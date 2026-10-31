@@ -1115,7 +1115,7 @@ def _check_feature_tree(commands, mw, layout, hooked):
             or "rotationz(3 * VarSet.Angulo)" not in cpt.circular_expression("T", "VarSet", "Eje", 3)
             or cpt.step_angle(360, 6, True) != 60 or cpt.step_angle(90, 4, True) != 30
             or cpt.step_angle(45, 4, False) != 45
-            or cpt.opposite_name("Soporte", {"Soporte-opuesta"}) != "Soporte-opuesta2"
+            or cpt.opposite_name("Soporte", {"Soporte-simetría"}) != "Soporte-simetría2"
             or cpt.next_title({"MatrizLineal1"}, "linear") != "MatrizLineal2"
             or not any(isinstance(e, dict) and e.get("flyout") == cpt.FLYOUT
                        for g in lay_.BAUGRUPPE[1] for e in g)):

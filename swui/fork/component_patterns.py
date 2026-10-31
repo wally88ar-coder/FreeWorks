@@ -15,8 +15,8 @@ Todo con objetos nativos (el archivo abre sin el addon):
   apoyado en lo que se eligió (arista, cara, eje), así que sigue a la pieza.
 - Simetría, misma pieza: App::Link con expresión de espejo (dos espejos = posición rígida):
   `Plano * F * Plano^-1 * Semilla * S` (S = espejo propio de la pieza simétrica).
-- Simetría, versión opuesta: archivo nuevo (al aceptar pide nombre y carpeta, como SW; propone
-  "<pieza>-opuesta.FCStd" en la carpeta de la original) con un SubShapeBinder de la
+- Simetría, versión simétrica: archivo nuevo (al aceptar pide nombre y carpeta, como SW; propone
+  "<pieza>-simetría.FCStd" en la carpeta de la original) con un SubShapeBinder de la
   pieza original + Part::Mirroring + Cuerpo; se reconstruye solo al abrirlo si la original cambió.
 - El motor de cálculo del ensamblaje mueve las piezas sin avisar a quien depende de ellas: un
   observador avisa (touch) a las copias y a los ejes/planos apoyados (decisión del usuario,
@@ -41,7 +41,7 @@ COPIES = "SWUI_Copies"
 DIR1 = "SWUI_Direction"
 DIR2 = "SWUI_Direction2"
 PLANE = "SWUI_Plane"
-OPPOSITE = "SWUI_Opposite"  # nombres de las semillas con versión opuesta
+OPPOSITE = "SWUI_Opposite"  # nombres de las semillas con versión simétrica
 OPPOSITE_MARK = "SWUI_OppositeOf"  # en el binder del archivo opuesto
 
 TITLES = {"linear": "MatrizLineal", "circular": "MatrizCircular", "mirror": "SimetríaDeComponentes"}
@@ -100,11 +100,11 @@ def mirror_expression(plane, seed, s_literal):
 
 
 def opposite_name(base, existing):
-    """'Soporte-opuesta', y si ya hay otro archivo con ese nombre: 'Soporte-opuesta2'..."""
-    name = "%s-opuesta" % base
+    """'Soporte-simetría', y si ya hay otro archivo con ese nombre: 'Soporte-simetría2'..."""
+    name = "%s-simetría" % base
     n = 2
     while name in existing:
-        name = "%s-opuesta%d" % (base, n)
+        name = "%s-simetría%d" % (base, n)
         n += 1
     return name
 
@@ -362,9 +362,9 @@ def _label_arrays(doc_name, data_name):
 
 
 def make_mirror(asm, seeds, plane, opposite=(), label=None, data=None, folder=None, paths=None):
-    """Simetría de componentes: copias (misma pieza) o versiones opuestas (archivo nuevo).
+    """Simetría de componentes: copias (misma pieza) o versiones simétricas (archivo nuevo).
 
-    paths: {nombre de la semilla: archivo elegido} para las opuestas nuevas (si falta, el automático).
+    paths: {nombre de la semilla: archivo elegido} para las simétricas nuevas (si falta, el automático).
     """
     paths = paths or {}
     v = data or _data(asm, "mirror", label or next_title({o.Label for o in asm.Document.Objects}, "mirror"))
@@ -413,7 +413,7 @@ def _back_to(asm):
 
 
 def existing_opposite(source):
-    """Body de la versión opuesta ya abierta de esta pieza, o None."""
+    """Body de la versión simétrica ya abierta de esta pieza, o None."""
     for d in FreeCAD.listDocuments().values():
         for o in d.Objects:
             if getattr(o, OPPOSITE_MARK, None) and getattr(o, "Support", None) and \
@@ -425,7 +425,7 @@ def existing_opposite(source):
 
 
 def default_opposite_path(seed, folder=None):
-    """Archivo que se propone: '<pieza>-opuesta.FCStd' en la carpeta de la original."""
+    """Archivo que se propone: '<pieza>-simetría.FCStd' en la carpeta de la original."""
     source = seed.LinkedObject
     src_doc = source.Document
     folder = folder or os.path.dirname(src_doc.FileName or "") or os.path.dirname(seed.Document.FileName or "")
@@ -435,7 +435,7 @@ def default_opposite_path(seed, folder=None):
 
 
 def opposite_part(seed, folder=None, path=None):
-    """Body del archivo de la versión opuesta (lo crea si no existe): espejo nativo atado a la original.
+    """Body del archivo de la versión simétrica (lo crea si no existe): espejo nativo atado a la original.
 
     path: archivo elegido por el usuario (como SW, que pide nombre y carpeta); si falta, el automático.
     """
@@ -451,7 +451,7 @@ def opposite_part(seed, folder=None, path=None):
     doc.saveAs(path)  # antes del binder: "Owner document not saved"
     binder = doc.addObject("PartDesign::SubShapeBinder", "Original")
     binder.Support = [(source, ("",))]
-    binder.addProperty("App::PropertyBool", OPPOSITE_MARK, "SW", "Versión opuesta de LikeSolidWorks UI")
+    binder.addProperty("App::PropertyBool", OPPOSITE_MARK, "SW", "Versión simétrica de LikeSolidWorks UI")
     setattr(binder, OPPOSITE_MARK, True)
     mirror = doc.addObject("Part::Mirroring", "Espejo")
     mirror.Source = binder
@@ -534,7 +534,7 @@ class _Observer:
 
     def slotCreatedDocument(self, doc):
         """
-        Versión opuesta: reconstruir al abrir si la original cambió (decisión del usuario).
+        Versión simétrica: reconstruir al abrir si la original cambió (decisión del usuario).
         FreeCAD 1.1 no avisa a Python el fin de la carga: se mira apenas termina (QTimer 0).
         También: auxiliares de archivos anteriores fuera del árbol.
         """
@@ -620,10 +620,10 @@ def _refresh_opposite(doc_name, binder_name):
         if not same:
             b.touch()
             doc.recompute()
-            FreeCAD.Console.PrintMessage("[SWUI] %s: la pieza original cambió, versión opuesta reconstruida.\n"
+            FreeCAD.Console.PrintMessage("[SWUI] %s: la pieza original cambió, versión simétrica reconstruida.\n"
                                          % doc.Label)
     except Exception:
-        FreeCAD.Console.PrintLog("[SWUI fork] Versión opuesta:\n%s\n" % traceback.format_exc())
+        FreeCAD.Console.PrintLog("[SWUI fork] Versión simétrica:\n%s\n" % traceback.format_exc())
 
 
 # --- Panel ---------------------------------------------------------------------
@@ -733,7 +733,7 @@ class PatternPanel:
         self.list.itemClicked.connect(lambda *_a: self._activate("seeds"))
         sl.addWidget(self.list)
         if self.kind == "mirror":
-            self.opp = QtWidgets.QCheckBox("Versión opuesta (pieza nueva espejada)")
+            self.opp = QtWidgets.QCheckBox("Versión simétrica (pieza nueva espejada)")
             self.opp.setToolTip("Para piezas que no son simétricas: crea una pieza nueva atada a la original (al aceptar pide nombre y carpeta)")
             self.opp.toggled.connect(self._toggle_opposite)
             self.list.currentRowChanged.connect(lambda *_a: self._show_opposite())
@@ -764,11 +764,11 @@ class PatternPanel:
             box.setText(describe(ref) if ref else "")
             box.setStyleSheet(ok_style if self.active == which else "")
         self.list.setStyleSheet(ok_style if self.active == "seeds" else "")
-        row = self.list.currentRow()  # rearmar la lista no debe perder la fila elegida (Versión opuesta)
+        row = self.list.currentRow()  # rearmar la lista no debe perder la fila elegida (Versión simétrica)
         self.list.blockSignals(True)
         self.list.clear()
         for s in self.seeds:
-            extra = "  (opuesta)" if s in self.opposite else ""
+            extra = "  (simétrica)" if s in self.opposite else ""
             self.list.addItem(s.Label + extra)
         if self.seeds:
             self.list.setCurrentRow(row if 0 <= row < len(self.seeds) else len(self.seeds) - 1)
@@ -914,7 +914,7 @@ class PatternPanel:
             # el archivo opuesto se crea recién al Aceptar; la vista previa usa la misma pieza
             v, warn = make_mirror(self.asm, self.seeds, plane, (), title)
             if [s for s in warn if s not in [o.Label for o in self.opposite]]:
-                self.problem = ("No es simétrica: %s. Marcá 'Versión opuesta' para que quede espejada de verdad."
+                self.problem = ("No es simétrica: %s. Marcá 'Versión simétrica' para que quede espejada de verdad."
                                 % ", ".join(warn))
             return v
         if kind == "linear":
@@ -959,7 +959,7 @@ class PatternPanel:
         return True
 
     def _ask_paths(self):
-        """Nombre y carpeta de cada versión opuesta nueva (las que ya existen no se preguntan)."""
+        """Nombre y carpeta de cada versión simétrica nueva (las que ya existen no se preguntan)."""
         paths, taken = {}, {os.path.normcase(d.FileName) for d in FreeCAD.listDocuments().values() if d.FileName}
         for seed in self.seeds:
             if seed not in self.opposite or existing_opposite(seed.LinkedObject) is not None:
@@ -997,11 +997,11 @@ class PatternPanel:
 
 
 def ask_opposite_path(seed, proposed):
-    """Guardar como de la versión opuesta: propone '<pieza>-opuesta.FCStd' en la carpeta de la original."""
+    """Guardar como de la versión simétrica: propone '<pieza>-simetría.FCStd' en la carpeta de la original."""
     source = seed.LinkedObject
     part = source.Document.Label if source.Document is not seed.Document else source.Label  # "Rodillo", no "Rodillo<1>"
     path, _f = QtWidgets.QFileDialog.getSaveFileName(
-        FreeCADGui.getMainWindow(), "Versión opuesta de %s: nombre y carpeta" % part, proposed,
+        FreeCADGui.getMainWindow(), "Versión simétrica de %s: nombre y carpeta" % part, proposed,
         "Documento de FreeCAD (*.FCStd)")
     return path
 
@@ -1095,7 +1095,7 @@ class _Command:
 
         tips = {"linear": "Repite componentes a lo largo de una o dos direcciones (como SW)",
                 "circular": "Repite componentes alrededor de un eje (como SW)",
-                "mirror": "Copia componentes simétricos respecto de un plano, o crea la versión opuesta"}
+                "mirror": "Copia componentes simétricos respecto de un plano, o crea la versión simétrica"}
         return {"MenuText": LABELS[self.kind], "ToolTip": tips[self.kind],
                 "Pixmap": paths.icon(ICONS[self.kind]) or ""}
 

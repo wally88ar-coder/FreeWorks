@@ -380,7 +380,7 @@ class _Observer:
 
 
 def modified_parts(asm_doc):
-    """Documentos que usa el ensamblaje (piezas, opuestas...) con cambios sin guardar y ya con archivo."""
+    """Documentos que usa el ensamblaje (piezas, simétricas...) con cambios sin guardar y ya con archivo."""
     out = []
     # de los componentes (vínculos): getDependentDocuments falla con el ciclo pieza <-> croquis
     # del ensamblaje ("The graph must be a DAG")
@@ -404,7 +404,7 @@ def modified_parts(asm_doc):
 def save_modified_parts(doc_name):
     """
     Como SW: guardar el ensamblaje guarda también las piezas que cambiaron (un taladro o corte de
-    ensamblaje, la versión opuesta...). FreeCAD 1.1.4 no las guardaba con Ctrl+S y "Guardar todo"
+    ensamblaje, la versión simétrica...). FreeCAD 1.1.4 no las guardaba con Ctrl+S y "Guardar todo"
     mostraba un error rojo de "dependencias cíclicas" (las piezas usan el croquis del ensamblaje):
     se guarda cada una por su lado, que no pasa por esa revisión. Visto con el mouse, 2026-10-31.
     """

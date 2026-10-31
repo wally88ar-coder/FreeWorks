@@ -420,6 +420,9 @@ Neueste Version oben. / Newest version first.
   (propone "<pieza>-opuesta" junto a la original; Cancelar deja el panel abierto).
 - Simetría de componentes: con la lista de componentes activa, un clic en una cara curva (un
   rodillo, un bulón) no agregaba el componente y avisaba "elegí una cara plana o un plano".
+- Simetría de componentes: "Versión opuesta" pasa a llamarse "Versión simétrica" (como SW) y el
+  archivo nuevo se propone como "<pieza>-simetría" (antes "<pieza>-opuesta"; los ya hechos siguen
+  funcionando).
 
 ## 0.10.0 — 2026-10-18
 
