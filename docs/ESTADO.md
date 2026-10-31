@@ -162,9 +162,8 @@ Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o come
   conjuntos suyos: fase 1 (chapa, sobre todo Convertir en chapa con STEP y DXF por lotes), fase 2,
   fase 3 (y sus decisiones), fase 4 (equidistanciar / trasladar cara), Mover/Copiar y
   Eliminar/Conservar sólidos, y fase 5 (etapas 2 a 5, checklist en su sección del documento de checklists).
-  Después: planos (plan en el documento "Planos estilo SW 2018", ver Checklists), aplicar el
-  arreglo de mate_refs a matrices / simetrías / planos del ensamblaje (ver Falta) o lo que elija
-  el usuario.
+  Después: planos (plan en el documento "Planos estilo SW 2018", ver Checklists), fase 6
+  (chequeo de compatibilidad) o lo que elija el usuario.
 - **Fase 3 — Evaluar: código completo (2026-10-26), hecha sola a pedido del usuario ("dale con
   toda la fase 3, yo estoy ocupado"); falta que la pruebe él y que revise las decisiones** de
   "Plan: fase 3" > Decisiones para revisar. Probada por Claude sin GUI y en FreeCAD real.
@@ -233,8 +232,8 @@ Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o come
   - Hecho 31/10: aviso visible al abrir sola una pieza con agujeros del ensamblaje (cartelito de
     notificación de FreeCAD; con el ensamblaje abierto, solo la vista de informes) y la cinta pasa
     sola a Ensamblaje (y vuelve a Operaciones al pasar a una pieza), `swui/fork/asm_tab.py`.
-  - Falta (menor): borrar una matriz entera de un golpe (borrar el VarSet deja
-    las copias); un eje/punto fijo pierde sus selecciones al editarlo; doble clic en el taladro dentro de la pieza abre el diálogo de FreeCAD.
+  - (Arreglado el 31/10: borrar una matriz entera de un golpe, eje/punto fijo que perdía sus
+    selecciones, doble clic en el taladro dentro de la pieza.)
   - Pruebas "Vos" hechas por Claude con el mouse (31/10), conjunto realista en
     C:\SW-AI-Bridge\trabajos\fase5_real (freecad\ y los .SLDPRT/.SLDASM de SW): placa 200x120x12 con
     agujero central Ø40 y 6xØ9 en Ø80, brida Ø110x10, bulón M8 con cabeza, escuadra asimétrica, rodillo.
@@ -1318,7 +1317,7 @@ Etapas:
 - Color de las piezas (gris de SW): no se tocó; pedir captura si el usuario lo quiere.
 - Ensamblaje: matrices, simetrías y planos del ensamblaje apoyados en caras por número: revisado
   el 2026-10-31, FreeCAD los sigue bien (ver fase 5); no hace falta arreglo.
-- Ensamblaje: en el árbol quedan "EjeMatriz" y "PlanoSimetria" (ocultos); SW no los muestra.
+- (Arreglado el 31/10: "EjeMatriz" y "PlanoSimetria" ya no aparecen en el árbol.)
 - Croquis: la relación hecha desde el panel se llama "Constraint1" en la lista (SW: "Sobre entidad1"...).
 
 ## Problemas reportados por el usuario (todos resueltos)
