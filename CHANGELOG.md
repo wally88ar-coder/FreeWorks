@@ -380,6 +380,10 @@ Neueste Version oben. / Newest version first.
   Cuerpo (daba Sólidos(2) o Sólidos(0) al aplanar; ahora 1, como SW).
 - Pestaña Evaluar: con la interfaz en castellano el botón "Language" dice "Idioma" ("Language"
   queda en el globo de ayuda).
+- La cinta pasa sola a la pestaña Ensamblaje al abrir o pasar a un ensamblaje, y vuelve a
+  Operaciones al pasar a una pieza, como SW (`swui/fork/asm_tab.py`).
+- Una pieza con agujeros o cortes hechos desde el ensamblaje, abierta sola, lo avisa con un
+  cartelito de FreeCAD (antes, solo en la vista de informes, que el fork tiene oculta).
 
 ## 0.10.0 — 2026-10-18
 

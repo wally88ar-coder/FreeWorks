@@ -1061,6 +1061,14 @@ def _check_feature_tree(commands, mw, layout, hooked):
             or mrf.element_type("Face12") != "Face" or mrf.element_type("Plane") is not None):
         print("  FEHLER: fork: relaciones que no saltan (volver a encontrar la entidad)")
         return False
+    # Cinta: pasar sola a Ensamblaje al abrir un ensamblaje, y a Operaciones al volver a una pieza
+    atb = importlib.import_module("swui.fork.asm_tab")
+    if (atb.tab_for(None, ("Conj", "assembly")) != "Baugruppe" or atb.tab_for(None, ("Base", "part")) is not None
+            or atb.tab_for(("Conj", "assembly"), ("Base", "part")) != "Features"
+            or atb.tab_for(("Base", "part"), ("Tapa", "part")) is not None
+            or atb.tab_for(("Conj", "assembly"), ("Conj", "assembly")) is not None):
+        print("  FEHLER: fork: la cinta pasa sola a Ensamblaje")
+        return False
     # Mover/Copiar de un vértice a otro: el vértice se vuelve a encontrar por sus caras
     mvb = importlib.import_module("swui.fork.move_bodies")
     plane_ = lambda n, p: {"t": "Face", "g": "plane", "n": n, "p": p, "s": 100.0}

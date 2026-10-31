@@ -384,9 +384,15 @@ def _tell_if_from_assembly(doc_name):
                 names.append(FreeCAD.getDocument(s).Label)
             except Exception:
                 names.append(s)
-        FreeCAD.Console.PrintMessage(
-            "[SWUI] %s tiene agujeros o cortes hechos desde el ensamblaje %s: se editan desde ahí "
-            "(clic derecho > Editar operación en el ensamblaje).\n" % (doc.Label, ", ".join(names)))
+        text = ("%s tiene agujeros o cortes hechos desde el ensamblaje %s: se editan desde ahí "
+                "(clic derecho > Editar operación en el ensamblaje).\n" % (doc.Label, ", ".join(names)))
+        open_docs = FreeCAD.listDocuments()
+        if any(s in open_docs for s in sources):
+            FreeCAD.Console.PrintMessage("[SWUI] " + text)  # abierta junto con su ensamblaje
+        else:
+            # pieza abierta sola: aviso a la vista (cartelito de FreeCAD que se va solo; la vista
+            # de informe está oculta en el fork). Como la flecha "->" de referencia externa de SW.
+            FreeCAD.Console.PrintTranslatedUserWarning(doc.Label, text)
 
 
 class _GuiObserver:

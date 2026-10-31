@@ -191,10 +191,11 @@ Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o come
       "Editar operación" (el doble clic sobre esos objetos es de FreeCAD o no hace nada en 1.1.4).
   - Pendiente que decida el usuario: pieza repetida en el ensamblaje con taladro (hoy sigue a la
     primera instancia y el panel avisa); nombre automático de la versión opuesta.
-  - Falta (menor): aviso visible al abrir sola una pieza con agujeros del ensamblaje (hoy, vista
-    de informes y nombre en el árbol); borrar una matriz entera de un golpe (borrar el VarSet deja
-    las copias); un eje/punto fijo pierde sus selecciones al editarlo; la cinta no pasa sola a la
-    pestaña Ensamblaje; doble clic en el taladro dentro de la pieza abre el diálogo de FreeCAD.
+  - Hecho 31/10: aviso visible al abrir sola una pieza con agujeros del ensamblaje (cartelito de
+    notificación de FreeCAD; con el ensamblaje abierto, solo la vista de informes) y la cinta pasa
+    sola a Ensamblaje (y vuelve a Operaciones al pasar a una pieza), `swui/fork/asm_tab.py`.
+  - Falta (menor): borrar una matriz entera de un golpe (borrar el VarSet deja
+    las copias); un eje/punto fijo pierde sus selecciones al editarlo; doble clic en el taladro dentro de la pieza abre el diálogo de FreeCAD.
 
 ## Pruebas comparadas con SW (Claude maneja el mouse en los dos programas)
 Forma de trabajo acordada con el usuario (2026-10-27/28): para cada renglón de los checklists,
@@ -417,7 +418,12 @@ Commits sin subir a GitHub (pedido del usuario): e70f8a4, 22ce54b, 4d8dc11 y el 
   - Diferencias vistas: en el árbol del ensamblaje quedan a la vista "EjeMatriz" y "PlanoSimetria"
     (ocultos, pero en SW no aparecen); la relación del croquis se llama "Constraint1" en la lista.
     Las matrices/simetrías y los planos se apoyan en caras por número: si la pieza renumera
-    pueden saltar como las relaciones (pendiente: usar lo de mate_refs también ahí).
+    pueden saltar como las relaciones. Revisado el 31/10 con FreeCADCmd: NO saltan. FreeCAD
+    1.1.4 sigue bien la cara o arista de un AttachmentSupport (Face7 -> Face9 -> Face10), con y
+    sin "Extruir1." adelante, editando el croquis de la base o agregando cortes, con el ensamblaje
+    abierto y cerrado; matriz circular de 4 y simetría quedan en el mismo lugar (guiones
+    scratchpad/datum_rep*.py). No hace falta el arreglo de mate_refs ahí (las uniones del
+    ensamblaje fallaban porque Assembly resuelve el nombre por su cuenta).
 
 - Otras diferencias vistas en fase 5: textos en inglés "1 inserted" (Insertar), "Preselected:" en
   la barra de estado dentro del ensamblaje, "Sketch Edit"/"Close" en el croquis del taladro; los
@@ -1193,10 +1199,8 @@ Etapas:
   que NO siguen a la pieza): el addon las pone solo al crear/actualizar vistas, con el Ø nominal,
   y las rehace si cambia el modelo; además esos 4 botones en la pestaña Dibujo.
 - Color de las piezas (gris de SW): no se tocó; pedir captura si el usuario lo quiere.
-- Ensamblaje: matrices, simetrías de componentes y planos/ejes del ensamblaje se apoyan en caras y
-  aristas de la pieza por número (Part::DatumPlane/Line con "Pad.Face5"): si la pieza renumera
-  pueden saltar, como pasaba con las relaciones. Aplicarles el mismo arreglo (`mate_refs`:
-  firma de la geometría y volver a encontrarla). Encontrado el 2026-10-30.
+- Ensamblaje: matrices, simetrías y planos del ensamblaje apoyados en caras por número: revisado
+  el 2026-10-31, FreeCAD los sigue bien (ver fase 5); no hace falta arreglo.
 - Ensamblaje: en el árbol quedan "EjeMatriz" y "PlanoSimetria" (ocultos); SW no los muestra.
 - Croquis: la relación hecha desde el panel se llama "Constraint1" en la lista (SW: "Sobre entidad1"...).
 
