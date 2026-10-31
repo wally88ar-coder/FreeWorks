@@ -215,6 +215,15 @@ Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o come
       aviso lo daba por abierto; la marca guardaba "Unnamed").
     - Arreglados en el momento: "Revisala" falso en una relación al recalcular la brida (costura
       del círculo); error rojo "Unknown document" del STEP al guardar cerrando.
+    - Probados con el mouse en FreeCAD (31/10, 12 h): tangente nueva acuesta el rodillo (y sigue
+      acostado al reabrir; en el árbol una sola relación); "Editar croquis" y "Guardar como..." en
+      castellano; Escape en la cota nueva la deja (16,82 mm quedó); guardar el ensamblaje guardó
+      Placa, Brida y Escuadra-opuesta sin ventana de error y el título queda sin "*" (arreglado en
+      el momento: el ciclo pieza <-> ensamblaje dejaba todo "modificado" al guardar). La pregunta
+      al cerrar con cambios se probó con guion (mismo texto que FreeCAD). Detalle: al borrar una
+      relación y crear otra, FreeCAD le pone "Tangente001" (reserva el nombre para deshacer).
+      SW: no se pudo comparar. Con el permiso de sldworks.exe ya dado, el SW nuevo abrió el
+      ensamblaje sin ventana (por el conector) y quedó gris; Archivo > Abrir no mostraba el diálogo.
     - Arreglados el 31/10 (con guiones; falta probarlos con el mouse): (1) tangente acuesta el
       cilindro; (2) guardar el ensamblaje guarda las piezas cambiadas; (4) textos en inglés;
       (6) Escape en la cota nueva. (5) no es error: doble clic en un croquis muestra sus cotas,

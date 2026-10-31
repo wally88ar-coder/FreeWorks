@@ -416,6 +416,13 @@ def save_modified_parts(doc_name):
         except Exception:
             FreeCAD.Console.PrintError("[SWUI fork] No se pudo guardar %s:\n%s\n" % (d.Label, traceback.format_exc()))
     if saved:
+        # pieza <-> ensamblaje se enlazan en ciclo: al guardar uno, FreeCAD marca al otro como
+        # cambiado (sello del vínculo externo, no un cambio de verdad) y el título quedaba con "*"
+        for name in [asm_doc.Name] + [d.Name for d in FreeCAD.listDocuments().values() if d.Label in saved]:
+            try:
+                FreeCADGui.getDocument(name).Modified = False
+            except Exception:
+                pass
         text = "También se guardaron las piezas: %s" % ", ".join(saved)
         FreeCAD.Console.PrintMessage("[SWUI fork] %s\n" % text)
         try:
