@@ -300,7 +300,21 @@ def create_joint(asm, key, refs, value=None, label=None):
     joint.Proxy.setJointConnectors(joint, connectors)
     if key == "tangent":
         _tangent_axis(asm, joint, refs, connectors)
+    hide_markers([joint] + companions(joint))
     return joint
+
+
+def hide_markers(joints):
+    """
+    Sin los ejes de colores de cada unión en la vista (SW no muestra nada por relación); la unión
+    sigue igual, es solo lo que se dibuja. Visto con el mouse 2026-10-31: quedaban a la vista.
+    """
+    for j in joints:
+        try:
+            if j.Visibility:
+                j.Visibility = False
+        except Exception:
+            pass
 
 
 TANGENT_OF = "SWUI_TangentOf"  # en la unión compañera: Name de la Tangente (nombre estable)
@@ -345,6 +359,15 @@ def _tangent_axis(asm, joint, refs, connectors):
     return axis
 
 
+def _relabel_later(doc_name):
+    try:
+        doc = FreeCAD.getDocument(doc_name)
+        relabel_grounded(doc)
+        hide_markers([o for o in doc.Objects if hasattr(o, "JointType") and not hasattr(o, "ObjectToGround")])
+    except Exception:
+        pass
+
+
 def companions(joint):
     """Uniones que acompañan a una relación (la del eje de una Tangente)."""
     try:
@@ -353,10 +376,37 @@ def companions(joint):
         return []
 
 
+def grounded_label(component_label):
+    """'Fijo (Placa<1>)' para la unión que fija un componente (FreeCAD la llama 'GroundedJoint')."""
+    name = component_label or ""
+    if name.startswith("(f) "):
+        name = name[4:]
+    return "Fijo (%s)" % name if name else "Fijo"
+
+
+def relabel_grounded(doc):
+    """Las uniones 'GroundedJoint' (inglés, de FreeCAD) del documento pasan a 'Fijo (...)'."""
+    for o in doc.Objects:
+        target = getattr(o, "ObjectToGround", None)
+        if target is not None and o.Label.startswith("GroundedJoint"):
+            o.Label = grounded_label(target.Label)
+
+
 class _CompanionObserver:
     """La unión del eje sigue a su Tangente: se suprime y se borra con ella."""
 
+    def slotCreatedDocument(self, doc):
+        if FreeCAD.GuiUp:
+            QtCore.QTimer.singleShot(0, lambda n=doc.Name: _relabel_later(n))
+
     def slotChangedObject(self, obj, prop):
+        if prop == "ObjectToGround":
+            try:
+                if not obj.Document.Restoring and obj.Label.startswith("GroundedJoint") and obj.ObjectToGround:
+                    obj.Label = grounded_label(obj.ObjectToGround.Label)
+            except Exception:
+                pass
+            return
         if prop not in ("Suppressed", PROP) or not hasattr(obj, "JointType") or hasattr(obj, TANGENT_OF):
             return
         try:

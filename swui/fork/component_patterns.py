@@ -460,6 +460,18 @@ def mark_own(obj):
         obj.addProperty("App::PropertyBool", "SWUI_Own", "SW", "Creado por la operación (se borra con ella)")
         obj.SWUI_Own = True
         obj.setEditorMode("SWUI_Own", 2)
+    hide_in_tree(obj)
+
+
+def hide_in_tree(obj):
+    """Eje o plano auxiliar de la operación ("EjeMatriz", "PlanoSimetria"): fuera del árbol, como SW."""
+    if obj is None or not FreeCAD.GuiUp:
+        return
+    try:
+        if obj.ViewObject is not None and obj.ViewObject.ShowInTree:
+            obj.ViewObject.ShowInTree = False
+    except Exception:
+        pass
 
 
 def operation_of(obj):
@@ -499,11 +511,56 @@ class _Observer:
         """
         Versión opuesta: reconstruir al abrir si la original cambió (decisión del usuario).
         FreeCAD 1.1 no avisa a Python el fin de la carga: se mira apenas termina (QTimer 0).
+        También: auxiliares de archivos anteriores fuera del árbol.
         """
         try:
             QtCore.QTimer.singleShot(0, lambda d=doc.Name: _check_opposites(d))
+            QtCore.QTimer.singleShot(0, lambda d=doc.Name: _hide_own(d))
         except Exception:
             pass
+
+    def slotDeletedObject(self, obj):
+        """Borrar la operación (el VarSet "MatrizCircular1"...) borra sus copias y auxiliares, como SW."""
+        try:
+            if not hasattr(obj, KIND):
+                return
+            # con un panel abierto la borra el propio panel para rehacerla (vista previa): no tocar
+            if FreeCAD.GuiUp and FreeCADGui.Control.activeDialog():
+                return
+            doc = obj.Document
+            names = list(getattr(obj, COPIES, []) or [])
+            names += [d.Name for d in (getattr(obj, p, None) for p in (DIR1, DIR2, PLANE))
+                      if d is not None and getattr(d, "SWUI_Own", False)]
+        except Exception:
+            return
+
+        def later():
+            for n in names:
+                o = doc.getObject(n)
+                if o is None:
+                    continue
+                try:
+                    if getattr(o, "ElementCount", 0):
+                        o.ElementCount = 0
+                    doc.removeObject(n)
+                except Exception:
+                    pass
+            doc.recompute()
+
+        if FreeCAD.GuiUp:
+            QtCore.QTimer.singleShot(0, later)  # no borrar dentro del aviso de borrado
+        else:
+            later()
+
+
+def _hide_own(doc_name):
+    try:
+        doc = FreeCAD.getDocument(doc_name)
+    except Exception:
+        return
+    for o in doc.Objects:
+        if getattr(o, "SWUI_Own", False):
+            hide_in_tree(o)
 
 
 def _check_opposites(doc_name):

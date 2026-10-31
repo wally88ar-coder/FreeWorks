@@ -21,6 +21,8 @@ Punto: Centro de arco         -> CenterOfCurvature
        A lo largo de la curva -> OnEdge (porcentaje del largo)
 """
 
+import json
+
 import FreeCAD
 
 from swui.compat import QtWidgets
@@ -30,6 +32,7 @@ from swui.fork import ref_plane_panel as rp
 LINE = "PartDesign::Line"
 POINT = "PartDesign::Point"
 ARC_EDGE = "arc"  # tipo extra de lo tocado: arista circular
+SPEC_PROP = "SWUI_RefSpec"  # NO CAMBIAR: queda en los archivos (selecciones del eje/punto)
 
 # Eje: tipo SW -> texto
 AXIS_TYPES = [("line", "Una línea/arista/eje"), ("planes", "Dos planos"), ("points", "Dos puntos/vértices"),
@@ -164,6 +167,9 @@ class _RefTypePanel(dp.SwPanel):
             support = list(self.obj.AttachmentSupport)
         except Exception:
             support = []
+        if not support:
+            # fijo en el ensamblaje (asm_reference le saca el apoyo): lo elegido quedó guardado
+            support = self._saved()
         for ref_obj, subs in support:
             for sub in (subs if isinstance(subs, (list, tuple)) else [subs]) or [""]:
                 kind = kind_of(ref_obj, sub)
@@ -242,12 +248,35 @@ class _RefTypePanel(dp.SwPanel):
         if obj.MapMode != mode:
             obj.MapMode = mode
         self._apply_extra()
+        self._save_spec()
         self.status.setText("Totalmente definido")
         self.status.setStyleSheet("color: %s;" % rp.OK_COLOR)
         return ""
 
     def _apply_extra(self):
         pass
+
+    def _saved(self):
+        """[(objeto, sub)] guardado en SWUI_RefSpec (o [] si no hay)."""
+        try:
+            spec = json.loads(getattr(self.obj, SPEC_PROP, "") or "[]")
+        except Exception:
+            return []
+        out = []
+        for s in spec:
+            o = self.doc.getObject(s.get("obj", ""))
+            if o is not None:
+                out.append((o, s.get("sub", "")))
+        return out
+
+    def _save_spec(self):
+        spec = json.dumps([{"obj": o.Name, "sub": s} for o, s, _k in self.refs])
+        obj = self.obj
+        if not hasattr(obj, SPEC_PROP):
+            obj.addProperty("App::PropertyString", SPEC_PROP, "SW", "Selecciones del eje/punto (LikeSolidWorks UI)")
+            obj.setEditorMode(SPEC_PROP, 2)
+        if getattr(obj, SPEC_PROP) != spec:
+            setattr(obj, SPEC_PROP, spec)
 
     def _adjust(self, mode, support):
         return mode, support

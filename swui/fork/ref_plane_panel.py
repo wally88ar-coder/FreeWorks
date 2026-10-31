@@ -35,7 +35,7 @@ import traceback
 import FreeCAD
 import FreeCADGui
 
-from swui.compat import QtWidgets
+from swui.compat import QtCore, QtWidgets
 from swui.fork import dress_up_panel as dp
 
 PLANE = "PartDesign::Plane"
@@ -143,6 +143,16 @@ def element(obj, sub):
         except Exception:
             return None
     return dp._element(obj.Shape, sub)
+
+
+def ref_text(ref):
+    """'Cara (Placa<1>)': lo elegido con nombre de SW (no "Taladro.Face5", el nombre interno)."""
+    obj, sub = ref
+    if not sub:
+        return obj.Label
+    name = leaf(sub)
+    kind = {"F": "Cara", "E": "Arista", "V": "Vértice"}.get(name[:1], name)
+    return "%s (%s)" % (kind, obj.Label)
 
 
 def leaf(sub):
@@ -382,6 +392,13 @@ class _RefGroup:
         lay = QtWidgets.QVBoxLayout(self.box)
         self.field = dp.RefBox(panel._activate)
         self.field.setPlaceholderText("Plano, cara, arista, eje o vértice")
+        # como SW: Supr o clic derecho > Borrar saca la referencia elegida
+        self.field.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
+        act = dp.QAction("Borrar", self.field)
+        act.triggered.connect(lambda *_a: self.clear())
+        self.field.addAction(act)
+        self.field._swui_keys = dp._ListKeys(self.clear)  # que no se lo lleve el recolector
+        self.field.installEventFilter(self.field._swui_keys)
         lay.addWidget(self.field)
         self.buttons = {}
         grid = QtWidgets.QGridLayout()
@@ -402,6 +419,15 @@ class _RefGroup:
         form.addRow(self.flip)
         lay.addLayout(form)
         self.update()
+
+    def clear(self):
+        if self.ref is None:
+            return
+        self.set(None, None)
+        self.panel._activate(self.field)
+        for g in self.panel.groups:
+            g.update()
+        self.panel._changed()
 
     def _before(self):
         groups = self.panel.groups
@@ -484,11 +510,7 @@ class PlanePanel(dp.SwPanel):
             g.field.setStyleSheet(dp.ACTIVE_QSS if g.field is widget else "")
 
     def _ref_text(self, ref):
-        obj, sub = ref
-        if not sub:
-            return obj.Label
-        kind = {"F": "Cara", "E": "Arista", "V": "Vértice"}.get(sub[0], sub)
-        return "%s (%s)" % (kind, obj.Label)
+        return ref_text(ref)
 
     def _load(self):
         """Lo guardado por este panel (SWUI_PlaneSpec) o, si no hay, lo que tenga el plano."""

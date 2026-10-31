@@ -39,6 +39,12 @@ MESSAGES = [
      r"¿Guardar los cambios del documento '\1' antes de cerrar?"),
 ]
 
+# botones y títulos de paneles de tareas (QToolButton/QPushButton) que FreeCAD deja en inglés
+WIDGETS = {
+    "Close": "Cerrar",
+    "Sketch Edit": "Edición de croquis",
+}
+
 _filter = None
 
 
@@ -103,13 +109,52 @@ class _Filter(QtCore.QObject):
                     _fix_box(obj)
                 elif isinstance(obj, QtWidgets.QMenu):
                     _fix_menu(obj)
+                elif isinstance(obj, QtWidgets.QAbstractButton):
+                    new = WIDGETS.get(obj.text())
+                    if new:
+                        obj.setText(new)
         except Exception:
             pass
         return False
 
 
+def inserted_text(text, delta):
+    """
+    Contador del panel Insertar de FreeCAD en castellano: "Placa : 1 insertado", "2 insertados".
+    delta +1 / -1; acepta también el texto en inglés de FreeCAD ("... : 1 inserted").
+    """
+    m = re.search(r" : (\d+) (inserted|insertados?)$", text)
+    base = text[:m.start()] if m else text
+    n = (int(m.group(1)) if m else 0) + delta
+    if n <= 0:
+        return base
+    return "%s : %d %s" % (base, n, "insertado" if n == 1 else "insertados")
+
+
+def _patch_insert_panel():
+    """FreeCAD cuenta los insertados leyendo "N inserted" del texto: se cambia el contador entero."""
+    try:
+        import CommandInsertLink
+    except Exception:
+        return
+    cls = CommandInsertLink.TaskAssemblyInsertLink
+    if getattr(cls.increment_counter, "_swui", False):
+        return
+
+    def increment_counter(self, item):
+        item.setText(0, inserted_text(item.text(0), +1))
+
+    def decrement_counter(self, item):
+        item.setText(0, inserted_text(item.text(0), -1))
+
+    increment_counter._swui = decrement_counter._swui = True
+    cls.increment_counter = increment_counter
+    cls.decrement_counter = decrement_counter
+
+
 def install():
     global _filter
+    _patch_insert_panel()
     if _filter is not None:
         return
     app = QtWidgets.QApplication.instance()

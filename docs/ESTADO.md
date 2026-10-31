@@ -254,6 +254,15 @@ Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o come
       mouse apareció el aviso de memoria de SW y no aceptó clics ni teclas (SW sí respondía por el
       conector): quedó abierto para que el usuario conteste Sí.
 
+- 31/10 tarde: arregladas con guiones (falta probar con el mouse) las diferencias de fase 5 que
+  quedaban: auxiliares fuera del árbol, ejes de relaciones ocultos, "Fijo (Placa<1>)", menú de
+  componente con "Más opciones", textos ("1 insertado", barra de estado, "Cerrar", "Edición de
+  croquis"), panel Plano (nombres SW, Supr/Borrar), eje/punto fijo guarda selecciones
+  (SWUI_RefSpec: nombre estable nuevo), corte de ensamblaje 10 mm, borrar matriz entera, doble
+  clic en el taladro de ensamblaje dentro de la pieza. El ajuste M6: el fork ya recuerda el último
+  usado, como SW (la diferencia vista era la memoria de SW). Al abrir un ensamblaje viejo se
+  renombra "GroundedJoint" y se ocultan los ejes: el archivo queda con "*" (cambio de vista).
+
 ## Pruebas comparadas con SW (Claude maneja el mouse en los dos programas)
 Forma de trabajo acordada con el usuario (2026-10-27/28): para cada renglón de los checklists,
 Claude hace la operación en SW 2018 (pieza base por la conexión directa, el comando con mouse y

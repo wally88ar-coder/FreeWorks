@@ -161,8 +161,11 @@ def _unique(points):
     return out
 
 
-def hit_by_cut(asm, sk, both=False):
-    """Componentes que toca el perfil extruido hacia adentro (o a los dos lados)."""
+CUT_DEPTH = 10.0  # mm: el corte de ensamblaje arranca en "Hasta profundidad especificada" (SW)
+
+
+def hit_by_cut(asm, sk, both=False, depth=1e4):
+    """Componentes que toca el perfil extruido hacia adentro `depth` mm (o a los dos lados)."""
     import Part
 
     try:
@@ -170,7 +173,7 @@ def hit_by_cut(asm, sk, both=False):
     except Exception:
         return []
     n = sketch_normal(sk)
-    tool = faces.extrude(n * -1e4)
+    tool = faces.extrude(n * -depth)
     if both:
         tool = tool.fuse(faces.extrude(n * 1e4))
     out = []
@@ -245,7 +248,8 @@ def add_to_part(link, sk, kind, title):
     else:
         feat = body.newObject("PartDesign::Pocket", "Corte")
         feat.Profile = binder
-        feat.Type = "ThroughAll"
+        feat.Type = "Length"  # como SW: arranca en "Hasta profundidad especificada", 10 mm
+        feat.Length = CUT_DEPTH
     label = "%s (%s)" % (title, sk.Document.Label)
     feat.Label = label
     if FreeCAD.GuiUp:  # después del nombre SW que pone el original (naming.py, también con QTimer 0)
@@ -430,6 +434,51 @@ def save_modified_parts(doc_name):
         except Exception:
             pass
     return saved
+
+
+def _front(doc):
+    """Poner al frente la ventana 3D del documento (pestaña de la vista)."""
+    FreeCADGui.setActiveDocument(doc.Name)
+    mdi = FreeCADGui.getMainWindow().findChild(QtWidgets.QMdiArea)
+    for sub in (mdi.subWindowList() if mdi is not None else []):
+        title = sub.windowTitle().replace("[*]", "").strip()
+        if title == doc.Label or title.startswith(doc.Label + " :"):
+            mdi.setActiveSubWindow(sub)
+            return
+
+
+def edit_redirect(obj):
+    """
+    Doble clic en el taladro o corte de ensamblaje DENTRO de la pieza: en lugar del diálogo de
+    FreeCAD (que lo editaba suelto, visto con el mouse 2026-10-31), como SW con una operación
+    propagada: se edita desde el ensamblaje. Si está abierto, se abre su panel; si no, se avisa.
+    """
+    profile = getattr(obj, "Profile", None)
+    binder = profile[0] if isinstance(profile, (list, tuple)) and profile else profile
+    if binder is None or not hasattr(binder, BINDER_MARK):
+        return None
+    v = operation_of(obj)
+    doc_name, label = obj.Document.Name, obj.Label
+
+    def act():
+        try:
+            FreeCADGui.getDocument(doc_name).resetEdit()
+        except Exception:
+            pass
+        asm_doc = v.Document if v is not None else None
+        if asm_doc is not None and _shown(asm_doc):
+            try:
+                _front(asm_doc)
+                open_panel(v)
+                return
+            except Exception:
+                FreeCAD.Console.PrintLog("[SWUI fork] Editar desde la pieza:\n%s\n" % traceback.format_exc())
+        name = asm_doc.Label if asm_doc is not None else getattr(binder, BINDER_MARK)
+        FreeCAD.Console.PrintTranslatedUserWarning(
+            label, "%s se hizo desde el ensamblaje %s: se edita desde ahí (abrí el ensamblaje, clic "
+                   "derecho > Editar operación).\n" % (label, name))
+
+    return act
 
 
 def _shown(doc):
@@ -617,7 +666,7 @@ def _after_sketch():
 
 
 def open_panel_new(asm, kind, sk):
-    hits = hit_by_holes(asm, sk) if kind == "hole" else hit_by_cut(asm, sk)
+    hits = hit_by_holes(asm, sk) if kind == "hole" else hit_by_cut(asm, sk, depth=CUT_DEPTH)
     parts, repeated = unique_parts(hits)
     title = next_title({o.Label for o in asm.Document.Objects}, kind)
     entries = []
@@ -1080,6 +1129,8 @@ def install():
 
     if (operation_of, open_panel) not in dp.OPENERS:
         dp.OPENERS.append((operation_of, open_panel))
+    if edit_redirect not in dp.EDIT_REDIRECTS:
+        dp.EDIT_REDIRECTS.append(edit_redirect)
     FreeCAD.addDocumentObserver(_Observer())
     FreeCADGui.addDocumentObserver(_GuiObserver())
     _installed = True

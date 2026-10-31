@@ -398,6 +398,20 @@ Neueste Version oben. / Newest version first.
   botones, y "Editar croquis" en el clic derecho (`swui/fork/es_texts.py`).
 - Cota nueva en el croquis: Escape en el cuadro del valor la deja con el valor medido, como SW
   (antes la borraba).
+- Ensamblaje, más parecido a SW: los ejes y planos auxiliares de matrices y simetrías no se ven
+  en el árbol; las relaciones no dejan sus ejes de colores en la vista; borrar la operación
+  (MatrizCircular1...) borra también sus copias y auxiliares; la unión que fija una pieza se
+  llama "Fijo (Placa<1>)" (no "GroundedJoint"); el clic derecho de un componente deja a mano lo
+  de todos los días y el resto en "Más opciones".
+- En castellano: el contador del panel Insertar ("1 insertado"), la barra de estado sobre una
+  relación o un componente (su nombre, no "Preselected: ..."), "Cerrar" y "Edición de croquis"
+  en el panel del croquis.
+- Panel Plano: muestra "Cara (Placa<1>)" en vez del nombre interno, y Supr o clic derecho >
+  Borrar saca una referencia elegida. Eje y Punto fijos del ensamblaje guardan sus selecciones
+  para volver a editarlos (propiedad SWUI_RefSpec).
+- Corte de ensamblaje: arranca en "Hasta profundidad especificada", 10 mm, como SW.
+- Doble clic en un taladro o corte de ensamblaje dentro de la pieza: abre su panel en el
+  ensamblaje (o avisa que se edita desde ahí) en vez del diálogo de FreeCAD.
 
 ## 0.10.0 — 2026-10-18
 

@@ -1069,8 +1069,22 @@ def _check_feature_tree(commands, mw, layout, hooked):
             or est.message_text("Save all changes to document 'Brida' before closing?")
             != "¿Guardar los cambios del documento 'Brida' antes de cerrar?"
             or est.message_text("Otra cosa") is not None
-            or not est.is_new_datum_title("Insertar longitud") or est.is_new_datum_title("Material")):
+            or not est.is_new_datum_title("Insertar longitud") or est.is_new_datum_title("Material")
+            or est.inserted_text("Placa", 1) != "Placa : 1 insertado"
+            or est.inserted_text("Placa : 1 insertado", 1) != "Placa : 2 insertados"
+            or est.inserted_text("Placa : 1 inserted", -1) != "Placa"):
         print("  FEHLER: fork: textos en castellano / Escape en la cota nueva")
+        return False
+    msw_ = sys.modules.get("swui.fork.mates_sw") or importlib.import_module("swui.fork.mates_sw")
+    rpp_ = importlib.import_module("swui.fork.ref_plane_panel")
+
+    class _Lbl:
+        Label = "(f) Placa<1>"
+
+    if (msw_.grounded_label("(f) Placa<1>") != "Fijo (Placa<1>)"
+            or rpp_.ref_text((_Lbl(), "Taladro.Face5")) != "Cara ((f) Placa<1>)"
+            or rpp_.ref_text((_Lbl(), "Edge3")) != "Arista ((f) Placa<1>)"):
+        print("  FEHLER: fork: nombres SW (fijo, referencias del plano)")
         return False
     # Cinta: pasar sola a Ensamblaje al abrir un ensamblaje, y a Operaciones al volver a una pieza
     atb = importlib.import_module("swui.fork.asm_tab")

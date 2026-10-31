@@ -51,6 +51,26 @@ def describe(shape, decimals=2):
     return ""
 
 
+def label_of(owner, sub):
+    """Nombre a mostrar de lo que está bajo el mouse: el componente o el objeto más cercano."""
+    if owner is None:
+        return ""
+    try:
+        parts = [p for p in (sub or "").split(".") if p][:-1] if sub and not sub.endswith(".") \
+            else [p for p in (sub or "").split(".") if p]
+        obj, best = owner, owner
+        for name in parts:
+            child = obj.getSubObject(name + ".", retType=1)
+            if child is None:
+                break
+            obj = child
+            if child.TypeId in ("App::Link", "App::LinkElement") or hasattr(child, "JointType"):
+                best = child  # el componente o la relación, no lo de adentro
+        return getattr(best, "Label", "")
+    except Exception:
+        return getattr(owner, "Label", "")
+
+
 def _in_workbench():
     try:
         return FreeCADGui.activeWorkbench().name() == WB_NAME
@@ -86,18 +106,22 @@ def on_message(message):
 class _Observer:
     def setPreselection(self, doc, obj, sub):
         _state["text"] = ""
-        if not sub or not _in_workbench():
+        if not _in_workbench():
             return
         try:
             owner = FreeCAD.getDocument(doc).getObject(obj)
-            target = owner.getSubObject(sub, retType=1) if owner is not None else None
+            target = owner.getSubObject(sub, retType=1) if owner is not None and sub else owner
             if getattr(target, "TypeId", "") in DATUMS:
                 _state["text"] = target.Label  # "Plano1" en lugar de "Preselected: doc.Body.DatumPlane..."
                 _show()
                 return
-            shape = owner.getSubObject(sub) if owner is not None else None
+            shape = owner.getSubObject(sub) if owner is not None and sub else None
             if shape is not None and not shape.isNull():
                 _state["text"] = describe(shape)
+            if not _state["text"]:
+                # sin medida (una relación, un componente entero): su nombre, como SW, y no el
+                # "Preselected: doc.Assembly.Joint." en inglés (visto con el mouse, 2026-10-31)
+                _state["text"] = label_of(owner, sub)
         except Exception:
             FreeCAD.Console.PrintLog("[SWUI fork] Barra de estado:\n%s\n" % traceback.format_exc())
         _show()

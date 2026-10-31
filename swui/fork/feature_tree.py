@@ -771,6 +771,60 @@ def arrange_menu(menu):
     return True
 
 
+# Clic derecho de un componente del ensamblaje: lo que queda a mano (el resto va a "Más opciones")
+COMPONENT_KEEP = ("Ocultar selección", "Mostrar selección", "Alternar visibilidad", "Eliminar",
+                  "Renombrar", "Propiedades", "Hide Selection", "Show Selection", "Toggle visibility",
+                  "Delete", "Rename", "Properties", "Suprimido", "Suppressed",
+                  "Editar operación", "Fijar", "Flotar", "Fijar / Flotar", "Ver relaciones de posición",
+                  "Abrir pieza", "Editar pieza")
+MORE = "Más opciones"
+
+
+def is_component_selection():
+    """¿Lo elegido es un solo componente (vínculo dentro de un ensamblaje)?"""
+    try:
+        sel = FreeCADGui.Selection.getSelection()
+    except Exception:
+        return False
+    if len(sel) != 1 or sel[0].TypeId not in ("App::Link", "Assembly::AssemblyLink"):
+        return False
+    return any(p.TypeId == "Assembly::AssemblyObject" for p in sel[0].InList)
+
+
+def fold_component_menu(menu):
+    """
+    El clic derecho de un componente trae el menú largo de FreeCAD (unas 30 opciones). Como SW: a
+    mano lo nuestro y lo de todos los días; lo demás, en el submenú "Más opciones". True si cambió.
+    """
+    from swui.compat import QtWidgets
+
+    actions = menu.actions()
+    if any(a.menu() is not None and a.text() == MORE for a in actions) or len(actions) < 14:
+        return False
+    names = [n for n, _c in COMMANDS]
+    keep = lambda a: (a.objectName() in names or a.objectName().startswith("SWUI_")
+                      or a.text().replace("&", "") in COMPONENT_KEEP)
+    rest = [a for a in actions if not a.isSeparator() and not keep(a)]
+    if len(rest) < 4:
+        return False
+    sub = QtWidgets.QMenu(MORE, menu)
+    for a in rest:
+        menu.removeAction(a)
+        sub.addAction(a)
+    menu.addSeparator()
+    menu.addMenu(sub)
+    # separadores sueltos que quedaron juntos o al principio/final
+    last_sep = True
+    for a in menu.actions():
+        if a.isSeparator():
+            if last_sep:
+                menu.removeAction(a)
+            last_sep = True
+        else:
+            last_sep = False
+    return True
+
+
 class _MenuShow:
     """Filtro de la aplicación: arreglar cada menú contextual al mostrarse."""
 
@@ -781,7 +835,11 @@ class _MenuShow:
             def eventFilter(self, obj, event):
                 try:
                     if event.type() == QtCore.QEvent.Type.Show and isinstance(obj, QtWidgets.QMenu):
-                        if translate_menu(obj) | arrange_menu(obj):
+                        changed = translate_menu(obj) | arrange_menu(obj)
+                        if obj.parent() is not None and not isinstance(obj.parent(), QtWidgets.QMenu) \
+                                and is_component_selection():
+                            changed = fold_component_menu(obj) or changed
+                        if changed:
                             obj.adjustSize()
                 except Exception:
                     pass

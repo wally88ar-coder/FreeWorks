@@ -1341,6 +1341,9 @@ CHOOSERS = []  # funciones obj -> clase de panel o None; antes que PANELS (p. ej
 # Operaciones del fork que no son de Part Design (sin modo edición de FreeCAD): pares
 # (obj -> objeto a editar o None, abrir(objeto)). Los usa "Editar operación" del árbol.
 OPENERS = []
+# Funciones obj -> acción (sin argumentos) o None: al entrar a editar obj (doble clic), en lugar del
+# diálogo nativo o del panel se hace la acción (p. ej. un taladro hecho desde el ensamblaje).
+EDIT_REDIRECTS = []
 
 
 def opener(obj):
@@ -1446,6 +1449,15 @@ class _EditObserver:
             obj = vp.Object
         except Exception:
             return
+        if _in_workbench():
+            for redirect in EDIT_REDIRECTS:
+                try:
+                    action = redirect(obj)
+                except Exception:
+                    action = None
+                if action is not None:
+                    QtCore.QTimer.singleShot(0, action)
+                    return
         if panel_class(obj) is not None and _state["panel"] is None and not _state["native"] and _in_workbench():
             QtCore.QTimer.singleShot(0, lambda: _take_over(obj.Document.Name, obj.Name))
 
