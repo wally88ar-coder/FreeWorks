@@ -9,13 +9,18 @@ Una tabla con dos partes, como SW:
 - Ecuaciones: "D1@Croquis1" = "Largo" * 2, "D1@Extruir1" = "Espesor" ...
 Columnas Nombre / Valor o ecuación / Se evalúa en / Comentarios. A la derecha, las
 cotas del modelo: doble clic las inserta en la celda (o arma una ecuación nueva).
-Aceptar guarda todo como un solo paso de deshacer; Cancelar deja todo como estaba.
+No modal (decisión del usuario, 2026-10-31): con la ventana abierta se puede girar la
+vista, mostrar las cotas con doble clic y un clic en una cota la inserta, como en SW.
+Aceptar guarda todo como un solo paso de deshacer; Cancelar deja todo como estaba
+(si mientras tanto se hizo otra operación, FreeCAD ya cerró ese paso: Cancelar no la toca).
 
 Por debajo, todo es nativo de FreeCAD (abre sin el addon):
 - las variables globales son propiedades de un VarSet (App::VarSet) llamado
   "Variables globales" (nombre interno VARSET_NAME, estable); el comentario es la
   documentación de la propiedad. Se muestran también las de otros VarSet del documento.
-- cada ecuación es una expresión de FreeCAD (la f(x) de la casilla).
+- cada ecuación es una expresión de FreeCAD (la f(x) de la casilla). FreeCAD no les
+  guarda comentario: los comentarios de las ecuaciones van en ese mismo VarSet, en la
+  propiedad oculta NOTES_PROP (JSON {"Objeto|ruta": texto}, nombre estable).
 - nombres de cotas como SW: "D1@Croquis1" (D1, D2... en el orden de las cotas del
   croquis; una cota con nombre propio se llama así). Al usar una cota sin nombre en
   una ecuación se le pone ese nombre (renameConstraint), así la ecuación no se corre
@@ -35,6 +40,7 @@ COMMAND = "SWUI_Equations"
 VARSET_NAME = "VariablesGlobales"  # nombre interno del VarSet que crea el addon (estable)
 VARSET_LABEL = "Variables globales"
 VAR_GROUP = "Variables"
+NOTES_PROP = "SWUI_EquationNotes"  # comentarios de las ecuaciones, en el VarSet (nombre estable)
 SKETCH_DIMS = ("Distance", "DistanceX", "DistanceY", "Radius", "Diameter", "Angle")
 VARSET_BASE = ("ExpressionEngine", "Label", "Label2", "Visibility", "Placement")
 
@@ -233,7 +239,7 @@ class Model:
         out = []
         for vs in self.varsets():
             for prop in vs.PropertiesList:
-                if prop in VARSET_BASE or vs.getGroupOfProperty(prop) == "Base":
+                if prop in VARSET_BASE or prop.startswith("SWUI_") or vs.getGroupOfProperty(prop) == "Base":
                     continue
                 out.append((vs, prop))
         return out
@@ -383,6 +389,8 @@ class Model:
                     path = ".Constraints[%d]" % index
                     value, unit = self.value(obj, path)
                     out.append(("%s@%s" % (n, obj.Label), obj, path, value, unit))
+            elif hasattr(obj, "SWUI_MoveFace") and obj.TypeId in ("PartDesign::Groove", "PartDesign::Revolution"):
+                continue  # Mover cara de un agujero: su 360° es de adentro, no una cota de SW
             else:
                 names = feature_dim_names(obj.TypeId, obj.PropertiesList)
                 for prop, n in sorted(names.items(), key=lambda p: int(p[1][1:])):
@@ -445,6 +453,36 @@ class Model:
         obj.setExpression(path, expr)
         return obj, path
 
+    def _notes(self):
+        import json
+
+        vs = self.main_varset()
+        try:
+            return json.loads(getattr(vs, NOTES_PROP, "") or "{}") if vs is not None else {}
+        except ValueError:
+            return {}
+
+    def equation_comment(self, obj, path):
+        return self._notes().get(note_key(obj, path), "")
+
+    def set_equation_comment(self, obj, path, text):
+        import json
+
+        notes = self._notes()
+        key = note_key(obj, path)
+        if (text or "").strip():
+            notes[key] = text
+        elif key in notes:
+            del notes[key]
+        else:
+            return
+        vs = self.main_varset(create=True)
+        if NOTES_PROP not in vs.PropertiesList:
+            vs.addProperty("App::PropertyString", NOTES_PROP, "SWUI",
+                           "Comentarios de las ecuaciones (fork de LikeSolidWorks UI)")
+            vs.setEditorMode(NOTES_PROP, 2)
+        setattr(vs, NOTES_PROP, json.dumps(notes, ensure_ascii=False, sort_keys=True))
+
     def remove_variable(self, vs, prop):
         users = [o.Label for o in self.doc.Objects for _p, e in getattr(o, "ExpressionEngine", [])
                  if re.search(r"\b%s\.%s\b" % (re.escape(vs.Name), re.escape(prop)), e)
@@ -452,6 +490,11 @@ class Model:
         if users:
             raise ValueError("La usan: %s. Sacala primero de esas ecuaciones." % ", ".join(sorted(set(users))))
         vs.removeProperty(prop)
+
+
+def note_key(obj, path):
+    """Clave del comentario de una ecuación: 'Sketch|Constraints.D1' (Name: sigue aunque cambie el nombre)."""
+    return "%s|%s" % (obj.Name, path.lstrip("."))
 
 
 def count(doc):
@@ -487,7 +530,7 @@ class _EquationsDialog(QtWidgets.QDialog):
         self.rows = []  # [(tipo, datos)] por renglón de la tabla
         self.filling = False
         self.setWindowTitle("Ecuaciones, variables globales y cotas")
-        self.setModal(True)  # un solo paso de deshacer: mientras está abierta no se toca otra cosa
+        self.setModal(False)  # se puede tocar el modelo (clic en una cota la inserta), como pidió el usuario
         self.resize(900, 460)
         doc.openTransaction("Ecuaciones")
         box = QtWidgets.QVBoxLayout(self)
@@ -511,7 +554,8 @@ class _EquationsDialog(QtWidgets.QDialog):
         right.addWidget(self.dims, 1)
         split.addLayout(right, 1)
         self.msg = QtWidgets.QLabel("Valor: un número (100 o 2,5). Ecuación: empieza con =, por ejemplo "
-                                    '= "Largo" / 2. Supr borra el renglón elegido.')
+                                    '= "Largo" / 2. Supr borra el renglón elegido. Con la ventana abierta, '
+                                    "doble clic en una cara muestra sus cotas y un clic en una cota la inserta.")
         self.msg.setWordWrap(True)
         box.addWidget(self.msg)
         row = QtWidgets.QHBoxLayout()
@@ -527,6 +571,12 @@ class _EquationsDialog(QtWidgets.QDialog):
         row.addWidget(b_cancel)
         box.addLayout(row)
         self._fill()
+        try:
+            from swui.fork import instant_dims
+
+            instant_dims.set_pick(self._picked)
+        except Exception:
+            pass
 
     # --- tabla
 
@@ -572,9 +622,9 @@ class _EquationsDialog(QtWidgets.QDialog):
             value, unit = m.value(obj, path)
             state = "Error" if "Invalid" in getattr(obj, "State", []) else fmt(value, unit)
             self._add_row(EQ, (obj, path), [self._item('"%s"' % name), self._item("= " + m.sw_expr(obj, expr), editable=True),
-                                           self._item(state), self._item("")])
+                                           self._item(state), self._item(m.equation_comment(obj, path), editable=True)])
         self._add_row(NEW_EQ, None, [self._item("Agregar ecuación", editable=True, grey=True),
-                                     self._item("", editable=True), self._item(""), self._item("")])
+                                     self._item("", editable=True), self._item(""), self._item("", editable=True)])
         self.filling = False
         self._fill_dims()
 
@@ -600,6 +650,9 @@ class _EquationsDialog(QtWidgets.QDialog):
             if kind == VAR and col == 3:
                 data[0].setDocumentationOfProperty(data[1], item.text())
                 return
+            if kind == EQ and col == 3:
+                self.model.set_equation_comment(data[0], data[1], item.text())
+                return
             if kind == VAR and col == 1:
                 self.model.set_variable(self.model.var_display(*data), value_text)
             elif kind == NEW_VAR:
@@ -613,7 +666,12 @@ class _EquationsDialog(QtWidgets.QDialog):
             elif kind == NEW_EQ:
                 if not value_text or name_cell == "Agregar ecuación":
                     return
-                self.model.set_equation(name_cell, value_text)
+                obj, path = self.model.set_equation(name_cell, value_text)
+                comment = self.table.item(r, 3).text()
+                if comment.strip():
+                    found = [p for o, p, _e in self.model.expressions()
+                             if o is obj and p.lstrip(".") == path.lstrip(".")]
+                    self.model.set_equation_comment(obj, found[0] if found else path, comment)
             else:
                 return
         except Exception as exc:
@@ -626,7 +684,20 @@ class _EquationsDialog(QtWidgets.QDialog):
         QtCore.QTimer.singleShot(0, self._fill)
 
     def _insert_dim(self, item):
-        name = item.data(QtCore.Qt.ItemDataRole.UserRole)
+        self._insert_name(item.data(QtCore.Qt.ItemDataRole.UserRole))
+
+    def _picked(self, dim):
+        """Clic en una cota del modelo (instant_dims) con la ventana abierta: como SW, va a la tabla."""
+        kind, obj, which = dim.setter
+        path = ".Constraints[%d]" % which if kind == "sketch" else which
+        name = self.model.name_of(obj, path)
+        if not name:
+            return
+        self._insert_name(name)
+        self.raise_()
+        self.activateWindow()
+
+    def _insert_name(self, name):
         r = self.table.currentRow()
         kind = self.rows[r][0] if 0 <= r < len(self.rows) else None
         editor_text = '"%s"' % name
@@ -660,6 +731,7 @@ class _EquationsDialog(QtWidgets.QDialog):
                 self.model.remove_variable(*data)
             elif kind == EQ:
                 data[0].setExpression(data[1], None)
+                self.model.set_equation_comment(data[0], data[1], "")
             else:
                 return
         except Exception as exc:
@@ -678,14 +750,29 @@ class _EquationsDialog(QtWidgets.QDialog):
 
     # --- cerrar
 
+    def _unpick(self):
+        try:
+            from swui.fork import instant_dims
+
+            instant_dims.set_pick(None)
+        except Exception:
+            pass
+
     def accept(self):
+        self._unpick()
         self.doc.commitTransaction()
         self.doc.recompute()
         _changed()
         super().accept()
 
     def reject(self):
-        self.doc.abortTransaction()
+        self._unpick()
+        # sin ventana: lo pendiente es lo de Ecuaciones. Con un panel de operación abierto, lo
+        # pendiente es de ese panel (FreeCAD ya cerró el de Ecuaciones): no se toca.
+        if FreeCADGui.Control.activeDialog():
+            FreeCAD.Console.PrintWarning("[SWUI] Ecuaciones: hay un panel abierto, los cambios ya aplicados quedan.\n")
+        else:
+            self.doc.abortTransaction()
         self.doc.recompute()
         _changed()
         super().reject()

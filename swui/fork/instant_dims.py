@@ -321,7 +321,10 @@ def show(obj):
         button.setFlat(True)
         button.setCursor(QtCore.Qt.CursorShape.PointingHandCursor)
         button.setStyleSheet(LABEL_QSS)
-        button.setToolTip("Atada a una ecuación: se cambia en Ecuaciones" if dim.locked else "Clic para modificar")
+        if _state.get("pick") is not None:
+            button.setToolTip("Clic: insertarla en Ecuaciones")
+        else:
+            button.setToolTip("Atada a una ecuación: se cambia en Ecuaciones" if dim.locked else "Clic para modificar")
         button.adjustSize()
         button.setFixedWidth(button.fontMetrics().horizontalAdvance(button.text()) + 8)  # no el ancho mínimo de botón
         button.clicked.connect(lambda *_a, d=dim, b=button: _clicked(d, b))
@@ -453,12 +456,27 @@ def apply_value(dim, value):
     return True
 
 
+def set_pick(fn):
+    """
+    Con la ventana Ecuaciones abierta, un clic en una cota la manda ahí (fn(cota)) en vez de abrir
+    "Modificar", como SW. fn=None vuelve a lo normal.
+    """
+    _state["pick"] = fn
+
+
 def _clicked(dim, button):
     """
     Clic o doble clic en la cota: "Modificar" una sola vez. En SW se hace doble clic;
     sin esta espera el segundo clic caía fuera de la ventanita y la cerraba (probado
     con el mouse, 2026-10-28). Se espera lo que dura un doble clic y se abre.
     """
+    pick = _state.get("pick")
+    if pick is not None:
+        try:
+            pick(dim)
+        except Exception:
+            FreeCAD.Console.PrintError("[SWUI fork] Cota a Ecuaciones:\n%s\n" % traceback.format_exc())
+        return
     if _state.get("pending"):
         return  # segundo clic del doble clic
     _state["pending"] = True
