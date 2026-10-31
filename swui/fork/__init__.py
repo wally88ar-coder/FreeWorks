@@ -20,6 +20,13 @@ MENU = "LikeSolidWorks UI"
 def install(workbench=None):
     """Enganchar los agregados del fork. Cada uno protegido por separado."""
     try:
+        # antes de que se arme la cinta: otro comando con un panel abierto lo cancela, como SW
+        from swui.fork import panel_guard
+
+        panel_guard.install()
+    except Exception:
+        FreeCAD.Console.PrintError("[SWUI fork] Paneles abiertos:\n%s\n" % traceback.format_exc())
+    try:
         from swui.fork import look_sw
 
         look_sw.install()

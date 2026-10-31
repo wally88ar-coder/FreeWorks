@@ -467,19 +467,28 @@ def solve(asm):
 
 class _SelObserver:
     def __init__(self, panel):
+        from swui.fork import panel_guard
+
         self.panel = panel
+        panel_guard.track(panel)
+
+    def _notify(self):
+        from swui.fork import panel_guard
+
+        if not panel_guard.orphaned(self):  # FreeCAD cerró el panel sin avisar: ignorar
+            self.panel.schedule()
 
     def addSelection(self, *_a):
-        self.panel.schedule()
+        self._notify()
 
     def removeSelection(self, *_a):
-        self.panel.schedule()
+        self._notify()
 
     def setSelection(self, *_a):
-        self.panel.schedule()
+        self._notify()
 
     def clearSelection(self, *_a):
-        self.panel.schedule()
+        self._notify()
 
 
 class MatePanel:

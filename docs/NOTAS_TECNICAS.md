@@ -429,6 +429,13 @@
   suyos): se agrega con un filtro que dura hasta que se muestra el menú. El color del texto de un
   renglón propio no se ve: la hoja de estilo de look_sw (`QTreeView::item { color }`) lo pisa; se
   atenúa con el velo de tree_overlay (`EXTRA_GREY`).
+- Paneles y otro comando (31/10): con un panel abierto, los comandos de FreeCAD preguntan "Un
+  diálogo ya está abierto en el panel de tareas" (Sí/No); con Sí FreeCAD quita el panel SIN llamar
+  a su reject: el escucha de selección del panel queda vivo. Después de eso `panel.form` queda en
+  None y la lista del panel borrada (el contenedor sigue válido). `FreeCADGui.Control` no deja
+  envolver showDialog ("missing implement of setattr") ni tiene reject ni devuelve el panel
+  Python (activeTaskDialog da un TaskDialog genérico): los paneles se anotan solos
+  (`panel_guard.track`, desde sus escuchas).
 - Capturas con computer-use (31/10, tarde): de golpe devolvían toda la pantalla oscura aunque
   FreeCAD estaba al frente; los clics sí llegaban. Salida: capturar con PowerShell
   (`Graphics.CopyFromScreen`, guion `cap.ps1` en el scratchpad). Y `timeout` de Git Bash NO

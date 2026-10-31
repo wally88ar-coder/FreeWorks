@@ -1106,6 +1106,13 @@ def _check_feature_tree(commands, mw, layout, hooked):
             or mtr.suffix_from([]) != "" or mtr.bare_component("Rodillo<2>") != "Rodillo<2>"):
         print("  FEHLER: fork: relaciones debajo de cada componente")
         return False
+    # Otro comando con un panel del fork abierto: lo cancela (como SW), salvo vista/medir/archivo
+    pgd = importlib.import_module("swui.fork.panel_guard")
+    if (not pgd.cancels_panel("PartDesign_Pocket") or not pgd.cancels_panel("SWUI_MoveFace")
+            or pgd.cancels_panel("Std_ViewIsometric") or pgd.cancels_panel("SWUI_Measure")
+            or pgd.cancels_panel("Std_Undo") or pgd.cancels_panel("")):
+        print("  FEHLER: fork: otro comando con un panel abierto")
+        return False
     # Mover/Copiar de un vértice a otro: el vértice se vuelve a encontrar por sus caras
     mvb = importlib.import_module("swui.fork.move_bodies")
     plane_ = lambda n, p: {"t": "Face", "g": "plane", "n": n, "p": p, "s": 100.0}

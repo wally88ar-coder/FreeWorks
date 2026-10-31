@@ -432,6 +432,12 @@ Neueste Version oben. / Newest version first.
 - Relaciones de posición con las piezas que unen, como SW: "Coincidente1 (Placa<1>,Brida<1>)",
   en la carpeta general y en la de cada componente. El nombre guardado sigue siendo
   "Coincidente1" (como en SW): las piezas se dibujan al lado, sin tocar el archivo.
+- Arreglo (visto por el usuario): con Redondeo abierto, apretar Extruir corte y contestar "Sí" a
+  "Un diálogo ya está abierto" dejaba el Redondeo escuchando: ya no se podían elegir caras y
+  salía "QListWidget already deleted". Ahora (`swui/fork/panel_guard.py`): (1) como SW, otro
+  comando de la cinta cancela el panel abierto del fork y arranca, sin la pregunta (vista, medir,
+  archivo y deshacer no lo cancelan); (2) red de seguridad: si FreeCAD cierra un panel del fork
+  por su cuenta, su escucha se apaga solo y limpia lo que dibujó.
 
 ## 0.10.0 — 2026-10-18
 

@@ -282,9 +282,16 @@ class _PickObserver:
     """Toda selección (vista o árbol) mientras el panel está abierto va al panel."""
 
     def __init__(self, panel):
+        from swui.fork import panel_guard
+
         self.panel = panel
+        panel_guard.track(panel)
 
     def addSelection(self, _doc, _obj, _sub, _pnt):
+        from swui.fork import panel_guard
+
+        if panel_guard.orphaned(self):  # FreeCAD cerró el panel sin avisar: no tocar la selección
+            return
         if not self.panel.busy:
             QtCore.QTimer.singleShot(0, self.panel.take_selection)
 
@@ -783,7 +790,12 @@ class SwPanel:
             except Exception:
                 pass  # se deshizo (Cancelar en uno nuevo): ya no existe
             self.pick_style = None
-        _state["panel"] = None
+        if _state["panel"] is self:  # otro panel pudo abrirse ya (panel cerrado por FreeCAD)
+            _state["panel"] = None
+
+    def _orphaned(self):
+        """FreeCAD cerró el panel sin Cancelar (panel_guard): sacar lo dibujado y el escucha."""
+        self._close()
 
     def _nothing(self):
         return False
