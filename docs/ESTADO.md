@@ -216,7 +216,9 @@ Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o come
     momento: lo suprimido no se veía gris (el estilo del árbol pisa el color; ahora con el velo de
     `tree_overlay`, gancho `EXTRA_GREY`). Pedido del usuario (31/10): nombres con las piezas como
     SW, "Coincidente1 (Placa<1>,Brida<1>)", en las dos carpetas; el Label no cambia (dibujado al
-    lado, gancho `EXTRA_TEXT`; F2 renombra solo el nombre, como SW). Probado con guion y por
+    lado, gancho `EXTRA_TEXT`; F2 renombra solo el nombre, como SW). Pedido del usuario (31/10):
+    al abrir un ensamblaje, "Joints" pasa a "Relaciones de posición" (`mates_sw.relabel_groups`;
+    solo si conserva el nombre de FreeCAD). Probado con guion. Probado con guion y por
     Claude con el mouse (31/10): las dos carpetas, desplazar el árbol, F2 (el editor muestra solo
     el nombre) y renombrar (las piezas siguen al lado en las dos carpetas). Ojo: un
     ensamblaje que no se creó dentro del fork deja la carpeta general como "Joints" (el original

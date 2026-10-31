@@ -1106,6 +1106,15 @@ def _check_feature_tree(commands, mw, layout, hooked):
             or mtr.suffix_from([]) != "" or mtr.bare_component("Rodillo<2>") != "Rodillo<2>"):
         print("  FEHLER: fork: relaciones debajo de cada componente")
         return False
+    # Carpetas del ensamblaje con nombre SW al abrir ("Joints" -> "Relaciones de posición")
+    msw_ = importlib.import_module("swui.fork.mates_sw")
+    rel_ = ["Relaciones de posición", "Mates", "Verknüpfungen"]
+    if (msw_.group_label("Joints", "Joints", rel_) != "Relaciones de posición"
+            or msw_.group_label("Mates", "Joints", rel_) != "Relaciones de posición"
+            or msw_.group_label("Relaciones de posición", "Joints", rel_) is not None
+            or msw_.group_label("Mis uniones", "Joints", rel_) is not None):
+        print("  FEHLER: fork: nombre SW de las carpetas del ensamblaje")
+        return False
     # Otro comando con un panel del fork abierto: lo cancela (como SW), salvo vista/medir/archivo
     pgd = importlib.import_module("swui.fork.panel_guard")
     if (not pgd.cancels_panel("PartDesign_Pocket") or not pgd.cancels_panel("SWUI_MoveFace")

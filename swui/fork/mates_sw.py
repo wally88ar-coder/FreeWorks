@@ -363,6 +363,7 @@ def _relabel_later(doc_name):
     try:
         doc = FreeCAD.getDocument(doc_name)
         relabel_grounded(doc)
+        relabel_groups(doc)
         hide_markers([o for o in doc.Objects if hasattr(o, "JointType") and not hasattr(o, "ObjectToGround")])
     except Exception:
         pass
@@ -390,6 +391,37 @@ def relabel_grounded(doc):
         target = getattr(o, "ObjectToGround", None)
         if target is not None and o.Label.startswith("GroundedJoint"):
             o.Label = grounded_label(target.Label)
+
+
+def group_label(label, internal_name, sw_names):
+    """
+    Nombre SW para una carpeta del ensamblaje ("Joints" -> "Relaciones de posición"), o None si
+    no hay que tocarla. Solo se cambia si conserva el nombre de FreeCAD (= su nombre interno) o
+    el de otro idioma del fork; si el usuario la renombró, queda como está.
+    sw_names: el nombre en el idioma actual primero, después los otros.
+    """
+    if not sw_names or label == sw_names[0]:
+        return None
+    if label == internal_name or label in sw_names:
+        return sw_names[0]
+    return None
+
+
+def relabel_groups(doc):
+    """
+    Carpetas del ensamblaje con nombre SW también en ensamblajes que no se crearon dentro del fork
+    (el original las nombra solo al crearlas; un archivo armado en FreeCAD solo decía "Joints").
+    """
+    from swui import naming
+
+    for o in doc.Objects:
+        german = naming.GROUP_NAMES.get(getattr(o, "TypeId", ""))
+        if german is None:
+            continue
+        names = [naming.tree(german)] + [v for v in naming.tree_variants(german) if v != naming.tree(german)]
+        want = group_label(o.Label, o.Name, names)
+        if want:
+            o.Label = want
 
 
 class _CompanionObserver:
