@@ -16,6 +16,16 @@ hechas y probadas con el mouse; arreglo de paneles trabados; fase 6 acordada).
 Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o comentó el usuario.
 
 ## Fase actual
+- **31/10 noche, pruebas "Vos" de las fases 1 a 4 (pedido del usuario):** en el checklist la
+  columna "Vos" dice "Probado" en las que Claude hizo con mouse y teclado (casi todas comparadas
+  con SW). Las cuatro que solo se habían hecho con guiones se repitieron con el mouse: DXF por
+  lotes desde un ensamblaje (Soporte_2mm.dxf y Tapa_2mm.dxf, capas y medidas bien), Ecuaciones
+  (dos variables globales y dos cotas; Alto 50 -> 60 y la masa sigue, 1,778 -> 2,532 kg; la
+  franja muestra "Ecuaciones"), la franja (clic en Sólidos despliega, doble clic en el material
+  abre Material) y el aviso de material faltante (sale al abrir, "Sí" lo recrea y lo vuelve a
+  asignar). Arreglado en el momento: el botón del aviso decía "Yes" (ahora "Sí", `es_texts`).
+  Quedan solo las que necesitan algo del usuario: STEP suyo (Convertir en chapa y Mover cara),
+  una pieza suya en Propiedades físicas y abrir el DXF en CypCut.
 - **Fase 5 CERRADA (31/10, decisión del usuario).** Las pruebas "Vos" quedan como hechas por
   Claude con el conjunto realista (fase5_real); lo que aparezca con conjuntos del usuario se
   arregla sobre la marcha.

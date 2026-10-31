@@ -30,6 +30,8 @@ BUTTONS = {
     "&Discard": "&Descartar",
     "Cancel": "Cancelar",
     "&Cancel": "&Cancelar",
+    "Yes": "Sí",  # p. ej. el aviso "Material faltante" (visto con el mouse, 31/10)
+    "&Yes": "&Sí",
 }
 
 MESSAGES = [

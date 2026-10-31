@@ -432,6 +432,7 @@ Neueste Version oben. / Newest version first.
 - Relaciones de posición con las piezas que unen, como SW: "Coincidente1 (Placa<1>,Brida<1>)",
   en la carpeta general y en la de cada componente. El nombre guardado sigue siendo
   "Coincidente1" (como en SW): las piezas se dibujan al lado, sin tocar el archivo.
+- Botón "Yes" en castellano ("Sí") en los avisos de FreeCAD, por ejemplo "Material faltante".
 - Ensamblajes que no se crearon dentro del fork: al abrirlos, la carpeta "Joints" (y las demás
   carpetas del ensamblaje) pasa a "Relaciones de posición", como SW; si el usuario la renombró,
   no se toca.

@@ -1072,7 +1072,8 @@ def _check_feature_tree(commands, mw, layout, hooked):
             or not est.is_new_datum_title("Insertar longitud") or est.is_new_datum_title("Material")
             or est.inserted_text("Placa", 1) != "Placa : 1 insertado"
             or est.inserted_text("Placa : 1 insertado", 1) != "Placa : 2 insertados"
-            or est.inserted_text("Placa : 1 inserted", -1) != "Placa"):
+            or est.inserted_text("Placa : 1 inserted", -1) != "Placa"
+            or est.BUTTONS.get("&Yes") != "&Sí"):
         print("  FEHLER: fork: textos en castellano / Escape en la cota nueva")
         return False
     msw_ = sys.modules.get("swui.fork.mates_sw") or importlib.import_module("swui.fork.mates_sw")
