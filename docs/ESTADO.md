@@ -183,14 +183,22 @@ Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o come
       vínculo); clic derecho "Ver relaciones de posición" las selecciona en la carpeta.
     - Límites solo en la concéntrica (FreeCAD los tiene solo en uniones cilíndricas, de giro y lineales).
     - Matriz: un vínculo con copias por semilla ("MatrizLineal1 Tornillo"), datos en un VarSet.
-    - Versión opuesta: archivo "<pieza>-opuesta" en la carpeta de la original, sin preguntar.
+    - Versión opuesta: al aceptar pide nombre y carpeta (como SW, decidido 31/10); propone
+      "<pieza>-opuesta" en la carpeta de la original.
     - Taladro: cada punto de posición lleva un círculo de 0,5 mm atado (el taladro solo toma
       círculos de la copia del croquis).
     - Plano/eje/punto hecho solo sobre el origen: queda fijo al aceptar (el motor ignora uno apoyado).
     - Matrices, simetrías, operaciones de ensamblaje y referencias se editan con clic derecho
       "Editar operación" (el doble clic sobre esos objetos es de FreeCAD o no hace nada en 1.1.4).
-  - Pendiente que decida el usuario: pieza repetida en el ensamblaje con taladro (hoy sigue a la
-    primera instancia y el panel avisa); nombre automático de la versión opuesta.
+  - Decidido por el usuario (31/10): pieza repetida en el ensamblaje con taladro, como SW (el
+    agujero va al archivo de la pieza y aparece en todas sus copias, ubicado según la primera
+    instancia; el panel avisa). Queda como está.
+  - Decidido por el usuario (31/10): taladro y corte de ensamblaje quedan como están (el agujero
+    va a la pieza, como SW con "Propagar operación a piezas"; sin casilla nueva).
+    A futuro (si FreeCAD cambia o aparece algo robusto): corte solo de ensamblaje. Idea sin probar:
+    el agujero queda en la pieza debajo de la barra de retroceso (Tip antes del agujero) y el
+    componente del ensamblaje enlaza a la operación del agujero en vez del cuerpo. Riesgos: que se
+    rompan las relaciones (atadas a subelementos del cuerpo) y operaciones nuevas quedando debajo.
   - Hecho 31/10: aviso visible al abrir sola una pieza con agujeros del ensamblaje (cartelito de
     notificación de FreeCAD; con el ensamblaje abierto, solo la vista de informes) y la cinta pasa
     sola a Ensamblaje (y vuelve a Operaciones al pasar a una pieza), `swui/fork/asm_tab.py`.

@@ -416,6 +416,8 @@ Neueste Version oben. / Newest version first.
   ejes de las relaciones; borrar una matriz ya no tira errores rojos en inglés; "Ir a la pieza"
   (antes "Go to Linked Object") a mano en el menú del componente; el Cuerpo de la versión
   opuesta lleva el nombre de la pieza (antes "Body").
+- Versión opuesta: al aceptar la simetría pide nombre y carpeta del archivo nuevo, como SW
+  (propone "<pieza>-opuesta" junto a la original; Cancelar deja el panel abierto).
 
 ## 0.10.0 — 2026-10-18
 

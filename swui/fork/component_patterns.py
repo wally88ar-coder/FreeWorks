@@ -15,7 +15,8 @@ Todo con objetos nativos (el archivo abre sin el addon):
   apoyado en lo que se eligió (arista, cara, eje), así que sigue a la pieza.
 - Simetría, misma pieza: App::Link con expresión de espejo (dos espejos = posición rígida):
   `Plano * F * Plano^-1 * Semilla * S` (S = espejo propio de la pieza simétrica).
-- Simetría, versión opuesta: archivo nuevo "<pieza>-opuesta.FCStd" con un SubShapeBinder de la
+- Simetría, versión opuesta: archivo nuevo (al aceptar pide nombre y carpeta, como SW; propone
+  "<pieza>-opuesta.FCStd" en la carpeta de la original) con un SubShapeBinder de la
   pieza original + Part::Mirroring + Cuerpo; se reconstruye solo al abrirlo si la original cambió.
 - El motor de cálculo del ensamblaje mueve las piezas sin avisar a quien depende de ellas: un
   observador avisa (touch) a las copias y a los ejes/planos apoyados (decisión del usuario,
@@ -360,8 +361,12 @@ def _label_arrays(doc_name, data_name):
         pass
 
 
-def make_mirror(asm, seeds, plane, opposite=(), label=None, data=None, folder=None):
-    """Simetría de componentes: copias (misma pieza) o versiones opuestas (archivo nuevo)."""
+def make_mirror(asm, seeds, plane, opposite=(), label=None, data=None, folder=None, paths=None):
+    """Simetría de componentes: copias (misma pieza) o versiones opuestas (archivo nuevo).
+
+    paths: {nombre de la semilla: archivo elegido} para las opuestas nuevas (si falta, el automático).
+    """
+    paths = paths or {}
     v = data or _data(asm, "mirror", label or next_title({o.Label for o in asm.Document.Objects}, "mirror"))
     for prop in (PLANE,):
         if not hasattr(v, prop):
@@ -373,7 +378,7 @@ def make_mirror(asm, seeds, plane, opposite=(), label=None, data=None, folder=No
     copies, warnings = [], []
     for seed in seeds:
         if seed in opposite:
-            target = opposite_part(seed, folder)
+            target = opposite_part(seed, folder, paths.get(seed.Name))
             s_mat = reflection(FreeCAD.Placement(FreeCAD.Vector(), FreeCAD.Rotation(FreeCAD.Vector(0, 0, 1),
                                                                                       FreeCAD.Vector(1, 0, 0))))
         else:
@@ -407,13 +412,8 @@ def _back_to(asm):
         pass
 
 
-def opposite_part(seed, folder=None):
-    """Body del archivo '<pieza>-opuesta' (lo crea si no existe): espejo nativo atado a la original."""
-    source = seed.LinkedObject
-    src_doc = source.Document
-    folder = folder or os.path.dirname(src_doc.FileName or "") or os.path.dirname(seed.Document.FileName or "")
-    base = src_doc.Label if src_doc is not seed.Document else source.Label
-    # ¿ya hay un opuesto de esta pieza abierto o en la carpeta?
+def existing_opposite(source):
+    """Body de la versión opuesta ya abierta de esta pieza, o None."""
     for d in FreeCAD.listDocuments().values():
         for o in d.Objects:
             if getattr(o, OPPOSITE_MARK, None) and getattr(o, "Support", None) and \
@@ -421,10 +421,34 @@ def opposite_part(seed, folder=None):
                 body = next((b for b in d.Objects if b.TypeId == "PartDesign::Body"), None)
                 if body is not None:
                     return body
+    return None
+
+
+def default_opposite_path(seed, folder=None):
+    """Archivo que se propone: '<pieza>-opuesta.FCStd' en la carpeta de la original."""
+    source = seed.LinkedObject
+    src_doc = source.Document
+    folder = folder or os.path.dirname(src_doc.FileName or "") or os.path.dirname(seed.Document.FileName or "")
+    base = src_doc.Label if src_doc is not seed.Document else source.Label
     existing = {os.path.splitext(f)[0] for f in os.listdir(folder)} if os.path.isdir(folder) else set()
-    name = opposite_name(base, existing)
+    return os.path.normpath(os.path.join(folder, opposite_name(base, existing) + ".FCStd"))
+
+
+def opposite_part(seed, folder=None, path=None):
+    """Body del archivo de la versión opuesta (lo crea si no existe): espejo nativo atado a la original.
+
+    path: archivo elegido por el usuario (como SW, que pide nombre y carpeta); si falta, el automático.
+    """
+    source = seed.LinkedObject
+    body = existing_opposite(source)
+    if body is not None:
+        return body
+    path = path or default_opposite_path(seed, folder)
+    if not path.lower().endswith(".fcstd"):
+        path += ".FCStd"
+    name = os.path.splitext(os.path.basename(path))[0]
     doc = FreeCAD.newDocument(name)
-    doc.saveAs(os.path.join(folder, name + ".FCStd"))  # antes del binder: "Owner document not saved"
+    doc.saveAs(path)  # antes del binder: "Owner document not saved"
     binder = doc.addObject("PartDesign::SubShapeBinder", "Original")
     binder.Support = [(source, ("",))]
     binder.addProperty("App::PropertyBool", OPPOSITE_MARK, "SW", "Versión opuesta de LikeSolidWorks UI")
@@ -710,7 +734,7 @@ class PatternPanel:
         sl.addWidget(self.list)
         if self.kind == "mirror":
             self.opp = QtWidgets.QCheckBox("Versión opuesta (pieza nueva espejada)")
-            self.opp.setToolTip("Para piezas que no son simétricas: crea '<pieza>-opuesta.FCStd' atada a la original")
+            self.opp.setToolTip("Para piezas que no son simétricas: crea una pieza nueva atada a la original (al aceptar pide nombre y carpeta)")
             self.opp.toggled.connect(self._toggle_opposite)
             self.list.currentRowChanged.connect(lambda *_a: self._show_opposite())
             sl.addWidget(self.opp)
@@ -912,6 +936,11 @@ class PatternPanel:
             self.message.setText("Falta elegir la dirección o los componentes.")
             self.message.setVisible(True)
             return False
+        paths = {}
+        if self.kind == "mirror" and self.opposite:
+            paths = self._ask_paths()
+            if paths is None:  # canceló el nombre: el panel sigue abierto, como SW
+                return False
         self.busy = True
         try:
             if self.kind == "mirror" and self.opposite:
@@ -919,7 +948,7 @@ class PatternPanel:
                 for c in copies_of(self.data):
                     self.doc.removeObject(c.Name)
                 self.doc.removeObject(self.data.Name)
-                self.data, _w = make_mirror(self.asm, self.seeds, plane, self.opposite, label)
+                self.data, _w = make_mirror(self.asm, self.seeds, plane, self.opposite, label, paths=paths)
             self.doc.recompute()
             self.doc.commitTransaction()
         except Exception:
@@ -927,6 +956,24 @@ class PatternPanel:
             self.doc.abortTransaction()
         self._close()
         return True
+
+    def _ask_paths(self):
+        """Nombre y carpeta de cada versión opuesta nueva (las que ya existen no se preguntan)."""
+        paths, taken = {}, {os.path.normcase(d.FileName) for d in FreeCAD.listDocuments().values() if d.FileName}
+        for seed in self.seeds:
+            if seed not in self.opposite or existing_opposite(seed.LinkedObject) is not None:
+                continue
+            path = ask_opposite_path(seed, default_opposite_path(seed))
+            if not path:
+                return None
+            if not path.lower().endswith(".fcstd"):
+                path += ".FCStd"
+            if os.path.normcase(path) in taken or path in paths.values():
+                self.message.setText("'%s' ya está abierto: elegí otro nombre." % os.path.basename(path))
+                self.message.setVisible(True)
+                return None
+            paths[seed.Name] = path
+        return paths
 
     def reject(self):
         self.busy = True
@@ -946,6 +993,14 @@ class PatternPanel:
             self.asm.recompute(True)
         except Exception:
             pass
+
+
+def ask_opposite_path(seed, proposed):
+    """Guardar como de la versión opuesta: propone '<pieza>-opuesta.FCStd' en la carpeta de la original."""
+    path, _f = QtWidgets.QFileDialog.getSaveFileName(
+        FreeCADGui.getMainWindow(), "Versión opuesta de %s: nombre y carpeta" % seed.Label, proposed,
+        "Documento de FreeCAD (*.FCStd)")
+    return path
 
 
 def _existing_ref(obj):
