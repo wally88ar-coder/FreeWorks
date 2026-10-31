@@ -150,8 +150,10 @@ Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o come
 - **31/10, problema del usuario arreglado:** Redondeo abierto -> Extruir corte -> "Sí" dejaba el
   escucha del Redondeo huérfano (no se podían elegir caras). `panel_guard.py`: otro comando de la
   cinta cancela el panel del fork como SW, y red de seguridad para cuando FreeCAD cierra el panel
-  solo. Probado con guiones (los dos casos). Falta: que el usuario reinicie FreeCAD y repita sus
-  pasos. Queda de FreeCAD: con "Sí", el Redondeo nuevo (fallido) queda en el árbol y en edición;
+  solo. Probado con guiones (los dos casos) y por Claude con el mouse en un FreeCAD nuevo (31/10):
+  Redondeo -> Extruir corte desde la cinta cancela el Redondeo sin preguntar (no queda
+  "Redondeo1"), se abre "seleccionar un plano", la cara de arriba abre el croquis, y después una
+  cara se elige normal fuera de los comandos. Queda de FreeCAD: con "Sí", el Redondeo nuevo (fallido) queda en el árbol y en edición;
   desde la cinta ya no pasa (se cancela bien).
 - **Fase 6 (nueva, 31/10, decisión del usuario): chequeo de compatibilidad**, como fase aparte y
   sin empezar (plan en CLAUDE.md > Fases). `mates_tree.self_check()` ya está listo para usarla.
