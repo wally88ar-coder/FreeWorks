@@ -406,3 +406,17 @@
   del objeto enlazado y recalcular el vínculo antes de cambiar una referencia ("Shape index out of
   bound"). Arreglo en `mate_refs.py`. Sin interfaz, el motor mueve la pieza fija (la unión de
   fijar no cuenta): medir posiciones relativas.
+- Renglones propios dentro del árbol (análisis para "relaciones debajo de cada componente",
+  2026-10-31, código de FreeCAD 1.1.4 `src/Gui/Tree.cpp`, `ViewProviderLink.cpp`): FreeCAD
+  revisa `item.type() == ObjectType` antes de tratar un renglón como objeto en casi todo el
+  árbol (menú, selección, preselección, expandir, arrastrar, ordenar); las excepciones
+  (`get/applyExpandedSnapshot`) solo usan funciones de QTreeWidgetItem. Un QTreeWidgetItem
+  propio con otro `type` (UserType+N) dentro de un componente convive bien: probado con guion
+  (cambiar la pieza, cerrar/abrir el componente, deshacer, guardar, crear y borrar objetos).
+  PERO `DocumentItem::populateItem` BORRA los renglones que no reconoce cuando cambian los hijos
+  del componente (operación nueva en la pieza): hay que volver a ponerlos (señal
+  `rowsAboutToBeRemoved` del modelo). Elegir un renglón propio hace que FreeCAD vacíe la
+  selección (`onItemSelectionChanged`). Vía nativa cerrada: `ViewProviderLink::claimChildren`
+  copia los hijos de la pieza enlazada sin llamar a extensiones, y `addExtension` de Python solo
+  sirve en objetos Python. Upstream (issue #23721) eligió un comando "seleccionar uniones
+  asociadas" en vez de mostrarlas bajo la pieza.
