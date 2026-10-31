@@ -2,31 +2,51 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 # SPDX-FileCopyrightText: 2026 wally88ar-coder
 """
-Mover cara como en SOLIDWORKS (fase 4): Equidistanciar / Trasladar / Girar, solo caras planas.
+Mover cara como en SOLIDWORKS (fase 4): Equidistanciar / Trasladar / Girar.
 
 Panel como el PropertyManager de SW (captura del usuario, 2026-10-26): tipo, caras, y en
-Parámetros la dirección (Trasladar), el eje de giro (Girar), Invertir dirección, distancia,
-ΔX ΔY ΔZ o ángulo. Sirve en piezas propias y en sólidos importados (STEP): a un sólido suelto
-se le arma un Cuerpo que arranca de él.
+Parámetros la condición final y la dirección (Trasladar), el eje de giro (Girar), Invertir
+dirección, distancia, ΔX ΔY ΔZ o ángulo. Sirve en piezas propias y en sólidos importados
+(STEP): a un sólido suelto se le arma un Cuerpo que arranca de él.
 
 Todo nativo (el addon es un asistente, docs/ESTADO.md "Análisis: ..."), verificado en 1.1.4:
-- Equidistanciar / Trasladar = mover la cara según su normal: Extruir (PartDesign::Pad) con la
-  cara misma como perfil si sale, Cortar (PartDesign::Pocket) si entra. De Trasladar cuenta
-  solo la componente normal (correr una cara plana dentro de su plano no la cambia). Con caras
-  vecinas inclinadas queda un escalón en vez de prolongarlas (límite conocido).
+- Equidistanciar / Trasladar una cara plana = moverla según su normal: Extruir
+  (PartDesign::Pad) con la cara misma como perfil si sale, Cortar (PartDesign::Pocket) si
+  entra. De Trasladar cuenta solo la componente normal (correr una cara plana dentro de su
+  plano no la cambia). Con caras vecinas inclinadas queda un escalón en vez de prolongarlas
+  (límite conocido).
+- Condición final de Trasladar, como SW (2026-10-31): Hasta la superficie = Pad/Pocket "Hasta
+  cara"; Equidistante de la superficie = lo mismo con Offset; Hasta el vértice = "Hasta cara"
+  contra un plano de referencia oculto que pasa por el vértice, paralelo a la cara (OXY sobre
+  vértice, arista de la cara y cara: sigue a la pieza); Hasta el sólido = hasta la primera
+  cara de ese sólido que encuentra la cara al avanzar (elegida al aplicar; "Hasta forma" de
+  FreeCAD no llega a un sólido entero, probado).
 - Girar alrededor de una arista recta de la cara = Ángulo de salida (PartDesign::Draft): plano
   neutro = una cara plana que contiene la arista; dirección de tiro = una arista recta (o la
   normal de una cara plana) perpendicular a la arista dentro de la cara. Prolonga bien las
   vecinas, también inclinadas.
+- Girar alrededor de otro eje paralelo a la cara (arista de otra cara, eje de referencia...):
+  girar la cara alrededor de ese eje es lo mismo que girarla el mismo ángulo alrededor de la
+  recta donde la cara girada corta a la original (corrida tan(ángulo/2) por la altura del
+  eje). Ángulo de salida con un plano neutro y una línea de tiro ocultos ubicados en esa recta
+  (el Draft no acepta un plano como tiro, sí una línea: probado). Quedan fijos: si la pieza
+  cambia, se reubican al editar el Mover cara.
+- Equidistanciar una cara cilíndrica entera (agujero o eje, 2026-10-31) = Ranura
+  (PartDesign::Groove) si quita material o Revolución si agrega, de un anillo (croquis oculto
+  en un plano que contiene el eje) entre el radio de la cara y el nuevo, a lo largo de la cara.
+  Agujero de Ø10 a Ø14: saca exactamente π·(7²-5²)·largo (probado). El croquis queda fijo: si
+  después cambia el agujero, editar el Mover cara lo reubica.
 Si cambia el sentido (agregar <-> quitar material) o el tipo, la operación se cambia por la
 otra (mientras nada más use sus caras). La distancia o el ángulo se pueden atar a ecuaciones.
+Los objetos auxiliares (planos, líneas, croquis) se nombran en "aux" de la marca.
 
 Marca: propiedad oculta SWUI_MoveFace (texto JSON con lo elegido en el panel). Nombre estable
 para siempre (docs/ESTADO.md, Decisiones): sin el addon el archivo abre y recalcula igual (es
-un Pad / Pocket / Draft común); con el addon, editar abre este panel.
+un Pad / Pocket / Draft / Groove / Revolution común); con el addon, editar abre este panel.
 """
 
 import json
+import math
 import traceback
 
 import FreeCAD
@@ -39,8 +59,15 @@ COMMAND = "SWUI_MoveFace"
 MARK = "SWUI_MoveFace"
 LABEL = "Mover cara"
 PAD, POCKET, DRAFT = "PartDesign::Pad", "PartDesign::Pocket", "PartDesign::Draft"
+GROOVE, REVOLUTION = "PartDesign::Groove", "PartDesign::Revolution"
+NATIVE_NAMES = {PAD: "Pad", POCKET: "Pocket", DRAFT: "Draft", GROOVE: "Groove", REVOLUTION: "Revolution"}
 OFFSET, TRANSLATE, ROTATE = "offset", "translate", "rotate"
 MODES = (("Equidistanciar", OFFSET), ("Trasladar", TRANSLATE), ("Girar", ROTATE))
+# Condición final de Trasladar, con los textos de SW 2018 (vistos en el SW del usuario, 2026-10-31)
+END_DEPTH, END_VERTEX, END_SURFACE, END_OFFSET, END_BODY = "depth", "vertex", "surface", "offset_surface", "body"
+ENDS = (("Hasta profundidad especificada", END_DEPTH), ("Hasta el vértice", END_VERTEX),
+        ("Hasta la superficie", END_SURFACE), ("Equidistante de la superficie", END_OFFSET),
+        ("Hasta el sólido", END_BODY))
 TOL = 1e-6
 
 
@@ -65,11 +92,34 @@ def normal_move(mode, normal, distance=0.0, flip=False, direction=None, delta=(0
     return dot(delta, normal)
 
 
-def native_type(mode, move):
+def native_type(mode, move, curved=False):
     """Operación nativa que hace el trabajo."""
     if mode == ROTATE:
         return DRAFT
+    if curved:
+        return REVOLUTION if move > 0 else GROOVE
     return PAD if move > 0 else POCKET
+
+
+def hinge_shift(height, angle):
+    """
+    Cara girada `angle` grados alrededor de un eje paralelo a ella, a `height` de su plano
+    (positivo = del lado de la normal): dónde corta la cara girada al plano de la cara, medido
+    desde el pie del eje sobre u×n (u = sentido del eje, giro positivo a la derecha de u).
+    """
+    return -height * math.tan(math.radians(angle) / 2.0)
+
+
+def ring_radii(radius, move, away):
+    """
+    Cara cilíndrica corrida `move` según su normal (positivo = agrega material). away: la normal
+    se aleja del eje (eje macizo) o va hacia él (agujero). -> (radio menor, radio mayor) del
+    anillo que se agrega o se saca, o None si el radio nuevo no da.
+    """
+    new = radius + (move if away else -move)
+    if new <= TOL:
+        return None
+    return min(radius, new), max(radius, new)
 
 
 def next_label(used):
@@ -101,7 +151,8 @@ def remember_mode(mode):
 def read_spec(text):
     """Lo guardado en SWUI_MoveFace (JSON) con valores por omisión."""
     spec = {"mode": OFFSET, "flip": False, "distance": 10.0, "delta": [0.0, 0.0, 0.0],
-            "dir": None, "hinge": "", "angle": 10.0}
+            "dir": None, "hinge": "", "angle": 10.0, "end": END_DEPTH, "target": None, "gap": 10.0,
+            "axis": None, "aux": {}, "faces": []}
     try:
         data = json.loads(text or "{}")
         if isinstance(data, dict):
@@ -110,6 +161,8 @@ def read_spec(text):
         pass
     if spec["mode"] not in (OFFSET, TRANSLATE, ROTATE):
         spec["mode"] = OFFSET
+    if spec["end"] not in [v for _t, v in ENDS]:
+        spec["end"] = END_DEPTH
     return spec
 
 
@@ -145,15 +198,52 @@ def _on_plane(point, origin, normal):
     return abs((point - origin).dot(normal)) < 1e-4
 
 
-def faces_problem(shape, subs, same_plane=False):
-    """Las caras elegidas sirven? (planas, mirando para el mismo lado). "" si sí."""
+def is_full_cylinder(face):
+    """Cara cilíndrica entera (agujero o eje de 360°)."""
+    try:
+        if type(face.Surface).__name__ != "Cylinder":
+            return False
+        u0, u1 = face.ParameterRange[:2]
+        return abs(abs(u1 - u0) - 2 * math.pi) < 1e-6
+    except Exception:
+        return False
+
+
+def cylinder_data(face):
+    """(centro del anillo en el eje, sentido del eje, radio, largo, la normal se aleja del eje)."""
+    surf = face.Surface
+    axis = FreeCAD.Vector(surf.Axis).normalize()
+    center = FreeCAD.Vector(surf.Center)
+    s = [(v.Point - center).dot(axis) for v in face.Vertexes]
+    if not s:  # sin vértices (cilindro de costura): los extremos por la caja
+        s = [(p - center).dot(axis) for p in (face.BoundBox.getPoint(i) for i in range(8))]
+    s0, s1 = min(s), max(s)
+    u0, u1, v0, v1 = face.ParameterRange
+    point = face.valueAt((u0 + u1) / 2.0, (v0 + v1) / 2.0)
+    radial = point - (center + axis * (point - center).dot(axis))
+    away = face_normal(face).dot(radial) > 0
+    return center + axis * s0, axis, surf.Radius, s1 - s0, away
+
+
+def faces_problem(shape, subs, same_plane=False, curved_ok=False):
+    """
+    Las caras elegidas sirven? (planas, mirando para el mismo lado; con curved_ok también UNA
+    cara cilíndrica entera). "" si sí.
+    """
     first = None
     for sub in subs:
         face = dp._element(shape, sub)
         if face is None:
             return "Hay caras que ya no existen (en rojo): borralas y elegí las nuevas."
         if not is_planar(face):
-            return "Solo se pueden mover caras planas."
+            if not curved_ok:
+                return ("Solo se pueden trasladar o girar caras planas (las cilíndricas, con "
+                        "Equidistanciar).")
+            if not is_full_cylinder(face):
+                return "De las caras curvas, por ahora solo cilíndricas enteras (agujeros y ejes)."
+            if len(subs) > 1:
+                return "Una cara cilíndrica va sola (para otra, otro Mover cara)."
+            return ""
         n = face_normal(face)
         if first is None:
             first = (face, n)
@@ -242,6 +332,92 @@ def direction_of(obj, sub):
     return None
 
 
+def _local(body, placement_or_vec):
+    """Global -> coordenadas del Cuerpo (las de obj.Shape de sus operaciones)."""
+    inv = body.getGlobalPlacement().inverse() if body is not None else FreeCAD.Placement()
+    if isinstance(placement_or_vec, FreeCAD.Vector):
+        return inv.multVec(placement_or_vec)
+    return inv.multiply(placement_or_vec)
+
+
+def axis_of(ref, base, body):
+    """
+    Eje de giro elegido: arista recta (de esta pieza o de otra), eje o recta de referencia.
+    -> (punto, sentido) en coordenadas del Cuerpo, o None.
+    """
+    obj, sub = ref
+    try:
+        if sub:
+            if obj is base:
+                edge = base.Shape.getElement(sub)
+                if not _is_line(edge):
+                    return None
+                return edge.Vertexes[0].Point, _edge_dir(edge)
+            from swui.fork import sketch_model_edges as sme
+
+            edge = sme._global_shape(obj).getElement(sub)
+            if not _is_line(edge):
+                return None
+            a, b = _local(body, edge.Vertexes[0].Point), _local(body, edge.Vertexes[-1].Point)
+            d = b - a
+            return (a, d.normalize()) if d.Length > TOL else None
+        plc = _local(body, obj.getGlobalPlacement())
+        local = FreeCAD.Vector(1, 0, 0) if obj.TypeId == "App::Line" else FreeCAD.Vector(0, 0, 1)
+        if obj.TypeId not in ("App::Line", "PartDesign::Line"):
+            return None
+        return plc.Base, plc.Rotation.multVec(local).normalize()
+    except Exception:
+        return None
+
+
+def rotation_aux(face, point, u, angle):
+    """
+    Girar la cara plana `angle` grados (con signo) alrededor del eje (point, u), paralelo a ella:
+    (Placement del plano neutro, Placement de la línea de tiro) para un Ángulo de salida de
+    `abs(angle)` sin invertir, o un problema (texto).
+    """
+    n = face_normal(face)
+    if abs(u.dot(n)) > 1e-6:
+        return None, None, "El eje de giro tiene que ser paralelo a la cara."
+    w = u.cross(n).normalize()
+    height = (point - face.Vertexes[0].Point).dot(n)
+    foot = point - n * height
+    hinge = foot + w * hinge_shift(height, angle)
+    # plano neutro: contiene la recta y la normal (su normal es w); tiro: w hacia donde sube la cara
+    pull = w if angle > 0 else w * -1
+    neutral = FreeCAD.Placement(hinge, FreeCAD.Rotation(FreeCAD.Vector(0, 0, 1), w))
+    line = FreeCAD.Placement(hinge, FreeCAD.Rotation(FreeCAD.Vector(0, 0, 1), pull))
+    return neutral, line, ""
+
+
+def first_face_hit(face, normal, target):
+    """
+    Hasta el sólido: la primera cara de `target` (forma, en coordenadas del Cuerpo) que encuentra
+    la cara al avanzar según `normal` (desde su centro). -> ("FaceN", distancia con signo) o None.
+    """
+    import Part
+
+    start = face.CenterOfMass
+    best = None
+    for sign in (1.0, -1.0):
+        ray = Part.LineSegment(start, start + normal * sign * 1e5).toShape()
+        for i, cand in enumerate(target.Faces):
+            try:
+                dist, pts, _info = ray.distToShape(cand)
+            except Exception:
+                continue
+            if dist > 1e-6 or not pts:
+                continue
+            s = (pts[0][0] - start).dot(normal)
+            if abs(s) < 1e-6:
+                continue
+            if best is None or abs(s) < abs(best[1]):
+                best = ("Face%d" % (i + 1), s)
+        if best is not None:
+            return best
+    return None
+
+
 def _links_to(user, obj):
     """¿user usa a obj en algo más que su BaseFeature (caras, aristas, croquis apoyados...)?"""
     for prop in user.PropertiesList:
@@ -264,24 +440,25 @@ def _links_to(user, obj):
 
 class MoveFacePanel(dp.SwPanel):
     TRANSACTION = "Mover cara"
-    NOTHING = "Elegí al menos una cara plana."
+    NOTHING = "Elegí al menos una cara."
 
     @property
     def FAIL(self):
         if self.spec["mode"] == ROTATE:
             # p. ej. girada hacia abajo la cara atravesaría la de enfrente
             return "FreeCAD no pudo girar la cara así: probá con Invertir dirección o un ángulo menor."
+        if self.spec["mode"] == TRANSLATE and self.spec["end"] != END_DEPTH:
+            return "FreeCAD no pudo llevar la cara hasta ahí: probá con otra referencia."
         return "FreeCAD no pudo mover la cara así: probá con una distancia menor."
 
     def __init__(self, obj, faces=None):
         self.spec = read_spec(getattr(obj, MARK, ""))
+        if not isinstance(self.spec.get("aux"), dict):
+            self.spec["aux"] = {}
         self.faces = list(faces) if faces is not None else self._initial_faces(obj)
-        self.direction = None
-        ref = self.spec.get("dir")
-        if ref:
-            ref_obj = obj.Document.getObject(ref[0])
-            if ref_obj is not None:
-                self.direction = (ref_obj, ref[1])
+        self.direction = self._ref(obj.Document, self.spec.get("dir"))
+        self.target = self._ref(obj.Document, self.spec.get("target"))
+        self.axis = self._ref(obj.Document, self.spec.get("axis"))
         self.hinge = self.spec.get("hinge") or ""
         gdoc = FreeCADGui.getDocument(obj.Document.Name)
         if gdoc.getInEdit() is not None and not obj.Document.HasPendingTransaction:
@@ -290,7 +467,16 @@ class MoveFacePanel(dp.SwPanel):
         super().__init__(obj)
 
     @staticmethod
+    def _ref(doc, data):
+        if not data:
+            return None
+        found = doc.getObject(data[0])
+        return (found, data[1]) if found is not None else None
+
+    @staticmethod
     def _initial_faces(obj):
+        if obj.TypeId in (GROOVE, REVOLUTION):
+            return list(read_spec(getattr(obj, MARK, "")).get("faces") or [])
         try:
             ref = obj.Base if obj.TypeId == DRAFT else obj.Profile
             return list(ref[1]) if ref and ref[0] is not None else []
@@ -331,17 +517,26 @@ class MoveFacePanel(dp.SwPanel):
 
         params = QtWidgets.QGroupBox("Parámetros")
         self.params = QtWidgets.QFormLayout(params)
+        self.end = QtWidgets.QComboBox()
+        for text, value in ENDS:
+            self.end.addItem(text, value)
+        self.end.setCurrentIndex(max(0, [v for _t, v in ENDS].index(self.spec["end"])))
+        self.end.currentIndexChanged.connect(self._end_changed)
+        self.target_box = dp.RefBox(self._activate)
         self.dir_box = dp.RefBox(self._activate)
         self.dir_box.setPlaceholderText("Arista, cara plana o plano")
         self.dir_box.setToolTip("Vacía: se usan ΔX ΔY ΔZ")
         self.hinge_box = dp.RefBox(self._activate)
-        self.hinge_box.setPlaceholderText("Arista recta de la cara")
+        self.hinge_box.setPlaceholderText("Arista recta o eje")
+        self.hinge_box.setToolTip("Una arista de la cara, u otra recta paralela a la cara")
         self.flip = QtWidgets.QCheckBox("Invertir dirección")
         self.flip.setChecked(bool(self.spec["flip"]))
         self.flip.toggled.connect(self._changed)
         locked = self._locked()
         self.distance = dp._spin(float(self.spec["distance"]), " mm", 0.001, 100000.0)
         self.distance.valueChanged.connect(self._changed)
+        self.gap = dp._spin(float(self.spec["gap"]), " mm", 0.0, 100000.0)
+        self.gap.valueChanged.connect(self._changed)
         self.deltas = []
         for value in self.spec["delta"]:
             spin = dp._spin(float(value), " mm", -100000.0, 100000.0)
@@ -354,8 +549,10 @@ class MoveFacePanel(dp.SwPanel):
                 spin.setEnabled(False)
                 spin.setToolTip("Controlado por una ecuación")
         self.rows = {}
-        for key, text, widget in (("dir", "Dirección:", self.dir_box), ("hinge", "Eje de giro:", self.hinge_box),
+        for key, text, widget in (("end", "", self.end), ("target", "Hasta:", self.target_box),
+                                  ("dir", "Dirección:", self.dir_box), ("hinge", "Eje de giro:", self.hinge_box),
                                   ("flip", "", self.flip), ("distance", "Distancia:", self.distance),
+                                  ("gap", "Distancia:", self.gap),
                                   ("dx", "ΔX:", self.deltas[0]), ("dy", "ΔY:", self.deltas[1]),
                                   ("dz", "ΔZ:", self.deltas[2]), ("angle", "Ángulo:", self.angle)):
             label = QtWidgets.QLabel(text)
@@ -369,8 +566,8 @@ class MoveFacePanel(dp.SwPanel):
 
     def _locked(self):
         """La distancia o el ángulo atados a una ecuación (en la operación nativa)."""
-        prop = "Angle" if self.obj.TypeId == DRAFT else "Length"
-        return self._has_expression(prop)
+        prop = {DRAFT: "Angle", GROOVE: "", REVOLUTION: ""}.get(self.obj.TypeId, "Length")
+        return bool(prop) and self._has_expression(prop)
 
     def _mode(self, mode):
         if mode == self.spec["mode"]:
@@ -381,27 +578,40 @@ class MoveFacePanel(dp.SwPanel):
         self._refresh()
         self._changed()
 
+    def _end_changed(self, *_a):
+        self.spec["end"] = self.end.currentData()
+        self.target = None
+        self.active = self.target_box if self.spec["end"] != END_DEPTH else self.list
+        self._refresh()
+        self._changed()
+
     def _activate(self, widget):
         self.active = widget
         self._paint_active()
 
     def _paint_active(self):
-        for w in (self.list, self.dir_box, self.hinge_box):
+        for w in (self.list, self.target_box, self.dir_box, self.hinge_box):
             qss = dp.ACTIVE_QSS if w is self.active else ""
             w.setStyleSheet(("QListWidget { %s }" % qss) if (w is self.list and qss) else qss)
 
     def _refresh(self):
-        mode = self.spec["mode"]
+        mode, end = self.spec["mode"], self.spec["end"]
         has_dir = self.direction is not None
-        show = {"dir": mode == TRANSLATE, "hinge": mode == ROTATE, "flip": True,
-                "distance": mode == OFFSET or (mode == TRANSLATE and has_dir),
-                "dx": mode == TRANSLATE and not has_dir, "dy": mode == TRANSLATE and not has_dir,
-                "dz": mode == TRANSLATE and not has_dir, "angle": mode == ROTATE}
+        depth = mode == TRANSLATE and end == END_DEPTH
+        show = {"end": mode == TRANSLATE, "target": mode == TRANSLATE and end != END_DEPTH,
+                "dir": depth, "hinge": mode == ROTATE, "flip": mode != TRANSLATE or end in (END_DEPTH, END_OFFSET),
+                "distance": mode == OFFSET or (depth and has_dir),
+                "gap": mode == TRANSLATE and end == END_OFFSET,
+                "dx": depth and not has_dir, "dy": depth and not has_dir,
+                "dz": depth and not has_dir, "angle": mode == ROTATE}
         for key, (label, widget) in self.rows.items():
             label.setVisible(show[key])
             widget.setVisible(show[key])
+        self.target_box.setPlaceholderText({END_VERTEX: "Vértice", END_SURFACE: "Cara o plano",
+                                            END_OFFSET: "Cara o plano", END_BODY: "Sólido"}.get(end, ""))
+        self.target_box.setText(self._ref_text(self.target))
         self.dir_box.setText(self._ref_text(self.direction))
-        self.hinge_box.setText("Arista<1>" if self.hinge else "")
+        self.hinge_box.setText(self._ref_text(self.axis) if self.axis else ("Arista<1>" if self.hinge else ""))
         row = self.list.currentRow()
         self.list.clear()
         for sub, text in zip(self.faces, dp.sw_names(self.faces)):
@@ -425,6 +635,8 @@ class MoveFacePanel(dp.SwPanel):
             return "Arista<1> (%s)" % obj.Label
         if sub.startswith("Face"):
             return "Cara<1> (%s)" % obj.Label
+        if sub.startswith("Vertex"):
+            return "Vértice<1> (%s)" % obj.Label
         return obj.Label
 
     def remove_current(self, *_a):
@@ -451,7 +663,52 @@ class MoveFacePanel(dp.SwPanel):
             return dp.to_base(self.obj.Shape, sub, self.base.Shape)
         return None
 
+    def _own(self, obj):
+        """¿obj es este Cuerpo (el sólido anterior, la vista previa o el Cuerpo mismo)?"""
+        from swui.fork import feature_tree as ft
+
+        return obj in (self.base, self.obj) or ft.body_of(obj) is ft.body_of(self.obj)
+
+    def _pick_target(self, obj, sub):
+        end = self.spec["end"]
+        ref = None
+        if end == END_BODY:
+            from swui.fork import feature_tree as ft
+
+            if self._own(obj):
+                return False  # hasta OTRO sólido
+            body = ft.body_of(obj)
+            target = body if body is not None else obj
+            try:
+                if not target.Shape.Solids:
+                    return False
+            except Exception:
+                return False
+            ref = (target, "")
+        elif end == END_VERTEX:
+            if not sub.startswith("Vertex"):
+                return False
+            if obj == self.obj:
+                return False  # el vértice de la vista previa se mueve con la cara
+            ref = (obj, sub)
+        else:
+            if sub.startswith("Face"):
+                if obj in (self.base, self.obj):
+                    name = self._to_base(obj, sub)
+                    ref = (self.base, name) if name else None
+                else:
+                    ref = (obj, sub)
+            elif not sub and obj.TypeId in ("App::Plane", "PartDesign::Plane"):
+                ref = (obj, "")
+        if ref is None:
+            return False
+        self.target = ref
+        self.active = self.list
+        return True
+
     def _pick(self, obj, sub):
+        if self.active is self.target_box:
+            return self._pick_target(obj, sub)
         if self.active is self.dir_box:
             ref = None
             if sub and obj in (self.base, self.obj):
@@ -466,13 +723,26 @@ class MoveFacePanel(dp.SwPanel):
             self.direction = ref
             self.active = self.list
             return True
+        if self.spec["mode"] == ROTATE and not sub and obj.TypeId in ("App::Line", "PartDesign::Line"):
+            self.axis, self.hinge = (obj, ""), ""  # eje de referencia
+            self.active = self.list
+            return True
         if sub.startswith("Edge"):
             if self.spec["mode"] != ROTATE:
                 return False
-            name = self._to_base(obj, sub)
-            if name is None or not _is_line(dp._element(self.base.Shape, name)):
+            name = self._to_base(obj, sub) if obj in (self.base, self.obj) else None
+            if name is not None:
+                edge = dp._element(self.base.Shape, name)
+                if edge is None or not _is_line(edge):
+                    return False
+                if self._in_face_plane(edge):
+                    self.hinge, self.axis = name, None  # arista en el plano de la cara: bisagra
+                else:
+                    self.hinge, self.axis = "", (self.base, name)
+            elif obj == self.obj:
                 return False
-            self.hinge = name
+            else:
+                self.hinge, self.axis = "", (obj, sub)  # arista de otra pieza o croquis
             self.active = self.list
             return True
         if not sub.startswith("Face"):
@@ -492,6 +762,56 @@ class MoveFacePanel(dp.SwPanel):
         self.faces = dp.toggle(self.faces, name)
         return True
 
+    def _in_face_plane(self, edge):
+        if not self.faces:
+            return True
+        face = dp._element(self.base.Shape, self.faces[0])
+        if face is None or not is_planar(face):
+            return True
+        n = face_normal(face)
+        origin = face.Vertexes[0].Point
+        return all(_on_plane(v.Point, origin, n) for v in edge.Vertexes)
+
+    # --- auxiliares (planos, líneas y croquis ocultos de la operación)
+
+    def _body(self):
+        from swui.fork import feature_tree as ft
+
+        return ft.body_of(self.obj)
+
+    def _aux(self, key, type_id, name):
+        """El auxiliar `key` de esta operación (lo crea antes de ella en el Cuerpo, oculto)."""
+        aux = self.spec["aux"]
+        found = self.doc.getObject(aux.get(key, "")) if aux.get(key) else None
+        if found is not None and found.TypeId == type_id:
+            return found
+        body = self._body()
+        new = self.doc.addObject(type_id, name)
+        body.insertObject(new, self.obj, False)
+        new.Visibility = False
+        try:
+            new.ViewObject.ShowInTree = False  # como SW: no se ven en el árbol
+        except Exception:
+            pass
+        new.Label = "%s-%s" % (self.obj.Label, name)
+        aux[key] = new.Name
+        return new
+
+    def _drop_aux(self, keep=()):
+        aux = self.spec["aux"]
+        for key in [k for k in aux if k not in keep]:
+            name = aux.pop(key)
+            obj = self.doc.getObject(name)
+            if obj is None:
+                continue
+            try:
+                body = self._body()
+                if body is not None and obj in body.Group:
+                    body.removeObject(obj)
+                self.doc.removeObject(name)
+            except Exception:
+                FreeCAD.Console.PrintError("[SWUI fork] Mover cara, auxiliar:\n%s\n" % traceback.format_exc())
+
     # --- operación nativa
 
     def _normal(self):
@@ -499,18 +819,18 @@ class MoveFacePanel(dp.SwPanel):
         return face_normal(face)
 
     def _swap(self, type_id):
-        """Cambiar la operación por otra (Pad <-> Pocket <-> Draft), en el mismo lugar del Cuerpo."""
-        from swui.fork import feature_tree as ft
+        """Cambiar la operación por otra (Pad <-> Pocket <-> Draft...), en el mismo lugar del Cuerpo."""
         from swui.fork import multibody
 
         old = self.obj
-        body = ft.body_of(old)
+        body = self._body()
         if body is None:
             return "La operación no está en un Cuerpo."
-        if any(u is not body and _links_to(u, old) for u in old.InList):
+        aux_names = set(self.spec["aux"].values())
+        if any(u is not body and u.Name not in aux_names and _links_to(u, old) for u in old.InList):
             return ("Otras operaciones usan esta cara movida: para pasar de agregar a quitar material "
                     "(o a girar) hay que hacer otro Mover cara.")
-        new = self.doc.addObject(type_id, {PAD: "Pad", POCKET: "Pocket", DRAFT: "Draft"}[type_id])
+        new = self.doc.addObject(type_id, NATIVE_NAMES[type_id])
         body.insertObject(new, old, True)
         new.addProperty("App::PropertyString", MARK, "SWUI", "Mover cara (fork de LikeSolidWorks UI)")
         new.setEditorMode(MARK, 2)
@@ -533,37 +853,33 @@ class MoveFacePanel(dp.SwPanel):
         self.base = new.BaseFeature
         return ""
 
+    def _ensure(self, type_id):
+        return self._swap(type_id) if self.obj.TypeId != type_id else ""
+
     def _apply(self):
         mode = self.spec["mode"]
         self.spec.update({"flip": self.flip.isChecked(), "distance": self.distance.value(),
                           "delta": [s.value() for s in self.deltas], "angle": self.angle.value(),
-                          "hinge": self.hinge,
-                          "dir": [self.direction[0].Name, self.direction[1]] if self.direction else None})
+                          "hinge": self.hinge, "end": self.end.currentData(), "gap": self.gap.value(),
+                          "faces": list(self.faces),
+                          "dir": [self.direction[0].Name, self.direction[1]] if self.direction else None,
+                          "target": [self.target[0].Name, self.target[1]] if self.target else None,
+                          "axis": [self.axis[0].Name, self.axis[1]] if self.axis else None})
         if self.base is None:
             return "No hay sólido antes de esta operación."
         if not self.faces:
             return ""
-        problem = faces_problem(self.base.Shape, self.faces, same_plane=(mode == ROTATE))
+        problem = faces_problem(self.base.Shape, self.faces, same_plane=(mode == ROTATE),
+                                curved_ok=(mode == OFFSET))
         if problem:
             return problem
         if mode == ROTATE:
-            if not self.hinge:
-                return "Elegí el eje de giro: una arista recta de la cara."
-            neutral, pull, problem = hinge_refs(self.base.Shape, self.faces, self.hinge)
-            if problem:
-                return problem
-            problem = self._swap(DRAFT) if self.obj.TypeId != DRAFT else ""
-            if problem:
-                return problem
-            self._write_spec()
-            self.obj.Base = (self.base, self.faces)
-            if self.obj.NeutralPlane != (self.base, [neutral]):
-                self.obj.NeutralPlane = (self.base, [neutral])
-            if self.obj.PullDirection != (self.base, [pull]):
-                self.obj.PullDirection = (self.base, [pull])
-            self._set("Angle", self.angle.value())
-            self._set("Reversed", self.flip.isChecked())
-            return ""
+            return self._apply_rotate()
+        face = dp._element(self.base.Shape, self.faces[0])
+        if not is_planar(face):
+            return self._apply_cylinder(face)
+        if mode == TRANSLATE and self.spec["end"] != END_DEPTH:
+            return self._apply_up_to(face)
         direction = direction_of(*self.direction) if (mode == TRANSLATE and self.direction) else None
         n = self._normal()
         move = normal_move(mode, (n.x, n.y, n.z), self.distance.value(), self.flip.isChecked(),
@@ -571,16 +887,208 @@ class MoveFacePanel(dp.SwPanel):
                            [s.value() for s in self.deltas])
         if abs(move) < TOL:
             return "Ese desplazamiento no mueve la cara (es paralelo a ella o vale cero)."
-        wanted = native_type(mode, move)
-        if self.obj.TypeId != wanted:
-            problem = self._swap(wanted)
-            if problem:
-                return problem
+        problem = self._ensure(native_type(mode, move))
+        if problem:
+            return problem
+        self._drop_aux()
         self._write_spec()
         if self.obj.Profile != (self.base, self.faces):
             self.obj.Profile = (self.base, self.faces)
         self._set("Type", "Length")
         self._set("Length", abs(move))
+        return ""
+
+    def _apply_up_to(self, face):
+        """Trasladar con condición final (Hasta el vértice / la superficie / el sólido)."""
+        from swui.fork import sketch_model_edges as sme
+
+        end = self.spec["end"]
+        if self.target is None:
+            return {END_VERTEX: "Elegí el vértice hasta donde llega la cara.",
+                    END_BODY: "Elegí el sólido hasta donde llega la cara."}.get(
+                        end, "Elegí la cara o el plano hasta donde llega la cara.")
+        n = face_normal(face)
+        origin = face.CenterOfMass
+        tobj, tsub = self.target
+        to_local = _local(self._body(), FreeCAD.Placement()).toMatrix()
+        if end == END_BODY:
+            try:
+                shape = sme._global_shape(tobj).transformed(to_local)
+            except Exception:
+                return "Ese sólido no tiene forma."
+            hit = first_face_hit(face, n, shape)
+            if hit is None:
+                return "La cara no encuentra ese sólido al avanzar ni al retroceder."
+            tsub, side = hit
+        else:
+            try:
+                if tobj is self.base:
+                    geo = self.base.Shape.getElement(tsub)
+                elif tsub:
+                    geo = sme._global_shape(tobj).getElement(tsub).transformed(to_local)
+                else:
+                    geo = None
+                point = geo.Point if end == END_VERTEX else (
+                    geo.CenterOfMass if geo is not None else _local(self._body(), tobj.getGlobalPlacement()).Base)
+            except Exception:
+                return "Esa referencia ya no existe: elegí otra."
+            side = (point - origin).dot(n)
+        if abs(side) < TOL:
+            return "La cara ya está ahí: no hay nada que mover."
+        problem = self._ensure(PAD if side > 0 else POCKET)
+        if problem:
+            return problem
+        keep = []
+        ref = self._bound((tobj, tsub), keep)
+        if end == END_VERTEX:
+            plane = self._aux("vertex_plane", "PartDesign::Plane", "PlanoVertice")
+            keep.append("vertex_plane")
+            refs = [(ref[0], ref[1][0]), (self.base, self._face_edge_name()), (self.base, self.faces[0])]
+            if [(o, s) for o, s in plane.AttachmentSupport] != refs:
+                plane.AttachmentSupport = refs
+            if plane.MapMode != "OXY":
+                plane.MapMode = "OXY"  # por el vértice, paralelo a la cara (probado en 1.1.4)
+            plane.recompute()
+            ref = (plane, [""])
+        offset = 0.0
+        if end == END_OFFSET:  # se queda a esa distancia antes de la superficie (Invertir: después)
+            offset = self.gap.value() * (1.0 if self.flip.isChecked() else -1.0)
+        self._drop_aux(keep)
+        self._write_spec()
+        if self.obj.Profile != (self.base, self.faces):
+            self.obj.Profile = (self.base, self.faces)
+        self._set("Type", "UpToFace")
+        if self.obj.UpToFace != ref:
+            self.obj.UpToFace = ref
+        self._set("Offset", offset)
+        return ""
+
+    def _bound(self, ref, keep):
+        """
+        Una referencia usable desde este Cuerpo: lo de otro Cuerpo o suelto queda fuera de alcance
+        para una operación de PartDesign, así que pasa por un enlace nativo (SubShapeBinder oculto).
+        -> (objeto, [sub]).
+        """
+        from swui.fork import feature_tree as ft
+
+        obj, sub = ref
+        body = self._body()
+        if obj is self.base or ft.body_of(obj) is body or obj in getattr(body.Origin, "OriginFeatures", []):
+            return (obj, [sub])
+        binder = self._aux("binder", "PartDesign::SubShapeBinder", "Enlace")
+        keep.append("binder")
+        support = [(obj, (sub,) if sub else ())]
+        if [(o, tuple(s)) for o, s in binder.Support] != support:
+            binder.Support = support
+        binder.recompute()
+        if sub.startswith("Vertex"):
+            return (binder, ["Vertex1"])
+        if sub.startswith("Face"):
+            return (binder, ["Face1"])
+        return (binder, [""])
+
+    def _face_edge_name(self):
+        face = dp._element(self.base.Shape, self.faces[0])
+        for i, e in enumerate(self.base.Shape.Edges):
+            if any(e.isSame(fe) for fe in face.Edges):
+                return "Edge%d" % (i + 1)
+        return ""
+
+    def _apply_rotate(self):
+        hinge_problem = ""
+        if self.hinge and not self.axis:
+            neutral, pull, hinge_problem = hinge_refs(self.base.Shape, self.faces, self.hinge)
+            if not hinge_problem:
+                problem = self._ensure(DRAFT)
+                if problem:
+                    return problem
+                self._drop_aux()
+                self._write_spec()
+                self.obj.Base = (self.base, self.faces)
+                if self.obj.NeutralPlane != (self.base, [neutral]):
+                    self.obj.NeutralPlane = (self.base, [neutral])
+                if self.obj.PullDirection != (self.base, [pull]):
+                    self.obj.PullDirection = (self.base, [pull])
+                self._set("Angle", self.angle.value())
+                self._set("Reversed", self.flip.isChecked())
+                return ""
+            axis_ref = (self.base, self.hinge)  # sin cara bisagra: como cualquier eje
+        elif self.axis:
+            axis_ref = self.axis
+        else:
+            return "Elegí el eje de giro: una arista recta o un eje."
+        axis = axis_of(axis_ref, self.base, self._body())
+        if axis is None:
+            return hinge_problem or "El eje de giro tiene que ser una recta."
+        face = dp._element(self.base.Shape, self.faces[0])
+        angle = self.angle.value() * (-1.0 if self.flip.isChecked() else 1.0)
+        neutral, line, problem = rotation_aux(face, axis[0], axis[1], angle)
+        if problem:
+            return problem
+        problem = self._ensure(DRAFT)
+        if problem:
+            return problem
+        plane = self._aux("plane", "PartDesign::Plane", "PlanoGiro")
+        pull = self._aux("line", "PartDesign::Line", "TiroGiro")
+        for aux, plc in ((plane, neutral), (pull, line)):
+            if aux.MapMode != "Deactivated":
+                aux.MapMode = "Deactivated"
+            if not aux.Placement.isSame(plc, 1e-9):
+                aux.Placement = plc
+            aux.recompute()
+        self._drop_aux(("plane", "line"))
+        self._write_spec()
+        self.obj.Base = (self.base, self.faces)
+        if self.obj.NeutralPlane != (plane, [""]):
+            self.obj.NeutralPlane = (plane, [""])
+        if self.obj.PullDirection != (pull, [""]):
+            self.obj.PullDirection = (pull, [""])
+        self._set("Angle", abs(angle))
+        self._set("Reversed", False)
+        return ""
+
+    def _apply_cylinder(self, face):
+        """Equidistanciar una cara cilíndrica entera: anillo revolucionado (Groove / Revolution)."""
+        import Part
+
+        center, axis, radius, length, away = cylinder_data(face)
+        move = normal_move(OFFSET, (0, 0, 0), self.distance.value(), self.flip.isChecked())
+        radii = ring_radii(radius, move, away)
+        if radii is None:
+            return "Con esa distancia el agujero se cierra: probá con una menor."
+        problem = self._ensure(native_type(OFFSET, move, curved=True))
+        if problem:
+            return problem
+        sketch = self._aux("sketch", "Sketcher::SketchObject", "Anillo")
+        # plano que contiene el eje: X radial, Y = eje (el V_Axis del croquis, eje de la revolución)
+        radial = axis.cross(FreeCAD.Vector(0, 0, 1))
+        if radial.Length < 1e-6:
+            radial = axis.cross(FreeCAD.Vector(1, 0, 0))
+        radial.normalize()
+        normal = radial.cross(axis)
+        rot = FreeCAD.Rotation(radial, axis, normal, "ZXY")
+        plc = FreeCAD.Placement(center, rot)
+        if sketch.MapMode != "Deactivated":
+            sketch.MapMode = "Deactivated"
+        if not sketch.Placement.isSame(plc, 1e-9):
+            sketch.Placement = plc
+        r0, r1 = radii
+        pts = [FreeCAD.Vector(r0, 0, 0), FreeCAD.Vector(r1, 0, 0),
+               FreeCAD.Vector(r1, length, 0), FreeCAD.Vector(r0, length, 0)]
+        old = [(g.StartPoint, g.EndPoint) for g in sketch.Geometry]
+        new = [(pts[i], pts[(i + 1) % 4]) for i in range(4)]
+        if len(old) != 4 or any((a - c).Length > 1e-9 or (b - d).Length > 1e-9 for (a, b), (c, d) in zip(old, new)):
+            sketch.deleteAllGeometry()
+            for a, b in new:
+                sketch.addGeometry(Part.LineSegment(a, b))
+        sketch.recompute()
+        self._drop_aux(("sketch",))
+        self._write_spec()
+        if self.obj.Profile != (sketch, [""]):
+            self.obj.Profile = (sketch, [""])
+        if self.obj.ReferenceAxis != (sketch, ["V_Axis"]):
+            self.obj.ReferenceAxis = (sketch, ["V_Axis"])
+        self._set("Angle", 360.0)
         return ""
 
     def _write_spec(self):
@@ -590,7 +1098,13 @@ class MoveFacePanel(dp.SwPanel):
         remember_mode(self.spec["mode"])
 
     def _ready(self):
-        return bool(self.faces) and (self.spec["mode"] != ROTATE or bool(self.hinge))
+        if not self.faces:
+            return False
+        if self.spec["mode"] == ROTATE:
+            return bool(self.hinge or self.axis)
+        if self.spec["mode"] == TRANSLATE and self.spec["end"] != END_DEPTH:
+            return self.target is not None
+        return True
 
     def _nothing(self):
         return not self.faces
