@@ -113,6 +113,11 @@ castellano, coma decimal; ver "Falta" en `docs/ESTADO.md`.
    usuario; las relaciones ya no saltan al cambiar una pieza): relaciones SW, matriz y
    simetría de componentes, taladro/corte de ensamblaje, geometría de referencia. Plan y checklist
    en la sección Fase 5 del documento de checklists (enlace en `docs/ESTADO.md`).
+6. Chequeo de compatibilidad (fase aparte, decidido por el usuario 2026-10-31; sin empezar):
+   aviso de versión de FreeCAD no probada, chequeo rápido al arrancar (cada función que depende
+   de algo interno de FreeCAD registra su chequeo; si falla, se apaga sola y avisa en castellano
+   con un informe técnico) y diagnóstico completo a pedido con pruebas reales. Pensado para
+   cuando ya no haya SW: guardar capturas propias de cómo queda la interfaz como referencia.
 
 ## Forma de trabajo
 - Antes de tocar algo grande, explicar el plan al usuario en lenguaje simple (no es programador).

@@ -147,6 +147,8 @@ Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o come
   Restricciones: descartado por el usuario (ecuaciones a mano si hiciera falta).
   Con esto (y la chapa de la fase 1) está completo el "Alcance" del menú Insertar.
   Detalle de las tres en "Análisis: Mover/Copiar sólido..." > Hecho.
+- **Fase 6 (nueva, 31/10, decisión del usuario): chequeo de compatibilidad**, como fase aparte y
+  sin empezar (plan en CLAUDE.md > Fases). `mates_tree.self_check()` ya está listo para usarla.
 - **Próximo paso:** todas las fases tienen el código completo (la 0 está terminada) y Claude ya
   probó todo lo de los checklists (fases 1 y 2 comparadas con SW); falta que el usuario pruebe con piezas y
   conjuntos suyos: fase 1 (chapa, sobre todo Convertir en chapa con STEP y DXF por lotes), fase 2,
