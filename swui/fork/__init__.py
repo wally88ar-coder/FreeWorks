@@ -27,6 +27,12 @@ def install(workbench=None):
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] Paneles abiertos:\n%s\n" % traceback.format_exc())
     try:
+        from swui.fork import brand
+
+        brand.install()
+    except Exception:
+        FreeCAD.Console.PrintError("[SWUI fork] Nombre FreeWorks:\n%s\n" % traceback.format_exc())
+    try:
         from swui.fork import look_sw
 
         look_sw.install()

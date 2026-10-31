@@ -157,12 +157,12 @@ def show_selector(visible):
 
 
 class _AlwaysCommand:
-    """Menú LikeSolidWorks UI -> Usar siempre LikeSolidWorks UI (con tilde)."""
+    """Menú FreeWorks -> Usar siempre FreeWorks (con tilde; nombre visible: brand.py)."""
 
     def GetResources(self):
         return {
-            "MenuText": "Usar siempre LikeSolidWorks UI",
-            "ToolTip": "Arrancar siempre en LikeSolidWorks UI, volver a él si algo cambia de banco "
+            "MenuText": "Usar siempre FreeWorks",
+            "ToolTip": "Arrancar siempre en FreeWorks, volver a él si algo cambia de banco "
                        "y ocultar el selector de bancos. Desmarcar para usar los bancos de FreeCAD.",
             "Checkable": enabled(),
         }
