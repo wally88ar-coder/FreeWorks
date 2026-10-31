@@ -6,8 +6,8 @@ Franja Ecuaciones / Sólidos / Material arriba del árbol, como las carpetas del
 FeatureManager de SOLIDWORKS (fase 3). El árbol de FreeCAD no acepta renglones
 inventados, así que es una franja propia encima, en la pestaña Modelo.
 
-- "Ecuaciones" (solo si el documento tiene variables globales o ecuaciones, como en
-  SW): clic abre la ventana Ecuaciones.
+- "Ecuaciones" (siempre, como la carpeta del SW 2018 del usuario aunque la pieza no tenga
+  ecuaciones; decisión del usuario, 2026-10-31): clic abre la ventana Ecuaciones.
 - "Sólidos(n)": cada sólido de SW es un Cuerpo de FreeCAD (decisión del 2026-10-26); no se
   cuentan los que se "comió" otro (herramienta de Combinar, base de un Dividir). Clic despliega
   la lista; clic en uno lo elige (para asignarle un material solo a él, por ejemplo). Un
@@ -44,7 +44,7 @@ def rows_for(doc):
     """
     Renglones de la franja para un documento: [(clave, texto)] (sin Qt, probable en el test).
     """
-    from swui.fork import equations, material
+    from swui.fork import material
 
     if doc is None:
         return []
@@ -52,12 +52,7 @@ def rows_for(doc):
     if any(getattr(o, "TypeId", "") == "Assembly::AssemblyObject" for o in roots):
         return []  # ensamblaje: cada pieza tiene su material
     parts = material.part_objects(doc)
-    out = []
-    try:
-        if equations.count(doc):
-            out.append(("equations", "Ecuaciones"))
-    except Exception:
-        pass
+    out = [("equations", "Ecuaciones")]  # siempre, como la carpeta de SW
     out.append(("solids", solids_text([_solid_count(o) for o in parts])))
     out.append(("material", material.summary(doc)))
     return out

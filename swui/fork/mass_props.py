@@ -14,7 +14,8 @@ Cuentas: OpenCASCADE da por sólido volumen, área, centro y matriz de inercia e
 centro con densidad 1 (forma de tensor: fuera de la diagonal, -∫xy). SW muestra los
 productos de inercia como +∫xy dm: acá se muestran igual que SW (decisión anotada en
 docs/ESTADO.md para verificar con una pieza en L). La densidad sale de material.py
-(material de la biblioteca, la copia guardada en la pieza, o 1000 kg/m³ como SW).
+(material de la biblioteca, la copia guardada en la pieza, o 0 sin material: decisión del
+usuario, 2026-10-31; SW usa 1000 kg/m³). Sin masa, el centro sale del volumen.
 
 FreeCAD 1.1.4 no trae esta herramienta; la 26.3 trae Std_MassProperties: si existe,
 el comando la usa (decisión del proyecto: ceder a lo nativo).
@@ -59,6 +60,7 @@ def combine(items):
     """
     mass = volume = area = 0.0
     moment = [0.0, 0.0, 0.0]
+    geo = [0.0, 0.0, 0.0]  # sin material (densidad 0) el centro es el del volumen
     for vol, ar, c, _t, rho in items:
         m = vol * rho
         mass += m
@@ -66,9 +68,10 @@ def combine(items):
         area += ar
         for k in range(3):
             moment[k] += m * c[k]
-    if mass <= 0:
+            geo[k] += vol * c[k]
+    if volume <= 0:
         return None
-    center = [moment[k] / mass for k in range(3)]
+    center = [moment[k] / mass for k in range(3)] if mass > 0 else [geo[k] / volume for k in range(3)]
     total = _zeros()
     for vol, _ar, c, tensor, rho in items:
         m = vol * rho
@@ -310,7 +313,7 @@ def compute(parts):
         if len(found) > 1:
             notes.append("%s: tiene %d sólidos sueltos (se suman todos)." % (name, len(found)))
         if source is None:
-            notes.append("%s: sin material, se usó 1000 kg/m³ (como SW)." % name)
+            notes.append("%s: sin material (densidad 0): su masa no cuenta. Asignale un material." % name)
         elif source == "copia":
             notes.append("%s: su material falta en la biblioteca; se usó la copia guardada en la pieza." % name)
     return combine(items), rhos, names, notes
@@ -360,7 +363,7 @@ class _MassDialog(QtWidgets.QDialog):
         box.addWidget(self.lb_sel)
         row = QtWidgets.QHBoxLayout()
         self.cb_hidden = QtWidgets.QCheckBox("Incluir sólidos/componentes ocultos")
-        self.cb_hidden.setChecked(True)
+        self.cb_hidden.setChecked(False)  # como SW 2018: de fábrica sin los ocultos
         self.cb_hidden.toggled.connect(lambda *_a: self.recompute())
         self.cb_marker = QtWidgets.QCheckBox("Mostrar centro de masa")
         self.cb_marker.setChecked(True)

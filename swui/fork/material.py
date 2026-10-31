@@ -19,7 +19,7 @@ Material como en SOLIDWORKS (fase 3, pestaña Evaluar).
   sin el addon se puede leer igual). Al abrir un archivo con un material que falta,
   avisa y ofrece recrearlo con el MISMO UUID (después FreeCAD lo encuentra solo).
   La masa (mass_props) usa la copia si el material falta.
-- Sin material: densidad 1000 kg/m³, la misma que usa SW.
+- Sin material: densidad 0 (masa 0 y un aviso), decisión del usuario 2026-10-31 (SW usa 1000).
 """
 
 import json
@@ -35,7 +35,7 @@ from swui.compat import QtCore, QtWidgets
 COMMAND = "SWUI_Material"
 COPY_PROP = "SWUI_MaterialCopy"  # nombre estable (se guarda en los archivos)
 COPY_GROUP = "Material"
-DEFAULT_DENSITY = 1e-6  # kg/mm³ = 1000 kg/m³, como SW sin material
+DEFAULT_DENSITY = 0.0  # kg/mm³ sin material: masa 0, así se nota que falta (SW usa 1000 kg/m³)
 DEFAULT_UUID = "7f9fd73b-50c9-41d8-b7b2-575a030c1eeb"  # material "Default" de FreeCAD 1.1.4 (sin material)
 SYSTEM = "System"
 USER_LIBRARIES = ("User", "Custom")  # dónde se guardan los personalizados (la primera que exista)
@@ -370,7 +370,7 @@ def material_info(obj):
 
 
 def density(obj):
-    """Densidad (kg/mm³) y origen ("material", "copia" o None = 1000 kg/m³ como SW)."""
+    """Densidad (kg/mm³) y origen ("material", "copia" o None = sin material, densidad 0)."""
     info, source = material_info(obj)
     value = density_from(info) if info else None
     if value:
@@ -975,7 +975,7 @@ class _MaterialDialog(QtWidgets.QDialog):
             return
         self.doc.commitTransaction()
         _changed()
-        self.note.setText("Sin material: la masa se calcula con 1000 kg/m³ (como SW).")
+        self.note.setText("Sin material: densidad 0, la masa da 0.")
 
 
 _listeners = []  # funciones a llamar cuando cambia un material (la franja del árbol)
