@@ -418,6 +418,8 @@ Neueste Version oben. / Newest version first.
   opuesta lleva el nombre de la pieza (antes "Body").
 - Versión opuesta: al aceptar la simetría pide nombre y carpeta del archivo nuevo, como SW
   (propone "<pieza>-opuesta" junto a la original; Cancelar deja el panel abierto).
+- Simetría de componentes: con la lista de componentes activa, un clic en una cara curva (un
+  rodillo, un bulón) no agregaba el componente y avisaba "elegí una cara plana o un plano".
 
 ## 0.10.0 — 2026-10-18
 

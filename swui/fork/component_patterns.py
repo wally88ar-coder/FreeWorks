@@ -826,7 +826,8 @@ class PatternPanel:
             obj, _sub, kind = ref
             if obj in own:
                 continue
-            if self.kind == "mirror" and kind not in ("part", "plane", "datum_plane"):
+            # solo si el clic va al plano: con la lista activa, cualquier cara elige su componente
+            if self.kind == "mirror" and self.active == "dir1" and kind not in ("part", "plane", "datum_plane"):
                 # el plano de simetría es una cara plana o un plano (SW no toma vértices ni aristas)
                 self.problem = "Para el plano de simetría elegí una cara plana o un plano."
                 self._refresh()
@@ -997,8 +998,10 @@ class PatternPanel:
 
 def ask_opposite_path(seed, proposed):
     """Guardar como de la versión opuesta: propone '<pieza>-opuesta.FCStd' en la carpeta de la original."""
+    source = seed.LinkedObject
+    part = source.Document.Label if source.Document is not seed.Document else source.Label  # "Rodillo", no "Rodillo<1>"
     path, _f = QtWidgets.QFileDialog.getSaveFileName(
-        FreeCADGui.getMainWindow(), "Versión opuesta de %s: nombre y carpeta" % seed.Label, proposed,
+        FreeCADGui.getMainWindow(), "Versión opuesta de %s: nombre y carpeta" % part, proposed,
         "Documento de FreeCAD (*.FCStd)")
     return path
 

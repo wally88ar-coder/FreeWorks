@@ -185,6 +185,10 @@ Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o come
     - Matriz: un vínculo con copias por semilla ("MatrizLineal1 Tornillo"), datos en un VarSet.
     - Versión opuesta: al aceptar pide nombre y carpeta (como SW, decidido 31/10); propone
       "<pieza>-opuesta" en la carpeta de la original.
+      Probado por Claude con el mouse (31/10) en FreeCAD y SW: igual en lo esencial. Diferencias:
+      SW lo pide dentro del panel (paso 3: prefijo/sufijo, botón "..." con el selector de
+      archivo y "Colocar archivos en una carpeta") y propone "SimetríaRodillo" (prefijo
+      "Simetría"); el fork abre el "Guardar como" al aceptar y propone "Rodillo-opuesta".
     - Taladro: cada punto de posición lleva un círculo de 0,5 mm atado (el taladro solo toma
       círculos de la copia del croquis).
     - Plano/eje/punto hecho solo sobre el origen: queda fijo al aceptar (el motor ignora uno apoyado).
