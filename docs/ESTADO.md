@@ -198,6 +198,11 @@ Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o come
   - Decidido por el usuario (31/10): pieza repetida en el ensamblaje con taladro, como SW (el
     agujero va al archivo de la pieza y aparece en todas sus copias, ubicado según la primera
     instancia; el panel avisa). Queda como está.
+  - Hecho 31/10 (decisión del usuario, opción A): relaciones de posición debajo de cada
+    componente en el árbol, como SW (`mates_tree.py`; solo dibujo, nada en el archivo). Probado
+    con guiones en FreeCAD real; falta probarlo con el mouse. Tiene `self_check()` para el
+    chequeo de compatibilidad al arrancar (plan aprobado: aviso de versión, chequeo rápido y
+    diagnóstico completo; próximo trabajo).
   - Decidido por el usuario (31/10): taladro y corte de ensamblaje quedan como están (el agujero
     va a la pieza, como SW con "Propagar operación a piezas"; sin casilla nueva).
     A futuro (si FreeCAD cambia o aparece algo robusto): corte solo de ensamblaje. Idea sin probar:

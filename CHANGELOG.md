@@ -423,6 +423,12 @@ Neueste Version oben. / Newest version first.
 - Simetría de componentes: "Versión opuesta" pasa a llamarse "Versión simétrica" (como SW) y el
   archivo nuevo se propone como "<pieza>-simetría" (antes "<pieza>-opuesta"; los ya hechos siguen
   funcionando).
+- Ensamblaje: cada componente muestra en el árbol, primero, la carpeta "Relaciones de posición en
+  <Conjunto>" con sus relaciones, como el FeatureManager de SW (la carpeta general sigue). Clic
+  elige, Ctrl+clic suma, doble clic edita, clic derecho con "Suprimido", pasar el mouse
+  preselecciona; suprimidas en gris. Es solo dibujo: no se guarda nada en el archivo
+  (`swui/fork/mates_tree.py`). Si una versión nueva de FreeCAD cambia el árbol, se apaga sola
+  y lo avisa.
 
 ## 0.10.0 — 2026-10-18
 

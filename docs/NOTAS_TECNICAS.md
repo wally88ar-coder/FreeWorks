@@ -420,3 +420,10 @@
   copia los hijos de la pieza enlazada sin llamar a extensiones, y `addExtension` de Python solo
   sirve en objetos Python. Upstream (issue #23721) eligió un comando "seleccionar uniones
   asociadas" en vez de mostrarlas bajo la pieza.
+  Hecho en `mates_tree.py`. Al recorrer el árbol de FreeCAD desde Python: `parent()` y
+  `child(i)` a mano dieron "Internal C++ object already deleted"; el iterador
+  `QTreeWidgetItemIterator` anda (lleva el documento al pasar por su renglón). Los renglones
+  propios guardan adentro documento/componente/relación (data roles). Al entrar el mouse en un
+  renglón ajeno FreeCAD borra la preselección (`onItemEntered`): ponerla un instante después.
+  El menú del clic derecho trae lo de la selección pero no "Suprimido" (solo en renglones
+  suyos): se agrega con un filtro que dura hasta que se muestra el menú.

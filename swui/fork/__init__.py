@@ -166,6 +166,9 @@ def install(workbench=None):
         from swui.fork import asm_tab
 
         asm_tab.install()
+        from swui.fork import mates_tree
+
+        mates_tree.install()
         if workbench is not None:
             workbench.appendMenu(MENU, [mates_sw.COMMAND])
     except Exception:

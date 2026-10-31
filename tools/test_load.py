@@ -1094,6 +1094,16 @@ def _check_feature_tree(commands, mw, layout, hooked):
             or atb.tab_for(("Conj", "assembly"), ("Conj", "assembly")) is not None):
         print("  FEHLER: fork: la cinta pasa sola a Ensamblaje")
         return False
+    # Relaciones de posición debajo de cada componente: renglones propios lejos de los de FreeCAD
+    mtr = importlib.import_module("swui.fork.mates_tree")
+    if (mtr.folder_title("Conjunto") != "Relaciones de posición en Conjunto"
+            or mtr.signature([("Joint", "Coincidente1", False), ("Joint001", "Concéntrica1", True)])
+            != "Joint:Coincidente1:0|Joint001:Concéntrica1:1"
+            or mtr.is_label_click(30, 40) or not mtr.is_label_click(40, 40)
+            or {mtr.FOLDER_TYPE, mtr.MATE_TYPE} & {mtr.DOCUMENT_TYPE, mtr.OBJECT_TYPE}
+            or mtr.FOLDER_TYPE == mtr.MATE_TYPE):
+        print("  FEHLER: fork: relaciones debajo de cada componente")
+        return False
     # Mover/Copiar de un vértice a otro: el vértice se vuelve a encontrar por sus caras
     mvb = importlib.import_module("swui.fork.move_bodies")
     plane_ = lambda n, p: {"t": "Face", "g": "plane", "n": n, "p": p, "s": 100.0}
