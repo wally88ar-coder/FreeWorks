@@ -426,4 +426,11 @@
   propios guardan adentro documento/componente/relación (data roles). Al entrar el mouse en un
   renglón ajeno FreeCAD borra la preselección (`onItemEntered`): ponerla un instante después.
   El menú del clic derecho trae lo de la selección pero no "Suprimido" (solo en renglones
-  suyos): se agrega con un filtro que dura hasta que se muestra el menú.
+  suyos): se agrega con un filtro que dura hasta que se muestra el menú. El color del texto de un
+  renglón propio no se ve: la hoja de estilo de look_sw (`QTreeView::item { color }`) lo pisa; se
+  atenúa con el velo de tree_overlay (`EXTRA_GREY`).
+- Capturas con computer-use (31/10, tarde): de golpe devolvían toda la pantalla oscura aunque
+  FreeCAD estaba al frente; los clics sí llegaban. Salida: capturar con PowerShell
+  (`Graphics.CopyFromScreen`, guion `cap.ps1` en el scratchpad). Y `timeout` de Git Bash NO
+  cierra freecad.exe: quedaron 8 FreeCAD de prueba abiertos (usar `os._exit` al final del guion
+  y revisar con Get-Process).

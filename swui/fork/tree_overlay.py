@@ -47,6 +47,9 @@ HIDE_SELECTED = ("QTreeView { selection-background-color: %(panel)s; }"
 NATIVE_SUPPRESSED_FROM = 26  # FreeCAD 26.3 tacha lo suprimido
 
 _overlays = {}  # tree -> _Overlay
+# Otros módulos piden atenuar renglones propios: funciones (árbol) -> [(top, bottom)]
+# (relaciones suprimidas de mates_tree: el estilo del árbol pisa el color del texto)
+EXTRA_GREY = []
 _mark = []  # [objeto] operación que creó la cara elegida
 _sel_observer = None
 _doc_observer = None
@@ -232,6 +235,12 @@ class _Overlay(QtWidgets.QWidget):
         p = QtGui.QPainter(self)
         width = self.width()
         grey = QtGui.QColor(*GREY)
+        for extra in EXTRA_GREY:
+            try:
+                for top, bottom in extra(self.tree):
+                    p.fillRect(0, top, width, bottom - top, grey)
+            except Exception:
+                pass
         for body, rows in body_rows(self.tree):
             for top, bottom in _greyed(body, rows):
                 p.fillRect(0, top, width, bottom - top, grey)

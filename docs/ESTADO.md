@@ -200,7 +200,12 @@ Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o come
     instancia; el panel avisa). Queda como está.
   - Hecho 31/10 (decisión del usuario, opción A): relaciones de posición debajo de cada
     componente en el árbol, como SW (`mates_tree.py`; solo dibujo, nada en el archivo). Probado
-    con guiones en FreeCAD real; falta probarlo con el mouse. Tiene `self_check()` para el
+    con guiones en FreeCAD real y por Claude con el mouse (31/10): carpeta, clic, Ctrl+clic, doble
+    clic (panel de edición), clic derecho con "Suprimido" (queda en gris), pasar el mouse
+    (preselección). Comparado con SW: misma carpeta, primera dentro del componente. Diferencia: SW
+    nombra las relaciones con sus piezas ("Coincidente1 (Placa<1>,Brida<1>)"). Arreglado en el
+    momento: lo suprimido no se veía gris (el estilo del árbol pisa el color; ahora con el velo de
+    `tree_overlay`, gancho `EXTRA_GREY`). Tiene `self_check()` para el
     chequeo de compatibilidad al arrancar (plan aprobado: aviso de versión, chequeo rápido y
     diagnóstico completo; próximo trabajo).
   - Decidido por el usuario (31/10): taladro y corte de ensamblaje quedan como están (el agujero

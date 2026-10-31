@@ -428,7 +428,7 @@ Neueste Version oben. / Newest version first.
   elige, Ctrl+clic suma, doble clic edita, clic derecho con "Suprimido", pasar el mouse
   preselecciona; suprimidas en gris. Es solo dibujo: no se guarda nada en el archivo
   (`swui/fork/mates_tree.py`). Si una versión nueva de FreeCAD cambia el árbol, se apaga sola
-  y lo avisa.
+  y lo avisa. Las suprimidas se atenúan con el mismo velo que lo suprimido de las piezas.
 
 ## 0.10.0 — 2026-10-18
 

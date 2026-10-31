@@ -44,6 +44,7 @@ MATE_TYPE = USER_TYPE + 2702
 NAME_ROLE = 0x0100 + 27  # Qt::UserRole + 27: nombre interno de la relación / firma de la carpeta
 DOC_ROLE = 0x0100 + 28  # documento del ensamblaje
 OWNER_ROLE = 0x0100 + 29  # componente dueño de la carpeta
+OFF_ROLE = 0x0100 + 30  # relación suprimida
 TITLE = "Relaciones de posición en %s"
 SUPPRESSED_COLOR = (150, 150, 150)
 MARK_FILL = "#a6c8e3"  # celeste de lo elegido (como tree_overlay)
@@ -199,6 +200,7 @@ def _make_folder(doc, asm, comp, rows, selected):
             child.setIcon(0, joint.ViewObject.Icon)
         except Exception:
             pass
+        child.setData(0, OFF_ROLE, bool(off))
         if off:
             child.setForeground(0, grey)
             child.setToolTip(0, "%s (suprimida)" % label)
@@ -223,6 +225,7 @@ def refresh():
                     _refresh_item(item, item_doc, show, selected)
                 except RuntimeError:  # renglón que FreeCAD acaba de rehacer: va en la próxima vuelta
                     _state["retry"] += 1
+        _repaint_overlays()
         if _state["retry"] and _state["retry"] < 20:
             QtCore.QTimer.singleShot(200, schedule)
         else:
@@ -258,6 +261,34 @@ def _refresh_item(item, item_doc, show, selected):
     folder = _make_folder(doc, asm, obj, rows, selected)
     item.insertChild(0, folder)
     folder.setExpanded((doc.Name, obj.Name) in _expanded)
+
+
+def grey_rows(tree):
+    """
+    [(top, bottom)] de las relaciones suprimidas a la vista. El estilo del árbol (look_sw) pisa el
+    color del texto: se atenúan con el mismo velo que lo suprimido de las piezas (tree_overlay).
+    """
+    out = []
+    if _state["disabled"]:
+        return out
+    it = QtWidgets.QTreeWidgetItemIterator(tree)
+    while it.value():
+        item = it.value()
+        if item.type() == MATE_TYPE and item.data(0, OFF_ROLE):
+            rect = tree.visualItemRect(item)
+            if rect.isValid() and rect.height() > 0:
+                out.append((rect.top(), rect.bottom() + 1))
+        it += 1
+    return out
+
+
+def _repaint_overlays():
+    try:
+        from swui.fork import tree_overlay
+
+        tree_overlay.refresh()
+    except Exception:
+        pass
 
 
 def _failed(where):
@@ -311,6 +342,7 @@ def _on_expanded(item):
     try:
         if item.type() == FOLDER_TYPE:
             _expanded.add(_owner_key(item))
+            QtCore.QTimer.singleShot(0, _repaint_overlays)
         elif item.type() == OBJECT_TYPE:
             schedule()
     except Exception:
@@ -321,6 +353,7 @@ def _on_collapsed(item):
     try:
         if item.type() == FOLDER_TYPE:
             _expanded.discard(_owner_key(item))
+            QtCore.QTimer.singleShot(0, _repaint_overlays)
     except Exception:
         pass
 
@@ -564,6 +597,13 @@ def install():
         return
     _filter = _Clicks()
     _menu_addition = _MenuAddition()
+    try:
+        from swui.fork import tree_overlay
+
+        if grey_rows not in tree_overlay.EXTRA_GREY:
+            tree_overlay.EXTRA_GREY.append(grey_rows)
+    except Exception:
+        pass
     FreeCAD.addDocumentObserver(_DocObserver())
     FreeCADGui.Selection.addObserver(_SelObserver())
     try:
