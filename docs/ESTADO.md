@@ -1,7 +1,7 @@
 # Estado del fork
 
-Última actualización: 2026-10-31 noche (fase 5 cerrada; pruebas del checklist de las fases 1 a 4
-hechas con el mouse por Claude, salvo las que necesitan archivos del usuario; fase 6 acordada).
+Última actualización: 2026-10-31 noche (decisiones del checklist tomadas y hechas; fase 5
+cerrada; fase 6 acordada).
 
 **Checklists compartidos con el usuario** (se tildan ahí; al cerrar algo, tildarlo también):
 - Todas las fases, incluida la fase 5 en detalle: "Checklists del fork: qué falta en cada fase"
@@ -16,8 +16,35 @@ hechas con el mouse por Claude, salvo las que necesitan archivos del usuario; fa
 Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o comentó el usuario.
 
 ## Fase actual
-- **31/10 noche, decisiones pendientes del checklist tomadas por el usuario** (todas; las que
-  piden cambios, sin hacer todavía):
+- **31/10 noche, HECHOS todos los cambios de las decisiones de abajo** (pedido del usuario: "hacé
+  todos los cambios"). Probados con guiones en FreeCAD real (copia de la configuración) y test en
+  verde; falta que los pruebe el usuario con el mouse. Resultados:
+  - Chapa: Brida base sale con 2 mm aunque lo último fuera 5; brida de arista con 20 aunque lo
+    último fuera 55; nombres "Brida base1", "Brida de arista1", "Chapa desplegada1" (croquis del
+    desarrollo estables al recalcular: arreglo en `sheet_metal.patch_sketch_names`). DXF: con el
+    archivo existente pregunta "Reemplazar / Cancelar"; Cancelar no lo toca. Lotes: pregunta una
+    vez por los que existen ("Reemplazar / No reemplazar / Cancelar") y la pieza queda con los
+    mismos objetos que antes (desarrollo y croquis borrados).
+  - Evaluar: caja sin material -> masa 0, centro (5; 10; 15) del volumen, nota "sin material
+    (densidad 0)"; la ventana arranca con "Incluir sólidos/componentes ocultos" destildada;
+    "Ecuaciones" siempre primera en la franja.
+  - Ecuaciones: no modal; comentario de una ecuación guardado (propiedad oculta
+    `SWUI_EquationNotes` del VarSet, nombre estable); con la ventana abierta un clic en una cota
+    (instant_dims) la inserta ("D2@Box"); al cerrar, las cotas vuelven a "Modificar".
+  - Mover cara: hasta la superficie (z 25), equidistante 3 mm (z 22), hasta el vértice (z 18 y
+    sigue al vértice si se mueve: 25), hasta el sólido (otro Cuerpo, z -16), girar 10° con un eje
+    de referencia fuera de la cara (normal y altura exactas, también invertido a -5°), agujero
+    Ø10 -> Ø14 (saca 753,98 mm³ exacto) y Ø10 -> Ø6 (agrega 502,66 exacto), editar reabre el
+    panel. Auxiliares (plano, línea, croquis, SubShapeBinder) ocultos y fuera del árbol, en "aux"
+    de la marca. Límite visto: el Ángulo de salida de FreeCAD falla en un sentido con 10° y anda
+    con 5° (también con la bisagra en una arista de la cara, o sea ya pasaba): el panel lo avisa.
+    Límite de diseño: los auxiliares del giro con eje fuera y el anillo del agujero quedan fijos
+    (si después cambia la pieza, editar el Mover cara los reubica).
+  - Nombre visible FreeWorks: menú "FreeWorks" (también al volver de otro banco) y en la lista
+    de bancos; "Usar siempre FreeWorks". Sin tocar InitGui.py ni package.xml (`swui/fork/brand.py`).
+    **Falta (consultar al usuario, es hacia afuera):** package.xml y el nombre del repositorio en
+    GitHub para el Addon Manager; la carpeta del addon sigue "LikeSolidWorks-UI".
+- **31/10 noche, decisiones pendientes del checklist tomadas por el usuario** (todas):
   - Chapa: K 0,5 y radio = espesor (queda). Espesor y largo de fábrica **siempre 2 mm y 20 mm**
     (no el último usado). DXF: **preguntar antes de pisar** (nombre pieza_espesor_material,
     queda). Nombres **como su SW 2018** (leídos en SW): "Brida base1", "Brida de arista1",
@@ -1350,8 +1377,8 @@ Etapas:
   cinta del addon; sin fecha).
 
 ## Falta / ideas pendientes
-- Fase 1: chapa hecha; pendientes chicos: desahogos de pliegue, Convertir en chapa de un sólido
-  macizo, elegir qué pliegues desdoblar.
+- Fase 1: chapa hecha; pendientes chicos: desahogos de pliegue, elegir qué pliegues desdoblar
+  (Convertir en chapa un sólido macizo: el usuario no lo necesita, 2026-10-31).
 - Simulación FEM como pestaña "Simulación" con flujo SW (estudio, material, sujeciones, cargas,
   malla, ejecutar, resultados): conversada, sin empezar; es grande.
 - Panel Ver/Datos (propiedades de FreeCAD): se deja por ahora; el usuario va a ver si le sirve.
@@ -1408,7 +1435,12 @@ Etapas:
 - Lo que sirve a todos va en ramas limpias para PR; antes de abrir PR/issue, consultar al usuario.
   **Actualizado 2026-10-31: el usuario decidió no proponer nada al original (desarrollo propio).**
   Las ramas quedan como están; upstream se sigue leyendo para traer novedades.
-- Nombre del paquete propio: "FreeWorks" (usuario, 2026-10-31); renombrar sin empezar.
+- Nombre del paquete propio: "FreeWorks" (usuario, 2026-10-31). Hecho el nombre visible
+  (`swui/fork/brand.py`); package.xml y repositorio sin tocar (consultar).
+- `SWUI_EquationNotes` (JSON oculto en el VarSet "Variables globales": comentarios de las
+  ecuaciones, clave "Objeto|ruta"): nombre estable (2026-10-31).
+- Marca `SWUI_MoveFace`: claves nuevas "end", "target", "gap", "axis", "aux", "faces"
+  (2026-10-31); los archivos viejos abren con los valores de siempre.
 - `SWUI_PlaneSpec` (texto JSON en los planos hechos con el panel SW): nombre estable (2026-10-27).
 - `SWUI_FromVertex` (texto JSON oculto en los puntos De / A de Mover/Copiar sólido: vértice y caras
   que se juntan ahí, para volver a encontrarlo): nombre estable (2026-10-30).

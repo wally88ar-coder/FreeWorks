@@ -894,7 +894,10 @@ def _check_feature_tree(commands, mw, layout, hooked):
             or two_["center"] != [5.0, 0.0, 0.0] or abs(two_["inertia_cm"][1][1] - 0.05) > 1e-12
             or mp.sw_matrix([[1, -2, 0], [-2, 1, 0], [0, 0, 1]])[0][1] != 2 or mp.fmt(1234.5678, 2) != "1.234,57"
             or mp.fmt(-0.0001, 2) != "0,00" or "kilogramos por metro cúbico" not in mp.density_text([7.85e-6])
-            or "Masa = 0,001 kilogramos" not in mp.report(res_, [1e-6], ["Body"], [])):
+            or "Masa = 0,001 kilogramos" not in mp.report(res_, [1e-6], ["Body"], [])
+            # sin material (densidad 0): masa 0 y el centro del volumen
+            or mp.combine([(1000.0, 600.0, (2.0, 4.0, 6.0), [[0.0] * 3] * 3, 0.0)])["center"] != [2.0, 4.0, 6.0]
+            or mp.combine([(1000.0, 600.0, (2.0, 4.0, 6.0), [[0.0] * 3] * 3, 0.0)])["mass"] != 0.0):
         print("  FEHLER: fork: propiedades físicas (masa, centro, inercia como SW, informe)")
         return False
     res_eq = eq.to_freecad('= "Largo" * 2,5 + sqr(16) + iif("Largo" > 5; 1; 2)',
@@ -1133,6 +1136,19 @@ def _check_feature_tree(commands, mw, layout, hooked):
             or mvb.vertex_cost(corner_, []) is not None):
         print("  FEHLER: fork: Mover/Copiar, volver a encontrar el vértice")
         return False
+    # Mover cara: giro con eje fuera de la cara, anillo de una cara cilíndrica, condición final
+    mfc = importlib.import_module("swui.fork.move_face")
+    if (abs(mfc.hinge_shift(10.0, 10.0) + 10.0 * math.tan(math.radians(5.0))) > 1e-12
+            or mfc.hinge_shift(0.0, 30.0) != 0.0
+            or mfc.ring_radii(5.0, -2.0, False) != (5.0, 7.0)  # agujero Ø10 -> Ø14 (saca material)
+            or mfc.ring_radii(5.0, 2.0, False) != (3.0, 5.0) or mfc.ring_radii(5.0, 2.0, True) != (5.0, 7.0)
+            or mfc.ring_radii(5.0, 6.0, False) is not None
+            or mfc.native_type(mfc.OFFSET, -1, curved=True) != mfc.GROOVE
+            or mfc.native_type(mfc.OFFSET, 1, curved=True) != mfc.REVOLUTION
+            or mfc.read_spec('{"end": "raro"}')["end"] != mfc.END_DEPTH
+            or mfc.read_spec('{"end": "vertex"}')["end"] != mfc.END_VERTEX):
+        print("  FEHLER: fork: Mover cara (giro con eje, anillo, condición final)")
+        return False
     # Matriz y simetría de componentes (component_patterns): cuentas, expresiones, cinta
     cpt = importlib.import_module("swui.fork.component_patterns")
     lin_ = cpt.linear_expression("Tornillo", "VarSet", "Dir", 2, -1, "Dir2", 1, 1)
@@ -1189,6 +1205,8 @@ def _check_feature_tree(commands, mw, layout, hooked):
             or smt.dxf_filename("Tapa", 2.0) != "Tapa_2mm.dxf" or smt.fmt_mm(0.75) != "0,75"
             or smt.dxf_filename('a/b:c', 3) != "a_b_c_3mm.dxf"
             or smt.next_label("Brida-Base", {"Brida-Base1"}) != "Brida-Base2"
+            or smt.next_label(smt.BASE_LABEL, {"Brida base1"}) != "Brida base2"
+            or smt.sketch_object_name("Chapa desplegada1_Sketch") != "Chapa_desplegada1_Sketch"
             or dxf_[:2] != ["  0", "SECTION"] or dxf_[-1] != "EOF" or "AC1009" not in dxf_
             or dxf_.count("PLEGADO") != 2 or "DASHED" not in dxf_ or "76.712" not in dxf_
             or dxf_[dxf_.index("ARC") + 12] != "270"

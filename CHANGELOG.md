@@ -53,6 +53,26 @@ Neueste Version oben. / Newest version first.
 - `tools/test_load.py` also runs on Windows (path comparisons).
 
 **Fork (wally88ar-coder, español)**
+- **Decisiones del usuario del 31/10** (checklist):
+  - Nombre visible **FreeWorks** (menú y lista de bancos; lo interno no cambia, los
+    archivos y la configuración abren igual) (`swui/fork/brand.py`).
+  - Chapa: espesor 2 mm y largo de brida 20 mm **siempre** al empezar; nombres como el SW
+    2018 del usuario: *Brida base1*, *Brida de arista1*, *Chapa desplegada1* (los croquis
+    del desarrollo ya no se rehacen en cada recálculo pese al espacio en el nombre). El DXF
+    **pregunta antes de pisar** un archivo; el DXF por lotes pregunta una vez por los que
+    ya existen y **ya no deja desarrollos agregados** en las piezas.
+  - Evaluar: **sin material, densidad 0** (masa 0 y aviso; el centro sale del volumen).
+    Propiedades físicas arranca **sin los sólidos ocultos**, como SW 2018. *Ecuaciones*
+    siempre en la franja del árbol.
+  - Ecuaciones **no modal**: con la ventana abierta se gira la vista, doble clic en una
+    cara muestra sus cotas y **un clic en una cota la inserta**, como SW. **Comentarios en
+    todas las filas** (los de las ecuaciones van en el objeto *Variables globales*).
+  - Mover cara: **condición final** de Trasladar como SW (*Hasta el vértice, Hasta la
+    superficie, Equidistante de la superficie, Hasta el sólido*); **Girar alrededor de
+    cualquier eje paralelo a la cara** (arista de otra cara o pieza, eje de referencia);
+    **Equidistanciar caras cilíndricas** enteras (agrandar o achicar un agujero o un eje).
+    Todo con operaciones nativas (Extruir/Cortar hasta cara, Ángulo de salida, Revolución /
+    Ranura) y auxiliares ocultos fuera del árbol.
 - **Aspecto claro de SOLIDWORKS 2018** (colores medidos en capturas): cinta y paneles
   #F7F7F7, pestañas #D4D4D4, fondo degradado gris-celeste a blanco; croquis en azul puro
   (líneas 2 px, constructivas 1 px trazo y punto), resaltado naranja, aristas negras 1 px.

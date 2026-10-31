@@ -277,6 +277,27 @@
 - `doc.removeObject(nombre)`: leer `obj.Name` antes (después da "deleted object").
 - `SwPanel.preview` vuelve a leer `self.obj` después de `_apply` (un panel puede cambiar la
   operación por otra); `dress_up_panel.CHOOSERS` elige el panel por marca antes que por TypeId.
+- (2026-10-31) Pad/Pocket `Type` en 1.1.4: Length, UpToLast, UpToFirst, UpToFace, TwoLengths,
+  UpToShape. "UpToFace" acepta una cara de otro objeto y `Offset` (negativo = se queda antes).
+  "UpToFace"/"UpToShape" con un vértice: forma inválida. "UpToShape" con un sólido entero (sin
+  subelementos o con todas sus caras): no llega ("Unable to reach the selected shape").
+- Plano de referencia por un vértice y paralelo a una cara: MapMode "OXY" (también OZX/OZY) con
+  (vértice, arista de la cara, cara). Con solo (vértice, cara) queda inválido; "Translate" no
+  sirve para "Hasta cara".
+- Una operación de PartDesign no puede apuntar a caras de otro Cuerpo o de un sólido suelto
+  (fuera de alcance): pasar por un `PartDesign::SubShapeBinder` dentro del Cuerpo (su forma es
+  "Face1"/"Vertex1").
+- `PartDesign::Draft`: `PullDirection` acepta una arista o una `PartDesign::Line` ("No pull
+  direction reference specified" con un plano); `NeutralPlane` acepta un `PartDesign::Plane`.
+  La cara gira hacia el sentido del tiro (sin Invertir). Falla sin mensaje según el sentido y el
+  ángulo aun con la bisagra en una arista de la cara (caja 50x30x10 con agujero: 10° hacia un lado
+  falla, 5° anda): es del Draft, no del fork.
+- Sketch con MapMode "SectionOfRevolution", "Concentric" u "ObjectXZ" sobre una cara cilíndrica:
+  inválido. El croquis del anillo va con Placement fijo (MapMode "Deactivated").
+- Las expresiones leen la forma: `Cyl.Shape.Faces[0].Surface.Radius` = 4 (no se usó: depende del
+  número de la cara igual que una referencia).
+- Un primitivo de PartDesign (AdditiveBox, SubtractiveCylinder) suelto (sin apoyo) ignora
+  `AttachmentOffset`: ubicarlo con `Placement` (en las pruebas).
 
 ## Chapa (fase 1): hallazgos con SheetMetal 0.8.26 en FreeCAD 1.1.4
 - SheetMetal se importa por módulos (`SheetMetalBaseCmd`, `SheetMetalCmd`, `SheetMetalUnfoldCmd`):
@@ -296,6 +317,11 @@
   (el doble). La brida de arista tiene su propio `kfactor` (solo para su vista "unfold").
 - Editar (setEdit) un objeto de SheetMetal abre su transacción y su panel; `resetEdit` llama a su
   `unsetEdit` (cierra el diálogo y oculta el `baseObject`) y la transacción queda abierta.
+- (2026-10-31) Los croquis del desarrollo se llaman "<Label>_Sketch..." y se buscan por Name: con
+  un espacio en el Label ("Chapa desplegada1") FreeCAD cambia el Name ("Chapa_desplegada1_...") y
+  SheetMetal los borraba y creaba de nuevo en cada recálculo. `sheet_metal.patch_sketch_names`
+  envuelve `SheetMetalNewUnfolder.SketchExtraction.edges_to_sketch_object` y le pasa el nombre ya
+  como lo deja FreeCAD (probado: los mismos 3 croquis después de recalcular).
 - Brida base cerrada: `Reverse` cambia el lado del espesor (`BendSide` no hace nada). Abierta:
   `BendSide` Inside = el croquis es la medida de afuera, Outside = de adentro, Middle = al medio.
 
