@@ -196,6 +196,39 @@ Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o come
     sola a Ensamblaje (y vuelve a Operaciones al pasar a una pieza), `swui/fork/asm_tab.py`.
   - Falta (menor): borrar una matriz entera de un golpe (borrar el VarSet deja
     las copias); un eje/punto fijo pierde sus selecciones al editarlo; doble clic en el taladro dentro de la pieza abre el diálogo de FreeCAD.
+  - Pruebas "Vos" hechas por Claude con el mouse (31/10), conjunto realista en
+    C:\SW-AI-Bridge\trabajos\fase5_real (freecad\ y los .SLDPRT/.SLDASM de SW): placa 200x120x12 con
+    agujero central Ø40 y 6xØ9 en Ø80, brida Ø110x10, bulón M8 con cabeza, escuadra asimétrica, rodillo.
+    Medido con guion sobre el archivo guardado:
+    - Insertar 5 piezas, nombres "(f) Placa<1>"...; cinta pasa sola a Ensamblaje. OK.
+    - Coincidente (brida/placa), Concéntrica (agujeros centrales y bulón/agujero de la brida),
+      Distancia 15: se eligen solas, el panel queda abierto. Brida centrada en z=12, bulón con la
+      cabeza apoyada en la brida (z=22). OK.
+    - Matriz circular de 6 bulones con el eje del agujero de la brida: los 6 exactos en los
+      agujeros. OK. Simetría de la escuadra: avisa "no es simétrica" y crea Escuadra-opuesta. OK.
+    - Taladro de ensamblaje M6 con los bulones puestos: Piezas afectadas = placa y brida (sin
+      bulón), agujero en las dos en el mismo lugar, los bulones no saltan. Mover el punto del
+      croquis (cota 35): el agujero se mueve en las dos piezas; bulones quietos. OK.
+    - Plano a 25 de la placa y Eje del agujero de la brida: "Totalmente definido". OK (la lista
+      muestra "Taladro.Face5" en vez de "Cara<1>").
+    - Pieza sola: sale el cartelito (arreglado el 31/10: FreeCAD carga el ensamblaje oculto y el
+      aviso lo daba por abierto; la marca guardaba "Unnamed").
+    - Arreglados en el momento: "Revisala" falso en una relación al recalcular la brida (costura
+      del círculo); error rojo "Unknown document" del STEP al guardar cerrando.
+    - Hallazgos nuevos sin arreglar: (1) Tangente cilindro/cara con el rodillo parado: el fork no
+      lo acuesta (queda atravesando la placa); en SW la tangente deja el eje paralelo a la cara
+      (por lo que se sabe de SW; no se llegó a comparar con el mouse). (2) Guardar el ensamblaje
+      (Ctrl+S) no guarda la placa y la brida agujereadas ni pregunta; "Guardar todo" muestra un
+      error rojo "dependencias cíclicas" (se guarda igual con Sí). SW pregunta "Guardar documentos
+      modificados". (3) Girar la brida cambiando el ángulo en Datos: vuelve sola a 17° (el
+      motor la devuelve; no se pudo probar arrastrando: FreeCAD no recibe el arrastre de Claude).
+      (4) Textos en inglés: "Editar Sketch" en el clic derecho del croquis del ensamblaje,
+      "Save As...", "Save all changes to document ... / Discard" al cerrar, "Sketch Edit"/"Close".
+      (5) Doble clic en el croquis del taladro (en el ensamblaje) no lo abre. (6) En una cota de
+      croquis, Escape en el cuadro del valor borra la cota (en SW la deja).
+    - SW: se armó el mismo conjunto (Placa, Brida, Bulón con relaciones, Rodillo). Al seguir con el
+      mouse apareció el aviso de memoria de SW y no aceptó clics ni teclas (SW sí respondía por el
+      conector): quedó abierto para que el usuario conteste Sí.
 
 ## Pruebas comparadas con SW (Claude maneja el mouse en los dos programas)
 Forma de trabajo acordada con el usuario (2026-10-27/28): para cada renglón de los checklists,
