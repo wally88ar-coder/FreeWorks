@@ -1,7 +1,7 @@
 # Estado del fork
 
-Última actualización: 2026-10-30 (pruebas de todos los checklists terminadas por Claude;
-relaciones de posición que ya no saltan; checklists unidos en un solo documento).
+Última actualización: 2026-10-31 (fase 5 cerrada de parte de Claude: decisiones del usuario
+hechas y probadas con el mouse; arreglo de paneles trabados; fase 6 acordada).
 
 **Checklists compartidos con el usuario** (se tildan ahí; al cerrar algo, tildarlo también):
 - Todas las fases, incluida la fase 5 en detalle: "Checklists del fork: qué falta en cada fase"
@@ -16,6 +16,14 @@ relaciones de posición que ya no saltan; checklists unidos en un solo documento
 Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o comentó el usuario.
 
 ## Fase actual
+- **31/10, resumen del día:** fase 5 sin pendientes de parte de Claude. Hecho y probado con el
+  mouse (FreeCAD y, donde aplica, SW): versión simétrica que pide nombre y carpeta (archivo
+  "<pieza>-simetría"); relaciones de posición colgadas de cada componente y con sus piezas en el
+  nombre, como SW (`mates_tree.py`); "Joints" pasa a "Relaciones de posición" al abrir; paneles
+  del fork que se trababan si se apretaba otro comando (`panel_guard.py`). Decisiones del usuario:
+  taladro/corte de ensamblaje y pieza repetida quedan como están (como SW con "Propagar"); el
+  chequeo de compatibilidad es la fase 6. Falta: que el usuario pruebe la fase 5 con conjuntos
+  suyos. Límites de FreeCAD: girar arrastrando una pieza que solo gira; aviso de "Guardar todo".
 - **30/10, 23 h: resto del checklist comparado con SW, los dos con el mouse** (lo que estaba
   Parcial o Pendiente para Claude). Resultados:
   - Chapa: U con brida base + 2 bridas de arista: igual a SW (200×100×30, 61 369,9 mm³) cuando SW
