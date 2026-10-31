@@ -95,9 +95,10 @@ tolerancias geométricas.
 Estado al 2026-10-31: fase 0 terminada; fases 1 a 5 con código completo y probadas por Claude
 (todo lo de los checklists); **fase 5 CERRADA** (31/10, decisión del usuario: probada por Claude
 con el mouse sobre un conjunto realista y comparada con SW; lo que aparezca usándola se arregla
-sobre la marcha); de las fases 1 a 4 falta que las pruebe el usuario con piezas suyas (de la 2
-solo probó el redondeo, de la 4 girar cara) y que revise las decisiones de las fases 1 y 3. Fase 6 (chequeo de
-compatibilidad) acordada, sin empezar.
+sobre la marcha); fases 1 a 4: todas las pruebas del checklist hechas con mouse y teclado (Claude,
+casi todas comparadas con SW; el usuario probó redondeo y girar cara); quedan solo las que
+necesitan algo del usuario (un STEP suyo, una pieza suya, abrir el DXF en CypCut) y que revise
+las decisiones de las fases 1 y 3. Fase 6 (chequeo de compatibilidad) acordada, sin empezar.
 Hecho además fuera de las fases: árbol de operaciones estilo SW (barra de retroceso, suprimir,
 mover, cotas con doble clic, reparar referencias...), aristas del modelo dentro del croquis,
 multicuerpo (Fusionar resultado, Alcance, Combinar, simetría de sólidos) y Mover/Copiar /

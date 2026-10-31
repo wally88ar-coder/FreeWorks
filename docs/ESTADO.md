@@ -1,7 +1,7 @@
 # Estado del fork
 
-Última actualización: 2026-10-31 (fase 5 cerrada de parte de Claude: decisiones del usuario
-hechas y probadas con el mouse; arreglo de paneles trabados; fase 6 acordada).
+Última actualización: 2026-10-31 noche (fase 5 cerrada; pruebas del checklist de las fases 1 a 4
+hechas con el mouse por Claude, salvo las que necesitan archivos del usuario; fase 6 acordada).
 
 **Checklists compartidos con el usuario** (se tildan ahí; al cerrar algo, tildarlo también):
 - Todas las fases, incluida la fase 5 en detalle: "Checklists del fork: qué falta en cada fase"
@@ -150,19 +150,21 @@ Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o come
   de pruebas en la sección "Plan: árbol de operaciones" de abajo.
 - **Aristas del modelo dentro del croquis (como SW): terminado y probado por el usuario.**
 - **Fase 1 — Chapa: versiones 1 a 3 hechas (2026-10-27/28); comparada con SW por Claude con el
-  mouse (2026-10-29); falta que la pruebe el usuario.** Pestaña Chapa con Brida base, Brida de
+  mouse (2026-10-29); DXF por lotes probado con el mouse el 31/10; falta del usuario: Convertir en
+  chapa con un STEP suyo, abrir el DXF en CypCut y revisar las decisiones de la fase 1.** Pestaña Chapa con Brida base, Brida de
   arista, Dobladillo, Extruir corte, Convertir en chapa (STEP), Aplanar, Desdoblar/Doblar y
   Exportar DXF (también por lotes desde un ensamblaje). Comparado con SW: brida base, bridas de
   arista (U), aplanar/volver, espesor 2 -> 3, dobladillo, extruir corte, perfil en L,
-  desdoblar/doblar: mismo volumen y mismo desarrollo DXF. Sin comparar (el usuario lo dejó ahí):
-  Convertir en chapa con un STEP suyo y DXF por lotes. Detalle en "Pruebas comparadas con SW".
+  desdoblar/doblar: mismo volumen y mismo desarrollo DXF. Convertir en chapa: probado con un STEP
+  exportado de SW por Claude (mismo DXF que SW). Detalle en "Pruebas comparadas con SW".
 - **Fase 2 — Flujos de pieza: código completo (2026-10-27); comparada con SW por Claude con el
-  mouse (2026-10-28), mismo resultado que SW en todo; falta que la pruebe el usuario** (el
-  redondeo ya lo probó: "anda OK"). Términos SW en barrido y hélice: probados por Claude el 30/10. Detalle en
+  mouse (2026-10-28), mismo resultado que SW en todo; todas las pruebas del checklist hechas**
+  (el redondeo lo probó el usuario: "anda OK"; el resto Claude con el mouse). Términos SW en barrido y hélice: probados por Claude el 30/10. Detalle en
   "Pruebas comparadas con SW" y "Plan: fase 2" > Avance.
 - **Fase 4 — Mover cara: terminada (2026-10-27)**, con operaciones nativas (Pad / Pocket /
   Draft), sin FeaturePython (aprobado por el usuario). Probado por él: girar cara ("muy bueno");
-  falta que pruebe equidistanciar y trasladar.
+  equidistanciar y trasladar, por Claude con el mouse y comparados con SW. Falta del usuario:
+  mover una cara de un STEP suyo.
 - **Mover/Copiar sólido y Eliminar/Conservar sólidos: terminados (2026-10-27); probados por
   Claude (29 y 30/10); falta que los pruebe el usuario.** Incluye "de un vértice a otro" y Supr que devuelve los sólidos.
   Restricciones: descartado por el usuario (ecuaciones a mano si hiciera falta).
@@ -178,16 +180,16 @@ Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o come
   desde la cinta ya no pasa (se cancela bien).
 - **Fase 6 (nueva, 31/10, decisión del usuario): chequeo de compatibilidad**, como fase aparte y
   sin empezar (plan en CLAUDE.md > Fases). `mates_tree.self_check()` ya está listo para usarla.
-- **Próximo paso:** todas las fases tienen el código completo (la 0 está terminada) y Claude ya
-  probó todo lo de los checklists (fases 1 y 2 comparadas con SW); falta que el usuario pruebe con piezas y
-  conjuntos suyos: fase 1 (chapa, sobre todo Convertir en chapa con STEP y DXF por lotes), fase 2,
-  fase 3 (y sus decisiones), fase 4 (equidistanciar / trasladar cara), Mover/Copiar y
-  Eliminar/Conservar sólidos, y fase 5 (etapas 2 a 5, checklist en su sección del documento de checklists).
-  Después: planos (plan en el documento "Planos estilo SW 2018", ver Checklists), fase 6
+- **Próximo paso:** fases 0 y 5 cerradas; de las fases 1 a 4, todas las pruebas del checklist
+  están hechas con mouse y teclado (31/10). Falta del usuario: un STEP suyo (Convertir en chapa,
+  Mover cara), una pieza suya en Propiedades físicas, abrir el DXF en CypCut, y revisar las
+  decisiones de las fases 1 (chapa) y 3 (evaluar); Mover/Copiar y Eliminar/Conservar sólidos los
+  probó Claude. Después: planos (plan en el documento "Planos estilo SW 2018", ver Checklists), fase 6
   (chequeo de compatibilidad) o lo que elija el usuario.
 - **Fase 3 — Evaluar: código completo (2026-10-26), hecha sola a pedido del usuario ("dale con
-  toda la fase 3, yo estoy ocupado"); falta que la pruebe él y que revise las decisiones** de
-  "Plan: fase 3" > Decisiones para revisar. Probada por Claude sin GUI y en FreeCAD real.
+  toda la fase 3, yo estoy ocupado"); pruebas del checklist hechas por Claude con el mouse (31/10:
+  también Ecuaciones, la franja y el aviso de material faltante); falta que el usuario revise las
+  decisiones** de "Plan: fase 3" > Decisiones para revisar, y una pieza suya en Propiedades físicas.
 - **Fase 5 — Ensamblaje: CERRADA el 2026-10-31** (código completo 2026-10-27; decisiones del
   usuario hechas; pruebas hechas por Claude con el mouse y comparadas con SW). Alcance (lo que el usuario usa de la pestaña Ensamblaje de SW):
   insertar, relaciones de posición, matriz de componentes lineal y circular, simetría de
