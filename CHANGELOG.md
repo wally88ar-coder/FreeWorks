@@ -388,6 +388,16 @@ Neueste Version oben. / Newest version first.
   pieza se recalcula y el agujero sigue igual (OpenCASCADE corre la costura del círculo).
 - Guardar también STEP: al guardar cerrando ("¿Guardar cambios?" o Cerrar todo) el STEP se
   actualiza igual; antes salía un error rojo "Unknown document" y el STEP quedaba viejo.
+- Tangente entre una cara plana y un cilindro: además acuesta el cilindro (eje paralelo a la
+  cara), como SW; antes un rodillo parado quedaba atravesando la placa. Se arma con una unión
+  Perpendicular nativa oculta en el árbol, que se suprime y se borra con la Tangente.
+- Guardar el ensamblaje guarda también las piezas que cambiaron (taladro o corte de ensamblaje,
+  versión opuesta), como SW; antes quedaban sin guardar y "Guardar todo" mostraba un error rojo
+  de "dependencias cíclicas".
+- En castellano: "Guardar como..." del menú Archivo, la pregunta al cerrar con cambios y sus
+  botones, y "Editar croquis" en el clic derecho (`swui/fork/es_texts.py`).
+- Cota nueva en el croquis: Escape en el cuadro del valor la deja con el valor medido, como SW
+  (antes la borraba).
 
 ## 0.10.0 — 2026-10-18
 

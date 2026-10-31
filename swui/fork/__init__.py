@@ -90,6 +90,12 @@ def install(workbench=None):
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] Paneles de operación SW:\n%s\n" % traceback.format_exc())
     try:
+        from swui.fork import es_texts
+
+        es_texts.install()
+    except Exception:
+        FreeCAD.Console.PrintError("[SWUI fork] Textos en castellano:\n%s\n" % traceback.format_exc())
+    try:
         from swui.fork import auto_body
 
         auto_body.install()

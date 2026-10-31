@@ -370,6 +370,60 @@ class _Observer:
     def slotCreatedDocument(self, doc):
         QtCore.QTimer.singleShot(0, lambda n=doc.Name: _tell_if_from_assembly(n))
 
+    def slotFinishSaveDocument(self, doc, _filename):
+        if any(o.TypeId == "Assembly::AssemblyObject" for o in doc.Objects):
+            QtCore.QTimer.singleShot(0, lambda n=doc.Name: save_modified_parts(n))
+
+
+def modified_parts(asm_doc):
+    """Documentos que usa el ensamblaje (piezas, opuestas...) con cambios sin guardar y ya con archivo."""
+    out = []
+    # de los componentes (vínculos): getDependentDocuments falla con el ciclo pieza <-> croquis
+    # del ensamblaje ("The graph must be a DAG")
+    for o in asm_doc.Objects:
+        if o.TypeId != "App::Link":
+            continue
+        try:
+            d = o.getLinkedObject(True).Document
+        except Exception:
+            continue
+        if d is asm_doc or d in out or not getattr(d, "FileName", ""):
+            continue
+        try:
+            if FreeCADGui.getDocument(d.Name).Modified:
+                out.append(d)
+        except Exception:
+            pass
+    return out
+
+
+def save_modified_parts(doc_name):
+    """
+    Como SW: guardar el ensamblaje guarda también las piezas que cambiaron (un taladro o corte de
+    ensamblaje, la versión opuesta...). FreeCAD 1.1.4 no las guardaba con Ctrl+S y "Guardar todo"
+    mostraba un error rojo de "dependencias cíclicas" (las piezas usan el croquis del ensamblaje):
+    se guarda cada una por su lado, que no pasa por esa revisión. Visto con el mouse, 2026-10-31.
+    """
+    try:
+        asm_doc = FreeCAD.getDocument(doc_name)
+    except Exception:
+        return []
+    saved = []
+    for d in modified_parts(asm_doc):
+        try:
+            d.save()
+            saved.append(d.Label)
+        except Exception:
+            FreeCAD.Console.PrintError("[SWUI fork] No se pudo guardar %s:\n%s\n" % (d.Label, traceback.format_exc()))
+    if saved:
+        text = "También se guardaron las piezas: %s" % ", ".join(saved)
+        FreeCAD.Console.PrintMessage("[SWUI fork] %s\n" % text)
+        try:
+            FreeCADGui.getMainWindow().statusBar().showMessage(text, 10000)
+        except Exception:
+            pass
+    return saved
+
 
 def _shown(doc):
     """¿El usuario tiene el documento abierto en una ventana? (no solo cargado como dependencia)"""

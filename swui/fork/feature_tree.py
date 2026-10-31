@@ -723,6 +723,7 @@ MENU_ES = {
     "Toggle Visibility in Tree View": "Alternar visibilidad en el árbol",
     "Add Dependent Objects to Selection": "Agregar dependientes a la selección",
     "Active Body": "Cuerpo activo",
+    "Edit Sketch": "Editar croquis",  # antes de la regla "Edit X" (daba "Editar Sketch")
 }
 
 

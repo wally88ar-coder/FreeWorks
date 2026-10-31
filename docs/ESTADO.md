@@ -215,7 +215,11 @@ Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o come
       aviso lo daba por abierto; la marca guardaba "Unnamed").
     - Arreglados en el momento: "Revisala" falso en una relación al recalcular la brida (costura
       del círculo); error rojo "Unknown document" del STEP al guardar cerrando.
-    - Hallazgos nuevos sin arreglar: (1) Tangente cilindro/cara con el rodillo parado: el fork no
+    - Arreglados el 31/10 (con guiones; falta probarlos con el mouse): (1) tangente acuesta el
+      cilindro; (2) guardar el ensamblaje guarda las piezas cambiadas; (4) textos en inglés;
+      (6) Escape en la cota nueva. (5) no es error: doble clic en un croquis muestra sus cotas,
+      como SW; se edita con clic derecho. (3) queda: es el motor de FreeCAD.
+    - Hallazgos nuevos vistos: (1) Tangente cilindro/cara con el rodillo parado: el fork no
       lo acuesta (queda atravesando la placa); en SW la tangente deja el eje paralelo a la cara
       (por lo que se sabe de SW; no se llegó a comparar con el mouse). (2) Guardar el ensamblaje
       (Ctrl+S) no guarda la placa y la brida agujereadas ni pregunta; "Guardar todo" muestra un

@@ -222,7 +222,7 @@ def joints_of(asm):
         jg = _assembly_modules()[1].getJointGroup(asm)
     except Exception:
         return []
-    return [j for j in (jg.Group if jg else []) if hasattr(j, "JointType")]
+    return [j for j in (jg.Group if jg else []) if hasattr(j, "JointType") and not hasattr(j, TANGENT_OF)]
 
 
 def mates_of(asm, comp):
@@ -298,7 +298,95 @@ def create_joint(asm, key, refs, value=None, label=None):
     if key == "lock":
         _keep_position(joint, connectors)
     joint.Proxy.setJointConnectors(joint, connectors)
+    if key == "tangent":
+        _tangent_axis(asm, joint, refs, connectors)
     return joint
+
+
+TANGENT_OF = "SWUI_TangentOf"  # en la unión compañera: Name de la Tangente (nombre estable)
+
+
+def _ref_kind(comp, sub):
+    from swui.fork import mate_refs
+
+    try:
+        shape = mate_refs.local_shape(comp)
+        return kind_of(shape.getElement(mate_refs.split_sub(sub)[1]))
+    except Exception:
+        return None
+
+
+def _tangent_axis(asm, joint, refs, connectors):
+    """
+    Tangente entre una cara plana y un cilindro (o cono): la unión Distance de FreeCAD deja el eje
+    a la distancia del radio pero no lo acuesta (un rodillo parado quedaba atravesando la placa,
+    visto con el mouse 2026-10-31). SW además deja el eje paralelo a la cara: se suma una unión
+    Perpendicular nativa (normal de la cara ⟂ eje), oculta en el árbol y atada a la Tangente.
+    """
+    kinds = {_ref_kind(c, s) for c, s in refs}
+    if "plane" not in kinds or not kinds & {"cylinder", "cone"}:
+        return None
+    jo, ua = _assembly_modules()
+    jg = ua.getJointGroup(asm)
+    axis = jg.newObject("App::FeaturePython", "Joint")
+    jo.Joint(axis, jo.JointTypes.index("Perpendicular"))
+    if FreeCAD.GuiUp and axis.ViewObject is not None:
+        jo.ViewProviderJoint(axis.ViewObject)
+        try:
+            axis.ViewObject.ShowInTree = False
+        except Exception:
+            pass
+    axis.addProperty("App::PropertyString", PROP, "Relación SW", "Parte de una Tangente (LikeSolidWorks UI)")
+    setattr(axis, PROP, "tangent_axis")
+    axis.addProperty("App::PropertyString", TANGENT_OF, "Relación SW", "Tangente a la que acompaña")
+    setattr(axis, TANGENT_OF, joint.Name)
+    axis.Label = joint.Label + " (eje)"
+    axis.Proxy.setJointConnectors(axis, connectors)
+    return axis
+
+
+def companions(joint):
+    """Uniones que acompañan a una relación (la del eje de una Tangente)."""
+    try:
+        return [o for o in joint.Document.Objects if getattr(o, TANGENT_OF, None) == joint.Name]
+    except Exception:
+        return []
+
+
+class _CompanionObserver:
+    """La unión del eje sigue a su Tangente: se suprime y se borra con ella."""
+
+    def slotChangedObject(self, obj, prop):
+        if prop not in ("Suppressed", PROP) or not hasattr(obj, "JointType") or hasattr(obj, TANGENT_OF):
+            return
+        try:
+            if obj.Document.Restoring:
+                return
+            for c in companions(obj):
+                if prop == "Suppressed" and c.Suppressed != obj.Suppressed:
+                    c.Suppressed = obj.Suppressed
+                elif prop == PROP and getattr(obj, PROP, "") != "tangent":
+                    obj.Document.removeObject(c.Name)  # dejó de ser Tangente
+        except Exception:
+            FreeCAD.Console.PrintLog("[SWUI fork] Eje de la tangente:\n%s\n" % traceback.format_exc())
+
+    def slotDeletedObject(self, obj):
+        try:
+            if not hasattr(obj, "JointType") or hasattr(obj, TANGENT_OF):
+                return
+            doc, name = obj.Document, obj.Name
+        except Exception:
+            return
+
+        def later():
+            for o in list(doc.Objects):
+                if getattr(o, TANGENT_OF, None) == name:
+                    doc.removeObject(o.Name)
+
+        if FreeCAD.GuiUp:
+            QtCore.QTimer.singleShot(0, later)  # no borrar dentro del aviso de borrado
+        else:
+            later()
 
 
 def _keep_position(joint, connectors):
@@ -1016,6 +1104,7 @@ def install():
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] Panel de relaciones del original:\n%s\n" % traceback.format_exc())
     _wrap_double_click()
+    FreeCAD.addDocumentObserver(_CompanionObserver())
     if hasattr(FreeCADGui, "addWorkbenchManipulator"):
         FreeCADGui.addWorkbenchManipulator(_Manipulator())
     _installed = True

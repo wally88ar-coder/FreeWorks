@@ -1063,6 +1063,15 @@ def _check_feature_tree(commands, mw, layout, hooked):
             or mrf.cost(hole_, dict(hole_, p=[16.75, 30, 10])) >= mrf.CLOSE):
         print("  FEHLER: fork: relaciones que no saltan (volver a encontrar la entidad)")
         return False
+    # Textos de FreeCAD que quedaban en inglés, y Escape en el cuadro de una cota nueva
+    est = importlib.import_module("swui.fork.es_texts")
+    if (est.menu_text("Save &As…") != "Guardar &como…"
+            or est.message_text("Save all changes to document 'Brida' before closing?")
+            != "¿Guardar los cambios del documento 'Brida' antes de cerrar?"
+            or est.message_text("Otra cosa") is not None
+            or not est.is_new_datum_title("Insertar longitud") or est.is_new_datum_title("Material")):
+        print("  FEHLER: fork: textos en castellano / Escape en la cota nueva")
+        return False
     # Cinta: pasar sola a Ensamblaje al abrir un ensamblaje, y a Operaciones al volver a una pieza
     atb = importlib.import_module("swui.fork.asm_tab")
     if (atb.tab_for(None, ("Conj", "assembly")) != "Baugruppe" or atb.tab_for(None, ("Base", "part")) is not None
