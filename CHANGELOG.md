@@ -386,6 +386,8 @@ Neueste Version oben. / Newest version first.
   cartelito de FreeCAD (antes, solo en la vista de informes, que el fork tiene oculta).
 - Relaciones de posición: ya no avisan "la arista circular elegida cambió... Revisala" cuando la
   pieza se recalcula y el agujero sigue igual (OpenCASCADE corre la costura del círculo).
+- Guardar también STEP: al guardar cerrando ("¿Guardar cambios?" o Cerrar todo) el STEP se
+  actualiza igual; antes salía un error rojo "Unknown document" y el STEP quedaba viejo.
 
 ## 0.10.0 — 2026-10-18
 

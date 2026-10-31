@@ -697,18 +697,19 @@ class _Observer:
         from swui.compat import QtCore
 
         name = doc.Name
-        QtCore.QTimer.singleShot(0, lambda: _check_saved_later(name))
+        QtCore.QTimer.singleShot(0, lambda: _check_saved_later(name, filename))
 
 
-def _check_saved_later(name):
-    try:
-        if check_saved(FreeCAD.getDocument(name)):
-            return  # se volvió a guardar: el STEP sale de ese segundo guardado
-    except Exception:
-        FreeCAD.Console.PrintLog("[SWUI fork] Aviso de retroceso:\n%s\n" % traceback.format_exc())
+def _check_saved_later(name, filename=""):
+    if name in FreeCAD.listDocuments():  # guardado al cerrar: ya no está (no hay aviso que dar)
+        try:
+            if check_saved(FreeCAD.getDocument(name)):
+                return  # se volvió a guardar: el STEP sale de ese segundo guardado
+        except Exception:
+            FreeCAD.Console.PrintLog("[SWUI fork] Aviso de retroceso:\n%s\n" % traceback.format_exc())
     from swui.fork import step_copy
 
-    step_copy.after_save(name)
+    step_copy.after_save(name, filename)
 
 
 # Opciones del clic derecho que FreeCAD 1.1.4 deja en inglés con el idioma en castellano

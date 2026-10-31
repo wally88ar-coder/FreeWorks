@@ -79,18 +79,41 @@ def export(doc):
     return path
 
 
-def after_save(name):
+def after_save(name, filename=""):
     """Llamado al terminar de guardar (desde feature_tree, después del aviso de retroceso)."""
     if not enabled():
         return
     try:
-        doc = FreeCAD.getDocument(name)
         mw = FreeCADGui.getMainWindow()
         mw.statusBar().showMessage("Guardando también STEP...")
-        path = export(doc)
+        if name in FreeCAD.listDocuments():
+            path = export(FreeCAD.getDocument(name))
+        else:
+            path = _export_closed(filename)
         mw.statusBar().showMessage("STEP guardado: %s" % path if path else "", 5000)
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] No se pudo guardar el STEP:\n%s\n" % traceback.format_exc())
+
+
+def _export_closed(filename):
+    """
+    Guardar al cerrar ("¿Guardar cambios?" -> Sí, o Cerrar todo): cuando llega el turno del STEP
+    el documento ya se cerró (salía un error rojo, visto con el mouse 2026-10-31). Se abre oculto el
+    archivo recién guardado, se exporta y se cierra todo lo que se abrió para eso.
+    """
+    if not filename or not os.path.isfile(filename):
+        return None
+    before = set(FreeCAD.listDocuments())
+    try:
+        doc = FreeCAD.openDocument(filename, True)
+        doc.recompute()
+        return export(doc)
+    finally:
+        for n in set(FreeCAD.listDocuments()) - before:
+            try:
+                FreeCAD.closeDocument(n)
+            except Exception:
+                pass
 
 
 class _AlsoSaveStep:
