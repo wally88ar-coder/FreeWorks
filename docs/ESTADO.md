@@ -16,6 +16,9 @@ hechas y probadas con el mouse; arreglo de paneles trabados; fase 6 acordada).
 Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o comentó el usuario.
 
 ## Fase actual
+- **Fase 5 CERRADA (31/10, decisión del usuario).** Las pruebas "Vos" quedan como hechas por
+  Claude con el conjunto realista (fase5_real); lo que aparezca con conjuntos del usuario se
+  arregla sobre la marcha.
 - **31/10, resumen del día:** fase 5 sin pendientes de parte de Claude. Hecho y probado con el
   mouse (FreeCAD y, donde aplica, SW): versión simétrica que pide nombre y carpeta (archivo
   "<pieza>-simetría"); relaciones de posición colgadas de cada componente y con sus piezas en el
@@ -175,9 +178,8 @@ Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o come
 - **Fase 3 — Evaluar: código completo (2026-10-26), hecha sola a pedido del usuario ("dale con
   toda la fase 3, yo estoy ocupado"); falta que la pruebe él y que revise las decisiones** de
   "Plan: fase 3" > Decisiones para revisar. Probada por Claude sin GUI y en FreeCAD real.
-- **Fase 5 — Ensamblaje: código completo (etapas 1 a 5, 2026-10-27); falta que el usuario la
-  pruebe con conjuntos suyos y que responda las casillas "Vos" de la sección Fase 5 del
-  documento de checklists** (enlace arriba), donde se tilda etapa por etapa. Alcance (lo que el usuario usa de la pestaña Ensamblaje de SW):
+- **Fase 5 — Ensamblaje: CERRADA el 2026-10-31** (código completo 2026-10-27; decisiones del
+  usuario hechas; pruebas hechas por Claude con el mouse y comparadas con SW). Alcance (lo que el usuario usa de la pestaña Ensamblaje de SW):
   insertar, relaciones de posición, matriz de componentes lineal y circular, simetría de
   componentes, taladro y extruir corte de ensamblaje, geometría de referencia. Commits 3d61268,
   bc35bf6, 258df65, c6b3deb. Hallazgos técnicos en `docs/NOTAS_TECNICAS.md` > "Ensamblaje (fase 5)".

@@ -93,9 +93,10 @@ tolerancias geométricas.
 
 ## Fases (orden propuesto; el usuario puede reordenar)
 Estado al 2026-10-31: fase 0 terminada; fases 1 a 5 con código completo y probadas por Claude
-(todo lo de los checklists, la 5 también con el mouse y comparada con SW); el usuario ya decidió
-todo lo de la fase 5; falta que las pruebe él con piezas y conjuntos suyos (de la 2 solo probó el
-redondeo, de la 4 girar cara) y que revise las decisiones de la fase 3. Fase 6 (chequeo de
+(todo lo de los checklists); **fase 5 CERRADA** (31/10, decisión del usuario: probada por Claude
+con el mouse sobre un conjunto realista y comparada con SW; lo que aparezca usándola se arregla
+sobre la marcha); de las fases 1 a 4 falta que las pruebe el usuario con piezas suyas (de la 2
+solo probó el redondeo, de la 4 girar cara) y que revise las decisiones de las fases 1 y 3. Fase 6 (chequeo de
 compatibilidad) acordada, sin empezar.
 Hecho además fuera de las fases: árbol de operaciones estilo SW (barra de retroceso, suprimir,
 mover, cotas con doble clic, reparar referencias...), aristas del modelo dentro del croquis,
@@ -110,10 +111,10 @@ castellano, coma decimal; ver "Falta" en `docs/ESTADO.md`.
 2. Flujos de pieza: diálogos restantes adaptados y asistente para taladro.
 3. Evaluar: propiedades físicas, material, ecuaciones.
 4. Mover/rotar cara (hecha 2026-10-27).
-5. Ensamblaje (código completo 2026-10-27, probada por Claude con el mouse y comparada con SW
-   2026-10-31, decisiones del usuario hechas: relaciones colgadas de cada componente y con sus
-   piezas en el nombre, versión simétrica que pide nombre y carpeta; falta que la pruebe el
-   usuario con conjuntos suyos; las relaciones ya no saltan al cambiar una pieza): relaciones SW, matriz y
+5. Ensamblaje — CERRADA el 2026-10-31 (código completo 2026-10-27, probada por Claude con el
+   mouse y comparada con SW, decisiones del usuario hechas: relaciones colgadas de cada componente y con sus
+   piezas en el nombre, versión simétrica que pide nombre y carpeta; las relaciones ya no saltan
+   al cambiar una pieza): relaciones SW, matriz y
    simetría de componentes, taladro/corte de ensamblaje, geometría de referencia. Plan y checklist
    en la sección Fase 5 del documento de checklists (enlace en `docs/ESTADO.md`).
 6. Chequeo de compatibilidad (fase aparte, decidido por el usuario 2026-10-31; sin empezar):
