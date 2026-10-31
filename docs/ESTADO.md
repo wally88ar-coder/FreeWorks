@@ -16,6 +16,31 @@ hechas con el mouse por Claude, salvo las que necesitan archivos del usuario; fa
 Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o comentó el usuario.
 
 ## Fase actual
+- **31/10 noche, decisiones pendientes del checklist tomadas por el usuario** (todas; las que
+  piden cambios, sin hacer todavía):
+  - Chapa: K 0,5 y radio = espesor (queda). Espesor y largo de fábrica **siempre 2 mm y 20 mm**
+    (no el último usado). DXF: **preguntar antes de pisar** (nombre pieza_espesor_material,
+    queda). Nombres **como su SW 2018** (leídos en SW): "Brida base1", "Brida de arista1",
+    "Chapa desplegada1" (solo etiquetas; nombres internos sin cambio). Convertir en chapa solo
+    para chapas plegadas (queda; sólido macizo descartado). DXF por lotes: **borrar los
+    desarrollos agregados** al terminar (las piezas quedan como estaban).
+  - Fase 2: el pedido a FreeCAD de planos en ángulo / punto medio, no por ahora.
+  - Evaluar: signo de Lxy ya verificado igual a SW (cerrada). **Sin material: densidad 0**
+    (masa e inercias 0, el informe avisa); OJO: SW usa 1000 kg/m³, el usuario eligió 0 igual.
+    Decimales 3 / 2, nombres originales de materiales, Aplicar sin selección a todos, copia del
+    material a la vista: quedan. **Ecuaciones no modal** (que se pueda tocar el modelo con la
+    ventana abierta, p. ej. clic en una cota). **Comentarios en todas las filas, como SW.**
+    Nombres D1@Croquis1: quedan (ya son como SW). **"Ecuaciones" siempre en la franja** (su SW
+    muestra la carpeta aunque no haya ecuaciones). **Propiedades físicas sin sólidos ocultos de
+    fábrica** (SW 2018 trae destildada "Incluir sólidos/componentes ocultos"). Medir sin
+    "Proyectado en" (queda).
+  - Mover cara: agregar **otras condiciones finales**, **girar con eje fuera de la cara** y
+    **equidistanciar caras curvas**. Casilla Copiar: no.
+  - Ideas: Simulación FEM más adelante; panel Ver/Datos se deja; color de FreeCAD (sin gris SW).
+  - Repositorio: **no se propone nada al original** (desarrollo propio). **Nombre del paquete:
+    "FreeWorks"** (se le explicó que "FreeCAD" es marca de la FPA y que "Works" recuerda a
+    SolidWorks; eligió FreeWorks). Renombrar es trabajo aparte: plan antes de tocar (carpeta,
+    package.xml, banco; nombres internos guardados en archivos sin cambio).
 - **31/10 noche, pruebas "Vos" de las fases 1 a 4 (pedido del usuario):** en el checklist la
   columna "Vos" dice "Probado" en las que Claude hizo con mouse y teclado (casi todas comparadas
   con SW). Las cuatro que solo se habían hecho con guiones se repitieron con el mouse: DXF por
@@ -1381,6 +1406,9 @@ Etapas:
   tablas/funciones del original desde afuera (sin editar sus archivos) para no generar
   conflictos al traer novedades de upstream.
 - Lo que sirve a todos va en ramas limpias para PR; antes de abrir PR/issue, consultar al usuario.
+  **Actualizado 2026-10-31: el usuario decidió no proponer nada al original (desarrollo propio).**
+  Las ramas quedan como están; upstream se sigue leyendo para traer novedades.
+- Nombre del paquete propio: "FreeWorks" (usuario, 2026-10-31); renombrar sin empezar.
 - `SWUI_PlaneSpec` (texto JSON en los planos hechos con el panel SW): nombre estable (2026-10-27).
 - `SWUI_FromVertex` (texto JSON oculto en los puntos De / A de Mover/Copiar sólido: vértice y caras
   que se juntan ahí, para volver a encontrarlo): nombre estable (2026-10-30).

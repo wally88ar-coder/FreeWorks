@@ -22,8 +22,8 @@
   antes de abrir cualquier PR o issue en el repositorio original.
 - Lo propio del usuario (chapa, mover/rotar cara, etc.) va en módulos separados nuevos, tocando lo
   mínimo los archivos existentes, para que incorporar cambios del original no genere conflictos.
-- Pendiente de decidir más adelante: si el fork se distribuye con otro nombre de paquete para que
-  no choque con el original en el Addon Manager.
+- Decidido (2026-10-31): no se propone nada al original (desarrollo propio) y el paquete se va a
+  llamar **FreeWorks** (renombrar sin empezar; los nombres internos guardados en archivos no cambian).
 
 ## Decisiones de arquitectura (no cambiar sin consultar)
 - Addon en Python encima de FreeCAD oficial; nada de modificar el código de FreeCAD.
