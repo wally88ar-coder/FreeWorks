@@ -724,6 +724,7 @@ MENU_ES = {
     "Add Dependent Objects to Selection": "Agregar dependientes a la selección",
     "Active Body": "Cuerpo activo",
     "Edit Sketch": "Editar croquis",  # antes de la regla "Edit X" (daba "Editar Sketch")
+    "Go to Linked Object": "Ir a la pieza",
 }
 
 
@@ -776,7 +777,7 @@ COMPONENT_KEEP = ("Ocultar selección", "Mostrar selección", "Alternar visibili
                   "Renombrar", "Propiedades", "Hide Selection", "Show Selection", "Toggle visibility",
                   "Delete", "Rename", "Properties", "Suprimido", "Suppressed",
                   "Editar operación", "Fijar", "Flotar", "Fijar / Flotar", "Ver relaciones de posición",
-                  "Abrir pieza", "Editar pieza")
+                  "Abrir pieza", "Editar pieza", "Ir a la pieza")
 MORE = "Más opciones"
 
 
@@ -836,8 +837,8 @@ class _MenuShow:
                 try:
                     if event.type() == QtCore.QEvent.Type.Show and isinstance(obj, QtWidgets.QMenu):
                         changed = translate_menu(obj) | arrange_menu(obj)
-                        if obj.parent() is not None and not isinstance(obj.parent(), QtWidgets.QMenu) \
-                                and is_component_selection():
+                        # el menú del árbol no tiene padre; un submenú tiene de padre otro menú
+                        if not isinstance(obj.parent(), QtWidgets.QMenu) and is_component_selection():
                             changed = fold_component_menu(obj) or changed
                         if changed:
                             obj.adjustSize()

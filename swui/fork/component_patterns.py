@@ -434,6 +434,7 @@ def opposite_part(seed, folder=None):
     mirror.Base = FreeCAD.Vector(0, 0, 0)
     mirror.Normal = FreeCAD.Vector(1, 0, 0)
     body = doc.addObject("PartDesign::Body", "Body")
+    body.Label = name  # como las demás piezas (el Cuerpo con el nombre de la pieza), no "Body"
     body.BaseFeature = mirror
     binder.Visibility = mirror.Visibility = False
     doc.recompute()
@@ -531,6 +532,17 @@ class _Observer:
             names = list(getattr(obj, COPIES, []) or [])
             names += [d.Name for d in (getattr(obj, p, None) for p in (DIR1, DIR2, PLANE))
                       if d is not None and getattr(d, "SWUI_Own", False)]
+            # las copias tienen expresiones que leen este VarSet: sin esto FreeCAD tiraba un error
+            # rojo en inglés por cada copia ("Document object 'VarSet' not found", visto con el
+            # mouse 2026-10-31). Se sueltan ya; las copias se borran enseguida.
+            for n in list(getattr(obj, COPIES, []) or []):
+                arr = doc.getObject(n)
+                for o in [arr] + list(getattr(arr, "ElementList", None) or []) if arr is not None else []:
+                    for prop, _expr in list(getattr(o, "ExpressionEngine", []) or []):
+                        try:
+                            o.setExpression(prop, None)
+                        except Exception:
+                            pass
         except Exception:
             return
 

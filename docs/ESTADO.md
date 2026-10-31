@@ -263,6 +263,18 @@ Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o come
   usado, como SW (la diferencia vista era la memoria de SW). Al abrir un ensamblaje viejo se
   renombra "GroundedJoint" y se ocultan los ejes: el archivo queda con "*" (cambio de vista).
 
+- 31/10 13 h, probado con el mouse en FreeCAD (copia del conjunto): "Fijo (Placa<1>)", sin
+  EjeMatriz en el árbol, relaciones sin ejes (arreglado en el momento: al abrir al arrancar,
+  FreeCAD restauraba la vista después; segunda pasada a los 2 s); menú del componente corto con
+  "Más opciones" (arreglado: no se aplicaba al menú del árbol; "Go to Linked Object" -> "Ir a la
+  pieza"); "Bulon : 2 insertados"; eje fijo vuelve a mostrar "Eje Z" al editarlo; panel Plano
+  "Arista ((f) Placa<1>)" / "Cara (...)" y Supr la saca; croquis con "Cerrar" y "Edición de
+  croquis"; doble clic en el taladro dentro de la Placa abre el panel del taladro en el Conjunto;
+  corte de ensamblaje arranca en 10 mm; borrar MatrizCircular1 borra copias y eje (arreglado: ya
+  no tira 5 errores rojos). Visto: el Cuerpo de Escuadra-opuesta se llamaba "Body" (arreglado).
+  SW: su menú de componente también es largo, con íconos arriba y "▾" para el resto (como "Más
+  opciones" del fork).
+
 ## Pruebas comparadas con SW (Claude maneja el mouse en los dos programas)
 Forma de trabajo acordada con el usuario (2026-10-27/28): para cada renglón de los checklists,
 Claude hace la operación en SW 2018 (pieza base por la conexión directa, el comando con mouse y

@@ -412,6 +412,10 @@ Neueste Version oben. / Newest version first.
 - Corte de ensamblaje: arranca en "Hasta profundidad especificada", 10 mm, como SW.
 - Doble clic en un taladro o corte de ensamblaje dentro de la pieza: abre su panel en el
   ensamblaje (o avisa que se edita desde ahí) en vez del diálogo de FreeCAD.
+- Al abrir un ensamblaje al arrancar FreeCAD (doble clic en el archivo) también se ocultan los
+  ejes de las relaciones; borrar una matriz ya no tira errores rojos en inglés; "Ir a la pieza"
+  (antes "Go to Linked Object") a mano en el menú del componente; el Cuerpo de la versión
+  opuesta lleva el nombre de la pieza (antes "Body").
 
 ## 0.10.0 — 2026-10-18
 

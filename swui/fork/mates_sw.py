@@ -398,6 +398,9 @@ class _CompanionObserver:
     def slotCreatedDocument(self, doc):
         if FreeCAD.GuiUp:
             QtCore.QTimer.singleShot(0, lambda n=doc.Name: _relabel_later(n))
+            # abierto al arrancar FreeCAD (doble clic en el archivo): la vista guardada se restaura
+            # después y volvía a mostrar los ejes (visto con el mouse 2026-10-31): otra pasada
+            QtCore.QTimer.singleShot(2000, lambda n=doc.Name: _relabel_later(n))
 
     def slotChangedObject(self, obj, prop):
         if prop == "ObjectToGround":
