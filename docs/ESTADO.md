@@ -224,6 +224,12 @@ Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o come
       relación y crear otra, FreeCAD le pone "Tangente001" (reserva el nombre para deshacer).
       SW: no se pudo comparar. Con el permiso de sldworks.exe ya dado, el SW nuevo abrió el
       ensamblaje sin ventana (por el conector) y quedó gris; Archivo > Abrir no mostraba el diálogo.
+      SW comparado con el mouse (31/10, 12:35, SW recién abierto): Tangente rodillo/placa: SW
+      también acuesta el rodillo (eje paralelo a la cara); lo dejó del otro lado del plano (en los
+      dos se cambia con Alineada/Antialineada). Arrastrar la brida: gira sobre su eje y el bulón la
+      sigue (en FreeCAD no se puede probar arrastrando: no recibe los arrastres de Claude). Guardar
+      el ensamblaje con la Placa cambiada (espesor 15): SW guardó ensamblaje y Placa sin preguntar,
+      igual que el fork ahora.
     - Arreglados el 31/10 (con guiones; falta probarlos con el mouse): (1) tangente acuesta el
       cilindro; (2) guardar el ensamblaje guarda las piezas cambiadas; (4) textos en inglés;
       (6) Escape en la cota nueva. (5) no es error: doble clic en un croquis muestra sus cotas,
