@@ -371,23 +371,33 @@ class _Observer:
         QtCore.QTimer.singleShot(0, lambda n=doc.Name: _tell_if_from_assembly(n))
 
 
+def _shown(doc):
+    """¿El usuario tiene el documento abierto en una ventana? (no solo cargado como dependencia)"""
+    try:
+        return bool(FreeCADGui.getDocument(doc.Name).mdiViewsOfType("Gui::View3DInventor"))
+    except Exception:
+        return False
+
+
 def _tell_if_from_assembly(doc_name):
     try:
         doc = FreeCAD.getDocument(doc_name)
     except Exception:
         return
-    sources = sorted({getattr(o, BINDER_MARK) for o in doc.Objects if hasattr(o, BINDER_MARK)})
-    if sources:
-        names = []
-        for s in sources:
-            try:
-                names.append(FreeCAD.getDocument(s).Label)
-            except Exception:
-                names.append(s)
+    binders = [o for o in doc.Objects if hasattr(o, BINDER_MARK)]
+    if binders:
+        # el ensamblaje sale de lo que el binder enlaza (FreeCAD lo carga oculto al abrir la
+        # pieza); la marca guarda el nombre interno de entonces ("Unnamed" si no estaba guardado)
+        asms = []
+        for o in binders:
+            for obj, _subs in (getattr(o, "Support", None) or []):
+                d = getattr(obj, "Document", None)
+                if d is not None and d not in asms:
+                    asms.append(d)
+        names = [d.Label for d in asms] or sorted({getattr(o, BINDER_MARK) for o in binders})
         text = ("%s tiene agujeros o cortes hechos desde el ensamblaje %s: se editan desde ahí "
                 "(clic derecho > Editar operación en el ensamblaje).\n" % (doc.Label, ", ".join(names)))
-        open_docs = FreeCAD.listDocuments()
-        if any(s in open_docs for s in sources):
+        if any(_shown(d) for d in asms):
             FreeCAD.Console.PrintMessage("[SWUI] " + text)  # abierta junto con su ensamblaje
         else:
             # pieza abierta sola: aviso a la vista (cartelito de FreeCAD que se va solo; la vista
