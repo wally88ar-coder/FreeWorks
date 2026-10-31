@@ -39,8 +39,13 @@ SM_MODULES = ("SheetMetalTools", "SheetMetalBaseCmd", "SheetMetalCmd", "SheetMet
 K_PROP = "SWUI_KFactor"  # factor K de la pieza, en la Brida base (nombre estable)
 FLAT_PROP = "SWUI_FlatOf"  # en el desarrollo: Name del Cuerpo (nombre estable)
 DEFAULT_K = 0.5  # como SW de fábrica
-DEFAULT_THICKNESS = 2.0
-DEFAULT_LENGTH = 20.0
+DEFAULT_THICKNESS = 2.0  # espesor al empezar una Brida base (siempre este: usuario, 2026-10-31)
+DEFAULT_LENGTH = 20.0  # largo al empezar una Brida de arista (siempre este)
+# Nombres en el árbol, los del SW 2018 del usuario (leídos en su SW, 2026-10-31). Solo el Label:
+# los objetos viejos conservan el suyo ("Brida-Base1", "Desarrollo").
+BASE_LABEL = "Brida base"
+WALL_LABEL = "Brida de arista"
+FLAT_LABEL = "Chapa desplegada"
 PREFS = "User parameter:BaseApp/Preferences/Mod/LikeSolidWorksUI/Chapa"
 
 OUTLINE_LAYER = "CONTORNO"
@@ -166,7 +171,7 @@ def thickness(body):
     return float(data["thickness"]) if data else 0.0
 
 
-# --- Preferencias (lo último usado, como SW recuerda el espesor) --------------
+# --- Preferencias (lo último usado: largo de un perfil abierto y del dobladillo) ---
 
 
 def last(name, default):
@@ -205,7 +210,7 @@ def dxf_filename(part, thick, material=None):
 
 
 def next_label(prefix, used):
-    """("Brida-Base", {"Brida-Base1"}) -> "Brida-Base2" (como SW)."""
+    """("Brida base", {"Brida base1"}) -> "Brida base2" (como SW)."""
     n = 1
     while "%s%d" % (prefix, n) in used:
         n += 1
@@ -516,10 +521,40 @@ def flat_of(body):
 
 
 def flat_label(body):
-    doc = body.Document
-    others = [b for b in sheet_bodies(doc) if b is not body]
-    # sin espacios ni paréntesis: SheetMetal nombra los croquis del desarrollo con el Label
-    return "Desarrollo" if not others else "Desarrollo_" + re.sub(r"\W+", "_", body.Label)
+    """"Chapa desplegada1", "Chapa desplegada2"... (como SW, uno por sólido de chapa)."""
+    return next_label(FLAT_LABEL, set(o.Label for o in body.Document.Objects))
+
+
+def sketch_object_name(name):
+    """"Chapa desplegada1_Sketch" -> "Chapa_desplegada1_Sketch" (el Name que le da FreeCAD)."""
+    return re.sub(r"[^A-Za-z0-9_]", "_", name)
+
+
+def patch_sketch_names():
+    """
+    SheetMetal nombra los croquis del desarrollo con el Label ("<Label>_Sketch") y busca los de
+    la vez anterior por ese texto entre los Name; con un espacio en el Label ("Chapa
+    desplegada1") FreeCAD cambia el Name y no los encuentra: los borra y crea otros en cada
+    recálculo. Paso el nombre ya como lo deja FreeCAD. Si SheetMetal cambia, queda como antes
+    (anda igual, solo rehace los croquis).
+    """
+    try:
+        import SheetMetalNewUnfolder
+
+        tools = SheetMetalNewUnfolder.SketchExtraction
+        orig = tools.edges_to_sketch_object
+    except Exception:
+        return False
+    if getattr(orig, "_swui", False):
+        return True
+
+    def edges_to_sketch_object(edges, object_name, *args, **kw):
+        return orig(edges, sketch_object_name(object_name), *args, **kw)
+
+    edges_to_sketch_object._swui = True
+    tools.edges_to_sketch_object = staticmethod(edges_to_sketch_object) if isinstance(
+        tools.__dict__.get("edges_to_sketch_object"), staticmethod) else edges_to_sketch_object
+    return True
 
 
 def ensure_flat(body, sketches=True):
@@ -529,6 +564,7 @@ def ensure_flat(body, sketches=True):
     """
     import SheetMetalUnfoldCmd
 
+    patch_sketch_names()
     base, tip = sheet_base(body), body.Tip
     face = fixed_face(body)
     if face is None:

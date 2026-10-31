@@ -191,7 +191,6 @@ class BaseFlangePanel(dp.SwPanel):
     def accept(self):
         ok = super().accept()
         if ok:
-            sm.remember("Thickness", self.thick.value())
             if not self.closed:
                 sm.remember("BaseLength", self.length.value())
         return ok
@@ -380,7 +379,6 @@ class EdgeFlangePanel(dp.SwPanel):
     def accept(self):
         ok = super().accept()
         if ok:
-            sm.remember("FlangeLength", self.length.value())
             _remember_text("FlangeSpec", self.spec_value)
             _remember_text("FlangePosition", self.position)
         return ok
@@ -798,7 +796,7 @@ def edit_cut_sketch(obj):
     if body is None or sketch is None or support is None:
         return None
     try:
-        flat = _flat(body, "Desarrollo")
+        flat = _flat(body, sm.FLAT_LABEL)
         flat.baseObject = (support, list(faces))  # la chapa como estaba antes de este corte
         flat.recompute()  # Aplanar / DXF lo vuelven a la punta (ensure_flat)
     except Exception as exc:
@@ -885,7 +883,7 @@ def start_base_flange():
         SheetMetalBaseCmd.SMBaseViewProvider(obj.ViewObject)
         body.addObject(obj)
         sm.ensure_k(obj)
-        obj.Thickness = sm.last("Thickness", sm.DEFAULT_THICKNESS)
+        obj.Thickness = sm.DEFAULT_THICKNESS  # siempre 2 mm al empezar (decisión del usuario, 31/10)
         obj.setExpression("Radius", "Thickness")  # radio = espesor (como trabaja el usuario)
         obj.Length = sm.last("BaseLength", 100.0)
         # perfil abierto: espesor hacia afuera del croquis, como SW (el croquis da las medidas de
@@ -893,7 +891,7 @@ def start_base_flange():
         obj.BendSide = "Outside"
         obj.Reverse = False
         obj.MidPlane = False
-        multibody._keep_label(obj, sm.next_label("Brida-Base", _labels(doc)))
+        multibody._keep_label(obj, sm.next_label(sm.BASE_LABEL, _labels(doc)))
         multibody._set_tip(body, obj)
         sketch.Visibility = False
         FreeCADGui.Selection.clearSelection()
@@ -994,12 +992,12 @@ def _start_on_edges(kind):
                 obj.setExpression("radius", "%s.Radius" % base.Name)  # Usar radio predeterminado
             else:
                 obj.radius = sm.radius(body) or sm.thickness(body)  # pieza convertida: por valor
-            obj.length = sm.last("FlangeLength", sm.DEFAULT_LENGTH)
+            obj.length = sm.DEFAULT_LENGTH  # siempre 20 mm al empezar (decisión del usuario, 31/10)
             obj.angle = 90.0
             # como SW: cómo se mide y la posición, las de la última brida (la primera vez, las de SW)
             obj.LengthSpec = _last_text("FlangeSpec", "Outer Sharp", LENGTH_SPECS)
             obj.BendType = _last_text("FlangePosition", "Material Inside", POSITIONS)
-            prefix, panel_cls = "Brida-Arista", EdgeFlangePanel
+            prefix, panel_cls = sm.WALL_LABEL, EdgeFlangePanel
         else:
             obj.HemType = "Flat"
             obj.width = sm.last("HemLength", 10.0)
@@ -1191,6 +1189,44 @@ def toggle_flat():
     return flat
 
 
+def _ask_overwrite(names):
+    """
+    Los DXF ya existen: ¿pisarlos? (decisión del usuario, 2026-10-31). Devuelve True (pisar),
+    False (no) o None (cancelar todo, solo con varios).
+    """
+    box = QtWidgets.QMessageBox(_mw())
+    box.setWindowTitle(TITLE)
+    box.setIcon(QtWidgets.QMessageBox.Icon.Question)
+    if len(names) == 1:
+        box.setText("Ya existe %s.\n¿Reemplazarlo?" % names[0])
+    else:
+        box.setText("Ya existen estos DXF:\n%s\n\n¿Reemplazarlos?" % "\n".join(names))
+    yes = box.addButton("Reemplazar", QtWidgets.QMessageBox.ButtonRole.YesRole)
+    no = box.addButton("No reemplazar" if len(names) > 1 else "Cancelar",
+                       QtWidgets.QMessageBox.ButtonRole.NoRole)
+    cancel = None
+    if len(names) > 1:
+        cancel = box.addButton("Cancelar", QtWidgets.QMessageBox.ButtonRole.RejectRole)
+    box.setDefaultButton(yes)
+    box.exec()
+    clicked = box.clickedButton()
+    if clicked is yes:
+        return True
+    if clicked is no and cancel is not None:
+        return False
+    return None if cancel is not None else False
+
+
+def _drop_flat(flat):
+    """Borra un desarrollo agregado solo para el DXF por lotes, con sus croquis."""
+    doc = flat.Document
+    names = list(getattr(flat, "UnfoldSketches", []) or [])
+    doc.removeObject(flat.Name)
+    for name in names:
+        if doc.getObject(name) is not None:
+            doc.removeObject(name)
+
+
 def _is_assembly(doc):
     return any(o.TypeId == "Assembly::AssemblyObject" for o in doc.Objects) or (
         not sm.sheet_bodies(doc) and bool(sm.sheet_parts(doc)))
@@ -1209,20 +1245,51 @@ def export_all(doc=None):
         folder = QtWidgets.QFileDialog.getExistingDirectory(_mw(), "Carpeta para los DXF")
         if not folder:
             return []
+    jobs = [(body, sm.dxf_filename(sm.part_name(body), sm.thickness(body), sm.material_name(body)))
+            for body in bodies]
+    existing = [name for _b, name in jobs if os.path.exists(os.path.join(folder, name))]
+    skip = set()
+    if existing:
+        answer = _ask_overwrite(existing)
+        if answer is None:
+            return []
+        if not answer:
+            skip = set(existing)
     done, failed = [], []
-    for body in bodies:
-        name = sm.dxf_filename(sm.part_name(body), sm.thickness(body), sm.material_name(body))
+    for body, name in jobs:
+        if name in skip:
+            continue
         path = os.path.join(folder, name)
+        # la pieza queda como estaba: el desarrollo que se agrega solo para el DXF se borra al
+        # terminar (decisión del usuario, 2026-10-31); uno que ya tenía queda.
+        new = sm.flat_of(body) is None
         try:
-            flat = _flat(body, "Desarrollo")
             with sm._active(body.Document):
+                if new:
+                    sm.ensure_flat(body, sketches=True)
+                    body.Document.recompute()
+                    flat = None
+                else:
+                    flat = _flat(body, sm.FLAT_LABEL)
                 sm.write_dxf(body, path)
-            _sketches_follow(flat)
+            if flat is not None:
+                _sketches_follow(flat)
             done.append(name)
         except Exception as exc:
             FreeCAD.Console.PrintError("[SWUI fork] DXF de %s:\n%s\n" % (body.Label, traceback.format_exc()))
             failed.append("%s (%s)" % (sm.part_name(body), exc))
+        finally:
+            added = sm.flat_of(body) if new else None
+            if added is not None:
+                try:
+                    _drop_flat(added)
+                    body.Document.recompute()
+                except Exception:
+                    FreeCAD.Console.PrintError("[SWUI fork] Borrar desarrollo de %s:\n%s\n"
+                                               % (body.Label, traceback.format_exc()))
     text = "DXF guardados en %s:\n%s" % (folder, "\n".join(done) or "(ninguno)")
+    if skip:
+        text += "\n\nSin reemplazar (ya existían):\n" + "\n".join(sorted(skip))
     if failed:
         text += "\n\nNo se pudieron exportar:\n" + "\n".join(failed)
     FreeCAD.Console.PrintMessage("[SWUI fork] %s\n" % text)
@@ -1242,6 +1309,8 @@ def export_dxf():
     name = sm.dxf_filename(sm.part_name(body), sm.thickness(body), sm.material_name(body))
     if doc.FileName:
         path = os.path.join(os.path.dirname(doc.FileName), name)
+        if os.path.exists(path) and not _ask_overwrite([name]):
+            return None
     else:
         # pieza sin guardar: la última carpeta de DXF o Documentos (sin carpeta, Qt abría en la del
         # addon, el directorio de trabajo de FreeCAD; visto con el mouse, 2026-10-29)
@@ -1255,7 +1324,7 @@ def export_dxf():
             return None
         params.SetString("DxfFolder", os.path.dirname(path))
     try:
-        flat = _flat(body, "Desarrollo")
+        flat = _flat(body, sm.FLAT_LABEL)
         sm.write_dxf(body, path)
         _sketches_follow(flat)
     except Exception as exc:
@@ -1287,7 +1356,7 @@ def start_unfold():
     else:
         sketch = None
     try:
-        flat = _flat(body, "Desarrollo")
+        flat = _flat(body, sm.FLAT_LABEL)
     except Exception as exc:
         FreeCAD.Console.PrintError("[SWUI fork] Desdoblar:\n%s\n" % traceback.format_exc())
         _info("No se pudo desplegar la chapa: %s" % exc)
