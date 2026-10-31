@@ -384,6 +384,8 @@ Neueste Version oben. / Newest version first.
   Operaciones al pasar a una pieza, como SW (`swui/fork/asm_tab.py`).
 - Una pieza con agujeros o cortes hechos desde el ensamblaje, abierta sola, lo avisa con un
   cartelito de FreeCAD (antes, solo en la vista de informes, que el fork tiene oculta).
+- Relaciones de posición: ya no avisan "la arista circular elegida cambió... Revisala" cuando la
+  pieza se recalcula y el agujero sigue igual (OpenCASCADE corre la costura del círculo).
 
 ## 0.10.0 — 2026-10-18
 

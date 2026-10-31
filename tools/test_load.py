@@ -1058,7 +1058,9 @@ def _check_feature_tree(commands, mw, layout, hooked):
             or mrf.split_sub("Edge3") != ("", "Edge3") or not mrf.is_broken("Pad.?Face5")
             or mrf.split_sub("Pad.;#1a:2;:U;XTR;:H1f4:7,V.Vertex6") != ("Pad.", "Vertex6")
             or mrf.split_sub(";#1a:2;:U;XTR;:H1f4:7,V.Vertex6") != ("", "Vertex6")
-            or mrf.element_type("Face12") != "Face" or mrf.element_type("Plane") is not None):
+            or mrf.element_type("Face12") != "Face" or mrf.element_type("Plane") is not None
+            # el mismo agujero con la costura corrida (pieza recalculada): no es "cambió"
+            or mrf.cost(hole_, dict(hole_, p=[16.75, 30, 10])) >= mrf.CLOSE):
         print("  FEHLER: fork: relaciones que no saltan (volver a encontrar la entidad)")
         return False
     # Cinta: pasar sola a Ensamblaje al abrir un ensamblaje, y a Operaciones al volver a una pieza

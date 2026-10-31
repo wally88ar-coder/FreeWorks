@@ -87,8 +87,11 @@ def cost(a, b):
         return 1000 * _angle(a["n"], b["n"]) + 100 * offset + _dist(a["p"], b["p"]) \
             + abs(a["s"] - b["s"]) / max(a["s"], b["s"], 1e-9)
     if g in ("cylinder", "cone", "circle"):
+        # "p" solo desempata: en un círculo entero es la costura, que OpenCASCADE corre al
+        # recalcular la pieza; sola no llega a CLOSE (daba "Revisala" sin motivo, 2026-10-31)
         return 1000 * _angle(a["d"], b["d"], True) + 100 * _line_gap(a["c"], a["d"], b["c"]) \
-            + 100 * abs(a["r"] - b["r"]) + 10 * _dist(a["c"], b["c"]) + 0.1 * _dist(a["p"], b["p"])
+            + 100 * abs(a["r"] - b["r"]) + 10 * _dist(a["c"], b["c"]) \
+            + min(0.1 * _dist(a["p"], b["p"]), 0.9 * CLOSE)
     if g == "line":
         return 1000 * _angle(a["d"], b["d"], True) + 100 * _line_gap(a["c"], a["d"], b["c"]) \
             + _dist(a["c"], b["c"]) + abs(a["s"] - b["s"])
