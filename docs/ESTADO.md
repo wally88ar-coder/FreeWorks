@@ -230,6 +230,11 @@ Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o come
       sigue (en FreeCAD no se puede probar arrastrando: no recibe los arrastres de Claude). Guardar
       el ensamblaje con la Placa cambiada (espesor 15): SW guardó ensamblaje y Placa sin preguntar,
       igual que el fork ahora.
+      Arrastre en FreeCAD (12:43): con el ensamblaje ACTIVADO y el mouse lento, el rodillo se
+      arrastra bien (antes fallaba porque el ensamblaje no estaba activado). La brida, que solo
+      puede girar sobre su eje, no gira arrastrando (queda elegida): límite del arrastre de
+      FreeCAD 1.1.4, no del fork; en SW gira y los bulones la siguen. Para girarla en FreeCAD:
+      una relación Ángulo.
     - Arreglados el 31/10 (con guiones; falta probarlos con el mouse): (1) tangente acuesta el
       cilindro; (2) guardar el ensamblaje guarda las piezas cambiadas; (4) textos en inglés;
       (6) Escape en la cota nueva. (5) no es error: doble clic en un croquis muestra sus cotas,
