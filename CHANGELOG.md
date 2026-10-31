@@ -429,6 +429,9 @@ Neueste Version oben. / Newest version first.
   preselecciona; suprimidas en gris. Es solo dibujo: no se guarda nada en el archivo
   (`swui/fork/mates_tree.py`). Si una versión nueva de FreeCAD cambia el árbol, se apaga sola
   y lo avisa. Las suprimidas se atenúan con el mismo velo que lo suprimido de las piezas.
+- Relaciones de posición con las piezas que unen, como SW: "Coincidente1 (Placa<1>,Brida<1>)",
+  en la carpeta general y en la de cada componente. El nombre guardado sigue siendo
+  "Coincidente1" (como en SW): las piezas se dibujan al lado, sin tocar el archivo.
 
 ## 0.10.0 — 2026-10-18
 

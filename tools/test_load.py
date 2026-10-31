@@ -1101,7 +1101,9 @@ def _check_feature_tree(commands, mw, layout, hooked):
             != "Joint:Coincidente1:0|Joint001:Concéntrica1:1"
             or mtr.is_label_click(30, 40) or not mtr.is_label_click(40, 40)
             or {mtr.FOLDER_TYPE, mtr.MATE_TYPE} & {mtr.DOCUMENT_TYPE, mtr.OBJECT_TYPE}
-            or mtr.FOLDER_TYPE == mtr.MATE_TYPE):
+            or mtr.FOLDER_TYPE == mtr.MATE_TYPE
+            or mtr.suffix_from(["(f) Placa<1>", "Brida<1>"]) != " (Placa<1>,Brida<1>)"
+            or mtr.suffix_from([]) != "" or mtr.bare_component("Rodillo<2>") != "Rodillo<2>"):
         print("  FEHLER: fork: relaciones debajo de cada componente")
         return False
     # Mover/Copiar de un vértice a otro: el vértice se vuelve a encontrar por sus caras

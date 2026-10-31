@@ -50,6 +50,9 @@ _overlays = {}  # tree -> _Overlay
 # Otros módulos piden atenuar renglones propios: funciones (árbol) -> [(top, bottom)]
 # (relaciones suprimidas de mates_tree: el estilo del árbol pisa el color del texto)
 EXTRA_GREY = []
+# ... y escribir texto al lado de un renglón: funciones (árbol) -> [(x, y, alto, texto)]
+# (las piezas que une cada relación, como SW: mates_tree.parts_rows)
+EXTRA_TEXT = []
 _mark = []  # [objeto] operación que creó la cara elegida
 _sel_observer = None
 _doc_observer = None
@@ -235,6 +238,16 @@ class _Overlay(QtWidgets.QWidget):
         p = QtGui.QPainter(self)
         width = self.width()
         grey = QtGui.QColor(*GREY)
+        if EXTRA_TEXT:
+            p.setFont(self.tree.font())
+            p.setPen(self.tree.palette().color(QtGui.QPalette.ColorRole.Text))
+        for extra in EXTRA_TEXT:
+            try:
+                for x, y, h, text in extra(self.tree):
+                    p.drawText(QtCore.QRect(x, y, max(width - x, 0), h),
+                               int(QtCore.Qt.AlignmentFlag.AlignLeft | QtCore.Qt.AlignmentFlag.AlignVCenter), text)
+            except Exception:
+                pass
         for extra in EXTRA_GREY:
             try:
                 for top, bottom in extra(self.tree):

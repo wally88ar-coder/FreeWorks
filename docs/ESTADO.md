@@ -205,7 +205,11 @@ Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o come
     (preselección). Comparado con SW: misma carpeta, primera dentro del componente. Diferencia: SW
     nombra las relaciones con sus piezas ("Coincidente1 (Placa<1>,Brida<1>)"). Arreglado en el
     momento: lo suprimido no se veía gris (el estilo del árbol pisa el color; ahora con el velo de
-    `tree_overlay`, gancho `EXTRA_GREY`). Tiene `self_check()` para el
+    `tree_overlay`, gancho `EXTRA_GREY`). Pedido del usuario (31/10): nombres con las piezas como
+    SW, "Coincidente1 (Placa<1>,Brida<1>)", en las dos carpetas; el Label no cambia (dibujado al
+    lado, gancho `EXTRA_TEXT`; F2 renombra solo el nombre, como SW). Probado con guion. Ojo: un
+    ensamblaje que no se creó dentro del fork deja la carpeta general como "Joints" (el original
+    la renombra solo al crearla). Tiene `self_check()` para el
     chequeo de compatibilidad al arrancar (plan aprobado: aviso de versión, chequeo rápido y
     diagnóstico completo; próximo trabajo).
   - Decidido por el usuario (31/10): taladro y corte de ensamblaje quedan como están (el agujero

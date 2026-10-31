@@ -16,6 +16,11 @@ usuario, 2026-10-31). Cada renglón señala a la relación verdadera de FreeCAD:
 - pasar el mouse: la preselecciona;
 - suprimida: en gris. "Fijo" no entra (en SW no es una relación).
 
+Nombres como SW: "Coincidente1 (Placa<1>,Brida<1>)", con las piezas que une, en esta carpeta
+y en la carpeta general. El nombre de verdad (Label) sigue siendo "Coincidente1", como en SW
+(al renombrar se edita solo el nombre): las piezas se dibujan al lado (`parts_rows`, con el
+dibujo de tree_overlay), así no cambia nada en el archivo ni en el resto del fork.
+
 Cómo (análisis en docs/NOTAS_TECNICAS.md, "Renglones propios dentro del árbol"):
 renglones QTreeWidgetItem de un tipo propio dentro del Gui::TreeWidget. FreeCAD 1.1.4 deja
 tranquilos los renglones que no son suyos, salvo que BORRA los de un componente cuando
@@ -28,6 +33,7 @@ renglones propios llevan adentro el documento, el componente y la relación.
 Si algo falla varias veces seguidas, se apaga solo y lo avisa (versión nueva de FreeCAD).
 """
 
+import re
 import traceback
 
 import FreeCAD
@@ -76,7 +82,32 @@ def is_label_click(x, label_left):
     return x >= label_left
 
 
+def bare_component(label):
+    """'(f) Placa<1>' -> 'Placa<1>' (SW nombra la relación con la instancia, sin el '(f)')."""
+    return re.sub(r"^\([^)]{1,2}\)\s+", "", label or "")
+
+
+def suffix_from(labels):
+    """' (Placa<1>,Brida<1>)' como SW (coma sin espacio), o '' si no hay piezas."""
+    names = [bare_component(x) for x in labels if x]
+    return " (%s)" % ",".join(names) if names else ""
+
+
 # --- Qué mostrar ---------------------------------------------------------
+
+
+def parts_suffix(joint):
+    """Las piezas que une la relación, en el orden en que se eligieron (como SW)."""
+    labels = []
+    for prop in ("Reference1", "Reference2"):
+        ref = getattr(joint, prop, None)
+        try:
+            obj = ref[0] if ref else None
+        except Exception:
+            obj = None
+        if obj is not None:
+            labels.append(obj.Label)
+    return suffix_from(labels)
 
 
 def _mates_sw():
@@ -103,7 +134,7 @@ def rows_for(comp):
     for j in _mates_sw().mates_of(asm, comp):
         if getattr(j, "ObjectToGround", None) is not None:
             continue
-        rows.append((j.Name, j.Label, bool(getattr(j, "Suppressed", False))))
+        rows.append((j.Name, j.Label + parts_suffix(j), bool(getattr(j, "Suppressed", False))))
     return asm, rows
 
 
@@ -279,6 +310,41 @@ def grey_rows(tree):
             if rect.isValid() and rect.height() > 0:
                 out.append((rect.top(), rect.bottom() + 1))
         it += 1
+    return out
+
+
+def _is_mate(obj):
+    return (obj is not None and hasattr(obj, "JointType") and getattr(obj, "ObjectToGround", None) is None
+            and not hasattr(obj, "SWUI_TangentOf"))
+
+
+def parts_rows(tree):
+    """
+    [(x, y, alto, texto)] para dibujar " (Placa<1>,Brida<1>)" a la derecha del nombre de cada
+    relación de la carpeta general (renglones de FreeCAD: su texto es el Label, no se toca).
+    Mientras se renombra con F2 no se dibuja (taparía el editor).
+    """
+    out = []
+    if _state["disabled"] or not _mates_sw()._in_swui():
+        return out
+    if tree.state() == QtWidgets.QAbstractItemView.EditingState:
+        return out
+    from swui.fork import tree_overlay
+
+    view = tree.viewport().rect()
+    metrics = tree.fontMetrics()
+    for item, doc in _object_items(tree):
+        rect = tree.visualItemRect(item)
+        if not rect.isValid() or rect.height() <= 0 or not rect.intersects(view):
+            continue
+        obj = _object_of(item, doc)
+        if not _is_mate(obj):
+            continue
+        suffix = parts_suffix(obj)
+        if not suffix:
+            continue
+        x = rect.x() + 4 + tree_overlay._icon_width(item) + 6 + metrics.horizontalAdvance(item.text(0))
+        out.append((x, rect.y(), rect.height(), suffix))
     return out
 
 
@@ -602,6 +668,8 @@ def install():
 
         if grey_rows not in tree_overlay.EXTRA_GREY:
             tree_overlay.EXTRA_GREY.append(grey_rows)
+        if parts_rows not in tree_overlay.EXTRA_TEXT:
+            tree_overlay.EXTRA_TEXT.append(parts_rows)
     except Exception:
         pass
     FreeCAD.addDocumentObserver(_DocObserver())

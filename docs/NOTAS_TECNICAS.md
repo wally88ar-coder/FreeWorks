@@ -433,4 +433,6 @@
   FreeCAD estaba al frente; los clics sí llegaban. Salida: capturar con PowerShell
   (`Graphics.CopyFromScreen`, guion `cap.ps1` en el scratchpad). Y `timeout` de Git Bash NO
   cierra freecad.exe: quedaron 8 FreeCAD de prueba abiertos (usar `os._exit` al final del guion
-  y revisar con Get-Process).
+  y revisar con Get-Process). `taskkill` desde la sesión de Claude dice "No hay ninguna instancia
+  activa" para FreeCAD lanzados en otra llamada: cerrarlos con `(Get-Process -Id N).Kill()` fuera
+  del sandbox (con permiso del usuario).
