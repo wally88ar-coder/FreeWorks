@@ -125,7 +125,7 @@ def capture(links):
     return out
 
 
-def refresh_joints(link, captured=None):
+def refresh_joints(link, captured=None, prefer_stored=False):
     """
     Después de cambiar la configuración del componente: volver a ubicar cada cara de sus
     relaciones por geometría (las caras se renumeran entre configuraciones) y vaciar y volver a
@@ -146,7 +146,9 @@ def refresh_joints(link, captured=None):
             if not ref or ref[0] is not link or not ref[1]:
                 continue
             ref = [ref[0], [s.replace("?", "") for s in ref[1]]]
-            stored = captured.get((j.Name, prop)) or mate_refs._read(j).get(prop)
+            saved = mate_refs._read(j).get(prop)
+            taken = captured.get((j.Name, prop))
+            stored = (saved or taken) if prefer_stored else (taken or saved)
             if stored:
                 try:
                     new_ref, _sigs = mate_refs._fix_ref(j, prop, ref, stored)
@@ -306,6 +308,98 @@ def pin_followers(doc, name):
         set_config(link, old, "all")
         done.append(link)
     return done
+
+
+def _users(body, name):
+    """
+    Dónde se usa la configuración name de la pieza en los documentos abiertos:
+    [(componente, celdas de la tabla del ensamblaje con ese nombre)]. Celdas vacías = el
+    componente la tiene puesta directo (ensamblaje sin configuraciones).
+    """
+    out = []
+    for doc in FreeCAD.listDocuments().values():
+        if body is not None and doc is body.Document:
+            continue
+        for link in list(doc.Objects):
+            try:
+                if not (is_component(link) and pinned(link) and source(link) is body):
+                    continue
+            except Exception:
+                continue
+            cells = []
+            alias = cf.bound_alias(link, cf.PROP, doc)
+            sheet = cf.table(doc)
+            n = cf.alias_col(sheet, alias) if alias and sheet is not None else None
+            if n is not None:
+                for row in cf.config_rows(sheet):
+                    cell = "%s%d" % (cf.col_letter(n), row)
+                    if cf._plain(cf._contents(sheet, cell)) == name:
+                        cells.append((sheet, cell))
+            if cells or (not alias and getattr(link, cf.PROP, None) == name):
+                out.append((link, cells))
+    return out
+
+
+def _point_users(users, name):
+    docs = []
+    for link, cells in users:
+        for sheet, cell in cells:
+            sheet.set(cell, cf.text_cell(name))
+        if link.Document not in docs:
+            docs.append(link.Document)
+    for doc in docs:
+        doc.recompute()  # la lista de configuraciones del componente toma el nombre nuevo
+    for link, cells in users:
+        if not cells:
+            try:
+                link.setExpression(cf.PROP, None)
+            except Exception:
+                pass
+            try:
+                items = list(link.getEnumerationsOfProperty(cf.PROP) or [])
+            except Exception:
+                items = []
+            if name not in items:
+                setattr(link, cf.PROP, part_configs(link))  # la lista de la pieza, ya con el nombre nuevo
+            setattr(link, cf.PROP, name)
+    for doc in docs:
+        doc.recompute()
+        settle_assembly(doc)
+    return [link for link, _c in users]
+
+
+def _hook_rename_delete():
+    """
+    Como SW: cambiar el nombre de una configuración de la pieza no cambia los componentes que
+    la usan (antes volvían a la primera, visto con el mouse 01/11); borrar una que usa algún
+    componente lo pasa a la activa de la pieza y avisa.
+    """
+    if getattr(cf.rename, "_swui_asm", False):
+        return
+    orig_rename, orig_delete = cf.rename, cf.delete
+
+    def rename(doc, old, new, _orig=orig_rename):
+        body = cf.owner(doc)
+        part = body is not None and getattr(body, "TypeId", "") != cf.ASSEMBLY
+        users = _users(body, old) if part else []
+        _orig(doc, old, new)
+        if users:
+            _point_users(users, (new or "").strip())
+
+    def delete(doc, name, _orig=orig_delete):
+        body = cf.owner(doc)
+        part = body is not None and getattr(body, "TypeId", "") != cf.ASSEMBLY
+        users = _users(body, name) if part else []
+        _orig(doc, name)
+        if users:
+            now = cf.active(doc)
+            for link in _point_users(users, now):
+                FreeCAD.Console.PrintWarning(
+                    "%s usaba la configuración «%s», que se eliminó: ahora usa «%s».\n"
+                    % (link.Label, name, now))
+
+    rename._swui_asm = delete._swui_asm = True
+    cf.rename, cf.delete = rename, delete
 
 
 def _sup_col(doc, link):
@@ -600,7 +694,13 @@ def _on_selection():
             if bar is not None:
                 bar.hide()
             return
-        link = picked_component()
+        # con un panel abierto (relación de posición, operación...) lo elegido es para el panel:
+        # la barra estorbaba al elegir la segunda cara (visto con el mouse 01/11; SW no la muestra)
+        try:
+            busy = FreeCADGui.Control.activeDialog()
+        except Exception:
+            busy = False
+        link = None if busy else picked_component()
         if link is None or len(part_configs(link)) < 2:
             if bar is not None and not bar.combo.view().isVisible():
                 bar.hide()
@@ -670,7 +770,10 @@ def settle_assembly(doc):
     for link in links:
         if repair_copy(link):
             doc.recompute()
-    if any([refresh_joints(link, taken) for link in links]):
+    # la configuración de los componentes no cambió: vale la geometría guardada cuando la relación
+    # quedó bien (la tomada ahora puede ser la de la copia a medio rehacer: avisaba "la cara plana
+    # elegida cambió" al agregar una configuración en la pieza, visto con el mouse 01/11)
+    if any([refresh_joints(link, taken, prefer_stored=True) for link in links]):
         doc.recompute()
     return True
 
@@ -815,6 +918,7 @@ def install():
         except Exception:
             FreeCAD.Console.PrintLog("[SWUI fork] Menú de componentes: no se pudo agregar.\n")
     _hook_activate()
+    _hook_rename_delete()
     if pin_followers not in cf._before:
         cf._before.append(pin_followers)
     try:

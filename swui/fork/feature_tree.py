@@ -179,7 +179,22 @@ def parents(obj):
     if _is_dress_up(obj):
         out = [o for o in links(obj) if not _is_container(o) and not _is_base_of(obj, o)]
         return out + [c for c in dress_up_creators(obj) if c not in out]
+    if _profile_on_base(obj):
+        # Extruir/Cortar con una cara del sólido anterior como perfil (Mover cara): igual que un
+        # redondeo, el padre real es la operación que creó la cara, no la anterior. Si no, suprimir
+        # un agujero hecho antes suprimía también el Mover cara de la punta (probado 01/11).
+        out = [o for o in links(obj) if not _is_container(o) and o is not obj.BaseFeature]
+        return out + [c for c in profile_creators(obj) if c not in out]
     return [o for o in links(obj) if not _is_container(o)]
+
+
+def _profile_on_base(obj):
+    """¿Es un Extruir/Cortar cuyo perfil son caras del sólido anterior (no un croquis)?"""
+    try:
+        target, subs = obj.Profile
+        return target is not None and target is obj.BaseFeature and any(s.lstrip("?").startswith("Face") for s in subs)
+    except Exception:
+        return False
 
 
 def _is_base_of(dress_up, obj):
@@ -415,12 +430,35 @@ def dress_up_creators(dress_up):
     """Operaciones que crearon las aristas/caras elegidas en un redondeo, chaflán..."""
     try:
         base = dress_up.Base[0]
-        feats = features(body_of(dress_up))
+    except Exception:
+        return []
+    return _creators(dress_up, base, _picked(dress_up))
+
+
+def profile_creators(feature):
+    """Operaciones que crearon las caras usadas como perfil (Extruir/Cortar de una cara: Mover cara)."""
+    try:
+        base, subs = feature.Profile
+        shape = base.Shape
+    except Exception:
+        return []
+    picked = []
+    for sub in subs:
+        try:
+            picked.append((sub, shape.getElement(sub.lstrip("?")).copy()))
+        except Exception:
+            picked.append((sub, None))
+    return _creators(feature, base, picked)
+
+
+def _creators(feature, base, picked):
+    try:
+        feats = features(body_of(feature))
         before = feats[:feats.index(base)]
     except Exception:
         return []
     out = []
-    for _sub, geo in _picked(dress_up):
+    for _sub, geo in picked:
         if geo is None:
             continue
         found = base
@@ -844,8 +882,11 @@ class _MenuShow:
                 try:
                     if event.type() == QtCore.QEvent.Type.Show and isinstance(obj, QtWidgets.QMenu):
                         changed = translate_menu(obj) | arrange_menu(obj)
-                        # el menú del árbol no tiene padre; un submenú tiene de padre otro menú
-                        if not isinstance(obj.parent(), QtWidgets.QMenu) and is_component_selection():
+                        # el menú del árbol no tiene padre; un submenú tiene de padre otro menú y los
+                        # de arriba (Archivo, Editar...) la barra de menús: con un componente elegido,
+                        # Archivo quedaba en "Más opciones" (visto con el mouse 01/11)
+                        if (not isinstance(obj.parent(), (QtWidgets.QMenu, QtWidgets.QMenuBar))
+                                and is_component_selection()):
                             changed = fold_component_menu(obj) or changed
                         if changed:
                             obj.adjustSize()
