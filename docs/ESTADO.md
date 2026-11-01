@@ -38,8 +38,12 @@ Commits locales (sin subir a GitHub): b701dc8 etapa 1, 0ae261d etapa 2, 0d0b348 
   reubicadas por geometría en cada cambio (no se rompen al reabrir); Suprimir / Desactivar
   supresión de componentes por la tabla del ensamblaje (por configuración); Propiedades físicas
   sin suprimidos; DXF por lotes uno por pieza y configuración usada.
-- Probado por Claude con guiones (FreeCADCmd y FreeCAD real con gui_probe), NO con el mouse
-  (regla [[implementar-sin-mouse]]): falta la prueba con mouse comparada con SW (preguntar quién).
+- Probado por Claude con guiones (FreeCADCmd y FreeCAD real con gui_probe) y, el 01/11 a la
+  mañana, **con el mouse comparado con SW 2018** (lo pidió el usuario): pieza, chapa y ensamblaje.
+  Arreglado en el acto (ver CHANGELOG y NOTAS "Configuraciones (implementación)"): cada componente
+  con su configuración (antes cambiaban con la pieza: error 5 de FreeCAD), error "?Face6" de la
+  chapa al cambiar, casilla nativa "Suprimido" oculta, configuración activa en el título de la
+  lista, barrita que se va sola, copia de componente que quedaba como Cuerpo activo.
 - **Preguntas para el usuario** (decidido por Claude mientras dormía; cambiar si no le gusta):
   1. Componentes en "Tracking" (siguen los cambios de la pieza, como SW) en vez de "Enabled"
      (copia congelada). Costo: cada cambio de la pieza recopia y el fork reubica las relaciones.
@@ -51,7 +55,7 @@ Commits locales (sin subir a GitHub): b701dc8 etapa 1, 0ae261d etapa 2, 0d0b348 
   5. Nombre del DXF por configuración: "Soporte-3mm_3mm.dxf" (pieza-configuración_espesor).
   6. Propiedades de chapa / paneles: un valor configurado se cambia solo en la configuración
      activa (en SW el PropertyManager hace lo mismo con las cotas configuradas).
-- Falta: prueba con mouse; Mover cara con configuraciones de cotas muy distintas; taladro/corte de
+- Falta: Mover cara con configuraciones de cotas muy distintas; taladro/corte de
   ensamblaje que saltee componentes suprimidos; pieza multicuerpo con configuraciones (la lista vive
   en un solo Cuerpo).
 

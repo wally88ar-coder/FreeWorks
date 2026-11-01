@@ -76,6 +76,19 @@ Neueste Version oben. / Newest version first.
   relaciones). La pestaña Configuraciones también sirve en el ensamblaje: con varias, suprimir y
   elegir la configuración de un componente valen solo para la activa. El DXF por lotes de un
   ensamblaje saca uno por pieza y configuración usada (`swui/fork/config_asm.py`).
+- **Configuraciones: arreglos de la prueba con mouse contra SW** (01/11):
+  - Cada componente tiene su configuración, como SW: cambiar la configuración en la ventana de
+    la pieza ya no cambia los componentes del ensamblaje (antes cambiaban todos, y también los
+    configurados desde la barrita: FreeCAD volvía a copiar la pieza). Un componente nuevo nace
+    con la configuración activa de la pieza.
+  - Al cambiar de configuración, la chapa ya no muestra el error "Chapa desplegada1: Invalid
+    shape name ?Face6" ni deja el contorno del desarrollo dibujado en 3D.
+  - Se oculta la casilla "Suprimido" de FreeCAD en el clic derecho de una operación: repetía
+    *Suprimir* pero salteaba las configuraciones (el árbol la mostraba gris y el agujero seguía).
+  - La lista muestra la configuración activa en el título ("Placa Configuraciones (Larga)").
+  - La barrita del componente se va sola al alejar el mouse, como la de SW.
+  - La copia que FreeCAD guarda de un componente configurado ya no queda como "Cuerpo activo"
+    del ensamblaje.
 - **Decisiones del usuario del 31/10** (checklist):
   - Nombre visible **FreeWorks** (menú y lista de bancos; lo interno no cambia, los
     archivos y la configuración abren igual) (`swui/fork/brand.py`). Paquete (package.xml) y

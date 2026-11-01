@@ -388,6 +388,20 @@ Cada uno con lo que hace el fork mientras tanto. Buscado en los issues de FreeCA
      `l.Configuracion = "Larga"` -> volumen viejo y "Croquis002" inválido.
    - Arreglo: `obj.AttachmentSupport = None` y volver a ponerlo con el nombre simple ("Face8");
      queda bien para siempre en esa copia. Fork: `config_asm.repair_copy`.
+5. **LinkCopyOnChange no copia si el valor nuevo es igual al de la pieza, y "Tracking" no vuelve
+   a poner en la copia las propiedades del vínculo** (FreeCAD 1.1.4, 2026-11-01, visto con el
+   mouse). (a) `l.LinkCopyOnChange = "Tracking"; l.Configuracion = <la misma que tiene la
+   pieza>` no hace la copia (`LinkedObject` sigue siendo la pieza; `LinkCopyOnChangeTouched =
+   True` tampoco): el componente cambia cuando cambia la pieza. (b) Con la copia hecha, al cambiar
+   la pieza el primer recálculo del ensamblaje vuelve a copiarla y muestra la forma de la pieza
+   (con el valor de la pieza); recién el SEGUNDO recálculo aplica el valor del vínculo.
+   - Prueba (FreeCADCmd): pieza con 2 configuraciones (Placa de m1h); ensamblaje con un Link;
+     `ca.set_config(l, <la activa>)` -> `l.LinkedObject` es la pieza. Pasando por otra y
+     volviendo, hay copia; `body.Configuracion = <otra>; recompute` -> el componente toma la
+     forma de la otra; un `ad.recompute()` más -> vuelve a la suya.
+   - Arreglo del fork: `config_asm._force_copy` (pasar por otra configuración y volver) y
+     `settle_doc` / `settle_assembly` (recalcular hasta que no quede nada tocado, después de
+     cualquier recálculo de una pieza con componentes configurados abiertos).
 
 ## Chapa (fase 1): hallazgos con SheetMetal 0.8.26 en FreeCAD 1.1.4
 - SheetMetal se importa por módulos (`SheetMetalBaseCmd`, `SheetMetalCmd`, `SheetMetalUnfoldCmd`):
@@ -638,3 +652,21 @@ scratchpad de la sesión del 01/11; se rehacen fácil con lo de abajo).
   parecido puede elegir mal); taladro/corte de ensamblaje sobre componentes suprimidos
   (`assembly_features._components` no los saltea); pieza multicuerpo (la lista vive en un solo
   Cuerpo: un componente vinculado a otro Cuerpo de la misma pieza no ve las configuraciones).
+- Prueba con mouse contra SW (01/11, mañana): pieza (agregar, Modificar Esta configuración,
+  Suprimir, cambiar, tabla), chapa (cambiar, DXF de todas) y ensamblaje (barrita en la vista,
+  componente nuevo, suprimir) en FreeCAD y en SW 2018. Arreglado en el acto:
+  - Cada componente tiene su configuración (SW): `config_asm.pin_followers` corre ANTES de cambiar
+    la configuración de una pieza (`configurations._before`, lo llaman `activate` y el camino de
+    chapa de `config_sheet`) y fija los componentes que mostraban la pieza tal cual; un
+    componente nuevo (observador, `LinkedObject`) nace fijado en la activa. Ver error 5.
+  - Chapa: `config_sheet._activate_skipping_flats` recalcula primero todo menos el desarrollo,
+    después reelige la cara fija y recién ahí recalcula el desarrollo (sin el aviso "Invalid
+    shape name ?Face6"); después oculta los croquis del desarrollo (`sheet_panels._sketches_follow`).
+  - `feature_tree.arrange_menu` oculta la casilla nativa "Suprimido" (checkable) cuando está lo
+    nuestro: no pasaba por las configuraciones.
+  - `auto_body` no activa una copia de componente (`configurations.is_copy`).
+  - Diferencias que quedan con SW (chicas): el Modificar no tiene "Especificar configuraciones";
+    no hay "Configurar operación" (tabla de una operación); la lista no se ordena alfabéticamente;
+    el árbol del ensamblaje no muestra la configuración al lado del nombre del componente; la
+    barrita aplica al elegir (SW pide confirmar con un tilde); "Agregar configuración" es un
+    diálogo (en SW, un panel).
