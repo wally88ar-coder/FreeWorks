@@ -31,6 +31,10 @@ PROP = "SWUI_MateGeom"  # nombre estable: no cambiar
 REFS = ("Reference1", "Reference2")
 SAME = 1e-4  # costo por debajo del cual es la misma entidad
 CLOSE = 0.5  # por encima: cambió de verdad, se avisa
+# Peso de la orientación (por radián). Con configuraciones una cara se corre mucho (largo 60 -> 100):
+# con 1000, la cara de la punta corrida 40 mm "se parecía" menos que una de costado girada 90° y
+# Mover cara movía la de costado (probado 01/11). Así un giro de 90° pesa como correrse 1,5 m.
+ANGLE = 1e5
 
 _state = {"busy": False, "installed": False}
 
@@ -84,16 +88,16 @@ def cost(a, b):
     g = a["g"]
     if g == "plane":
         offset = abs(_dot(a["n"], a["p"]) - _dot(b["n"], b["p"]))
-        return 1000 * _angle(a["n"], b["n"]) + 100 * offset + _dist(a["p"], b["p"]) \
+        return ANGLE * _angle(a["n"], b["n"]) + 100 * offset + _dist(a["p"], b["p"]) \
             + abs(a["s"] - b["s"]) / max(a["s"], b["s"], 1e-9)
     if g in ("cylinder", "cone", "circle"):
         # "p" solo desempata: en un círculo entero es la costura, que OpenCASCADE corre al
         # recalcular la pieza; sola no llega a CLOSE (daba "Revisala" sin motivo, 2026-10-31)
-        return 1000 * _angle(a["d"], b["d"], True) + 100 * _line_gap(a["c"], a["d"], b["c"]) \
+        return ANGLE * _angle(a["d"], b["d"], True) + 100 * _line_gap(a["c"], a["d"], b["c"]) \
             + 100 * abs(a["r"] - b["r"]) + 10 * _dist(a["c"], b["c"]) \
             + min(0.1 * _dist(a["p"], b["p"]), 0.9 * CLOSE)
     if g == "line":
-        return 1000 * _angle(a["d"], b["d"], True) + 100 * _line_gap(a["c"], a["d"], b["c"]) \
+        return ANGLE * _angle(a["d"], b["d"], True) + 100 * _line_gap(a["c"], a["d"], b["c"]) \
             + _dist(a["c"], b["c"]) + abs(a["s"] - b["s"])
     if g == "sphere":
         return 10 * _dist(a["c"], b["c"]) + 100 * abs(a["r"] - b["r"])

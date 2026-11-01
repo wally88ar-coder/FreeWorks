@@ -666,6 +666,7 @@ def lost_in(doc):
 LINK_SKIP = ("BaseFeature", "_Body", "Group", "Origin")
 MULTI = ("Profile", "Base")  # las caras que se mueven: una cara partida va con todos sus pedazos
 _relinking = {}  # Name del documento -> vueltas seguidas corrigiendo (corta un ida y vuelta)
+_quiet = {}  # Name del documento -> True mientras cambia de configuración (sin avisos de "corregido")
 
 
 def _geo_sig(element):
@@ -882,17 +883,34 @@ def snapshot_geo(obj):
         sig = _element_sig(target, _element_name(sub))
         if sig:
             geo[key] = sig
-    if json.dumps(geo, sort_keys=True) == json.dumps(spec.get("geo") or {}, sort_keys=True):
+    conf = _config(obj)
+    by_conf = spec.get("geoc") or {}
+    same = json.dumps(geo, sort_keys=True) == json.dumps(spec.get("geo") or {}, sort_keys=True)
+    if same and (conf is None or json.dumps(by_conf.get(conf) or {}, sort_keys=True) == json.dumps(geo, sort_keys=True)):
         return False
     spec["geo"] = geo
+    if conf is not None:  # cómo es en cada configuración: al volver a una, se compara con lo suyo
+        by_conf[conf] = geo
+        spec["geoc"] = by_conf
     _write_mark(obj, spec)
     return True
+
+
+def _config(obj):
+    """Configuración activa de la pieza (None si no tiene configuraciones)."""
+    try:
+        from swui.fork import configurations as cf
+
+        doc = obj.Document
+        return cf.active(doc) if cf.configured(doc) else None
+    except Exception:
+        return None
 
 
 def relink(obj):
     """Corregir lo que FreeCAD perdió o cambió por otro. -> (cambió algo, [avisos])."""
     spec = read_spec(getattr(obj, MARK, ""))
-    geo = spec.get("geo") or {}
+    geo = (spec.get("geoc") or {}).get(_config(obj)) or spec.get("geo") or {}
     if not geo:
         return False, []
     notes, renamed = [], {}
@@ -988,6 +1006,8 @@ def relink_doc(doc):
             blocked.add(bname)  # los de después, cuando este ya esté recalculado
             # el error de FreeCAD del primer cálculo ("Sub shape not found ...?Face3") ya quedó viejo
             text = "; ".join(notes) if notes else "se volvió a encontrar lo elegido"
+            if _quiet.get(doc.Name):  # cambio de configuración: las caras cambian a propósito
+                continue
             _warn(doc, "%s: FreeCAD lo había perdido y ya está corregido (%s).\n" % (obj.Label, text))
             continue
         try:

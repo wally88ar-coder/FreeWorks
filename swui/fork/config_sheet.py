@@ -70,27 +70,59 @@ def _hide_flat_sketches(doc):
         FreeCAD.Console.PrintLog("[SWUI fork] Croquis del desarrollo:\n%s\n" % traceback.format_exc())
 
 
+def _move_faces(doc):
+    try:
+        from swui.fork import move_face as mfc
+
+        return list(mfc.marked(doc, every=True))
+    except Exception:
+        return []
+
+
 def _activate_skipping_flats(doc, name, original):
     """
-    Cambiar de configuración sin recalcular todavía los desarrollos: con la cara fija vieja
-    ("Face6" que en la otra configuración no existe) FreeCAD mostraba el error "Chapa
-    desplegada1: Invalid shape name ?Face6" antes de que refresh_flats la corrigiera (visto con
-    el mouse, 01/11). Primero el resto, después la cara fija, después el desarrollo.
+    Cambiar de configuración sin recalcular todavía los desarrollos ni los Mover cara: con la
+    cara vieja ("Face6" que en la otra configuración no existe o es otra) FreeCAD mostraba el
+    error "Chapa desplegada1: Invalid shape name ?Face6" o "Sub shape not found" antes de que el
+    fork la corrigiera (visto con el mouse, 01/11). Primero el resto, después las caras (Mover
+    cara por su forma, desarrollo por la cara fija), recién ahí ellos.
     """
-    flats = _flats(doc)
+    flats, moves = _flats(doc), _move_faces(doc)
     body = cf.owner(doc)
-    if (not flats or body is None or name not in cf.names(doc)
+    if ((not flats and not moves) or body is None or name not in cf.names(doc)
             or getattr(body, "TypeId", "") == cf.ASSEMBLY):
         return original(doc, name)  # ensamblaje: lo maneja config_asm
-    skip = set()
-    for f in flats:
+    skip, skip_flats = set(), set()
+    for f in flats + moves:
         skip.add(f)
         skip.update(f.InListRecursive)
+    for f in flats:
+        skip_flats.add(f)
+        skip_flats.update(f.InListRecursive)
     cf.before_activate(doc, name)
     if getattr(body, cf.PROP) != name:
         setattr(body, cf.PROP, name)
     doc.recompute([o for o in doc.Objects if o not in skip])
+    if moves:
+        _relink_moves(doc)
+        # lo que quedó sin recalcular (los Mover cara y lo de después); el desarrollo, más tarde
+        doc.recompute([o for o in doc.Objects if o not in skip_flats])
     return None
+
+
+def _relink_moves(doc):
+    from swui.fork import move_face as mfc
+
+    mfc._quiet[doc.Name] = True
+    try:
+        for _i in range(len(_move_faces(doc)) + 1):
+            if not mfc.relink_doc(doc):
+                break
+            doc.recompute()
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Mover cara por configuración:\n%s\n" % traceback.format_exc())
+    finally:
+        mfc._quiet.pop(doc.Name, None)
 
 
 def _hook_activate():
