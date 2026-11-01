@@ -228,9 +228,10 @@ def install(workbench=None):
         FreeCAD.Console.PrintError("[SWUI fork] Chapa:\n%s\n" % traceback.format_exc())
     try:
         # después de panel_sw, instant_dims, feature_tree y equations: los envuelve
-        from swui.fork import config_tab
+        from swui.fork import config_sheet, config_tab
 
         config_tab.install()
+        config_sheet.install()
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] Configuraciones:\n%s\n" % traceback.format_exc())
     try:

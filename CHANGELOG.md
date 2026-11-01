@@ -61,6 +61,12 @@ Neueste Version oben. / Newest version first.
   como SW. Por debajo, la tabla de configuración nativa de la planilla de FreeCAD (sin Excel,
   decisión del usuario): el archivo cambia de configuración, guarda y abre sin el addon
   (`swui/fork/configurations.py`, `config_tab.py`).
+- **Configuraciones en chapa** (01/11, etapa 2): Espesor y Profundidad de la Brida base
+  aparecen como cotas con doble clic (se configuran igual que las otras); los paneles del fork
+  cambian un valor atado a la tabla solo en la configuración activa; al cambiar de configuración
+  el desarrollo vuelve a elegir su cara fija; **Exportar DXF** pregunta *Esta configuración /
+  Todas las configuraciones* y el nombre lleva la configuración (`Soporte-3mm_3mm.dxf`)
+  (`swui/fork/config_sheet.py`).
 - **Decisiones del usuario del 31/10** (checklist):
   - Nombre visible **FreeWorks** (menú y lista de bancos; lo interno no cambia, los
     archivos y la configuración abren igual) (`swui/fork/brand.py`). Paquete (package.xml) y
