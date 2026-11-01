@@ -29,8 +29,9 @@ configuración, suprimir componentes); nada en planos. Conclusión: se puede con
 (tabla de configuración de Spreadsheet, `Suppressed` por expresión, App::Link con
 LinkCopyOnChange); piezas y chapa muy parecidas a SW; ensamblajes parecidos, con dos defectos de
 FreeCAD a tapar (uniones rotas al reabrir cuando el componente cambia de copia, error 3 de
-NOTAS_TECNICAS; copias que no siguen a la pieza salvo "Tracking"); Excel no incrustado (editar en
-Excel y traer con un botón). Probado en FreeCADCmd (hallazgos en NOTAS_TECNICAS, "Configuraciones").
+NOTAS_TECNICAS; copias que no siguen a la pieza salvo "Tracking"). Decidido por el usuario
+(01/11): sin Excel; la tabla de diseño es la planilla propia de FreeCAD (etapa 3 achicada, puede
+ir con la etapa 1). Probado en FreeCADCmd (hallazgos en NOTAS_TECNICAS, "Configuraciones").
 En SW se miró el ConfigurationManager y el panel de Tabla de diseño (pieza cerrada sin guardar).
 Esperando que el usuario lea el documento y decida si se hace y las decisiones de la etapa 1.
 Si se hace: cambiar en CLAUDE.md el límite "no hay configuraciones equivalentes a SW".
