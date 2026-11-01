@@ -16,6 +16,13 @@ cerrada; fase 6 acordada).
 Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o comentó el usuario.
 
 ## Fase actual
+- **31/10 noche (22:30), hecho pero SIN probar con el mouse** (decisión del usuario sobre los
+  detalles vistos): (a) el desarrollo de chapa apunta al Cuerpo en vez de a la punta, para que no
+  salga el aviso en inglés "Link(s) ... go out of the allowed scope 'Unfold'" (probado sin GUI:
+  mismo desarrollo, misma área); (b) en Mover cara "Hasta el vértice", un clic en una arista toma
+  la punta más cercana al clic (`MoveFacePanel._edge_end`). Falta: probar los dos con el mouse
+  (piezas en el scratchpad mouse2/: ChapaMouse, FinMouse) y anotarlo en el checklist. El clic
+  sin efecto en el texto de "Brida base" queda como está (usuario: "queda ahí").
 - **31/10 noche (22 h), segunda tanda con mouse y teclado** (lo que había quedado solo con
   guiones): chapa (Brida base con 2 mm y "Brida base1", Brida de arista con 20 mm y "Brida de
   arista1", Aplanar -> "Chapa desplegada1", DXF que pregunta: Cancelar no toca el archivo,
