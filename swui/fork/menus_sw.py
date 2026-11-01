@@ -581,6 +581,22 @@ def _info(name):
         return {}
 
 
+def _pixmap(name):
+    """
+    Los íconos de TechDraw están en :/icons/actions/, carpeta que FreeCAD suma recién al abrir el
+    banco TechDraw: pedidos por nombre al armar la barra daban "Cannot find icon: TechDraw_View" en
+    las notificaciones al arrancar (visto por el usuario, 01/11). Se pasa la ruta completa, o nada
+    si no existe (TechDraw_ExportPagePDF no está en ningún lado). Los demás, por nombre.
+    """
+    if not name or not name.startswith("TechDraw_"):
+        return name
+    path = ":/icons/actions/%s.svg" % name
+    try:
+        return path if QtCore.QFile.exists(path) else None
+    except Exception:
+        return None
+
+
 class _Wrapper:
     """Entrada de menú propia: texto de SW, gris según el entorno, ejecuta como la cinta."""
 
@@ -599,8 +615,9 @@ class _Wrapper:
             info = _info(first)
             if info.get("toolTip") and not e.get("tip"):
                 res["ToolTip"] = re.sub(r"<[^>]+>", "", info["toolTip"]).strip() or e["label"]
-            if info.get("pixmap"):
-                res["Pixmap"] = info["pixmap"]
+            pixmap = _pixmap(info.get("pixmap"))
+            if pixmap:
+                res["Pixmap"] = pixmap
         return res
 
     def IsActive(self):

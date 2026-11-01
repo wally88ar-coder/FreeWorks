@@ -74,6 +74,7 @@ Neueste Version oben. / Newest version first.
   un paso de deshacer lo devuelve). Los que ya tenían algo, los del fork y los que usa una
   operación no se tocan. Dentro del croquis, Insertar > Croquis dice "Salir del croquis", como SW.
 - La relación fija del primer componente dice "Fijo (Placa<1>)" (antes "Fijo (Body)").
+- Sin avisos "Cannot find icon: TechDraw_..." al arrancar (los íconos de Dibujo de los menús, por ruta).
 - Redondeo o Chaflán con el panel de otra operación abierto lo cancelan y arrancan callados (antes
   quedaba un redondeo vacío con el aviso en inglés "Fillet not possible on selected shapes").
 - **Configuraciones como SW** (01/11, etapa 1 de 5: piezas): pestaña **Configuraciones** junto a
