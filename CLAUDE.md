@@ -23,7 +23,8 @@
 - Lo propio del usuario (chapa, mover/rotar cara, etc.) va en módulos separados nuevos, tocando lo
   mínimo los archivos existentes, para que incorporar cambios del original no genere conflictos.
 - Decidido (2026-10-31): no se propone nada al original (desarrollo propio) y el paquete se va a
-  llamar **FreeWorks** (renombrar sin empezar; los nombres internos guardados en archivos no cambian).
+  llamar **FreeWorks** (hecho 31/10: menú, package.xml y repositorio
+  https://github.com/wally88ar-coder/FreeWorks; la carpeta local y los nombres internos no cambian).
 
 ## Decisiones de arquitectura (no cambiar sin consultar)
 - Addon en Python encima de FreeCAD oficial; nada de modificar el código de FreeCAD.

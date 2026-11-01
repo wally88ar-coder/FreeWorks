@@ -109,8 +109,14 @@ Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o come
     solo mira (compara dónde están los auxiliares con dónde deberían estar).
   - Nombre visible FreeWorks: menú "FreeWorks" (también al volver de otro banco) y en la lista
     de bancos; "Usar siempre FreeWorks". Sin tocar InitGui.py ni package.xml (`swui/fork/brand.py`).
-    **Falta (consultar al usuario, es hacia afuera):** package.xml y el nombre del repositorio en
-    GitHub para el Addon Manager; la carpeta del addon sigue "LikeSolidWorks-UI".
+    **Hecho 31/10 (pedido del usuario: "subilos y cambiá el nombre"):** repositorio renombrado
+    en GitHub a https://github.com/wally88ar-coder/FreeWorks (GitHub redirige el nombre viejo;
+    remoto origin actualizado) y package.xml con nombre FreeWorks, descripción en castellano,
+    responsable wally88ar-coder y Dominik como autor. Quedan igual: el banco registrado como
+    "LikeSolidWorks UI" (el test exige que package.xml e InitGui.py coincidan; en pantalla dice
+    FreeWorks), la carpeta local "LikeSolidWorks-UI" (nada depende de ella) y la rama "release"
+    a la que apunta package.xml, que todavía no existe en el fork: para que el Addon Manager lo
+    instale hay que publicar una versión (tools/freigabe.sh). Los README siguen los del original.
 - **31/10 noche, decisiones pendientes del checklist tomadas por el usuario** (todas):
   - Chapa: K 0,5 y radio = espesor (queda). Espesor y largo de fábrica **siempre 2 mm y 20 mm**
     (no el último usado). DXF: **preguntar antes de pisar** (nombre pieza_espesor_material,
@@ -1503,7 +1509,7 @@ Etapas:
   **Actualizado 2026-10-31: el usuario decidió no proponer nada al original (desarrollo propio).**
   Las ramas quedan como están; upstream se sigue leyendo para traer novedades.
 - Nombre del paquete propio: "FreeWorks" (usuario, 2026-10-31). Hecho el nombre visible
-  (`swui/fork/brand.py`); package.xml y repositorio sin tocar (consultar).
+  (`swui/fork/brand.py`); package.xml y repositorio en GitHub renombrados el 31/10.
 - `SWUI_EquationNotes` (JSON oculto en el VarSet "Variables globales": comentarios de las
   ecuaciones, clave "Objeto|ruta"): nombre estable (2026-10-31).
 - Marca `SWUI_MoveFace`: claves nuevas "end", "target", "gap", "axis", "aux", "faces"

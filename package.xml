@@ -1,27 +1,24 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <package format="1" xmlns="https://wiki.freecad.org/Package_Metadata">
-  <!-- Anzeigename im Addon-Manager (Dominik, 17.10.): "LikeSolid".
-       Die Werkbank selbst heisst weiter "LikeSolidWorks UI" (unten bei
-       <content>). Die Suche des Addon-Managers prueft Name, Beschreibung
-       und <tag> - deshalb steht "LikeSolidWorks UI" in beiden, damit die
-       Suche nach dem Werkbank-Namen das Paket findet. -->
-  <name>LikeSolid</name>
+  <!-- Fork: nombre visible en el Addon Manager "FreeWorks" (decisión del usuario, 2026-10-31).
+       El banco sigue registrado como "LikeSolidWorks UI" (abajo en <content>, igual que MenuText
+       en InitGui.py; en pantalla dice FreeWorks por swui/fork/brand.py). La búsqueda del Addon
+       Manager mira nombre, descripción y <tag>: por eso "LikeSolidWorks UI" sigue en los tags. -->
+  <name>FreeWorks</name>
   <description>
-    LikeSolidWorks UI: a SOLIDWORKS-like user interface for FreeCAD -
-    CommandManager-style ribbon, SOLIDWORKS names and terms for parts,
-    assemblies and drawings. Interface in English and German.
-    SOLIDWORKS-aehnliche Benutzeroberflaeche und
-    Werkzeuge fuer FreeCAD.
-    Modernes Ribbon-Layout, Feature-Manager und ein Skizzier-Workflow,
-    der sich an SOLIDWORKS orientiert. Entwickelt und getestet unter
-    Linux Mint mit FreeCAD 1.1. SOLIDWORKS ist eine Marke von Dassault
-    Systemes; dieses Projekt ist nicht mit Dassault Systemes verbunden.
-    Not affiliated with Dassault Systemes.
+    FreeWorks: interfaz y flujo de trabajo estilo SOLIDWORKS 2018 para FreeCAD, en
+    castellano. Cinta tipo CommandManager, chapa metálica sobre el addon SheetMetal con
+    DXF del desarrollo en un clic, propiedades físicas, ecuaciones, mover/rotar cara,
+    relaciones de posición y planos. Fork de LikeSolidWorks UI (Dominik Ladewig).
+    SOLIDWORKS-like interface for FreeCAD (Spanish), fork of LikeSolidWorks UI.
+    SOLIDWORKS es una marca de Dassault Systemes; este proyecto no está relacionado
+    con Dassault Systemes. Not affiliated with Dassault Systemes.
   </description>
   <version>0.10.0</version>
   <date>2026-10-18</date>
 
-  <maintainer email="ladewig_dominik@web.de">Dominik Ladewig</maintainer>
+  <maintainer email="cafeto652@gmail.com">wally88ar-coder</maintainer>
+  <author email="ladewig_dominik@web.de">Dominik Ladewig</author>
 
   <!-- Zwei Lizenzen: Quelltext LGPL (wie FreeCAD selbst), Grafiken und
        Vorlagen CC-BY-SA (die LGPL passt schlecht auf Nicht-Quelltext).
@@ -30,20 +27,22 @@
   <license file="LICENSE-Code">LGPL-2.1-or-later</license>
   <license file="LICENSE-Assets">CC-BY-SA-4.0</license>
 
-  <!-- Pflicht fuer den Addon-Index. Nutzer bekommen den Zweig "release"
-       (nur gepruefte Freigaben, tools/freigabe.sh); entwickelt wird auf
-       "master". Diese Datei steht in beiden Zweigen gleich. -->
-  <url type="repository" branch="release">https://github.com/Schlauminik/LikeSolidWorks-UI</url>
-  <url type="readme">https://github.com/Schlauminik/LikeSolidWorks-UI/blob/release/README.md</url>
+  <!-- Fork: el repositorio propio. Como en el original, los usuarios reciben la rama "release"
+       (solo versiones revisadas, tools/freigabe.sh); se desarrolla en "master". -->
+  <url type="repository" branch="release">https://github.com/wally88ar-coder/FreeWorks</url>
+  <url type="readme">https://github.com/wally88ar-coder/FreeWorks/blob/release/README.md</url>
 
   <freecadmin>1.0</freecadmin>
 
+  <tag>FreeWorks</tag>
   <tag>LikeSolidWorks UI</tag>
   <tag>LikeSolidWorks</tag>
   <tag>Ribbon</tag>
   <tag>TechDraw</tag>
   <tag>Deutsch</tag>
   <tag>English</tag>
+  <tag>Español</tag>
+  <tag>SheetMetal</tag>
 
   <content>
     <workbench>

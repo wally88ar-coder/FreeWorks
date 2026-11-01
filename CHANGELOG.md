@@ -55,7 +55,8 @@ Neueste Version oben. / Newest version first.
 **Fork (wally88ar-coder, español)**
 - **Decisiones del usuario del 31/10** (checklist):
   - Nombre visible **FreeWorks** (menú y lista de bancos; lo interno no cambia, los
-    archivos y la configuración abren igual) (`swui/fork/brand.py`).
+    archivos y la configuración abren igual) (`swui/fork/brand.py`). Paquete (package.xml) y
+    repositorio en GitHub: **FreeWorks** (https://github.com/wally88ar-coder/FreeWorks).
   - Chapa: espesor 2 mm y largo de brida 20 mm **siempre** al empezar; nombres como el SW
     2018 del usuario: *Brida base1*, *Brida de arista1*, *Chapa desplegada1* (los croquis
     del desarrollo ya no se rehacen en cada recálculo pese al espacio en el nombre). El DXF
