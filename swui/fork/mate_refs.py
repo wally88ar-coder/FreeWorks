@@ -452,8 +452,12 @@ def _what(sig):
 
 
 def _warn(joint, obj, text):
-    FreeCAD.Console.PrintWarning("Relación de posición «%s» (%s): %s\n"
-                                 % (joint.Label, getattr(obj, "Label", "?"), text))
+    msg = "Relación de posición «%s» (%s): %s\n" % (joint.Label, getattr(obj, "Label", "?"), text)
+    if _state.get("quiet") and "cambió" in text:
+        # cambio de configuración de un componente: que la cara cambie es lo esperado (SW no avisa)
+        FreeCAD.Console.PrintLog("[SWUI fork] " + msg)
+        return
+    FreeCAD.Console.PrintWarning(msg)
 
 
 # --- Cuándo revisar ------------------------------------------------------------------

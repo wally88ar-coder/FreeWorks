@@ -155,6 +155,17 @@ def refresh_joints(link, captured=None, prefer_stored=False):
 
     captured = captured or {}
     done = []
+    quiet_before = mate_refs._state.get("quiet")
+    mate_refs._state["quiet"] = True
+    try:
+        return _refresh_joints(link, captured, prefer_stored, done)
+    finally:
+        mate_refs._state["quiet"] = quiet_before
+
+
+def _refresh_joints(link, captured, prefer_stored, done):
+    from swui.fork import mate_refs
+
     try:
         link.recompute()
     except Exception:
@@ -289,8 +300,20 @@ def set_config(link, name, scope="this"):
             doc.recompute()
     finally:
         _state["busy"] = False
+    _quiet_mates()
     _repaint_tree()
     return link.LinkedObject
+
+
+def _quiet_mates(ms=2500):
+    """Las relaciones se reubican solas un rato después del cambio: sin "Revisala" mientras tanto."""
+    from swui.fork import mate_refs
+
+    mate_refs._state["quiet"] = True
+    try:
+        QtCore.QTimer.singleShot(ms, lambda: mate_refs._state.__setitem__("quiet", False))
+    except Exception:
+        pass
 
 
 def _repaint_tree():
@@ -531,6 +554,7 @@ def _hook_activate():
             return _original(doc, name)
         links = _configured_links(doc)
         taken = capture(links)
+        _quiet_mates()
         _state["busy"] = True
         try:
             _original(doc, name)
@@ -884,6 +908,7 @@ def settle_assembly(doc):
 
 
 def _settle_later(names):
+    _quiet_mates()
     _state["settling"] = True
     try:
         for name in names:
