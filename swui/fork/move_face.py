@@ -553,8 +553,40 @@ def update(obj):
     return True
 
 
-def marked(doc):
-    return [o for o in doc.Objects if hasattr(o, MARK) and o.TypeId in (DRAFT, GROOVE, REVOLUTION)]
+def marked(doc, every=False):
+    """Los Mover cara del documento (every=False: solo los que pueden tener auxiliares fijos)."""
+    return [o for o in doc.Objects if hasattr(o, MARK) and (every or o.TypeId in (DRAFT, GROOVE, REVOLUTION))]
+
+
+def lost(obj):
+    """
+    ¿Perdió la cara que mueve? FreeCAD renumera las caras cuando cambia la forma de antes (p. ej. un
+    agujero que deja de atravesar) y la referencia queda "?Face3": la operación sigue "válida" pero
+    no hace nada (visto con el mouse, 2026-10-31). Hay que abrirlo y elegir la cara de nuevo.
+    """
+    base = getattr(obj, "BaseFeature", None)
+    faces = MoveFacePanel._initial_faces(obj)
+    if base is None or not faces:
+        return False
+    for name in faces:
+        if name.startswith("?"):
+            return True
+        try:
+            base.Shape.getElement(name)
+        except Exception:
+            return True
+    return False
+
+
+def lost_in(doc):
+    out = []
+    for obj in marked(doc, every=True):
+        try:
+            if lost(obj):
+                out.append(obj)
+        except Exception:
+            pass
+    return out
 
 
 def stale_in(doc):
@@ -568,41 +600,64 @@ def stale_in(doc):
     return out
 
 
-def update_stale(doc):
-    """Ctrl+Q: reubicar los auxiliares de todos los Mover cara atrasados. -> cuántos."""
+def update_stale(doc, passes=5):
+    """
+    Ctrl+Q: reubicar los auxiliares de todos los Mover cara atrasados. -> cuántos. Puede hacer falta
+    más de una vuelta: al poner al día uno (el agujero), otro de después recupera su cara y recién
+    entonces se ve que también quedó atrasado (visto con el mouse, 2026-10-31).
+    """
     done = 0
-    for obj in stale_in(doc):
-        try:
-            if update(obj):
-                done += 1
-        except Exception:
-            FreeCAD.Console.PrintError("[SWUI fork] Actualizar %s:\n%s\n" % (obj.Label, traceback.format_exc()))
+    for _i in range(passes):
+        now = 0
+        for obj in stale_in(doc):
+            try:
+                if update(obj):
+                    now += 1
+            except Exception:
+                FreeCAD.Console.PrintError("[SWUI fork] Actualizar %s:\n%s\n" % (obj.Label, traceback.format_exc()))
+        if not now:
+            break
+        done += now
+        doc.recompute()
     return done
 
 
 STALE_TEXT = "⚠ desactualizado: Ctrl+Q"
+LOST_TEXT = "⚠ perdió la cara: Ctrl+Q o abrilo"
 _stale = {}  # Name del documento -> {Name de los Mover cara atrasados}
+_lost = {}  # Name del documento -> {Name de los Mover cara que perdieron la cara}
+
+
+def _warn(doc, text):
+    try:
+        FreeCAD.Console.PrintTranslatedUserWarning(doc.Label, text)  # cartelito de FreeCAD
+    except Exception:
+        FreeCAD.Console.PrintWarning("[SWUI] " + text)
 
 
 def check(doc):
-    """Mirar (sin cambiar nada) qué Mover cara quedaron atrasados; avisar los nuevos."""
+    """Mirar (sin cambiar nada) qué Mover cara quedaron atrasados o sin cara; avisar los nuevos."""
     if doc is None:
         return
     try:
-        now = set(o.Name for o in stale_in(doc))
+        lost_now = set(o.Name for o in lost_in(doc))
+        now = set(o.Name for o in stale_in(doc)) - lost_now
     except Exception:
         return
-    before = _stale.get(doc.Name, set())
-    _stale[doc.Name] = now
+    before, lost_before = _stale.get(doc.Name, set()), _lost.get(doc.Name, set())
+    _stale[doc.Name], _lost[doc.Name] = now, lost_now
     new = [doc.getObject(n) for n in sorted(now - before)]
     if new:
-        text = ("%s quedó desactualizado porque cambió la pieza: apretá Ctrl+Q para actualizarlo.\n"
-                % ", ".join(o.Label for o in new if o is not None))
-        try:
-            FreeCAD.Console.PrintTranslatedUserWarning(doc.Label, text)  # cartelito de FreeCAD
-        except Exception:
-            FreeCAD.Console.PrintWarning("[SWUI] " + text)
-    if now != before:
+        _warn(doc, "%s quedó desactualizado porque cambió la pieza: apretá Ctrl+Q para actualizarlo.\n"
+              % ", ".join(o.Label for o in new if o is not None))
+    gone = [doc.getObject(n) for n in sorted(lost_now - lost_before)]
+    if gone:
+        hint = (" Si otro Mover cara de antes quedó desactualizado, apretá primero Ctrl+Q: al ponerlo al día "
+                "suele volver la cara." if now else "")
+        _warn(doc, "%s perdió la cara que movía porque cambió la pieza (FreeCAD renumeró las caras): "
+                   "abrilo (clic derecho > Editar operación) y elegí la cara de nuevo.%s\n"
+              % (", ".join(o.Label for o in gone if o is not None), hint))
+    if now != before or lost_now != lost_before:
         try:
             from swui.fork import tree_overlay
 
@@ -619,7 +674,9 @@ def tree_text(tree):
     for _body, rows in tree_overlay.body_rows(tree):
         for obj, (x, y0, w, h, _row_x), _top, _bottom, _f in rows:
             try:
-                if obj.Name in _stale.get(obj.Document.Name, ()):
+                if obj.Name in _lost.get(obj.Document.Name, ()):
+                    out.append((x + w + 6, y0, h, LOST_TEXT))
+                elif obj.Name in _stale.get(obj.Document.Name, ()):
                     out.append((x + w + 6, y0, h, STALE_TEXT))
             except Exception:
                 pass
@@ -641,9 +698,16 @@ class _DocObserver:
             return
         QtCore.QTimer.singleShot(800, lambda: check(FreeCAD.listDocuments().get(name)))
 
+    def slotUndoDocument(self, doc):  # deshacer no recalcula: mirar igual (visto con el mouse, 2026-10-31)
+        self.slotRecomputedDocument(doc)
+
+    def slotRedoDocument(self, doc):
+        self.slotRecomputedDocument(doc)
+
     def slotDeletedDocument(self, doc):
         try:
             _stale.pop(doc.Name, None)
+            _lost.pop(doc.Name, None)
         except Exception:
             pass
 
