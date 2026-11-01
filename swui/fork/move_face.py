@@ -1276,8 +1276,17 @@ class MoveFacePanel(dp.SwPanel):
             plane.recompute()
             ref = (plane, [""])
         offset = 0.0
-        if end == END_OFFSET:  # se queda a esa distancia antes de la superficie (Invertir: después)
-            offset = self.gap.value() * (1.0 if self.flip.isChecked() else -1.0)
+        if end == END_OFFSET:
+            # Un plano oculto apoyado en la superficie y corrido la distancia hacia la cara (Invertir:
+            # del otro lado), y "Hasta cara" contra él. El Offset de FreeCAD no sirve: su signo
+            # depende de cómo está orientada la cara y de si la superficie la tapa o no (con la cara
+            # +X de un tope que no la tapaba quedaba del otro lado: visto con el mouse, 2026-10-31).
+            plane = self._aux("offset_plane", "PartDesign::Plane", "PlanoEquidistante")
+            keep.append("offset_plane")
+            problem = self._offset_plane(plane, ref, n if side > 0 else n * -1)
+            if problem:
+                return problem
+            ref = (plane, [""])
         self._drop_aux(keep)
         self._write_spec()
         if self.obj.Profile != (self.base, self.faces):
@@ -1286,6 +1295,34 @@ class MoveFacePanel(dp.SwPanel):
         if self.obj.UpToFace != ref:
             self.obj.UpToFace = ref
         self._set("Offset", offset)
+        return ""
+
+    def _offset_plane(self, plane, ref, travel):
+        """
+        Ubicar el plano equidistante: apoyado en la superficie (cara plana o plano de referencia),
+        corrido `gap` hacia donde viene la cara (`travel` = sentido en que avanza la cara).
+        """
+        obj, subs = ref
+        sub = subs[0] if subs else ""
+        support = [(obj, sub)]
+        mode = "FlatFace" if sub.startswith("Face") else "ObjectXY"
+        if [(o, s) for o, s in plane.AttachmentSupport] != support:
+            plane.AttachmentSupport = support
+        if plane.MapMode != mode:
+            plane.MapMode = mode
+        plane.AttachmentOffset = FreeCAD.Placement()
+        plane.recompute()
+        if "Invalid" in getattr(plane, "State", []):
+            return "Para Equidistante, la superficie tiene que ser plana (o un plano)."
+        z = plane.Placement.Rotation.multVec(FreeCAD.Vector(0, 0, 1))
+        toward = z.dot(travel)
+        if abs(toward) < 1e-9:
+            return "La superficie es paralela al movimiento: la cara nunca llega."
+        # antes de la superficie = correrla en contra del avance; Invertir: a favor
+        step = self.gap.value() * (1.0 if self.flip.isChecked() else -1.0)
+        shift = step if toward > 0 else -step
+        plane.AttachmentOffset = FreeCAD.Placement(FreeCAD.Vector(0, 0, shift), FreeCAD.Rotation())
+        plane.recompute()
         return ""
 
     def _bound(self, ref, keep):
