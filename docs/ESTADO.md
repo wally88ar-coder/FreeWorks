@@ -6,7 +6,8 @@ aviso "Cannot find icon: TechDraw_..." que le salió al arrancar quedó arreglad
 se borra como SW. Configuraciones estilo SW: hechas y probadas por Claude. Todo subido a GitHub.
 Falta que el usuario use los menús y las configuraciones en su trabajo y avise lo que aparezca).
 **Primera versión publicada (01/11, pedido del usuario "hacé primer release"): FreeWorks 0.11.0**,
-rama "release" + etiqueta v0.11.0 en GitHub (la 0.10.0 era la última del original). Mínimo
+rama "release" + etiqueta v0.11.0 en GitHub (la 0.10.0 era la última del original) + página de
+la versión con las novedades en castellano (https://github.com/wally88ar-coder/FreeWorks/releases/tag/v0.11.0). Mínimo
 declarado FreeCAD 1.1 (antes 1.0; el fork se probó solo en 1.1.4). Para la próxima: subir versión
 en swui/version.py y package.xml (+ fecha), entrada "## X.Y.Z — fecha" en CHANGELOG y
 tools/freigabe.sh (en Windows hacer los pasos a mano: el script llama a python3 y /tmp).
