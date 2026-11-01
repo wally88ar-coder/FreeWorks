@@ -136,7 +136,9 @@ puente tildado, "Reconectar" en /mcp de la app; la reconexión de un servidor de
 el usuario, no Claude): estado de "aro" y, a pedido ("hacelo sobre aro, es una pieza de
 testing"), placa de prueba 100x60x10 con agujero Ø10 en un Cuerpo nuevo al lado del aro, croquis
 totalmente definidos, 59 214,602 mm³ exacto, prueba aparte bien, respaldo previo, un paso de
-Ctrl+Z; captura con ajustar. Detalle: si se nombran los objetos en el script, `naming.py` no les
+Ctrl+Z; captura con ajustar. **Probado por el usuario (01/11, ~21 h):** Ctrl+Z en "aro" deshizo la
+placa entera; destildar y tildar Puente IA avisa bien en la barra de estado. Sin probar por él:
+pedirle algo a la IA él mismo (opcional). Columna Vos del checklist: es del usuario, no se tocó. Detalle: si se nombran los objetos en el script, `naming.py` no les
 pone nombre SW (con nombres por defecto sí).
 
 **MENÚS ESTILO SW 2018: HECHOS — 01/11/2026 tarde** (`swui/fork/menus_sw.py`; detalle, pruebas y
