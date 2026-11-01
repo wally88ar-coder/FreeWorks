@@ -152,7 +152,7 @@ def read_spec(text):
     """Lo guardado en SWUI_MoveFace (JSON) con valores por omisión."""
     spec = {"mode": OFFSET, "flip": False, "distance": 10.0, "delta": [0.0, 0.0, 0.0],
             "dir": None, "hinge": "", "angle": 10.0, "end": END_DEPTH, "target": None, "gap": 10.0,
-            "axis": None, "aux": {}, "faces": [], "plc": None}
+            "axis": None, "aux": {}, "faces": [], "plc": None, "geo": {}}
     try:
         data = json.loads(text or "{}")
         if isinstance(data, dict):
@@ -653,6 +653,353 @@ def lost_in(doc):
     return out
 
 
+# --- Referencias que FreeCAD pierde o confunde ------------------------------------------
+# Como las relaciones de posición (mate_refs): después de cada recálculo se guarda cómo es todo lo
+# que usa cada Mover cara (las caras, la bisagra, el destino, el eje; en la operación nativa, en sus
+# auxiliares y en lo que guarda el panel) en "geo" de la marca. Si FreeCAD lo da por perdido
+# ("?Face3": la cara se partió en dos, visto 2026-10-31) o lo cambió por otro, se busca lo más
+# parecido y se corrige. Una cara que se mueve y quedó partida pasa a ser todos sus pedazos (en el
+# mismo plano, dentro de donde estaba). Si antes en el Cuerpo hay un Mover cara atrasado, nada:
+# primero Ctrl+Q (con la pieza a medio actualizar elegiría mal). La marca se escribe sin dejar la
+# operación para recalcular (estado Output/NoRecompute, queda en el archivo).
+
+LINK_SKIP = ("BaseFeature", "_Body", "Group", "Origin")
+MULTI = ("Profile", "Base")  # las caras que se mueven: una cara partida va con todos sus pedazos
+_relinking = {}  # Name del documento -> vueltas seguidas corrigiendo (corta un ida y vuelta)
+
+
+def _geo_sig(element):
+    from swui.fork import mate_refs as mr
+
+    sig = mr.signature(element)
+    if sig is not None and element.ShapeType == "Face":
+        b = element.BoundBox
+        sig["b"] = [round(v, 6) for v in (b.XMin, b.YMin, b.ZMin, b.XMax, b.YMax, b.ZMax)]
+    return sig
+
+
+def _element_name(sub):
+    """'Face3' / '?Face3' -> 'Face3'; None si no es un elemento suelto (con prefijo, vacío...)."""
+    from swui.fork import mate_refs as mr
+
+    if not sub or "." in sub or ";" in sub:
+        return None
+    name = sub.lstrip("?")
+    return name if mr.element_type(name) else None
+
+
+def _element_sig(obj, name):
+    try:
+        return _geo_sig(obj.Shape.getElement(name))
+    except Exception:
+        return None
+
+
+def _holders(obj):
+    _spec, aux = _spec_aux(obj)
+    out = [obj]
+    for name in aux.values():
+        found = obj.Document.getObject(name)
+        if found is not None:
+            out.append(found)
+    return out
+
+
+def _link_props(holder):
+    out = []
+    for prop in holder.PropertiesList:
+        if prop in LINK_SKIP:
+            continue
+        try:
+            kind = holder.getTypeIdOfProperty(prop)
+        except Exception:
+            continue
+        if "LinkSub" in kind:
+            out.append((prop, "List" in kind))
+    return out
+
+
+def _entries(value, is_list):
+    """[(objeto, [subs])] de un PropertyLinkSub o un LinkSubList."""
+    if not value:
+        return []
+    items = value if is_list else [value]
+    out = []
+    for item in items:
+        try:
+            target, subs = item
+        except (TypeError, ValueError):
+            continue
+        if target is None:
+            continue
+        out.append((target, list(subs) if isinstance(subs, (list, tuple)) else [subs]))
+    return out
+
+
+def _native_refs(obj, geo=None):
+    """
+    [(clave, dueño, propiedad, i, j, objeto, sub)] de los vínculos de la operación y sus auxiliares.
+    Con `geo`, también los que quedaron vacíos y tenían firma: FreeCAD a veces borra el elemento
+    perdido en vez de marcarlo con '?' (el SubShapeBinder quedó apuntando al sólido entero cuando la
+    cara de destino se partió, 2026-10-31).
+    """
+    out = []
+    for holder in _holders(obj):
+        for prop, is_list in _link_props(holder):
+            try:
+                entries = _entries(getattr(holder, prop), is_list)
+            except Exception:
+                continue
+            for i, (target, subs) in enumerate(entries):
+                for j, sub in enumerate(subs):
+                    key = "%s|%s|%d|%d" % (holder.Name, prop, i, j)
+                    if _element_name(sub) or (geo and not sub and key in geo):
+                        out.append((key, holder, prop, i, j, target, sub or ""))
+    return out
+
+
+def _spec_refs(obj, spec):
+    """[(clave, objeto, sub)] de lo que el panel guarda por nombre (bisagra, destino, eje, dirección)."""
+    doc = obj.Document
+    base = getattr(obj, "BaseFeature", None)
+    out = []
+    if spec.get("hinge") and base is not None:
+        out.append(("spec.hinge", base, spec["hinge"]))
+    for key in ("target", "axis", "dir"):
+        data = spec.get(key)
+        if data and len(data) == 2 and _element_name(data[1]):
+            found = doc.getObject(data[0])
+            if found is not None:
+                out.append(("spec." + key, found, data[1]))
+    if obj.TypeId in (GROOVE, REVOLUTION) and base is not None:  # el anillo usa las caras por nombre
+        for i, name in enumerate(spec.get("faces") or []):
+            if _element_name(name):
+                out.append(("spec.faces.%d" % i, base, name))
+    return out
+
+
+def _candidates(obj, kind):
+    shape = obj.Shape
+    elements = {"Face": shape.Faces, "Edge": shape.Edges, "Vertex": shape.Vertexes}[kind]
+    out = []
+    for n, element in enumerate(elements, 1):
+        try:
+            out.append(("%s%d" % (kind, n), _geo_sig(element)))
+        except Exception:
+            pass
+    return out
+
+
+def _pieces(want, candidates, tol=1e-4):
+    """Las caras planas en el mismo plano que `want` y dentro de donde estaba (una cara partida)."""
+    from swui.fork import mate_refs as mr
+
+    if want.get("g") != "plane" or not want.get("b"):
+        return []
+    b = want["b"]
+    out = []
+    for name, sig in candidates:
+        if not sig or sig.get("g") != "plane" or not sig.get("b"):
+            continue
+        if mr._angle(want["n"], sig["n"]) > 1e-6:
+            continue
+        if abs(mr._dot(want["n"], want["p"]) - mr._dot(sig["n"], sig["p"])) > tol:
+            continue
+        s = sig["b"]
+        if any(s[k] < b[k] - tol for k in range(3)) or any(s[k + 3] > b[k + 3] + tol for k in range(3)):
+            continue
+        out.append(name)
+    return out
+
+
+def _fix(want, target, sub, multi):
+    """
+    Lo guardado `want` en `target` ahora es `sub`: -> (nombres nuevos, aviso) si hay que cambiarlo,
+    o (None, "") si sigue bien o no hay con qué cambiarlo.
+    """
+    from swui.fork import mate_refs as mr
+
+    name = _element_name(sub)
+    if not want or target is None or (name is None and sub):
+        return None, ""
+    kind = mr.element_type(name) if name else want.get("t")  # vacío: lo que era, por la firma
+    if kind not in ("Face", "Edge", "Vertex"):
+        return None, ""
+    current = None if (not name or sub.startswith("?")) else _element_sig(target, name)
+    here = mr.cost(want, current)
+    if here is not None and here < mr.SAME:
+        return None, ""
+    try:
+        candidates = _candidates(target, kind)
+    except Exception:
+        return None, ""
+    best, best_cost = mr.best_match(want, candidates)
+    if best is None:
+        return None, ""
+    if here is not None and here <= best_cost + 1e-9:
+        return None, ""  # la misma sigue siendo la más parecida: solo cambió de forma
+    if multi and kind == "Face":
+        pieces = _pieces(want, candidates)
+        if len(pieces) > 1 and best in pieces:
+            return pieces, "la cara quedó partida en %d: se mueven todos los pedazos" % len(pieces)
+    if best_cost >= mr.CLOSE:
+        return [best], "la %s elegida cambió; se tomó la más parecida: revisala" % mr._what(want)
+    return [best], ""
+
+
+def _write_link(holder, prop, is_list, entries):
+    if is_list:
+        setattr(holder, prop, [(o, s[0] if len(s) == 1 else tuple(s)) for o, s in entries])
+    else:
+        target, subs = entries[0]
+        setattr(holder, prop, (target, subs))
+
+
+def _write_mark(obj, spec):
+    """Escribir la marca sin dejar la operación para recalcular (la firma cambia después de cada recálculo)."""
+    try:
+        status = obj.getPropertyStatus(MARK)
+        if "Output" not in status or "NoRecompute" not in status:
+            obj.setPropertyStatus(MARK, ["Output", "NoRecompute"])
+    except Exception:
+        pass
+    text = json.dumps(spec, sort_keys=True)
+    if getattr(obj, MARK, "") != text:
+        setattr(obj, MARK, text)
+
+
+def snapshot_geo(obj):
+    """Guardar cómo es ahora lo que usa este Mover cara (si está bien: sin '?')."""
+    spec = read_spec(getattr(obj, MARK, ""))
+    geo = {}
+    for key, _h, _p, _i, _j, target, sub in _native_refs(obj):
+        if sub.startswith("?"):
+            return False
+        sig = _element_sig(target, _element_name(sub))
+        if sig:
+            geo[key] = sig
+    for key, target, sub in _spec_refs(obj, spec):
+        sig = _element_sig(target, _element_name(sub))
+        if sig:
+            geo[key] = sig
+    if json.dumps(geo, sort_keys=True) == json.dumps(spec.get("geo") or {}, sort_keys=True):
+        return False
+    spec["geo"] = geo
+    _write_mark(obj, spec)
+    return True
+
+
+def relink(obj):
+    """Corregir lo que FreeCAD perdió o cambió por otro. -> (cambió algo, [avisos])."""
+    spec = read_spec(getattr(obj, MARK, ""))
+    geo = spec.get("geo") or {}
+    if not geo:
+        return False, []
+    notes, renamed = [], {}
+    changed = False
+    by_link = {}
+    for key, holder, prop, i, j, target, sub in _native_refs(obj, geo):
+        by_link.setdefault((holder, prop), []).append((key, i, j, target, sub))
+    for (holder, prop), items in by_link.items():
+        is_list = dict(_link_props(holder)).get(prop, False)
+        entries = _entries(getattr(holder, prop), is_list)
+        new = [(t, list(s)) for t, s in entries]
+        touched = False
+        for key, i, j, target, sub in items:
+            names, note = _fix(geo.get(key), target, sub, holder is obj and prop in MULTI)
+            if names is None:
+                continue
+            subs = new[i][1]
+            subs[j:j + 1] = [names[0]]
+            for extra in names[1:]:
+                if extra not in subs:
+                    subs.append(extra)
+            renamed[(target.Name, _element_name(sub))] = names[0]
+            touched = True
+            if note:
+                notes.append(note)
+        if touched:
+            _write_link(holder, prop, is_list, new)
+            changed = True
+    for key, target, sub in _spec_refs(obj, spec):
+        name = renamed.get((target.Name, _element_name(sub)))
+        if name is None:
+            names, note = _fix(geo.get(key), target, sub, False)
+            if names is None:
+                continue
+            name = names[0]
+            if note:
+                notes.append(note)
+        if key == "spec.hinge":
+            spec["hinge"] = name
+        elif key.startswith("spec.faces."):
+            spec["faces"][int(key.rsplit(".", 1)[1])] = name
+        else:
+            spec[key[5:]] = [spec[key[5:]][0], name]
+        changed = True
+    if not changed:
+        return False, []
+    if obj.TypeId not in (GROOVE, REVOLUTION):
+        spec["faces"] = MoveFacePanel._initial_faces(obj)
+    _write_mark(obj, spec)
+    if stale(obj):  # eje o anillo fijos: reubicarlos con lo corregido, como Ctrl+Q
+        update(obj)
+    obj.touch()
+    return True, sorted(set(notes))
+
+
+def _in_body_order(objs):
+    from swui.fork import feature_tree as ft
+
+    def key(o):
+        body = ft.body_of(o)
+        try:
+            return (body.Name if body is not None else "", body.Group.index(o) if body is not None else 0)
+        except ValueError:
+            return (body.Name if body is not None else "", 0)
+
+    return sorted(objs, key=key)
+
+
+def relink_doc(doc):
+    """
+    Revisar los Mover cara del documento en el orden del Cuerpo. -> True si corrigió algo (falta
+    recalcular). Los que están bien guardan su firma.
+    """
+    from swui.fork import feature_tree as ft
+
+    blocked = set()
+    changed = False
+    for obj in _in_body_order(marked(doc, every=True)):
+        body = ft.body_of(obj)
+        bname = body.Name if body is not None else ""
+        if bname in blocked:
+            continue
+        try:
+            if stale(obj):
+                blocked.add(bname)  # atrasado: primero Ctrl+Q, y los de después esperan
+                continue
+            fixed, notes = relink(obj)
+        except Exception:
+            FreeCAD.Console.PrintLog("[SWUI fork] Mover cara, referencias:\n%s\n" % traceback.format_exc())
+            continue
+        if fixed:
+            changed = True
+            blocked.add(bname)  # los de después, cuando este ya esté recalculado
+            # el error de FreeCAD del primer cálculo ("Sub shape not found ...?Face3") ya quedó viejo
+            text = "; ".join(notes) if notes else "se volvió a encontrar lo elegido"
+            _warn(doc, "%s: FreeCAD lo había perdido y ya está corregido (%s).\n" % (obj.Label, text))
+            continue
+        try:
+            if obj.isValid() and not lost(obj):
+                snapshot_geo(obj)
+            elif lost(obj):
+                blocked.add(bname)
+        except Exception:
+            pass
+    return changed
+
+
 def stale_in(doc):
     out = []
     for obj in marked(doc):
@@ -699,10 +1046,26 @@ def _warn(doc, text):
         FreeCAD.Console.PrintWarning("[SWUI] " + text)
 
 
-def check(doc):
-    """Mirar (sin cambiar nada) qué Mover cara quedaron atrasados o sin cara; avisar los nuevos."""
+def check(doc, fix=False):
+    """
+    Mirar qué Mover cara quedaron atrasados o sin cara y avisar los nuevos. Con fix (después de un
+    recálculo): antes, corregir lo que FreeCAD perdió (relink_doc) y recalcular otra vez.
+    """
     if doc is None:
         return
+    if fix:
+        rounds = _relinking.get(doc.Name, 0)
+        changed = False
+        if rounds < 3:  # corta un ida y vuelta (no debería pasar)
+            try:
+                changed = relink_doc(doc)
+            except Exception:
+                FreeCAD.Console.PrintLog("[SWUI fork] Mover cara, referencias:\n%s\n" % traceback.format_exc())
+        if changed:
+            _relinking[doc.Name] = rounds + 1
+            doc.recompute()  # vuelve a llegar acá (slotRecomputedDocument) y recién ahí avisa
+            return
+        _relinking.pop(doc.Name, None)
     try:
         lost_now = set(o.Name for o in lost_in(doc))
         now = set(o.Name for o in stale_in(doc)) - lost_now
@@ -753,7 +1116,7 @@ class _DocObserver:
             name = doc.Name
         except Exception:
             return
-        QtCore.QTimer.singleShot(0, lambda: check(FreeCAD.listDocuments().get(name)))
+        QtCore.QTimer.singleShot(0, lambda: check(FreeCAD.listDocuments().get(name), fix=True))
 
     def slotCreatedDocument(self, doc):  # también al abrir un archivo (ya cargado cuando corre)
         try:
@@ -763,10 +1126,17 @@ class _DocObserver:
         QtCore.QTimer.singleShot(800, lambda: check(FreeCAD.listDocuments().get(name)))
 
     def slotUndoDocument(self, doc):  # deshacer no recalcula: mirar igual (visto con el mouse, 2026-10-31)
-        self.slotRecomputedDocument(doc)
+        self._look(doc)
 
     def slotRedoDocument(self, doc):
-        self.slotRecomputedDocument(doc)
+        self._look(doc)
+
+    def _look(self, doc):  # solo mirar: corregir al deshacer metería cambios fuera del historial
+        try:
+            name = doc.Name
+        except Exception:
+            return
+        QtCore.QTimer.singleShot(0, lambda: check(FreeCAD.listDocuments().get(name)))
 
     def slotDeletedDocument(self, doc):
         try:
@@ -1547,6 +1917,7 @@ class MoveFacePanel(dp.SwPanel):
         return "FreeCAD dejó la cara sin girar: probá un ángulo menor o el otro sentido."
 
     def _write_spec(self):
+        self.spec["geo"] = {}  # lo elegido ahora es lo bueno: la firma se guarda al recalcular (snapshot_geo)
         text = json.dumps(self.spec, sort_keys=True)
         if getattr(self.obj, MARK, None) != text:
             setattr(self.obj, MARK, text)
