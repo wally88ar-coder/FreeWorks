@@ -1820,7 +1820,8 @@ Etapas:
   raras"). Herramientas propias verificadas para lo frecuente, lo que necesita saber de FreeWorks
   y lo delicado; scripts escritos en el momento (herramienta "Python seguro": respaldo, un paso de
   Ctrl+Z, código a la vista en la consola, guardable como macro) para lo demás. Lo que se pide
-  seguido por script pasa a herramienta. Sin decidir: Planificar por defecto para scripts. Ojo:
+  seguido por script pasa a herramienta. Los scripts sueltos arrancan en modo Planificar (usuario,
+  01/11): muestran el código y qué van a hacer antes de correr. Ojo:
   la prueba en FreeCADCmd no cubre cambios visuales (sin ViewObject); verificar en 1.1.4 que un
   cambio de ViewObject se deshace con Ctrl+Z.
 
