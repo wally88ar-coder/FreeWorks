@@ -85,6 +85,16 @@ def _form_ok(panel):
         return True
 
 
+def _form_exists(panel):
+    """La ventana del panel existe (aunque todavía no esté puesta dentro de FreeCAD)."""
+    sb = _shiboken()
+    form = getattr(panel, "form", None)
+    if sb is None or form is None:
+        return form is not None
+    forms = form if isinstance(form, (list, tuple)) else [form]
+    return all(sb.isValid(f) for f in forms)
+
+
 def alive(panel):
     """El panel sigue abierto: su ventana existe, está en FreeCAD y hay un panel en Tareas."""
     try:
@@ -121,7 +131,15 @@ def orphaned(observer):
     True si el panel ya no existe (el escucha se da de baja y el aviso se ignora).
     """
     panel = getattr(observer, "panel", None)
-    if panel is None or alive(panel):
+    if panel is None:
+        return False
+    if alive(panel):
+        panel._swui_was_alive = True
+        return False
+    if not getattr(panel, "_swui_was_alive", False) and _form_exists(panel):
+        # todavía se está abriendo: muchos paneles limpian la selección justo después de
+        # anotarse como escuchas, antes de mostrarse; con algo elegido, ese aviso los daba por
+        # cerrados y dejaban de escuchar (corte de ensamblaje que no abría el croquis, 01/11)
         return False
     if getattr(observer, "_swui_orphan", False):
         return True
