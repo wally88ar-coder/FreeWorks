@@ -1825,6 +1825,14 @@ Etapas:
   01/11): muestran el código y qué van a hacer antes de correr. Ojo:
   la prueba en FreeCADCmd no cubre cambios visuales (sin ViewObject); verificar en 1.1.4 que un
   cambio de ViewObject se deshace con Ctrl+Z.
+- **IA agnóstica, por suscripción y sin API** (usuario, 2026-11-01). El puente habla MCP y sirve a
+  cualquier programa que lo hable. La pestaña Asistente tiene una capa `motores/` con un enchufe
+  por programa de suscripción: Claude Code primero; después Codex CLI (cuenta de ChatGPT, MCP en
+  ~/.codex/config.toml, `codex exec` sin ventana) y Antigravity CLI (`agy`, cuenta de Google;
+  reemplazó al Gemini CLI para cuentas personales el 18/06/2026; MCP en mcp_config.json según
+  guías). A verificar antes de Antigravity: modo sin ventana, límites, MCP. Solo Claude se prueba
+  con el rigor del checklist. Los amigos usan la suscripción que ya pagan. API / Ollama: posibles
+  más adelante (cliente de ghbalf, `llm/client.py`, 24 proveedores, solo stdlib).
 
 ## Git
 - `origin` = https://github.com/wally88ar-coder/FreeWorks (renombrado el 2026-10-31; todo
