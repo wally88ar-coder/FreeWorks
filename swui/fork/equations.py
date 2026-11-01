@@ -389,12 +389,8 @@ class Model:
                     path = ".Constraints[%d]" % index
                     value, unit = self.value(obj, path)
                     out.append(("%s@%s" % (n, obj.Label), obj, path, value, unit))
-            elif hasattr(obj, "SWUI_MoveFace") and (
-                    obj.TypeId in ("PartDesign::Groove", "PartDesign::Revolution")
-                    or getattr(obj, "Type", "Length") not in ("Length", "TwoLengths")):
-                # Mover cara de un agujero (su 360° es de adentro) o "Hasta la superficie" (su Length
-                # no se usa): no son cotas de SW (visto con el mouse, 2026-10-31)
-                continue
+            elif hasattr(obj, "SWUI_MoveFace") and obj.TypeId in ("PartDesign::Groove", "PartDesign::Revolution"):
+                continue  # Mover cara de un agujero: su 360° es de adentro, no una cota de SW
             else:
                 names = feature_dim_names(obj.TypeId, obj.PropertiesList)
                 for prop, n in sorted(names.items(), key=lambda p: int(p[1][1:])):
@@ -405,7 +401,11 @@ class Model:
 
     def _relevant(self, obj, prop, value, name):
         """¿Mostrar esta cota de operación? (los números D1, D2... no cambian aunque no se muestre)."""
-        if name == "D1" or self.expression_of(obj, prop):
+        if self.expression_of(obj, prop):
+            return True
+        if prop == "Length" and getattr(obj, "Type", "Length") not in ("Length", "TwoLengths"):
+            return False  # "Por todo", "Hasta cara"...: el largo no se usa (visto con el mouse, 31/10)
+        if name == "D1":
             return True
         if prop in ("Length2", "Angle2"):
             return getattr(obj, "Type", "") in ("TwoLengths", "TwoAngles")
