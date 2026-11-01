@@ -53,6 +53,14 @@ Neueste Version oben. / Newest version first.
 - `tools/test_load.py` also runs on Windows (path comparisons).
 
 **Fork (wally88ar-coder, español)**
+- **Configuraciones como SW** (01/11, etapa 1 de 5: piezas): pestaña **Configuraciones** junto a
+  Modelo y Tareas (como el ConfigurationManager): lista con la activa en negrita, doble clic =
+  mostrar; clic derecho: Agregar configuración, Cambiar nombre (F2), Eliminar, Editar tabla de
+  diseño. Con más de una configuración, la cajita *Modificar* de las cotas pregunta **Esta
+  configuración / Todas las configuraciones** y *Suprimir* del árbol vale solo para la activa,
+  como SW. Por debajo, la tabla de configuración nativa de la planilla de FreeCAD (sin Excel,
+  decisión del usuario): el archivo cambia de configuración, guarda y abre sin el addon
+  (`swui/fork/configurations.py`, `config_tab.py`).
 - **Decisiones del usuario del 31/10** (checklist):
   - Nombre visible **FreeWorks** (menú y lista de bancos; lo interno no cambia, los
     archivos y la configuración abren igual) (`swui/fork/brand.py`). Paquete (package.xml) y
