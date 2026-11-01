@@ -1815,6 +1815,14 @@ Etapas:
   documentada del módulo (nunca las `_internas`). Nada propio de la IA en los archivos. Únicos
   contactos: la pestaña Asistente (envuelve `panel_sw` como Configuraciones) y la función pública
   de cada módulo que usa su archivo de herramientas.
+- **IA: confiabilidad para lo frecuente, libertad para lo puntual** (usuario, 2026-11-01:
+  "confiabilidad para lo que se usa mucho, pero también libertad para las cosas puntuales o
+  raras"). Herramientas propias verificadas para lo frecuente, lo que necesita saber de FreeWorks
+  y lo delicado; scripts escritos en el momento (herramienta "Python seguro": respaldo, un paso de
+  Ctrl+Z, código a la vista en la consola, guardable como macro) para lo demás. Lo que se pide
+  seguido por script pasa a herramienta. Sin decidir: Planificar por defecto para scripts. Ojo:
+  la prueba en FreeCADCmd no cubre cambios visuales (sin ViewObject); verificar en 1.1.4 que un
+  cambio de ViewObject se deshace con Ctrl+Z.
 
 ## Git
 - `origin` = https://github.com/wally88ar-coder/FreeWorks (renombrado el 2026-10-31; todo
