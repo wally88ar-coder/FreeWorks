@@ -267,30 +267,50 @@ def _visibility_alias(link):
 
 
 def is_suppressed(link):
-    return not link.Visibility and (_visibility_alias(link) is not None or
-                                    any(getattr(j, "Suppressed", False) for j in joints_of(link)))
+    """Suprimido = oculto por la tabla del ensamblaje (un componente oculto con el ojo no lo está)."""
+    return not link.Visibility and _visibility_alias(link) is not None
 
 
 def suppress(link, on=True, scope="this"):
-    """Suprimir (on=True) o desactivar la supresión de un componente."""
+    """
+    Suprimir (on=True) o desactivar la supresión de un componente. Siempre por la tabla del
+    ensamblaje (si no estaba, se arma con "Predeterminado", como SW): así se distingue un componente
+    suprimido de uno oculto, y Propiedades físicas lo saltea.
+    """
     doc = link.Document
-    if cf.owner(doc) is not None and cf.configured(doc):
-        alias = _visibility_alias(link)
-        if alias is None:
-            alias, _n = _sup_col(doc, link)
-            _bind_suppression(doc, link, alias)
-        sheet = cf.table(doc)
-        n = cf.alias_col(sheet, alias)
-        rows = cf.config_rows(sheet) if scope == "all" else [cf.row_of(doc, cf.active(doc))]
-        for row in rows:
-            sheet.set("%s%d" % (cf.col_letter(n), row), "1" if on else "0")
-        doc.recompute()
-        return
-    link.Visibility = not on
-    for j in joints_of(link):
-        if hasattr(j, "Suppressed"):
-            j.Suppressed = on
+    cf.ensure(doc)
+    alias = _visibility_alias(link)
+    if alias is None:
+        alias, _n = _sup_col(doc, link)
+        _bind_suppression(doc, link, alias)
+    sheet = cf.table(doc)
+    n = cf.alias_col(sheet, alias)
+    rows = cf.config_rows(sheet) if scope == "all" else [cf.row_of(doc, cf.active(doc))]
+    for row in rows:
+        sheet.set("%s%d" % (cf.col_letter(n), row), "1" if on else "0")
     doc.recompute()
+
+
+def _hook_mass():
+    """Propiedades físicas (y lo que use mass_props.components) sin los componentes suprimidos."""
+    from swui.fork import mass_props as mp
+
+    if getattr(mp.components, "_swui_conf", False):
+        return
+    original = mp.components
+
+    def components(doc, hidden=True, _original=original):
+        out = []
+        for part, root, path in _original(doc, hidden):
+            token = (path or "").split(".")[0]
+            comp = doc.getObject(token) if token else None
+            if comp is not None and is_component(comp) and is_suppressed(comp):
+                continue
+            out.append((part, root, path))
+        return out
+
+    components._swui_conf = True
+    mp.components = components
 
 
 def is_config_expression_asm(obj, path, expr):
@@ -643,6 +663,10 @@ def install():
         except Exception:
             FreeCAD.Console.PrintLog("[SWUI fork] Menú de componentes: no se pudo agregar.\n")
     _hook_activate()
+    try:
+        _hook_mass()
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Propiedades físicas sin suprimidos:\n%s\n" % traceback.format_exc())
     # que no se muestren como ecuaciones
     original = cf.is_config_expression
     if not getattr(original, "_swui_asm", False):
