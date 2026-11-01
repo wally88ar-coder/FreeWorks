@@ -1834,6 +1834,10 @@ Etapas:
   con el rigor del checklist. Los amigos usan la suscripción que ya pagan. API / Ollama: posibles
   más adelante (cliente de ghbalf, `llm/client.py`, 24 proveedores, solo stdlib).
 - **IA: se arranca por la etapa 0, el puente** (usuario, 2026-11-01). Sin empezar a programar.
+- **IA: privacidad = nube con cuidados** (usuario, 2026-11-01): puente apagado por defecto; mandar
+  lo mínimo (capturas solo cuando hacen falta, el Asistente avisa al mandar una); lo que viajó
+  queda en el registro de la consola; modo confidencial para piezas de clientes (aviso en archivos
+  marcados o modelo local Ollama). Nunca mandar el .FCStd entero ni carpetas salvo pedido expreso.
 
 ## Git
 - `origin` = https://github.com/wally88ar-coder/FreeWorks (renombrado el 2026-10-31; todo
