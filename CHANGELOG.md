@@ -111,6 +111,13 @@ Neueste Version oben. / Newest version first.
     (sin cuadro aparte); no se puede eliminar una configuración que usa un componente de un
     ensamblaje abierto (SW tampoco deja) y avisa cuál la usa; la ventana de Configurar
     operación se llama "Modificar configuraciones", como en SW.
+  - Últimas pruebas con mouse contra SW (01/11, 12:40): Mover cara con configuraciones (la punta
+    se corre igual en Predeterminado, Larga y sin el agujero), corte de ensamblaje (saltea el
+    suprimido y corta la pieza real), DXF por lotes y pieza multicuerpo. Arreglado en el acto:
+    el corte/taladro de ensamblaje no abría el croquis si había algo elegido antes (también
+    otros paneles: el escucha se daba de baja solo); el desarrollo de chapa ahora reelige su
+    cara fija después de cualquier cambio de la pieza ("?Face6"); el DXF por lotes ya no repite
+    el mismo archivo ni incluye componentes suprimidos.
 - **Decisiones del usuario del 31/10** (checklist):
   - Nombre visible **FreeWorks** (menú y lista de bancos; lo interno no cambia, los
     archivos y la configuración abren igual) (`swui/fork/brand.py`). Paquete (package.xml) y

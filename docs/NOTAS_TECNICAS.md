@@ -619,6 +619,14 @@ scratchpad de la sesión del 01/11; se rehacen fácil con lo de abajo).
 - `freecadcmd` imprime lo de `print` recién al final y mezclado con el registro: volcar a JSON
   después de cada paso.
 
+## Paneles que dejaban de escuchar (01/11)
+`mates_sw._SelObserver` llama `panel_guard.orphaned` en cada aviso. Muchos paneles se anotan como
+escuchas y enseguida hacen `Selection.clearSelection()`, antes de `Control.showDialog`: con algo
+elegido, ese aviso llegaba con el panel todavía sin mostrar (`activeDialog()` falso, la ventana
+fuera de la de FreeCAD) y lo daba por huérfano: el escucha se daba de baja y el panel no veía
+más los clics (corte de ensamblaje que no abría el croquis). Ahora `orphaned` no da por huérfano
+a un panel que nunca estuvo vivo mientras su ventana exista (`_swui_was_alive`, `_form_exists`).
+
 ## Archivos .pyc rotos (01/11): FreeCAD colgado al cerrar
 Con un FreeCADCmd y un FreeCAD con interfaz corriendo a la vez (pruebas) y los .py del addon
 cambiando, un .pyc de `swui/**/__pycache__` quedó roto: el informe se llenó de "XXX lineno: 448,

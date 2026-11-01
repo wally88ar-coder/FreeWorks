@@ -61,6 +61,14 @@ Commits locales (sin subir a GitHub): b701dc8 etapa 1, 0ae261d etapa 2, 0d0b348 
   Probado con el mouse en FreeCAD: relaciones al cambiar la configuración de los componentes,
   guardar y reabrir; cambiar nombre y eliminar configuraciones. Configurar operación y la
   configuración en el árbol: probados con guion (gui_probe), falta con el mouse.
+- 01/11 12:40: terminadas con mouse (FreeCAD y SW) las que seguían con guion: Mover cara con
+  configuraciones, corte de ensamblaje con suprimido y componente en otra configuración, DXF por
+  lotes (SW no tiene equivalente) y pieza multicuerpo. Arreglos: panel_guard (paneles que dejaban
+  de escuchar), cara fija del desarrollo tras cualquier cambio, DXF por lotes sin repetidos ni
+  suprimidos. **Pregunta para el usuario 7:** en SW, una operación nueva hecha con "Larga"
+  activa quedó suprimida en Predeterminado (opción de SW "Suprimir operaciones nuevas"); en
+  FreeWorks la operación nueva va en todas las configuraciones. ¿Lo dejamos así o lo hacemos
+  como SW?
 - 01/11 mediodía: hecha con el mouse la comparación en SW (relaciones al cambiar la configuración
   de un componente, guardar y reabrir; cambiar nombre: SW lo sigue y avisa; eliminar una en uso:
   SW no deja -> FreeWorks ahora tampoco; Modificar configuraciones). En FreeCAD con el mouse:
