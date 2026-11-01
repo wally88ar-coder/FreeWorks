@@ -111,6 +111,10 @@ Pendiente aparte: README propio en castellano (el Addon Manager muestra el del o
   possible" -> HECHO (`dress_up_panel._cancel_native_edit`: con el panel nativo de una operación
   abierto, Redondeo/Chaflán lo cancelan y arrancan callados). Ambos probados con el mouse.
   Subido a GitHub (pedido del usuario). Falta: que el usuario reinicie su FreeCAD y lo pruebe.
+- IA en FreeWorks (análisis y plan, 2026-11-01): "IA en FreeWorks: análisis y plan"
+  (https://claude.ai/artifact/DkYTFWvqPi9Fc5VEvhHEEj). Proyectos existentes, qué código se copia y
+  de dónde, puente IA (dibujo), etapas 0 a 5 y decisiones pendientes del usuario. Resumen en
+  "Falta / ideas pendientes" > IA en FreeWorks.
 Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o comentó el usuario.
 
 ## Fase actual
