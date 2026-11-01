@@ -1734,6 +1734,13 @@ Etapas:
   hace nada) y `tools/registry.py`; su panel de chat (~3.300 líneas) y sus 50 herramientas
   genéricas, no. Otros vistos: spkane (Apache-2.0), iplayfast (idea de un solo registro para chat,
   consola y servidor).
+  Ejemplo sumado a pedido del usuario (01/11): **acotación automática de planos**, en dos capas:
+  (1) "Insertar cotas del modelo" sin IA (ya era la prueba de concepto de Planos, etapa 5), con la
+  arista de la vista buscada por forma; (2) la IA decide qué acotar y cómo (cadena / coordenadas,
+  lado) y revisa planos hechos; las cotas las crea el puente con las herramientas de TechDraw.
+  FreeCAD 1.1.4 no trae acotación automática (revisado en TechDrawGui.pyd): sí TechDraw_Extension
+  CreateHoriz/Vert/ObliqueChainDimension, ...CoordDimension, ...CascadeHoriz/VertDimension,
+  ...PosChainDimension y TechDraw_DimensionRepair. Meta: el 80 %. Anotado en los dos documentos.
 
 ## Problemas reportados por el usuario (todos resueltos)
 - 2026-10-26 (archivo "fallo multiples solidos.FCStd" en Documentos\FreeCAD pruebas, captura):
