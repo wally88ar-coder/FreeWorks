@@ -33,6 +33,11 @@ Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o come
     auxiliares de Mover cara aparecían en el árbol; `tree_overlay.hide_unlisted` los esconde.
   - El menú volvía a "LikeSolidWorks UI" al abrir un ensamblaje: `brand` vuelve a ponerle el
     nombre cada vez que FreeCAD rearma la barra de menús.
+  **Detalles anotados, arreglados después y probados con el mouse:** campos numéricos: un clic
+  marca todo el valor y lo escrito lo reemplaza, como SW (`swui/fork/spin_select.py`, filtro de
+  la aplicación solo para el foco por clic, dentro de LikeSolidWorks UI; "3" sobre "10,00 mm" ->
+  "3,00 mm"); Ecuaciones ya no lista el largo sin uso de un Extruir/Cortar que no es "Hasta
+  profundidad" (corte "Por todo": sin D1).
   Visto y no arreglado (anotado): el primer clic en el texto de un botón grande de la cinta
   (Brida base) a veces no hace nada (sobre el ícono sí); el aviso en inglés de SheetMetal
   "Link(s) to object(s) 'Bend' go out of the allowed scope 'Unfold'" sale como cartelito al

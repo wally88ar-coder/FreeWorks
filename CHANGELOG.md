@@ -81,6 +81,8 @@ Neueste Version oben. / Newest version first.
     quedar del otro lado de la superficie). Los croquis del desarrollo de una chapa ya no caen
     en otro documento abierto. Los auxiliares ocultos tampoco se ven dentro del Cuerpo en el
     árbol. El menú dice FreeWorks también después de abrir un ensamblaje.
+  - Campos numéricos como SW: un clic marca todo el valor y lo escrito lo reemplaza
+    (`swui/fork/spin_select.py`). Ecuaciones no lista el largo de un corte "Por todo".
   - Ecuaciones: las cotas a la vista se actualizan después de cada ecuación y al Cancelar; no
     lista el largo sin uso de un Mover cara "Hasta la superficie". El árbol flotante ya no
     muestra los auxiliares ocultos.
