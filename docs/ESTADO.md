@@ -1,7 +1,9 @@
 # Estado del fork
 
 Última actualización: 2026-10-31 noche (decisiones del checklist tomadas y hechas; fase 5
-cerrada; fase 6 acordada).
+cerrada; fase 6 acordada; repositorio renombrado a FreeWorks y todo subido).
+**Próximo paso posible:** publicar la primera versión en la rama "release" (sin ella el Addon
+Manager no puede instalar FreeWorks); preguntar al usuario antes, es hacia afuera.
 
 **Checklists compartidos con el usuario** (se tildan ahí; al cerrar algo, tildarlo también):
 - Todas las fases, incluida la fase 5 en detalle: "Checklists del fork: qué falta en cada fase"
@@ -112,7 +114,8 @@ Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o come
     **Hecho 31/10 (pedido del usuario: "subilos y cambiá el nombre"):** repositorio renombrado
     en GitHub a https://github.com/wally88ar-coder/FreeWorks (GitHub redirige el nombre viejo;
     remoto origin actualizado) y package.xml con nombre FreeWorks, descripción en castellano,
-    responsable wally88ar-coder y Dominik como autor. Quedan igual: el banco registrado como
+    responsable wally88ar-coder (correo privado de GitHub, ver Git) y Dominik como autor;
+    commits subidos. Quedan igual: el banco registrado como
     "LikeSolidWorks UI" (el test exige que package.xml e InitGui.py coincidan; en pantalla dice
     FreeWorks), la carpeta local "LikeSolidWorks-UI" (nada depende de ella) y la rama "release"
     a la que apunta package.xml, que todavía no existe en el fork: para que el Addon Manager lo
@@ -1527,7 +1530,13 @@ Etapas:
   tener); cada función cede a lo nativo si la versión de FreeCAD lo trae.
 
 ## Git
-- `origin` = fork del usuario (subido al 2026-10-30, salvo lo que diga "sin subir"), `upstream` = Schlauminik/LikeSolidWorks-UI.
+- `origin` = https://github.com/wally88ar-coder/FreeWorks (renombrado el 2026-10-31; todo
+  subido al 31/10 noche, f8e8ed1), `upstream` = Schlauminik/LikeSolidWorks-UI.
+- Correo de los commits: el privado de GitHub, `347947152+wally88ar-coder@users.noreply.github.com`
+  (`git config user.email` solo de este repositorio, desde el 31/10, pedido del usuario: el
+  `cafeto652@gmail.com` que estaba configurado "no es el mail de esta cuenta"). Los commits ya
+  subidos con ese correo quedan así (no se reescribe historia publicada). Es también el
+  correo del responsable en package.xml.
 - `master` = versión que usa el usuario (ramas generales unidas + código del fork).
 
 ## PR al original
