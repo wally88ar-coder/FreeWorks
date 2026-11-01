@@ -1,6 +1,10 @@
 # Estado del fork
 
-Última actualización: 2026-11-01 17:00 (barra de menús estilo SW 2018: hecha, probada por Claude
+Última actualización: 2026-11-01 21:00 (**IA, etapa 0 (el puente): hecha, conectada a la app de
+Claude del usuario y probada de punta a punta**; ver Fase actual. El checklist compartido tiene
+una sección "IA en FreeWorks" con la columna Vos vacía. Subida a GitHub como trabajo sin
+publicar: no está en la versión 0.11.0 de la rama "release").
+Antes, 2026-11-01 17:00 (barra de menús estilo SW 2018: hecha, probada por Claude
 con el mouse y comparada con SW; el usuario reinició su FreeCAD y la vio: "se ven un lujo"; el
 aviso "Cannot find icon: TechDraw_..." que le salió al arrancar quedó arreglado. Croquis vacío que
 se borra como SW. Configuraciones estilo SW: hechas y probadas por Claude. Todo subido a GitHub.

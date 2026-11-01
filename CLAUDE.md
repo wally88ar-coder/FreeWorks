@@ -109,7 +109,11 @@ Hecho además fuera de las fases: barra de menús como SW 2018 (2026-11-01, `swu
 maqueta, decisiones y pruebas en `docs/ESTADO.md`; croquis vacío que se borra al cerrarlo,
 `swui/fork/empty_sketch.py`); configuraciones estilo SW en piezas, chapa (DXF de todas) y
 ensamblajes (2026-11-01, `swui/fork/config*.py`; análisis y plan en el documento enlazado en
-`docs/ESTADO.md`); árbol de operaciones estilo SW (barra de retroceso, suprimir,
+`docs/ESTADO.md`); IA, etapa 0 (2026-11-01, `swui/fork/ia/`: puente MCP en FreeWorks > IA,
+conectado a la app de Claude del usuario como "freeworks" y probado de punta a punta; AISLADA:
+nada de FreeWorks importa `swui/fork/ia` salvo el enganche, capas terceros/nucleo/herramientas/
+puertas, código ajeno copiado con su aviso; plan, etapas 1 a 5 y decisiones en el documento de
+IA enlazado en `docs/ESTADO.md`); árbol de operaciones estilo SW (barra de retroceso, suprimir,
 mover, cotas con doble clic, reparar referencias...), aristas del modelo dentro del croquis,
 multicuerpo (Fusionar resultado, Alcance, Combinar, simetría de sólidos) y Mover/Copiar /
 Eliminar/Conservar sólidos. Próximo: lo que elija el usuario después de probar. Ver `docs/ESTADO.md`.
