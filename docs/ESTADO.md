@@ -55,9 +55,16 @@ Commits locales (sin subir a GitHub): b701dc8 etapa 1, 0ae261d etapa 2, 0d0b348 
   5. Nombre del DXF por configuración: "Soporte-3mm_3mm.dxf" (pieza-configuración_espesor).
   6. Propiedades de chapa / paneles: un valor configurado se cambia solo en la configuración
      activa (en SW el PropertyManager hace lo mismo con las cotas configuradas).
-- Falta: Mover cara con configuraciones de cotas muy distintas; taladro/corte de
-  ensamblaje que saltee componentes suprimidos; pieza multicuerpo con configuraciones (la lista vive
-  en un solo Cuerpo).
+- 01/11 tarde (pedido del usuario): hechos Configurar operación, configuración al lado del nombre
+  del componente, Mover cara con configuraciones, renombrar/eliminar que siguen en los
+  componentes, taladro/corte de ensamblaje sin suprimidos (y en la pieza real), multicuerpo.
+  Probado con el mouse en FreeCAD: relaciones al cambiar la configuración de los componentes,
+  guardar y reabrir; cambiar nombre y eliminar configuraciones. Configurar operación y la
+  configuración en el árbol: probados con guion (gui_probe), falta con el mouse.
+- Falta: comparar en SW con el mouse las relaciones al cambiar de configuración y el cambio de
+  nombre (SW se colgó por falta de memoria el 01/11; el usuario lo reinició). Límite que queda:
+  en una pieza multicuerpo solo el sólido principal puede estar en otra configuración dentro de
+  un ensamblaje; y suprimir la única operación de un sólido no lo hace desaparecer (FreeCAD).
 
 Pendientes del usuario (31/10, en este orden): 1) Girar cara que a veces no gira — HECHO;
 2) Mover cara que pierde su cara: que la vuelva a encontrar sola guardando cómo era (como

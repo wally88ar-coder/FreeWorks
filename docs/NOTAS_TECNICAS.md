@@ -666,7 +666,39 @@ scratchpad de la sesión del 01/11; se rehacen fácil con lo de abajo).
     nuestro: no pasaba por las configuraciones.
   - `auto_body` no activa una copia de componente (`configurations.is_copy`).
   - Diferencias que quedan con SW (chicas): el Modificar no tiene "Especificar configuraciones";
-    no hay "Configurar operación" (tabla de una operación); la lista no se ordena alfabéticamente;
-    el árbol del ensamblaje no muestra la configuración al lado del nombre del componente; la
-    barrita aplica al elegir (SW pide confirmar con un tilde); "Agregar configuración" es un
-    diálogo (en SW, un panel).
+    la lista no se ordena alfabéticamente; la barrita aplica al elegir (SW pide confirmar con un
+    tilde); "Agregar configuración" y "Cambiar nombre" son diálogos (en SW, panel / en el árbol).
+- 01/11 tarde, lo que había quedado abierto:
+  - `config_feature.py`: Configurar operación. Columnas = `instant_dims.dims_of` (las cotas del
+    doble clic, las atadas a la tabla también) + Suprimir; escribe con
+    `configurations.set_values` / lee con `value_in`. Suprimir en una configuración suprime
+    también los dependientes. Entra al clic derecho envolviendo `feature_tree.menu_commands` y
+    sumándose a `feature_tree.COMMANDS` (así sube con lo nuestro).
+  - `config_asm.config_rows` en `tree_overlay.EXTRA_TEXT` (como las piezas de las relaciones):
+    " (Larga)" al lado del nombre del componente.
+  - Mover cara: (1) `mate_refs.ANGLE` = 1e5 por radián (antes 1000): con configuraciones la cara
+    de la punta se corre mucho (60 -> 100 mm) y una de costado girada 90° "se parecía" más; vale
+    también para relaciones. (2) `move_face.snapshot_geo` guarda la firma por configuración
+    (`geoc` en la marca) y `relink` usa la de la activa. (3) `config_sheet._activate_skipping_flats`
+    deja los Mover cara (y lo que depende) para después de reencontrar la cara, sin avisos
+    (`move_face._quiet`): sin "Sub shape not found". (4) `feature_tree.parents`: un
+    Extruir/Cortar cuyo perfil es una cara del sólido anterior tiene de padre a la operación que
+    creó la cara (`profile_creators`, como los redondeos): suprimir un agujero anterior suprimía
+    el Mover cara de la punta.
+  - Renombrar/eliminar: `config_asm._hook_rename_delete` anota antes quién usa el nombre
+    (componentes y celdas de la tabla del ensamblaje) y después los apunta al nuevo / a la
+    activa. En un componente sin tabla, la lista de la propiedad todavía no tiene el nombre
+    nuevo: se le pone la lista de la pieza antes del valor.
+  - `assembly_features.part_of`: con LinkCopyOnChange, `LinkedObject` es la copia del
+    ensamblaje; el taladro va a `LinkCopyOnChangeSource`. `_components` saltea suprimidos.
+  - Multicuerpo: FreeCAD solo copia en otra configuración si la propiedad CopyOnChange está en
+    el objeto vinculado. La lista vive en un Cuerpo; atar los otros a ella sería un ciclo (la
+    tabla depende del dueño, los sólidos de la tabla). Un componente de otro sólido muestra la
+    configuración activa (barrita gris con explicación). En la pieza, la tabla maneja todo.
+  - FreeCAD 1.1.4: con la única operación de un Cuerpo suprimida, el Cuerpo sigue mostrando el
+    sólido (también suprimiendo a mano, sin configuraciones; el Pad queda con forma nula).
+  - Visto con el mouse y arreglado: `feature_tree._MenuShow` plegaba en "Más opciones" también
+    los menús de la barra (Archivo...) con un componente elegido (su padre es QMenuBar); la
+    barrita del componente salía con el panel de relación abierto (ahora no, si hay
+    `Control.activeDialog()`); `settle_assembly` usaba la geometría tomada con la copia a medio
+    rehacer y avisaba "cara cambiada" al agregar una configuración (ahora prefiere la guardada).

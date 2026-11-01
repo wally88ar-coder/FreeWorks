@@ -89,6 +89,24 @@ Neueste Version oben. / Newest version first.
   - La barrita del componente se va sola al alejar el mouse, como la de SW.
   - La copia que FreeCAD guarda de un componente configurado ya no queda como "Cuerpo activo"
     del ensamblaje.
+- **Configuraciones: lo que había quedado abierto** (01/11, tarde):
+  - **Configurar operación** (clic derecho en una operación, como SW): tabla con una fila por
+    configuración, "Suprimir" y las cotas de la operación, todo de una vez
+    (`swui/fork/config_feature.py`).
+  - La **configuración al lado del nombre** de cada componente en el árbol: "Soporte<2> (3mm)".
+  - **Mover cara** con configuraciones: mueve la cara correcta en cada una (antes, con un largo
+    muy distinto movía una cara de costado) y sin el error "Sub shape not found" al cambiar;
+    suprimir una operación anterior (un agujero) ya no suprime el Mover cara.
+  - Cambiar el **nombre** de una configuración de la pieza lo cambia también en los componentes
+    y en la tabla del ensamblaje; **eliminarla** los pasa a la activa y avisa.
+  - Taladro y corte de ensamblaje **saltean los componentes suprimidos** y, en un componente en
+    otra configuración, agujerean la pieza de verdad (no la copia del ensamblaje).
+  - Pieza **multicuerpo**: la tabla maneja las cotas de todos los sólidos; un componente de un
+    sólido que no es el principal muestra la configuración activa de la pieza (no puede tener
+    otra: límite de FreeCAD, ver NOTAS_TECNICAS).
+  - Arreglos vistos con el mouse: con un componente elegido, el menú Archivo ya no queda en
+    "Más opciones"; la barrita no aparece con el panel de relación de posición abierto; sin
+    avisos de "cara cambiada" en las relaciones al agregar una configuración en la pieza.
 - **Decisiones del usuario del 31/10** (checklist):
   - Nombre visible **FreeWorks** (menú y lista de bancos; lo interno no cambia, los
     archivos y la configuración abren igual) (`swui/fork/brand.py`). Paquete (package.xml) y
