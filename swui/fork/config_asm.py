@@ -85,6 +85,25 @@ def part_configs(link):
         return []
 
 
+def other_body_configs(link):
+    """
+    Componente de un sólido de una pieza multicuerpo con configuraciones que no es el que tiene la
+    lista (el Cuerpo dueño): (dueño, configuración activa de la pieza), o None. FreeCAD solo copia
+    la pieza en otra configuración si la propiedad está en el mismo objeto vinculado (límite).
+    """
+    src = source(link)
+    if src is None or cf.PROP in getattr(src, "PropertiesList", []):
+        return None
+    try:
+        doc = src.Document
+        owner = cf.owner(doc)
+        if owner is None or owner is src or not cf.configured(doc):
+            return None
+        return owner, cf.active(doc)
+    except Exception:
+        return None
+
+
 def current(link):
     if cf.PROP in link.PropertiesList:
         return getattr(link, cf.PROP)
@@ -654,16 +673,28 @@ class _Bar(QtWidgets.QFrame):
 
     def show_for(self, link):
         names = part_configs(link)
-        if len(names) < 2:
+        other = other_body_configs(link) if len(names) < 2 else None
+        if len(names) < 2 and not other:
             self.hide()
             return
         self.link_name, self.doc_name = link.Name, link.Document.Name
         self.combo.blockSignals(True)
         self.combo.clear()
-        self.combo.addItems(names)
-        cur = current(link)
-        if cur in names:
-            self.combo.setCurrentIndex(names.index(cur))
+        if other:
+            # sólido de una pieza multicuerpo que no es el que tiene la lista: sigue a la pieza
+            owner, active = other
+            self.combo.addItems([active])
+            self.combo.setEnabled(False)
+            self.setToolTip("Pieza multicuerpo: este sólido muestra la configuración activa de la pieza. "
+                            "Para elegir la configuración en el ensamblaje, insertá el sólido «%s»."
+                            % owner.Label)
+        else:
+            self.combo.setEnabled(True)
+            self.setToolTip("")
+            self.combo.addItems(names)
+            cur = current(link)
+            if cur in names:
+                self.combo.setCurrentIndex(names.index(cur))
         self.combo.blockSignals(False)
         self.adjustSize()
         pos = QtGui.QCursor.pos() + QtCore.QPoint(18, -self.height() - 14)
@@ -701,7 +732,7 @@ def _on_selection():
         except Exception:
             busy = False
         link = None if busy else picked_component()
-        if link is None or len(part_configs(link)) < 2:
+        if link is None or (len(part_configs(link)) < 2 and not other_body_configs(link)):
             if bar is not None and not bar.combo.view().isVisible():
                 bar.hide()
             return

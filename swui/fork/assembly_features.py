@@ -56,8 +56,8 @@ def unique_parts(links):
     """Una sola vez cada pieza (dos instancias del mismo archivo = una sola operación en la pieza)."""
     seen, out, repeated = set(), [], []
     for link in links:
-        key = id(link.LinkedObject) if hasattr(link, "LinkedObject") else id(link)
-        target = getattr(link, "LinkedObject", None)
+        key = id(link)
+        target = part_of(link)
         key = (target.Document.Name, target.Name) if target is not None else key
         if key in seen:
             repeated.append(link)
@@ -77,10 +77,31 @@ def next_title(used, kind):
 # --- FreeCAD -------------------------------------------------------------------
 
 
+def part_of(link):
+    """
+    La pieza (Cuerpo) del componente. Con otra configuración, LinkedObject es la copia que
+    FreeCAD guarda dentro del ensamblaje: el taladro tiene que ir a la pieza de verdad (en la copia
+    se perdía al volver a copiarla).
+    """
+    src = getattr(link, "LinkCopyOnChangeSource", None)
+    if src is not None and getattr(link, "LinkCopyOnChange", "Disabled") != "Disabled":
+        return src
+    return getattr(link, "LinkedObject", None)
+
+
+def _suppressed(link):
+    try:
+        from swui.fork import config_asm
+
+        return config_asm.is_suppressed(link)
+    except Exception:
+        return False
+
+
 def _components(asm):
+    """Componentes de pieza del ensamblaje, sin los suprimidos (como SW: no se agujerean)."""
     return [o for o in asm.Group if o.TypeId == "App::Link" and not getattr(o, "ElementCount", 0)
-            and getattr(o, "LinkedObject", None) is not None
-            and getattr(o.LinkedObject, "TypeId", "") == "PartDesign::Body"]
+            and getattr(part_of(o), "TypeId", "") == "PartDesign::Body" and not _suppressed(o)]
 
 
 def sketch_normal(sk):
@@ -224,7 +245,7 @@ def make_sketch(asm, comp, sub):
 
 def add_to_part(link, sk, kind, title):
     """Binder del croquis + taladro / vaciado nativo en el Cuerpo de la pieza."""
-    body = link.LinkedObject
+    body = part_of(link)
     pdoc = body.Document
     if not pdoc.HasPendingTransaction:
         pdoc.openTransaction(LABELS[kind])
@@ -388,7 +409,7 @@ def modified_parts(asm_doc):
         if o.TypeId != "App::Link":
             continue
         try:
-            d = o.getLinkedObject(True).Document
+            d = (part_of(o) or o.getLinkedObject(True)).Document
         except Exception:
             continue
         if d is asm_doc or d in out or not getattr(d, "FileName", ""):
@@ -746,7 +767,7 @@ class _Scope:
             if e[0] is link:
                 self._drop(e)
                 return True
-        if any(e[0].LinkedObject is link.LinkedObject for e in self.entries):
+        if any(part_of(e[0]) is part_of(link) for e in self.entries):
             return False  # misma pieza, otra instancia
         binder, feat = add_to_part(link, self.sketch, self.op_kind, self.title)
         self.part_docs[binder.Document.Name] = binder.Document
@@ -783,7 +804,7 @@ class _Scope:
 
         body = obj if obj.TypeId == "PartDesign::Body" else ft.body_of(obj)
         for link in _components(self.asm):
-            if link.LinkedObject is body:
+            if part_of(link) is body or link.LinkedObject is body:
                 return link
         return None
 
