@@ -72,7 +72,9 @@ Neueste Version oben. / Newest version first.
     cualquier eje paralelo a la cara** (arista de otra cara o pieza, eje de referencia);
     **Equidistanciar caras cilíndricas** enteras (agrandar o achicar un agujero o un eje).
     Todo con operaciones nativas (Extruir/Cortar hasta cara, Ángulo de salida, Revolución /
-    Ranura) y auxiliares ocultos fuera del árbol.
+    Ranura) y auxiliares ocultos fuera del árbol. Si la pieza cambia y el giro con eje fuera o
+    el agujero quedan atrasados, **avisa** (cartelito y "⚠ desactualizado: Ctrl+Q" en el árbol)
+    y **Ctrl+Q** los pone al día (`swui/fork/rebuild_keys.py`).
 - **Aspecto claro de SOLIDWORKS 2018** (colores medidos en capturas): cinta y paneles
   #F7F7F7, pestañas #D4D4D4, fondo degradado gris-celeste a blanco; croquis en azul puro
   (líneas 2 px, constructivas 1 px trazo y punto), resaltado naranja, aristas negras 1 px.

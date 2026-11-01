@@ -296,6 +296,9 @@
   inválido. El croquis del anillo va con Placement fijo (MapMode "Deactivated").
 - Las expresiones leen la forma: `Cyl.Shape.Faces[0].Surface.Radius` = 4 (no se usó: depende del
   número de la cara igual que una referencia).
+- El observador de documento `slotRecomputedDocument` sí llega (con interfaz, 2026-10-31): lo usa
+  el aviso de Mover cara atrasado (`move_face.check`, después con QTimer 0). Al abrir un archivo:
+  `slotCreatedDocument` + QTimer.
 - Un primitivo de PartDesign (AdditiveBox, SubtractiveCylinder) suelto (sin apoyo) ignora
   `AttachmentOffset`: ubicarlo con `Placement` (en las pruebas).
 

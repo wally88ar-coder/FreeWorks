@@ -38,8 +38,14 @@ Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o come
     panel. Auxiliares (plano, línea, croquis, SubShapeBinder) ocultos y fuera del árbol, en "aux"
     de la marca. Límite visto: el Ángulo de salida de FreeCAD falla en un sentido con 10° y anda
     con 5° (también con la bisagra en una arista de la cara, o sea ya pasaba): el panel lo avisa.
-    Límite de diseño: los auxiliares del giro con eje fuera y el anillo del agujero quedan fijos
-    (si después cambia la pieza, editar el Mover cara los reubica).
+    Los auxiliares del giro con eje fuera y el anillo del agujero quedan fijos; decisión del
+    usuario (31/10): **aviso + Ctrl+Q**. Si la pieza cambia, sale el cartelito "Mover cara1 quedó
+    desactualizado porque cambió la pieza: apretá Ctrl+Q para actualizarlo" (también al abrir el
+    archivo) y "⚠ desactualizado: Ctrl+Q" al lado del renglón; Ctrl+Q los reubica (un paso de
+    deshacer "Actualizar Mover cara"). Probado: agujero movido de x 25 a 32 -> aviso -> Ctrl+Q ->
+    Ø14 en x 32 (volumen exacto); placa de 10 a 15 con giro -> aviso -> Ctrl+Q -> cara exacta
+    (25,115); guardado atrasado y reabierto -> aviso. Sin cálculo propio en el recálculo: el aviso
+    solo mira (compara dónde están los auxiliares con dónde deberían estar).
   - Nombre visible FreeWorks: menú "FreeWorks" (también al volver de otro banco) y en la lista
     de bancos; "Usar siempre FreeWorks". Sin tocar InitGui.py ni package.xml (`swui/fork/brand.py`).
     **Falta (consultar al usuario, es hacia afuera):** package.xml y el nombre del repositorio en
