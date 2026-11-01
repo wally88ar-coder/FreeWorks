@@ -21,8 +21,10 @@ COMMANDS = ("SWUI_IABridge", "SWUI_IAConnect")
 
 
 def install():
-    """Solo registra los comandos del menú; el puente arranca apagado y lo pesado se carga al
-    prenderlo."""
+    """Registra los comandos del menú y el aviso de guardado (borra el respaldo de la IA cuando
+    el usuario guarda); el puente arranca apagado y lo pesado se carga al prenderlo."""
+    from swui.fork.ia.nucleo import respaldo
     from swui.fork.ia.puertas import menu
 
     menu.install()
+    respaldo.install()

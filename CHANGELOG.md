@@ -15,6 +15,10 @@ Neueste Version oben. / Newest version first.
   neka-nat/freecad-mcp (cola al hilo principal, MIT) y ghbalf/freecad-ai (servidor MCP,
   LGPL-2.1+), en `swui/fork/ia/terceros/`. Aislada: nada de FreeWorks la importa salvo el
   enganche (lo verifica el test).
+- IA: **un solo respaldo por documento**, el de antes del primer cambio de la IA desde que
+  guardaste; **al guardar se borra** (aceptaste lo que hizo la IA). Las consultas (`solo_leer`)
+  no hacen copia, y si cambian algo se deshacen. El aviso "un paso de Ctrl+Z" sale solo cuando
+  de verdad hubo cambios. Sin archivos .FCBak de más.
 
 ## 0.11.0 — 2026-11-01
 

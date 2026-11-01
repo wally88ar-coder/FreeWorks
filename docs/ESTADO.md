@@ -138,7 +138,13 @@ testing"), placa de prueba 100x60x10 con agujero Ø10 en un Cuerpo nuevo al lado
 totalmente definidos, 59 214,602 mm³ exacto, prueba aparte bien, respaldo previo, un paso de
 Ctrl+Z; captura con ajustar. **Probado por el usuario (01/11, ~21 h):** Ctrl+Z en "aro" deshizo la
 placa entera; destildar y tildar Puente IA avisa bien en la barra de estado. Sin probar por él:
-pedirle algo a la IA él mismo (opcional). Columna Vos del checklist: es del usuario, no se tocó. Detalle: si se nombran los objetos en el script, `naming.py` no les
+pedirle algo a la IA él mismo (opcional). Columna Vos del checklist: es del usuario, no se tocó.
+**Prueba del usuario (01/11 ~21 h): "cambiá el diámetro exterior del aro a 100 mm"**: la IA leyó
+las cotas, cambió la de Ø80 a Ø100 (interior Ø60, volumen exacto 50 265,482). Salieron dos
+detalles -> **decisión del usuario: respaldo único** (el de antes del primer cambio de la IA
+desde el último guardado, se borra al guardar; "no haremos control de versiones") y consultas
+sin copia (`solo_leer`); aviso de Ctrl+Z solo si hubo cambio. Hecho y probado con guion en
+FreeCAD real; en el FreeCAD del usuario entra al reiniciarlo. Detalle: si se nombran los objetos en el script, `naming.py` no les
 pone nombre SW (con nombres por defecto sí).
 
 **MENÚS ESTILO SW 2018: HECHOS — 01/11/2026 tarde** (`swui/fork/menus_sw.py`; detalle, pruebas y

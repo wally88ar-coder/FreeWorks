@@ -793,9 +793,23 @@ Plan y decisiones: documento "IA en FreeWorks: análisis y plan" (enlace en `doc
 - Hilo principal: cada herramienta pasa por la cola de neka-nat (`dispatch_to_gui`, espera
   arrastres del mouse, menús y ventanas modales; marca "trabado" si se pasa de `timeout`). La de
   Python maneja sus propios pasos (`main_thread=False`) para no frenar la ventana durante la prueba.
-- Python seguro (`nucleo/ejecutar.py`): `doc.saveCopy(ruta)` (existe en 1.1.4) hace el respaldo
-  sin cambiar FileName ni Label, en `<datos de usuario>/FreeWorks-IA/respaldos/` (uno por
-  documento, se pisa). La misma copia se abre en `freecadcmd.exe <script>` (CREATE_NO_WINDOW,
+- Respaldo de la IA (`nucleo/respaldo.py`, decisión del usuario 01/11: "no haremos control de
+  versiones"): UNO por documento, el de antes del primer cambio de la IA desde el último guardado;
+  los scripts siguientes no lo pisan; al guardar el usuario se borra (aceptó lo de la IA); cerrar
+  sin guardar lo deja en `<datos de usuario>/FreeWorks-IA/respaldos/`. Observador de App
+  `slotFinishSaveDocument(doc, archivo)`: en 1.1.4 llega también con `saveCopy` (probado en
+  freecadcmd), por eso solo cuenta si `archivo` es `doc.FileName`. `saveCopy` sobre un archivo que
+  ya existe deja un `.FCBak` al lado (preferencia de copias de seguridad de FreeCAD; guarda 1):
+  `respaldo.save_copy` borra el archivo antes. Scripts `solo_leer`: sin respaldo ni prueba; si
+  cambian algo (queda el paso en `UndoNames`) se hace `undo` y vuelve error. FreeCAD descarta las
+  transacciones vacías: "cambió" = `UndoNames[0] == "IA: <título>"`; si no cambió nada, el
+  respaldo hecho para ese script se borra. Probado en FreeCAD real (prueba 2 del 01/11: cambio,
+  segundo cambio sin pisar, consulta, consulta que cambia -> deshecha, guardar -> borrado,
+  cambio nuevo -> respaldo nuevo, sin .FCBak). En esa prueba el FreeCAD de prueba una vez quedó
+  abierto después de cerrar los documentos (no se investigó; se cerró con `.Kill()`).
+- Python seguro (`nucleo/ejecutar.py`): `doc.saveCopy(ruta)` (existe en 1.1.4) no cambia
+  FileName ni Label. La copia de trabajo (`FreeWorks-IA/prueba/documento.FCStd`, se pisa) se abre
+  en `freecadcmd.exe <script>` (CREATE_NO_WINDOW,
   corte con `subprocess.run(timeout=90)`, que en Windows sí mata el proceso; el corte de ghbalf
   usa SIGALRM y en Windows no hace nada) con un FreeCADGui falso; termina con `os._exit` y deja
   `resultado.json`. Falla si el script lanza, si deja algo "Invalid" o un PartDesign::Feature con
