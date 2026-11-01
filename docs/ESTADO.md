@@ -16,6 +16,28 @@ cerrada; fase 6 acordada).
 Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o comentó el usuario.
 
 ## Fase actual
+- **31/10 noche, prueba con mouse y teclado en FreeCAD real** (pedido del usuario; ventana de
+  prueba aparte con copia de la configuración, piezas armadas con guion: placa con agujero de
+  croquis "Por todo"). Anduvo: agrandar el agujero Ø10 -> Ø14 con Mover cara (panel, Invertir,
+  vista previa, medido radio 7), cambiar el Ø original (Datos) y el espesor (doble clic en la
+  placa, clic en la cota, Modificar 10 -> 15) -> aviso en el árbol, cartelito y barra de estado ->
+  Ctrl+Q -> Ø14 / Ø16 correctos; Ctrl+Z / Ctrl+Y; Girar 10° con eje en la arista de abajo (o la
+  línea del croquis); Trasladar hasta la superficie del Tope (55 mm medido); Ecuaciones no modal:
+  doble clic en Placa del árbol muestra las cotas y un clic en el 30 arma "D2@Sketch", "= 40"
+  aplica, comentario guardado y sigue al volver a abrir; Propiedades físicas sin material: densidad
+  0, masa 0, ocultos destildados. **Encontrado y arreglado en el momento** (y repetido con el
+  mouse): el aviso no se actualizaba al deshacer/rehacer; hacían falta dos Ctrl+Q cuando un Mover
+  cara depende de otro (ahora una sola vez); un Mover cara que **pierde su cara** (FreeCAD
+  renumera las caras, p. ej. el espesor cambia la topología: "Base ... [?Face3]") quedaba "válido"
+  sin hacer nada y sin aviso: ahora avisa "perdió la cara: Ctrl+Q o abrilo" (Ctrl+Q lo resolvió
+  cuando la causa era otro Mover cara atrasado); el árbol flotante mostraba los auxiliares
+  ("Plano1", "Eje1"); Ecuaciones listaba el largo sin uso de un "Hasta la superficie"; las cotas a
+  la vista no se actualizaban después de una ecuación ni al Cancelar. Sin probar con el mouse en
+  esta tanda: chapa (nombres, DXF que pregunta, lotes) y el resto de condiciones finales (vértice,
+  equidistante, sólido), que sí se probaron con guiones en FreeCAD real.
+  Notas: el campo Distancia a veces no toma el valor con triple clic (sí con Ctrl+A), pasa en
+  todos los paneles SW (`dress_up_panel._spin`), anotado. Un "Corte Por todo" muestra su "D1"
+  (largo sin uso) en Ecuaciones: es de antes, anotado.
 - **31/10 noche, HECHOS todos los cambios de las decisiones de abajo** (pedido del usuario: "hacé
   todos los cambios"). Probados con guiones en FreeCAD real (copia de la configuración) y test en
   verde; falta que los pruebe el usuario con el mouse. Resultados:

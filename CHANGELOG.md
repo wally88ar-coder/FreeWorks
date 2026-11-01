@@ -74,7 +74,12 @@ Neueste Version oben. / Newest version first.
     Todo con operaciones nativas (Extruir/Cortar hasta cara, Ángulo de salida, Revolución /
     Ranura) y auxiliares ocultos fuera del árbol. Si la pieza cambia y el giro con eje fuera o
     el agujero quedan atrasados, **avisa** (cartelito y "⚠ desactualizado: Ctrl+Q" en el árbol)
-    y **Ctrl+Q** los pone al día (`swui/fork/rebuild_keys.py`).
+    y **Ctrl+Q** los pone al día (`swui/fork/rebuild_keys.py`), también en cadena con un solo
+    Ctrl+Q. Si un Mover cara **pierde su cara** (FreeCAD renumeró las caras) avisa en vez de
+    quedar sin hacer nada. El aviso se actualiza también al deshacer y rehacer.
+  - Ecuaciones: las cotas a la vista se actualizan después de cada ecuación y al Cancelar; no
+    lista el largo sin uso de un Mover cara "Hasta la superficie". El árbol flotante ya no
+    muestra los auxiliares ocultos.
 - **Aspecto claro de SOLIDWORKS 2018** (colores medidos en capturas): cinta y paneles
   #F7F7F7, pestañas #D4D4D4, fondo degradado gris-celeste a blanco; croquis en azul puro
   (líneas 2 px, constructivas 1 px trazo y punto), resaltado naranja, aristas negras 1 px.
