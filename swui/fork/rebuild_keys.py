@@ -5,7 +5,9 @@
 Teclas de SOLIDWORKS para reconstruir y medir.
 
 - Ctrl+B: reconstruir (lo que cambió). Ctrl+Q: forzar la reconstrucción de
-  todo. Si quedan errores se abre "¿Qué es incorrecto?". En FreeCAD, Ctrl+B
+  todo y poner al día los Mover cara con auxiliares fijos que quedaron atrasados
+  (move_face.update_stale; decisión del usuario, 2026-10-31). Si quedan errores se
+  abre "¿Qué es incorrecto?". En FreeCAD, Ctrl+B
   es "Zoom de ventana" (Std_ViewBoxZoom): ese atajo se quita mientras se está
   en LikeSolidWorks UI y se devuelve al salir.
 - Barra espaciadora: Medir (el estilo SW del fork, measure_sw.py), como la tiene configurada el
@@ -50,10 +52,35 @@ def rebuild(force=False):
             except Exception:
                 pass
     doc.recompute()
+    if force:
+        _update_move_faces(doc)
     from swui.fork import tree_dialogs
 
     if tree_dialogs.problems(doc):
         tree_dialogs.show_whats_wrong(doc)
+
+
+def _update_move_faces(doc):
+    """
+    Ctrl+Q también pone al día los Mover cara con auxiliares fijos que quedaron atrasados (giro con
+    eje fuera de la cara, agujero agrandado): como abrirlos y aceptar. Un solo paso de deshacer.
+    """
+    try:
+        from swui.fork import move_face
+
+        if not move_face.stale_in(doc):
+            return 0
+        doc.openTransaction("Actualizar Mover cara")
+        done = move_face.update_stale(doc)
+        doc.commitTransaction()
+        if done:
+            doc.recompute()
+        return done
+    except Exception:
+        if doc.HasPendingTransaction:
+            doc.abortTransaction()
+        FreeCAD.Console.PrintError("[SWUI fork] Ctrl+Q, Mover cara:\n%s\n" % traceback.format_exc())
+        return 0
 
 
 class _Rebuild:
@@ -74,7 +101,8 @@ class _Rebuild:
 class _ForceRebuild(_Rebuild):
     force = True
     menu = "Forzar reconstrucción"
-    tip = "Reconstruye todas las operaciones, hayan cambiado o no (Ctrl+Q)"
+    tip = ("Reconstruye todas las operaciones, hayan cambiado o no, y pone al día los Mover cara "
+           "desactualizados (Ctrl+Q)")
 
 
 class _WhatsWrong:

@@ -30,12 +30,12 @@ Todo nativo (el addon es un asistente, docs/ESTADO.md "Análisis: ..."), verific
   recta donde la cara girada corta a la original (corrida tan(ángulo/2) por la altura del
   eje). Ángulo de salida con un plano neutro y una línea de tiro ocultos ubicados en esa recta
   (el Draft no acepta un plano como tiro, sí una línea: probado). Quedan fijos: si la pieza
-  cambia, se reubican al editar el Mover cara.
+  cambia, avisa (check) y Ctrl+Q los reubica (update_stale), como editar el Mover cara.
 - Equidistanciar una cara cilíndrica entera (agujero o eje, 2026-10-31) = Ranura
   (PartDesign::Groove) si quita material o Revolución si agrega, de un anillo (croquis oculto
   en un plano que contiene el eje) entre el radio de la cara y el nuevo, a lo largo de la cara.
   Agujero de Ø10 a Ø14: saca exactamente π·(7²-5²)·largo (probado). El croquis queda fijo: si
-  después cambia el agujero, editar el Mover cara lo reubica.
+  después cambia el agujero, avisa y Ctrl+Q lo reubica (lo mismo que editar el Mover cara).
 Si cambia el sentido (agregar <-> quitar material) o el tipo, la operación se cambia por la
 otra (mientras nada más use sus caras). La distancia o el ángulo se pueden atar a ecuaciones.
 Los objetos auxiliares (planos, líneas, croquis) se nombran en "aux" de la marca.
@@ -388,6 +388,267 @@ def rotation_aux(face, point, u, angle):
     neutral = FreeCAD.Placement(hinge, FreeCAD.Rotation(FreeCAD.Vector(0, 0, 1), w))
     line = FreeCAD.Placement(hinge, FreeCAD.Rotation(FreeCAD.Vector(0, 0, 1), pull))
     return neutral, line, ""
+
+
+def ring_geometry(face, distance, flip):
+    """
+    Equidistanciar una cara cilíndrica entera: (operación, Placement del croquis del anillo,
+    sus 4 esquinas, "") o (None, None, None, problema). El croquis contiene el eje: X radial,
+    Y = eje (su V_Axis es el eje de la revolución).
+    """
+    center, axis, radius, length, away = cylinder_data(face)
+    move = normal_move(OFFSET, (0, 0, 0), distance, flip)
+    radii = ring_radii(radius, move, away)
+    if radii is None:
+        return None, None, None, "Con esa distancia el agujero se cierra: probá con una menor."
+    radial = axis.cross(FreeCAD.Vector(0, 0, 1))
+    if radial.Length < 1e-6:
+        radial = axis.cross(FreeCAD.Vector(1, 0, 0))
+    radial.normalize()
+    rot = FreeCAD.Rotation(radial, axis, radial.cross(axis), "ZXY")
+    r0, r1 = radii
+    pts = [FreeCAD.Vector(r0, 0, 0), FreeCAD.Vector(r1, 0, 0),
+           FreeCAD.Vector(r1, length, 0), FreeCAD.Vector(r0, length, 0)]
+    return native_type(OFFSET, move, curved=True), FreeCAD.Placement(center, rot), pts, ""
+
+
+def _ring_global(plc, pts):
+    return [plc.multVec(p) for p in pts]
+
+
+def ring_matches(sketch, plc, pts, tol=1e-6):
+    """¿El croquis del anillo ya dibuja ese anillo? (mismas esquinas en el espacio)."""
+    try:
+        have = [sketch.Placement.multVec(g.StartPoint) for g in sketch.Geometry]
+    except Exception:
+        return False
+    want = _ring_global(plc, pts)
+    return len(have) == 4 and all((a - b).Length < tol for a, b in zip(have, want))
+
+
+def write_ring(sketch, plc, pts):
+    import Part
+
+    if sketch.MapMode != "Deactivated":
+        sketch.MapMode = "Deactivated"
+    if not sketch.Placement.isSame(plc, 1e-9):
+        sketch.Placement = plc
+    old = [(g.StartPoint, g.EndPoint) for g in sketch.Geometry]
+    new = [(pts[i], pts[(i + 1) % 4]) for i in range(4)]
+    if len(old) != 4 or any((a - c).Length > 1e-9 or (b - d).Length > 1e-9 for (a, b), (c, d) in zip(old, new)):
+        sketch.deleteAllGeometry()
+        for a, b in new:
+            sketch.addGeometry(Part.LineSegment(a, b))
+    sketch.recompute()
+
+
+def place_aux(aux, plc):
+    if aux.MapMode != "Deactivated":
+        aux.MapMode = "Deactivated"
+    if not aux.Placement.isSame(plc, 1e-9):
+        aux.Placement = plc
+    aux.recompute()
+
+
+def same_plane(a, b, tol=1e-6):
+    """Dos Placement de plano (normal = Z local): ¿el mismo plano?"""
+    z = FreeCAD.Vector(0, 0, 1)
+    na, nb = a.Rotation.multVec(z), b.Rotation.multVec(z)
+    return abs(abs(na.dot(nb)) - 1) < 1e-9 and abs(na.dot(b.Base - a.Base)) < tol
+
+
+def same_line(a, b, tol=1e-6):
+    """Dos Placement de línea (sentido = Z local): ¿la misma recta, con el mismo sentido?"""
+    z = FreeCAD.Vector(0, 0, 1)
+    da, db = a.Rotation.multVec(z), b.Rotation.multVec(z)
+    return da.dot(db) > 1 - 1e-9 and (b.Base - a.Base).cross(da).Length < tol
+
+
+# --- Auxiliares fijos: aviso y Ctrl+Q ------------------------------------------
+# El giro con eje fuera de la cara y el anillo de una cara cilíndrica usan auxiliares con ubicación
+# fija (calculada al aceptar). Si la pieza cambia, quedan atrasados: se avisa (cartelito y texto en
+# el árbol) y Ctrl+Q los reubica, igual que abrir el Mover cara y aceptar. Sin cálculo propio en
+# el recálculo de FreeCAD (el archivo abre y recalcula sin el addon).
+
+
+def _spec_aux(obj):
+    spec = read_spec(getattr(obj, MARK, ""))
+    aux = spec.get("aux") if isinstance(spec.get("aux"), dict) else {}
+    return spec, aux
+
+
+def wanted_aux(obj):
+    """
+    Dónde deberían estar los auxiliares fijos de este Mover cara con la pieza como está ahora:
+    {"plane": Placement, "line": Placement} o {"sketch": (Placement, esquinas)}. None si no tiene
+    auxiliares fijos o no se puede calcular (cara que ya no existe, operación con error...).
+    """
+    from swui.fork import feature_tree as ft
+
+    spec, aux = _spec_aux(obj)
+    if "sketch" not in aux and not ("plane" in aux and "line" in aux):
+        return None
+    base = getattr(obj, "BaseFeature", None)
+    faces = MoveFacePanel._initial_faces(obj)
+    try:
+        face = base.Shape.getElement(faces[0]) if base is not None and faces else None
+    except Exception:
+        face = None
+    if face is None:
+        return None
+    if "sketch" in aux:
+        type_id, plc, pts, problem = ring_geometry(face, float(spec["distance"]), bool(spec["flip"]))
+        if problem or type_id != obj.TypeId:
+            return None
+        return {"sketch": (plc, pts)}
+    ref = MoveFacePanel._ref(obj.Document, spec.get("axis"))
+    if ref is None and spec.get("hinge"):
+        ref = (base, spec["hinge"])
+    if ref is None:
+        return None
+    axis = axis_of(ref, base, ft.body_of(obj))
+    if axis is None:
+        return None
+    angle = obj.Angle.Value * (-1.0 if spec["flip"] else 1.0)
+    neutral, line, problem = rotation_aux(face, axis[0], axis[1], angle)
+    if problem:
+        return None
+    return {"plane": neutral, "line": line}
+
+
+def stale(obj):
+    """¿Los auxiliares fijos de este Mover cara quedaron atrasados respecto de la pieza?"""
+    want = wanted_aux(obj)
+    if not want:
+        return False
+    _spec, aux = _spec_aux(obj)
+    doc = obj.Document
+    for key, value in want.items():
+        have = doc.getObject(aux.get(key, ""))
+        if have is None:
+            return False
+        if key == "sketch" and not ring_matches(have, *value):
+            return True
+        if key == "plane" and not same_plane(have.Placement, value):
+            return True
+        if key == "line" and not same_line(have.Placement, value):
+            return True
+    return False
+
+
+def update(obj):
+    """Reubicar los auxiliares fijos (lo mismo que abrir el Mover cara y aceptar). True si cambió algo."""
+    if not stale(obj):
+        return False
+    want = wanted_aux(obj)
+    _spec, aux = _spec_aux(obj)
+    doc = obj.Document
+    for key, value in want.items():
+        target = doc.getObject(aux[key])
+        if key == "sketch":
+            write_ring(target, *value)
+        else:
+            place_aux(target, value)
+    obj.touch()
+    return True
+
+
+def marked(doc):
+    return [o for o in doc.Objects if hasattr(o, MARK) and o.TypeId in (DRAFT, GROOVE, REVOLUTION)]
+
+
+def stale_in(doc):
+    out = []
+    for obj in marked(doc):
+        try:
+            if stale(obj):
+                out.append(obj)
+        except Exception:
+            FreeCAD.Console.PrintLog("[SWUI fork] Mover cara atrasado:\n%s\n" % traceback.format_exc())
+    return out
+
+
+def update_stale(doc):
+    """Ctrl+Q: reubicar los auxiliares de todos los Mover cara atrasados. -> cuántos."""
+    done = 0
+    for obj in stale_in(doc):
+        try:
+            if update(obj):
+                done += 1
+        except Exception:
+            FreeCAD.Console.PrintError("[SWUI fork] Actualizar %s:\n%s\n" % (obj.Label, traceback.format_exc()))
+    return done
+
+
+STALE_TEXT = "⚠ desactualizado: Ctrl+Q"
+_stale = {}  # Name del documento -> {Name de los Mover cara atrasados}
+
+
+def check(doc):
+    """Mirar (sin cambiar nada) qué Mover cara quedaron atrasados; avisar los nuevos."""
+    if doc is None:
+        return
+    try:
+        now = set(o.Name for o in stale_in(doc))
+    except Exception:
+        return
+    before = _stale.get(doc.Name, set())
+    _stale[doc.Name] = now
+    new = [doc.getObject(n) for n in sorted(now - before)]
+    if new:
+        text = ("%s quedó desactualizado porque cambió la pieza: apretá Ctrl+Q para actualizarlo.\n"
+                % ", ".join(o.Label for o in new if o is not None))
+        try:
+            FreeCAD.Console.PrintTranslatedUserWarning(doc.Label, text)  # cartelito de FreeCAD
+        except Exception:
+            FreeCAD.Console.PrintWarning("[SWUI] " + text)
+    if now != before:
+        try:
+            from swui.fork import tree_overlay
+
+            tree_overlay.refresh()
+        except Exception:
+            pass
+
+
+def tree_text(tree):
+    """Texto al lado del renglón de cada Mover cara atrasado (tree_overlay.EXTRA_TEXT)."""
+    from swui.fork import tree_overlay
+
+    out = []
+    for _body, rows in tree_overlay.body_rows(tree):
+        for obj, (x, y0, w, h, _row_x), _top, _bottom, _f in rows:
+            try:
+                if obj.Name in _stale.get(obj.Document.Name, ()):
+                    out.append((x + w + 6, y0, h, STALE_TEXT))
+            except Exception:
+                pass
+    return out
+
+
+class _DocObserver:
+    def slotRecomputedDocument(self, doc):
+        try:
+            name = doc.Name
+        except Exception:
+            return
+        QtCore.QTimer.singleShot(0, lambda: check(FreeCAD.listDocuments().get(name)))
+
+    def slotCreatedDocument(self, doc):  # también al abrir un archivo (ya cargado cuando corre)
+        try:
+            name = doc.Name
+        except Exception:
+            return
+        QtCore.QTimer.singleShot(800, lambda: check(FreeCAD.listDocuments().get(name)))
+
+    def slotDeletedDocument(self, doc):
+        try:
+            _stale.pop(doc.Name, None)
+        except Exception:
+            pass
+
+
+_observer = None
 
 
 def first_face_hit(face, normal, target):
@@ -1030,12 +1291,8 @@ class MoveFacePanel(dp.SwPanel):
             return problem
         plane = self._aux("plane", "PartDesign::Plane", "PlanoGiro")
         pull = self._aux("line", "PartDesign::Line", "TiroGiro")
-        for aux, plc in ((plane, neutral), (pull, line)):
-            if aux.MapMode != "Deactivated":
-                aux.MapMode = "Deactivated"
-            if not aux.Placement.isSame(plc, 1e-9):
-                aux.Placement = plc
-            aux.recompute()
+        place_aux(plane, neutral)
+        place_aux(pull, line)
         self._drop_aux(("plane", "line"))
         self._write_spec()
         self.obj.Base = (self.base, self.faces)
@@ -1049,39 +1306,14 @@ class MoveFacePanel(dp.SwPanel):
 
     def _apply_cylinder(self, face):
         """Equidistanciar una cara cilíndrica entera: anillo revolucionado (Groove / Revolution)."""
-        import Part
-
-        center, axis, radius, length, away = cylinder_data(face)
-        move = normal_move(OFFSET, (0, 0, 0), self.distance.value(), self.flip.isChecked())
-        radii = ring_radii(radius, move, away)
-        if radii is None:
-            return "Con esa distancia el agujero se cierra: probá con una menor."
-        problem = self._ensure(native_type(OFFSET, move, curved=True))
+        type_id, plc, pts, problem = ring_geometry(face, self.distance.value(), self.flip.isChecked())
+        if problem:
+            return problem
+        problem = self._ensure(type_id)
         if problem:
             return problem
         sketch = self._aux("sketch", "Sketcher::SketchObject", "Anillo")
-        # plano que contiene el eje: X radial, Y = eje (el V_Axis del croquis, eje de la revolución)
-        radial = axis.cross(FreeCAD.Vector(0, 0, 1))
-        if radial.Length < 1e-6:
-            radial = axis.cross(FreeCAD.Vector(1, 0, 0))
-        radial.normalize()
-        normal = radial.cross(axis)
-        rot = FreeCAD.Rotation(radial, axis, normal, "ZXY")
-        plc = FreeCAD.Placement(center, rot)
-        if sketch.MapMode != "Deactivated":
-            sketch.MapMode = "Deactivated"
-        if not sketch.Placement.isSame(plc, 1e-9):
-            sketch.Placement = plc
-        r0, r1 = radii
-        pts = [FreeCAD.Vector(r0, 0, 0), FreeCAD.Vector(r1, 0, 0),
-               FreeCAD.Vector(r1, length, 0), FreeCAD.Vector(r0, length, 0)]
-        old = [(g.StartPoint, g.EndPoint) for g in sketch.Geometry]
-        new = [(pts[i], pts[(i + 1) % 4]) for i in range(4)]
-        if len(old) != 4 or any((a - c).Length > 1e-9 or (b - d).Length > 1e-9 for (a, b), (c, d) in zip(old, new)):
-            sketch.deleteAllGeometry()
-            for a, b in new:
-                sketch.addGeometry(Part.LineSegment(a, b))
-        sketch.recompute()
+        write_ring(sketch, plc, pts)
         self._drop_aux(("sketch",))
         self._write_spec()
         if self.obj.Profile != (sketch, [""]):
@@ -1357,8 +1589,23 @@ class _MoveFaceCommand:
 
 
 def install():
+    global _observer
     if _choose not in dp.CHOOSERS:
         dp.CHOOSERS.append(_choose)
+    if _observer is None:
+        try:
+            _observer = _DocObserver()
+            FreeCAD.addDocumentObserver(_observer)
+        except Exception:
+            _observer = None
+            FreeCAD.Console.PrintLog("[SWUI fork] Mover cara, aviso de atrasados:\n%s\n" % traceback.format_exc())
+    try:
+        from swui.fork import tree_overlay
+
+        if tree_text not in tree_overlay.EXTRA_TEXT:
+            tree_overlay.EXTRA_TEXT.append(tree_text)
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Mover cara, texto en el árbol:\n%s\n" % traceback.format_exc())
     try:
         FreeCADGui.addCommand(COMMAND, _MoveFaceCommand())
     except Exception:
