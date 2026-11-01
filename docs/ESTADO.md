@@ -118,6 +118,16 @@ Pendiente aparte: README propio en castellano (el Addon Manager muestra el del o
 Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o comentó el usuario.
 
 ## Fase actual
+**IA, ETAPA 0 (EL PUENTE): HECHA — 01/11/2026 noche** (pedido del usuario "empezá";
+`swui/fork/ia/`; plan en el documento de IA, detalle técnico en NOTAS_TECNICAS "IA, etapa 0").
+FreeWorks > IA > Puente IA (tilde, arranca apagado) y Conectar la IA... (línea para Claude Code,
+copiar, cambiar la clave). Herramientas: estado, captura, ejecutar_python (respaldo + prueba en
+freecadcmd + un paso de Ctrl+Z + registro en la consola). Código copiado de neka-nat y ghbalf en
+`terceros/`. Test en verde con chequeo de aislamiento. Probado con guion en FreeCAD real y un
+cliente MCP de afuera (todo bien, ver NOTAS). **Falta:** conectar el Claude Code del usuario (no
+tiene `claude` en el PATH; usa la app de escritorio) y probarlo de verdad; preguntar quién prueba
+con el mouse (memoria "implementar sin mouse").
+
 **MENÚS ESTILO SW 2018: HECHOS — 01/11/2026 tarde** (`swui/fork/menus_sw.py`; detalle, pruebas y
 decisiones en "Checklists compartidos" > Menús estilo SW, arriba). Archivo, Edición, Ver,
 Insertar, Herramientas, FreeWorks, Ventana y "?"; gris según pieza / ensamblaje / plano / croquis;

@@ -765,3 +765,42 @@ run.log, borrar los .pyc antes de seguir.
     `ShowInTree` de la planilla según haya una o más configuraciones; corre en `ensure` y al
     final de `activate` (agregar, eliminar y cambiar el nombre pasan por ahí). Fuera de un
     Cuerpo, FreeCAD 1.1.4 respeta `ShowInTree` (dentro no: ver `tree_overlay.hide_unlisted`).
+
+## IA, etapa 0: el puente (2026-11-01)
+Plan y decisiones: documento "IA en FreeWorks: análisis y plan" (enlace en `docs/ESTADO.md`).
+- Estructura `swui/fork/ia/`: `terceros/` (copiado) -> `nucleo/` -> `herramientas/` -> `puertas/`;
+  cada capa usa solo las de abajo y nada fuera de `ia/` la importa salvo `swui/fork/__init__.py`.
+  `tools/test_load.py` (`check_ia`) verifica las dos reglas y responde un saludo MCP sin FreeCAD.
+- Código copiado (origen y versión en `terceros/__init__.py`; cambios marcados "FreeWorks:"):
+  neka-nat/freecad-mcp 8babe99 (`gui_dispatch.py`, `dispatch_health.py`, MIT: cabecera SPDX
+  "LGPL-2.1-or-later AND MIT", el test lo acepta solo en `terceros/`) y ghbalf/freecad-ai 08d637d
+  (`mcp_protocol.py`, `mcp_http.py` = HTTPServerTransport sin los transportes de cliente,
+  `mcp_server.py` sin STDIO, `registry.py` + campo `timeout`). Para traer arreglos: comparar con
+  esos archivos de origen. El `ip_filter` de neka-nat no se copió: el transporte de ghbalf ya
+  rechaza Origin (páginas web) y Host que no sea local.
+- Servidor: Streamable HTTP en `http://127.0.0.1:47115/mcp` (también /sse heredado), clave
+  obligatoria (`Authorization: Bearer`), 401 si falta. Puerto y clave en
+  `BaseApp/Preferences/Mod/SWUI/IA` (Port, Token; la clave se crea sola con `secrets`). Arranca
+  apagado en cada sesión (privacidad). Conectar Claude Code:
+  `claude mcp add --scope user --transport http freeworks <url> --header "Authorization: Bearer <clave>"`.
+  OJO: en la PC del usuario no hay `claude` en el PATH (usa la app de escritorio, que trae su
+  propio claude.exe en `%LOCALAPPDATA%\Claude-Data\...\claude-code\<versión>\`).
+- Hilo principal: cada herramienta pasa por la cola de neka-nat (`dispatch_to_gui`, espera
+  arrastres del mouse, menús y ventanas modales; marca "trabado" si se pasa de `timeout`). La de
+  Python maneja sus propios pasos (`main_thread=False`) para no frenar la ventana durante la prueba.
+- Python seguro (`nucleo/ejecutar.py`): `doc.saveCopy(ruta)` (existe en 1.1.4) hace el respaldo
+  sin cambiar FileName ni Label, en `<datos de usuario>/FreeWorks-IA/respaldos/` (uno por
+  documento, se pisa). La misma copia se abre en `freecadcmd.exe <script>` (CREATE_NO_WINDOW,
+  corte con `subprocess.run(timeout=90)`, que en Windows sí mata el proceso; el corte de ghbalf
+  usa SIGALRM y en Windows no hace nada) con un FreeCADGui falso; termina con `os._exit` y deja
+  `resultado.json`. Falla si el script lanza, si deja algo "Invalid" o un PartDesign::Feature con
+  forma nula/inválida que antes no estaba. Después corre en vivo dentro de
+  `openTransaction("IA: <título>")`; si falla, `abortTransaction`. Registro:
+  `FreeCADGui.doCommandSkip(texto)` escribe en la consola de Python sin ejecutar.
+- Probado en FreeCAD real (copia de user.cfg, puerto 47199) con un cliente MCP de afuera:
+  clave mala 401; saludo con instrucciones; estado; placa 100x60x10 con agujero Ø10 por script
+  (59 214,602 mm³ exacto; `naming.py` le pone los nombres SW); captura con y sin ajustar; script
+  con error -> no se ejecuta; con error y sin prueba -> se deshace solo; `while True` -> cortado a
+  los 90 s sin tocar la pieza; un `doc.undo()` deshace la placa entera; apagar y prender desde el
+  menú (tilde). Sin probar: Claude Code real conectado (falta el permiso del usuario para tocar su
+  configuración de Claude Code).

@@ -2,6 +2,20 @@
 
 Neueste Version oben. / Newest version first.
 
+## Unveröffentlicht / Unreleased
+
+**Fork (wally88ar-coder, español)**
+- **IA, etapa 0: el puente** (`swui/fork/ia/`). FreeWorks > IA > **Puente IA** (se tilda; arranca
+  apagado) deja que la IA de tu suscripción (Claude Code primero) maneje FreeWorks por MCP, solo
+  en esta PC (127.0.0.1:47115) y con clave; **Conectar la IA...** muestra la línea para conectarla
+  y deja cambiar la clave. Herramientas: **estado** (documentos, árbol, selección, panel abierto),
+  **captura** (vista 3D o ventana; queda anotado) y **ejecutar_python** (copia de respaldo, prueba
+  en un FreeCAD aparte sin pantalla que corta los scripts que fallan o se cuelgan, y un solo paso
+  de Ctrl+Z "IA: ..."; el script queda en la consola de Python). Código copiado, con su aviso, de
+  neka-nat/freecad-mcp (cola al hilo principal, MIT) y ghbalf/freecad-ai (servidor MCP,
+  LGPL-2.1+), en `swui/fork/ia/terceros/`. Aislada: nada de FreeWorks la importa salvo el
+  enganche (lo verifica el test).
+
 ## 0.11.0 — 2026-11-01
 
 Primera versión de FreeWorks (fork de LikeSolidWorks UI). / First FreeWorks release.

@@ -436,6 +436,10 @@ def menus():
             E("Chequear carpeta...", "SWUI_CheckFolder"),
             E("Diagnóstico", "SWUI_Diagnostics"),
             S("Idioma", _language_items()),
+            S("IA", [
+                E("Puente IA", "SWUI_IABridge"),
+                E("Conectar la IA...", "SWUI_IAConnect"),
+            ]),
             SEP,
             S("FreeCAD", [
                 E("Mostrar los menús originales de FreeCAD", ORIGINALS_CMD),

@@ -5490,8 +5490,11 @@ def check_manifest():
                 p = os.path.join(base, f)
                 with open(p, encoding="utf-8") as fh:
                     head = [fh.readline().rstrip("\n") for _ in range(5)]
-                if want not in head:
-                    missing.append(os.path.relpath(p, ADDON))
+                rel = os.path.relpath(p, ADDON)
+                # fork: el código copiado de neka-nat (MIT) lleva las dos licencias
+                mixed = rel.startswith(os.path.join("swui", "fork", "ia", "terceros")) and want + " AND MIT" in head
+                if want not in head and not mixed:
+                    missing.append(rel)
     if missing:
         print("  FEHLER: SPDX-Kopfzeile '%s' fehlt in: %s" % (want, ", ".join(sorted(missing))))
         ok = False
@@ -5513,6 +5516,92 @@ def check_manifest():
     return ok
 
 
+def check_ia():
+    """fork: la IA (swui/fork/ia) queda aislada y su servidor MCP responde bien (sin FreeCAD)."""
+    import re
+
+    ok = True
+    # 1) Nadie fuera de swui/fork/ia importa la IA, salvo el enganche de swui/fork/__init__.py
+    ia_dir = os.path.join(ADDON, "swui", "fork", "ia")
+    hook = os.path.join(ADDON, "swui", "fork", "__init__.py")
+    pattern = re.compile(r"swui\.fork\.ia\b|from\s+swui\.fork\s+import\s+[^\n]*\bia\b")
+    leaks = []
+    for base, dirs, files in os.walk(ADDON):
+        dirs[:] = [d for d in dirs if d != "__pycache__" and not d.startswith(".")]
+        if os.path.abspath(base).startswith(os.path.abspath(ia_dir)):
+            continue
+        for f in files:
+            p = os.path.join(base, f)
+            if not f.endswith(".py") or os.path.abspath(p) in (os.path.abspath(hook), os.path.abspath(__file__)):
+                continue
+            with open(p, encoding="utf-8") as fh:
+                if pattern.search(fh.read()):
+                    leaks.append(os.path.relpath(p, ADDON))
+    if leaks:
+        print("  FEHLER: IA no aislada, la importan: %s" % ", ".join(leaks))
+        ok = False
+    # 2) Las capas de abajo no usan las de arriba
+    order = ["terceros", "nucleo", "herramientas", "puertas"]
+    for i, layer in enumerate(order):
+        upper = order[i + 1:]
+        for base, _dirs, files in os.walk(os.path.join(ia_dir, layer)):
+            for f in files:
+                if not f.endswith(".py"):
+                    continue
+                with open(os.path.join(base, f), encoding="utf-8") as fh:
+                    src = fh.read()
+                for up in upper:
+                    if re.search(r"swui\.fork\.ia\.%s\b|from\s+swui\.fork\.ia\s+import\s+[^\n]*\b%s\b" % (up, up), src):
+                        print("  FEHLER: IA: %s/%s usa la capa de arriba %s" % (layer, f, up))
+                        ok = False
+    # 3) Servidor MCP copiado: saludo, lista y llamada a una herramienta de prueba
+    try:
+        from swui.fork.ia.terceros import mcp_http, mcp_protocol, mcp_server
+        from swui.fork.ia.terceros.registry import ToolDefinition, ToolParam, ToolRegistry, ToolResult
+
+        reg = ToolRegistry()
+        reg.register(ToolDefinition("eco", "Devuelve el texto", [ToolParam("texto", "string", "Texto")],
+                                    lambda texto: ToolResult(True, "eco: " + texto, data={"n": 1})))
+        srv = mcp_server.MCPServer(reg)
+        init = srv.handle({"jsonrpc": "2.0", "id": 1, "method": "initialize",
+                           "params": {"protocolVersion": "2025-06-18"}})
+        tools = srv.handle({"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
+        call = srv.handle({"jsonrpc": "2.0", "id": 3, "method": "tools/call",
+                           "params": {"name": "eco", "arguments": {"texto": "hola"}}})
+        bad = srv.handle({"jsonrpc": "2.0", "id": 4, "method": "tools/call",
+                          "params": {"name": "eco", "arguments": {}}})
+        if (init["result"]["serverInfo"]["name"] != "FreeWorks" or "instructions" not in init["result"]
+                or [t["name"] for t in tools["result"]["tools"]] != ["eco"]
+                or call["result"]["content"][0]["text"] != "eco: hola"
+                or call["result"]["content"][1]["text"] != '{"n": 1}'
+                or not bad["result"]["isError"]):
+            print("  FEHLER: IA: respuestas MCP inesperadas", init, tools, call, bad)
+            ok = False
+        try:
+            mcp_http.HTTPServerTransport(port=0, auth_token="")
+            print("  FEHLER: IA: el servidor arranca sin clave")
+            ok = False
+        except ValueError:
+            pass
+        t = mcp_http.HTTPServerTransport(port=0, auth_token="clave")
+        if (t._classify_request("127.0.0.1:1", None, "Bearer clave") != "ok"
+                or t._classify_request("127.0.0.1:1", None, "Bearer otra") != "unauthorized"
+                or t._classify_request("127.0.0.1:1", "http://pagina.web", "Bearer clave") != "denied"):
+            print("  FEHLER: IA: la clave o el filtro de páginas web no andan")
+            ok = False
+        if mcp_protocol.LATEST_LEGACY_VERSION != "2025-11-25":
+            print("  FEHLER: IA: versiones MCP cambiaron")
+            ok = False
+    except Exception:
+        import traceback
+
+        print("  FEHLER: IA: servidor MCP\n%s" % traceback.format_exc())
+        ok = False
+    if ok:
+        print("  IA       : fork: aislada (solo el enganche la importa, capas en orden), MCP responde, clave obligatoria")
+    return ok
+
+
 # --- Hauptteil -------------------------------------------------------
 
 print("Add-on:", ADDON)
@@ -5521,6 +5610,7 @@ results = {
     "getrennte Namensraeume": run(split_namespace=True),
     "ein Namensraum": run(split_namespace=False),
     "package.xml": check_manifest(),
+    "IA (fork)": check_ia(),
 }
 
 print("\n" + "=" * 62)

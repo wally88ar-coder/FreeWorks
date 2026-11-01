@@ -251,6 +251,15 @@ def install(workbench=None):
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] Croquis vacío:\n%s\n" % traceback.format_exc())
     try:
+        # IA (único enganche: nada de FreeWorks importa swui.fork.ia; ver su __init__)
+        from swui.fork import ia
+
+        ia.install()
+        if workbench is not None:
+            workbench.appendMenu(MENU, list(ia.COMMANDS))
+    except Exception:
+        FreeCAD.Console.PrintError("[SWUI fork] IA (puente):\n%s\n" % traceback.format_exc())
+    try:
         # al final: reparte en menús estilo SW lo que todos agregaron al menú del banco
         from swui.fork import menus_sw
 
