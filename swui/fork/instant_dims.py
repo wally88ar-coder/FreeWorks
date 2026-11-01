@@ -361,6 +361,21 @@ def shown():
     return _state["obj"] is not None
 
 
+def refresh():
+    """Volver a dibujar las cotas a la vista con los valores nuevos (p. ej. después de una ecuación)."""
+    obj = _state["obj"]
+    if obj is None:
+        return
+    try:
+        obj.Name  # se borró: "deleted object"
+    except Exception:
+        hide()
+        return
+    by_click = _state.get("by_click")
+    show(obj)
+    _state["by_click"] = by_click
+
+
 def _draw_lines(view, dims):
     from pivy import coin
 

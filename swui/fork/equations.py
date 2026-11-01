@@ -389,8 +389,12 @@ class Model:
                     path = ".Constraints[%d]" % index
                     value, unit = self.value(obj, path)
                     out.append(("%s@%s" % (n, obj.Label), obj, path, value, unit))
-            elif hasattr(obj, "SWUI_MoveFace") and obj.TypeId in ("PartDesign::Groove", "PartDesign::Revolution"):
-                continue  # Mover cara de un agujero: su 360° es de adentro, no una cota de SW
+            elif hasattr(obj, "SWUI_MoveFace") and (
+                    obj.TypeId in ("PartDesign::Groove", "PartDesign::Revolution")
+                    or getattr(obj, "Type", "Length") not in ("Length", "TwoLengths")):
+                # Mover cara de un agujero (su 360° es de adentro) o "Hasta la superficie" (su Length
+                # no se usa): no son cotas de SW (visto con el mouse, 2026-10-31)
+                continue
             else:
                 names = feature_dim_names(obj.TypeId, obj.PropertiesList)
                 for prop, n in sorted(names.items(), key=lambda p: int(p[1][1:])):
@@ -681,6 +685,7 @@ class _EquationsDialog(QtWidgets.QDialog):
         self.msg.setText("Aplicado.")
         self.msg.setStyleSheet("")
         self.doc.recompute()
+        _refresh_dims()
         QtCore.QTimer.singleShot(0, self._fill)
 
     def _insert_dim(self, item):
@@ -739,6 +744,7 @@ class _EquationsDialog(QtWidgets.QDialog):
             self.msg.setStyleSheet("color: #c00000;")
             return
         self.doc.recompute()
+        _refresh_dims()
         self._fill()
 
     def eventFilter(self, obj, event):
@@ -762,6 +768,7 @@ class _EquationsDialog(QtWidgets.QDialog):
         self._unpick()
         self.doc.commitTransaction()
         self.doc.recompute()
+        _refresh_dims()
         _changed()
         super().accept()
 
@@ -774,8 +781,19 @@ class _EquationsDialog(QtWidgets.QDialog):
         else:
             self.doc.abortTransaction()
         self.doc.recompute()
+        _refresh_dims()  # Cancelar deshace: las cotas a la vista vuelven a los valores de antes
         _changed()
         super().reject()
+
+
+def _refresh_dims():
+    """Las cotas a la vista (instant_dims) con los valores nuevos; antes quedaban las viejas (31/10)."""
+    try:
+        from swui.fork import instant_dims
+
+        instant_dims.refresh()
+    except Exception:
+        pass
 
 
 _listeners = []

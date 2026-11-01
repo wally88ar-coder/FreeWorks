@@ -61,8 +61,17 @@ def rows(body):
             continue
         if obj.TypeId == "Sketcher::SketchObject" and _consumed(obj):
             continue  # el croquis de una operación va colgado de ella
-        out.append((obj, _sketches_of(obj)))
+        if not _in_tree(obj):
+            continue  # auxiliares ocultos (Mover cara: plano y eje del giro), como en el árbol
+        out.append((obj, [s for s in _sketches_of(obj) if _in_tree(s)]))
     return out
+
+
+def _in_tree(obj):
+    try:
+        return obj.ViewObject is None or obj.ViewObject.ShowInTree
+    except Exception:
+        return True
 
 
 def _consumed(sketch):
