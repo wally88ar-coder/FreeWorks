@@ -28,6 +28,7 @@ NOMBRES INTERNOS ESTABLES (quedan en los archivos, no cambiarlos nunca): la prop
 """
 
 import re
+import traceback
 
 import FreeCAD
 
@@ -294,10 +295,23 @@ def add(doc, name):
     return name
 
 
+_before = []  # funciones (doc, nombre) que corren antes de cambiar de configuración
+
+
+def before_activate(doc, name):
+    for fn in list(_before):
+        try:
+            fn(doc, name)
+        except Exception:
+            FreeCAD.Console.PrintLog("[SWUI fork] Antes de cambiar de configuración:\n%s\n"
+                                     % traceback.format_exc())
+
+
 def activate(doc, name):
     body = owner(doc)
     if body is None or name not in names(doc):
         raise ValueError("No hay una configuración \"%s\"." % name)
+    before_activate(doc, name)
     if getattr(body, PROP) != name:
         setattr(body, PROP, name)
     doc.recompute()

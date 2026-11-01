@@ -59,6 +59,10 @@ def _activate(doc_name, obj_name):
         body = body_of(obj)
         if body is None or _busy(gdoc):
             return
+        from swui.fork import configurations as cf
+
+        if cf.is_copy(body):
+            return  # la copia de un componente configurado (ensamblaje): no es para trabajar adentro
         view = gdoc.ActiveView
         if view is None or view.getActiveObject("pdbody") is body:
             return

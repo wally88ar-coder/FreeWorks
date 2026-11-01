@@ -43,6 +43,8 @@ SUPPRESS_CMD = "SWUI_ComponentSuppress"
 UNSUPPRESS_CMD = "SWUI_ComponentUnsuppress"
 CONFIG_CMD = "SWUI_ComponentConfig"
 
+FADE_PX = 100  # distancia del mouse a la barra del componente para que se vaya sola
+
 _state = {"bar": None, "busy": False}
 
 
@@ -203,6 +205,42 @@ def _settle(link):
     doc.recompute()
     if repair_copy(link):
         doc.recompute()
+    settle_doc(doc)
+
+
+def settle_doc(doc, rounds=3):
+    """
+    Con "Tracking", el primer recálculo después de un cambio de la pieza vuelve a copiarla y la
+    copia queda tocada con la forma vieja: hace falta otro recálculo (probado 01/11). Recalcular
+    hasta que no quede nada tocado. Devuelve cuántos recálculos hizo.
+    """
+    n = 0
+    while n < rounds and any("Touched" in o.State for o in doc.Objects):
+        doc.recompute()
+        n += 1
+    return n
+
+
+def _force_copy(link, name):
+    """
+    FreeCAD copia la pieza recién cuando la configuración del componente es distinta de la de
+    la pieza: con la misma, el componente seguía atado a la pieza y cambiaba con ella. Pasar por
+    otra configuración y volver deja la copia hecha (probado 01/11).
+    """
+    try:
+        if link.LinkedObject is not source(link):
+            return False
+    except Exception:
+        return False
+    other = [n for n in part_configs(link) if n != name]
+    if not other:
+        return False
+    link.setExpression(cf.PROP, None)
+    setattr(link, cf.PROP, other[0])
+    link.Document.recompute()
+    setattr(link, cf.PROP, name)
+    link.Document.recompute()
+    return True
 
 
 def _configured_links(doc):
@@ -220,6 +258,7 @@ def set_config(link, name, scope="this"):
     taken = capture([link])
     _state["busy"] = True  # el observador no repite lo que se hace acá
     try:
+        _force_copy(link, name)
         if cf.owner(doc) is not None and cf.configured(doc):
             cf.configure(doc, ("conf", link), name, scope)
         elif getattr(link, cf.PROP) != name:
@@ -230,6 +269,43 @@ def set_config(link, name, scope="this"):
     finally:
         _state["busy"] = False
     return link.LinkedObject
+
+
+def pinned(link):
+    """¿El componente tiene su propia configuración (copia de la pieza)?"""
+    return cf.PROP in link.PropertiesList and link.LinkCopyOnChange != "Disabled"
+
+
+def followers(body):
+    """Componentes (en los documentos abiertos) que muestran la pieza tal como está, sin configuración propia."""
+    out = []
+    for doc in FreeCAD.listDocuments().values():
+        for obj in doc.Objects:
+            try:
+                if is_component(obj) and not pinned(obj) and source(obj) is body:
+                    out.append(obj)
+            except Exception:
+                pass
+    return out
+
+
+def pin_followers(doc, name):
+    """
+    Como SW, cada componente tiene su configuración: cambiar la configuración activa en la
+    ventana de la pieza no cambia los componentes. Los que todavía mostraban la pieza tal cual
+    se quedan en la configuración de antes (visto con el mouse, 01/11: cambiaban todos).
+    """
+    body = cf.owner(doc)
+    if body is None or getattr(body, "TypeId", "") == cf.ASSEMBLY:
+        return []
+    old = getattr(body, cf.PROP, None)
+    if not old or old == name:
+        return []
+    done = []
+    for link in followers(body):
+        set_config(link, old, "all")
+        done.append(link)
+    return done
 
 
 def _sup_col(doc, link):
@@ -334,6 +410,7 @@ def _hook_activate():
         _state["busy"] = True
         try:
             _original(doc, name)
+            settle_doc(doc)
             if any([repair_copy(link) for link in links]):
                 doc.recompute()
             if any([refresh_joints(link, taken) for link in links]):
@@ -466,6 +543,20 @@ class _Bar(QtWidgets.QFrame):
         self.link_name = None
         self.doc_name = None
         self.combo.activated.connect(self._picked)
+        # como SW: la barra se va sola cuando el mouse se aleja (y la lista no está abierta)
+        self._fade = QtCore.QTimer(self)
+        self._fade.setInterval(150)
+        self._fade.timeout.connect(self._check_mouse)
+
+    def _check_mouse(self):
+        if not self.isVisible():
+            self._fade.stop()
+            return
+        if self.combo.view().isVisible():
+            return
+        if not self.geometry().adjusted(-FADE_PX, -FADE_PX, FADE_PX, FADE_PX).contains(QtGui.QCursor.pos()):
+            self.hide()
+            self._fade.stop()
 
     def show_for(self, link):
         names = part_configs(link)
@@ -484,6 +575,7 @@ class _Bar(QtWidgets.QFrame):
         pos = QtGui.QCursor.pos() + QtCore.QPoint(18, -self.height() - 14)
         self.move(pos)
         self.show()
+        self._fade.start()
 
     def _picked(self, i):
         try:
@@ -530,6 +622,16 @@ class _SelectionObserver:
 class _DocObserver:
     """Cuando un componente pasa a otra copia de la pieza, volver a poner sus relaciones."""
 
+    def slotRecomputedDocument(self, doc):
+        if _state["busy"] or _state.get("settling"):
+            return
+        try:
+            names = assemblies_using(doc)
+        except Exception:
+            return
+        if names:
+            QtCore.QTimer.singleShot(0, lambda: _settle_later(names))
+
     def slotChangedObject(self, obj, prop):
         if prop != "LinkedObject" or _state["busy"]:
             return
@@ -542,6 +644,49 @@ class _DocObserver:
         QtCore.QTimer.singleShot(0, lambda: _refresh_later(doc_name, name))
 
 
+def assemblies_using(doc):
+    """Documentos abiertos con componentes configurados (copias) de piezas de doc."""
+    out = []
+    for other in FreeCAD.listDocuments().values():
+        if other is doc:
+            continue
+        for obj in other.Objects:
+            try:
+                src = source(obj) if is_component(obj) and pinned(obj) else None
+            except Exception:
+                src = None
+            if src is not None and src.Document is doc:
+                out.append(other.Name)
+                break
+    return out
+
+
+def settle_assembly(doc):
+    """Después de un cambio en una pieza: recalcular hasta que la copia quede al día y reubicar relaciones."""
+    links = [o for o in doc.Objects if is_component(o) and pinned(o)]
+    taken = capture(links)
+    if not settle_doc(doc):
+        return False
+    for link in links:
+        if repair_copy(link):
+            doc.recompute()
+    if any([refresh_joints(link, taken) for link in links]):
+        doc.recompute()
+    return True
+
+
+def _settle_later(names):
+    _state["settling"] = True
+    try:
+        for name in names:
+            try:
+                settle_assembly(FreeCAD.getDocument(name))
+            except Exception:
+                FreeCAD.Console.PrintLog("[SWUI fork] Ensamblaje al día:\n%s\n" % traceback.format_exc())
+    finally:
+        _state["settling"] = False
+
+
 def _refresh_later(doc_name, name):
     try:
         doc = FreeCAD.getDocument(doc_name)
@@ -550,6 +695,13 @@ def _refresh_later(doc_name, name):
         return
     if link is None:
         return
+    try:
+        # componente nuevo de una pieza con configuraciones: nace con la configuración activa (SW)
+        if not pinned(link) and len(part_configs(link)) > 1:
+            set_config(link, current(link), "all")
+            return
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Configuración del componente nuevo:\n%s\n" % traceback.format_exc())
     _state["busy"] = True
     try:
         if repair_copy(link):
@@ -663,6 +815,8 @@ def install():
         except Exception:
             FreeCAD.Console.PrintLog("[SWUI fork] Menú de componentes: no se pudo agregar.\n")
     _hook_activate()
+    if pin_followers not in cf._before:
+        cf._before.append(pin_followers)
     try:
         _hook_mass()
     except Exception:
