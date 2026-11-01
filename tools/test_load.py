@@ -787,6 +787,27 @@ def _check_feature_tree(commands, mw, layout, hooked):
         print("  FEHLER: fork: menús estilo SW (comandos, repetidos, orden, entorno)", missing,
               sorted({n for n in names if names.count(n) > 1}))
         return False
+    # Croquis nuevo que se cierra vacío: se borra como SW, salvo que tenga algo, sea del fork o se use
+    es_ = sys.modules["swui.fork.empty_sketch"]
+
+    class _Sk:
+        TypeId = "Sketcher::SketchObject"
+
+        def __init__(self, geo=(), props=(), users=()):
+            self.Geometry, self.Constraints, self.ExternalGeometry = list(geo), [], []
+            self.PropertiesList, self.InList = list(props), list(users)
+
+    class _User:
+        def __init__(self, body):
+            self.body = body
+
+        def isDerivedFrom(self, t):
+            return self.body and t == "PartDesign::Body"
+
+    if (not es_.should_remove(_Sk(users=[_User(True)])) or es_.should_remove(_Sk(geo=[1]))
+            or es_.should_remove(_Sk(props=["SWUI_UnfoldCut"])) or es_.should_remove(_Sk(users=[_User(False)]))):
+        print("  FEHLER: fork: croquis vacío (cuándo se borra)")
+        return False
     # Cotas con doble clic (instant_dims): formato y lectura de valores como SW en castellano
     idm = sys.modules["swui.fork.instant_dims"]
     if (idm.fmt(100.0) != "100" or idm.fmt(12.5) != "12,5" or idm.fmt(0.1234) != "0,123"

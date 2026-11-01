@@ -90,6 +90,11 @@ Manager no puede instalar FreeWorks); preguntar al usuario antes, es hacia afuer
   `SwPanel.reject` muestra la punta después de deshacer. Sigue el aviso en inglés "Fillet not
   possible on selected shapes" en ese caso (de FreeCAD). Por error se abrió en SW el ensamblaje
   "Revisión mesa H3015" (Abrir reciente): se cerró con "No guardar", sin cambios.
+  **01/11 16:20, croquis vacío como SW (pedido del usuario): HECHO** (`swui/fork/empty_sketch.py`):
+  un croquis creado en la sesión que se cierra sin geometría, relaciones ni referencias externas,
+  sin propiedades SWUI_ y sin que lo use nada fuera de su Cuerpo, se borra (transacción "Croquis
+  vacío"). Probado con el mouse en FreeCAD: Insertar > Croquis + Salir del croquis -> no queda;
+  con un punto -> queda; cerrado con dos Esc -> no queda.
 Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o comentó el usuario.
 
 ## Fase actual

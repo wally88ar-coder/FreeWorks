@@ -245,6 +245,12 @@ def install(workbench=None):
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] Usar siempre LikeSolidWorks UI:\n%s\n" % traceback.format_exc())
     try:
+        from swui.fork import empty_sketch
+
+        empty_sketch.install()
+    except Exception:
+        FreeCAD.Console.PrintError("[SWUI fork] Croquis vacío:\n%s\n" % traceback.format_exc())
+    try:
         # al final: reparte en menús estilo SW lo que todos agregaron al menú del banco
         from swui.fork import menus_sw
 

@@ -70,6 +70,9 @@ Neueste Version oben. / Newest version first.
   una cara elegida abren la operación que creó la cara, como SW (antes, la última del sólido).
 - Archivo > Crear ensamblaje desde pieza mete la pieza en el ensamblaje nuevo, fija en el origen.
 - "Close this dialog?" y el aviso de Volver a cargar, en castellano.
+- Un croquis nuevo que se cierra sin dibujar nada se borra, como SW (`swui/fork/empty_sketch.py`;
+  un paso de deshacer lo devuelve). Los que ya tenían algo, los del fork y los que usa una
+  operación no se tocan. Dentro del croquis, Insertar > Croquis dice "Salir del croquis", como SW.
 - **Configuraciones como SW** (01/11, etapa 1 de 5: piezas): pestaña **Configuraciones** junto a
   Modelo y Tareas (como el ConfigurationManager): lista con la activa en negrita, doble clic =
   mostrar; clic derecho: Agregar configuración, Cambiar nombre (F2), Eliminar, Editar tabla de
