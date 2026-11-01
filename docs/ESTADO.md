@@ -1,7 +1,7 @@
 # Estado del fork
 
-Última actualización: 2026-11-01 01:00 (análisis de configuraciones estilo SW terminado, documento
-compartido abajo; antes: Girar cara y Mover cara que pierde su cara, hechos y subidos).
+Última actualización: 2026-11-01 01:35 (configuraciones estilo SW: plan completo implementado,
+etapas 1 a 5, probado con guiones; falta la prueba con mouse).
 **Próximo paso posible:** publicar la primera versión en la rama "release" (sin ella el Addon
 Manager no puede instalar FreeWorks); preguntar al usuario antes, es hacia afuera.
 
@@ -18,25 +18,42 @@ Manager no puede instalar FreeWorks); preguntar al usuario antes, es hacia afuer
 - Configuraciones (análisis, 2026-11-01): "Configuraciones estilo SW 2018 en FreeWorks: análisis
   y plan" (https://claude.ai/artifact/26ZuPXVSKWXDnC6tFA3rxz). Se puede, sobre la tabla de
   configuración nativa de la planilla + Suppressed + Link "Copy on change"; plan en etapas 1 a 5,
-  decisiones pendientes del usuario en cada una.
+  IMPLEMENTADO completo el 01/11 01:35 (ver Fase actual).
 Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o comentó el usuario.
 
 ## Fase actual
-**01/11 (01:00), análisis de configuraciones estilo SW — TERMINADO, sin código del addon** (pedido
-del usuario). Lo que usa en SW (respondido el 01/11): piezas (cotas, suprimir operaciones, tabla de
-diseño en Excel), chapa con DXF de cada configuración, ensamblajes (componente en otra
-configuración, suprimir componentes); nada en planos. Conclusión: se puede con lo nativo de 1.1.4
-(tabla de configuración de Spreadsheet, `Suppressed` por expresión, App::Link con
-LinkCopyOnChange); piezas y chapa muy parecidas a SW; ensamblajes parecidos, con dos defectos de
-FreeCAD a tapar (uniones rotas al reabrir cuando el componente cambia de copia, error 3 de
-NOTAS_TECNICAS; copias que no siguen a la pieza salvo "Tracking"). Decidido por el usuario
-(01/11): sin Excel; la tabla de diseño es la planilla propia de FreeCAD (etapa 3 achicada, va
-con la etapa 1) y se abre desde la pestaña Configuraciones. Ensamblajes (etapa 4): la
-configuración del componente se elige como en SW, en la barra que aparece al hacer clic en el
-componente (árbol o zona gráfica). El usuario aprobó el plan: **etapa 1 EN CURSO** (01/11). Probado en FreeCADCmd (hallazgos en NOTAS_TECNICAS, "Configuraciones").
-En SW se miró el ConfigurationManager y el panel de Tabla de diseño (pieza cerrada sin guardar).
-Esperando que el usuario lea el documento y decida si se hace y las decisiones de la etapa 1.
-Si se hace: cambiar en CLAUDE.md el límite "no hay configuraciones equivalentes a SW".
+**CONFIGURACIONES ESTILO SW: PLAN COMPLETO IMPLEMENTADO — terminado el 01/11/2026 a las 01:35**
+(el usuario pidió de noche "implementá la planificación total, anotá la hora cuando termines").
+Commits locales (sin subir a GitHub): b701dc8 etapa 1, 0ae261d etapa 2, 0d0b348 etapas 4 y 5,
+759c99a suprimir por tabla + masa. Detalle técnico: NOTAS_TECNICAS, "Configuraciones
+(implementación)"; errores 3 y 4 de FreeCAD encontrados en el camino.
+- Etapa 1 (piezas) + 3 (tabla, sin Excel): pestaña **Configuraciones** junto a Modelo y Tareas;
+  doble clic = mostrar; clic derecho Agregar / Cambiar nombre (F2) / Eliminar / Editar tabla de
+  diseño; Modificar de las cotas con "Esta configuración / Todas" (por omisión Esta, como SW);
+  Suprimir del árbol solo en la activa; las cotas de la tabla no salen como ecuaciones.
+- Etapa 2 (chapa): Espesor y Profundidad de la Brida base como cotas con doble clic; el desarrollo
+  reelige su cara fija al cambiar; Exportar DXF pregunta Esta / Todas; nombre Pieza-Config_esp.dxf.
+- Etapas 4 y 5 (ensamblajes): barrita "Configuración: [lista]" al lado del cursor al elegir un
+  componente (árbol o zona gráfica) + clic derecho "Configuración del componente..."; relaciones
+  reubicadas por geometría en cada cambio (no se rompen al reabrir); Suprimir / Desactivar
+  supresión de componentes por la tabla del ensamblaje (por configuración); Propiedades físicas
+  sin suprimidos; DXF por lotes uno por pieza y configuración usada.
+- Probado por Claude con guiones (FreeCADCmd y FreeCAD real con gui_probe), NO con el mouse
+  (regla [[implementar-sin-mouse]]): falta la prueba con mouse comparada con SW (preguntar quién).
+- **Preguntas para el usuario** (decidido por Claude mientras dormía; cambiar si no le gusta):
+  1. Componentes en "Tracking" (siguen los cambios de la pieza, como SW) en vez de "Enabled"
+     (copia congelada). Costo: cada cambio de la pieza recopia y el fork reubica las relaciones.
+  2. Suprimir componente = ocultar + suprimir sus relaciones; en 1.1.4 sigue cargado en memoria.
+     En el árbol se ve con el ojo apagado (no gris como SW). ¿Alcanza?
+  3. Suprimir un componente arma la tabla del ensamblaje aunque tenga una sola configuración
+     ("Predeterminado"), para distinguir suprimido de oculto.
+  4. La tabla tiene una fila gris "Activa: ..." (la arma FreeCAD); no se puede sacar.
+  5. Nombre del DXF por configuración: "Soporte-3mm_3mm.dxf" (pieza-configuración_espesor).
+  6. Propiedades de chapa / paneles: un valor configurado se cambia solo en la configuración
+     activa (en SW el PropertyManager hace lo mismo con las cotas configuradas).
+- Falta: prueba con mouse; Mover cara con configuraciones de cotas muy distintas; taladro/corte de
+  ensamblaje que saltee componentes suprimidos; pieza multicuerpo con configuraciones (la lista vive
+  en un solo Cuerpo).
 
 Pendientes del usuario (31/10, en este orden): 1) Girar cara que a veces no gira — HECHO;
 2) Mover cara que pierde su cara: que la vuelva a encontrar sola guardando cómo era (como

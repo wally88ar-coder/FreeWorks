@@ -105,7 +105,9 @@ tomadas; quedan solo las que necesitan algo del usuario (un STEP suyo, una pieza
 DXF en CypCut, Brida base de punta a punta) y el Dobladillo abierto (Claude). Repositorio en
 GitHub: wally88ar-coder/FreeWorks (todo subido). Fase 6 (chequeo de compatibilidad) acordada,
 sin empezar.
-Hecho además fuera de las fases: árbol de operaciones estilo SW (barra de retroceso, suprimir,
+Hecho además fuera de las fases: configuraciones estilo SW en piezas, chapa (DXF de todas) y
+ensamblajes (2026-11-01, `swui/fork/config*.py`; análisis y plan en el documento enlazado en
+`docs/ESTADO.md`); árbol de operaciones estilo SW (barra de retroceso, suprimir,
 mover, cotas con doble clic, reparar referencias...), aristas del modelo dentro del croquis,
 multicuerpo (Fusionar resultado, Alcance, Combinar, simetría de sólidos) y Mover/Copiar /
 Eliminar/Conservar sólidos. Próximo: lo que elija el usuario después de probar. Ver `docs/ESTADO.md`.
@@ -151,5 +153,7 @@ castellano, coma decimal; ver "Falta" en `docs/ESTADO.md`.
 ## Límites conocidos (comunicar, no prometer)
 Motor OpenCASCADE menos robusto que Parasolid en redondeos complejos; rendimiento con ensamblajes
 grandes; los .SLDPRT/.SLDASM solo se pueden traer como sólidos sin historial (STEP o el addon de
-importación de SolidWorks); TechDraw requiere más clics para acotar; no hay configuraciones
-equivalentes a SW; archivos de 1.1 pueden no abrir en versiones anteriores.
+importación de SolidWorks); TechDraw requiere más clics para acotar; archivos de 1.1 pueden no
+abrir en versiones anteriores. Configuraciones (hechas 2026-11-01, sobre la tabla de configuración
+nativa de la planilla): sin Excel; cada componente en otra configuración guarda una copia de la
+pieza dentro del ensamblaje; suprimir un componente lo oculta (sigue cargado en memoria).

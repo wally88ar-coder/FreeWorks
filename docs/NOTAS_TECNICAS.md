@@ -371,8 +371,23 @@ Cada uno con lo que hace el fork mientras tanto. Buscado en los issues de FreeCA
    - Lo que NO arregla: volver a asignar la misma referencia, ni `touch()` + recalcular.
      Lo que SÍ: `j.Reference1 = None` y después `j.Reference1 = [obj, ["Face5", "Face5"]]`, antes
      de guardar (probado en los dos casos, Enabled y Tracking).
-   - Fork (si se hacen configuraciones): limpiar y volver a poner las referencias de las uniones
-     del componente en cada cambio de configuración o recopia.
+   - Fork (`config_asm.refresh_joints`): en cada cambio de configuración del componente o
+     recopia, vuelve a ubicar cada cara por geometría (`mate_refs._fix_ref`: entre configuraciones
+     las caras se renumeran, el nombre simple solo no alcanza: la placa quedaba a z=7 en vez de 10)
+     y vacía y vuelve a poner la referencia.
+4. **En la copia de un componente (LinkCopyOnChange), un croquis apoyado en una cara de una
+   operación que estaba suprimida al copiarse no la vuelve a encontrar** (FreeCAD 1.1.4,
+   2026-11-01). La copia se hace con la pieza en una configuración donde la operación (Pad001)
+   está suprimida; al pasar el componente a otra donde no lo está, el apoyo del croquis queda
+   "?Face8" ("No planar face in AttachEngine3D") y frena el recálculo de TODA la copia: el
+   componente muestra la forma de la configuración vieja. Con interfaz, además, FreeCAD quedó
+   recalculando en bucle (repetía el aviso) hasta que lo cortó el timeout. En la pieza misma no
+   pasa (mismo archivo, cambiar de configuración ahí anda bien).
+   - Prueba (FreeCADCmd): pieza con configuraciones donde un saliente con un croquis encima se
+     suprime en la activa (Nuc.FCStd de las pruebas); ensamblaje con un Link "Tracking";
+     `l.Configuracion = "Larga"` -> volumen viejo y "Croquis002" inválido.
+   - Arreglo: `obj.AttachmentSupport = None` y volver a ponerlo con el nombre simple ("Face8");
+     queda bien para siempre en esa copia. Fork: `config_asm.repair_copy`.
 
 ## Chapa (fase 1): hallazgos con SheetMetal 0.8.26 en FreeCAD 1.1.4
 - SheetMetal se importa por módulos (`SheetMetalBaseCmd`, `SheetMetalCmd`, `SheetMetalUnfoldCmd`):
@@ -589,3 +604,37 @@ scratchpad de la sesión del 01/11; se rehacen fácil con lo de abajo).
   #14578 (no recalcula), #19182 (variantes y redondeos).
 - `freecadcmd` imprime lo de `print` recién al final y mezclado con el registro: volcar a JSON
   después de cada paso.
+
+## Configuraciones (implementación, etapas 1 a 5, 2026-11-01)
+- Módulos: `configurations.py` (núcleo sin interfaz: tabla, lista, Esta/Todas, suprimir con
+  apoyo de croquis por expresión), `config_tab.py` (pestaña, Modificar, Suprimir del árbol,
+  Ecuaciones), `config_sheet.py` (chapa y DXF), `config_asm.py` (componentes y ensamblaje). Se
+  instalan juntos al final de `swui/fork/__init__.py` y ENVUELVEN funciones de otros módulos del
+  fork: `panel_sw.dock_left`, `instant_dims._expressions/apply_value/_modify/feature_dims`,
+  `feature_tree.suppress/unsuppress`, `equations.Model.expressions`, `dress_up_panel.SwPanel._set`,
+  `sheet_panels.export_dxf` (+ `_Command.Activated`, que guardaba la función vieja),
+  `sheet_metal.part_name`, `mass_props.components`, y su propio `configurations.activate`
+  (dos veces: chapa y ensamblaje).
+- Tabla: fila 1 títulos, fila 2 "Activa: <nombre>" + valores enlazados (gris, cursiva), filas 3..
+  configuraciones. `A2 = <<Activa: >> + hiddenref(Body.Configuracion.String)` (concatenar textos
+  anda). El diálogo nativo "Configuration Table…" no la reconoce por eso (no hace falta).
+- Dueño de la lista: el Cuerpo en una pieza; en un ensamblaje SIEMPRE el objeto Ensamblaje (los
+  Cuerpos de ahí son copias de componentes, `CopyOnChangeGroup*`; una se colaba como dueña).
+- Cotas sin nombre: se les pone "Dn" (como SW) y se atan por nombre (`Constraints.D1`), no por
+  índice (el índice cambia al borrar restricciones).
+- Suprimir en esta configuración: una columna "Sup_<Name>" por operación (ella y sus dependientes,
+  como `feature_tree.suppress`); los croquis/planos apoyados en una suprimida llevan
+  `MapMode = T.Sup_A + T.Sup_B > 0 ? <<Deactivated>> : <<FlatFace>>`.
+- Componentes: `LinkCopyOnChange = "Tracking"` al elegir la configuración por primera vez.
+  Suprimir componente: siempre por la tabla del ensamblaje (la arma con "Predeterminado" si no
+  estaba), `Visibility = T.Sup_X == 0` y las uniones `Suppressed = T.Sup_X (+ T.Sup_Y) > 0`. Así
+  "suprimido" (alias) se distingue de "oculto con el ojo".
+- Pruebas: núcleo en FreeCADCmd (pieza 3 configuraciones, ida y vuelta, borrar, renombrar,
+  reabrir: volúmenes exactos); con interfaz (gui_probe): pestaña, Modificar con Esta/Todas,
+  Suprimir del árbol, tabla, chapa 2/3 mm con desarrollo y DXF de todas, barrita del componente
+  en árbol y vista, Larga sin errores, ensamblaje "Sin_pieza_2", reabrir, DXF por lotes con dos
+  configuraciones, Propiedades físicas sin el suprimido.
+- Falta probar: Mover cara con configuraciones de cotas muy distintas (su reencuentro por
+  parecido puede elegir mal); taladro/corte de ensamblaje sobre componentes suprimidos
+  (`assembly_features._components` no los saltea); pieza multicuerpo (la lista vive en un solo
+  Cuerpo: un componente vinculado a otro Cuerpo de la misma pieza no ve las configuraciones).
