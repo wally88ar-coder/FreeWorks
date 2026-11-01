@@ -63,6 +63,9 @@ Neueste Version oben. / Newest version first.
   equivalente en SW, en FreeWorks > FreeCAD (Gráfico de dependencias, Paneles, Apariencia,
   Engranaje...). Salida de emergencia: FreeWorks > FreeCAD > "Mostrar los menús originales de
   FreeCAD" (al reiniciar). El menú "FreeWorks" de antes se repartió en su lugar de SW.
+- Con el panel "seleccionar un plano" abierto (Croquis / Extruir sin selección), otra operación
+  desde la cinta o el menú (p. ej. Redondeo) lo cancela y arranca, como SW. Antes salía la
+  pregunta de FreeCAD y quedaba un Redondeo vacío con error y la pieza oculta.
 - **Configuraciones como SW** (01/11, etapa 1 de 5: piezas): pestaña **Configuraciones** junto a
   Modelo y Tareas (como el ConfigurationManager): lista con la activa en negrita, doble clic =
   mostrar; clic derecho: Agregar configuración, Cambiar nombre (F2), Eliminar, Editar tabla de

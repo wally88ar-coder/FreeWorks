@@ -669,7 +669,7 @@ def plan(structure=None):
 # --- Armar la barra ------------------------------------------------------------------
 
 _state = {"applied": False, "labels": {}, "texts": [], "keys": [], "hidden": [], "filter": None,
-          "pending": False, "hidden_actions": [], "watched": set(), "wrappers": {}}
+          "pending": False, "hidden_actions": [], "watched": set(), "wrappers": {}, "submenus": set()}
 
 
 def _register_partdesign_extras():
@@ -727,6 +727,7 @@ def apply(wb):
             if items:
                 wb.appendMenu(path if len(path) > 1 else path[0], items)
         _state["labels"] = dict(NATIVE_TEXTS, **labels)
+        _state["submenus"] = {name for p, _items in calls for name in p[1:]}
         _state["applied"] = True
         _ignore_old_menu(wb)
         return True
@@ -825,6 +826,12 @@ def relabel():
                     menu.aboutToShow.connect(_refresh_states)
     except Exception:
         pass
+    try:
+        for action in FreeCADGui.getMainWindow().menuBar().actions():
+            if action.menu() is not None:
+                _show_separators(action.menu(), 0)
+    except Exception:
+        pass
     for action in _menu_actions():
         name = action.objectName()
         if name in HIDE:
@@ -837,6 +844,19 @@ def relabel():
         if new is None:
             new = SUBMENU_TEXTS.get(action.text().replace("&", ""))
         set_text(action, new)
+
+
+def _show_separators(menu, depth):
+    """FreeCAD deja ocultas algunas líneas de separación (antes de un submenú, visto con el mouse en
+    FreeWorks): se muestran las que quedan entre dos entradas que se ven."""
+    actions = [a for a in menu.actions() if a.isSeparator() or a.isVisible()]
+    for i, action in enumerate(actions):
+        if action.isSeparator():
+            if (not action.isVisible() and 0 < i < len(actions) - 1
+                    and not actions[i - 1].isSeparator() and not actions[i + 1].isSeparator()):
+                action.setVisible(True)
+        elif action.menu() is not None and depth < 5:
+            _show_separators(action.menu(), depth + 1)
 
 
 def _refresh_states():
@@ -852,8 +872,34 @@ def _refresh_states():
             wrapper = wrappers.get(action.objectName())
             if wrapper is not None:
                 action.setEnabled(wrapper.IsActive())
+        for action in FreeCADGui.getMainWindow().menuBar().actions():
+            if action.menu() is not None:
+                _grey_submenus(action.menu(), 0)
     except Exception:
         pass
+
+
+def _grey_submenus(menu, depth):
+    """
+    Como SW: un submenú nuestro con todo lo de adentro en gris queda en gris (en el plano,
+    Insertar > Saliente/Base...). Devuelve si el menú tiene algo activo. Solo se tocan los
+    submenús que arma este módulo (los de FreeCAD, como Abrir reciente, quedan como están).
+    """
+    any_on = False
+    for action in menu.actions():
+        if action.isSeparator() or not action.isVisible():
+            continue
+        sub = action.menu()
+        if sub is not None and depth < 5:
+            on = _grey_submenus(sub, depth + 1)
+            if action.text() in _state["submenus"]:
+                action.setEnabled(on)
+            else:
+                on = action.isEnabled()
+        else:
+            on = action.isEnabled()
+        any_on = any_on or on
+    return any_on
 
 
 def restore_texts():

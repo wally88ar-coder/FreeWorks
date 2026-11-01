@@ -166,9 +166,27 @@ def _drop(observer, panel):
                              % type(panel).__name__)
 
 
+def _pick_plane_panel():
+    """
+    El panel "seleccionar un plano" del original (Croquis / Extruir sin selección), si está
+    abierto. No se anota con `track`: con él abierto, Redondeo desde la cinta o el menú daba la
+    pregunta de FreeCAD y, con "No", dejaba un Redondeo vacío con error y la pieza oculta (visto
+    con el mouse, 01/11).
+    """
+    try:
+        from swui import pick_plane
+
+        panel = getattr(pick_plane, "_panel", None)
+        if panel is not None and not getattr(panel, "done", True) and FreeCADGui.Control.activeDialog():
+            return panel
+    except Exception:
+        pass
+    return None
+
+
 def cancel_open():
     """Cancela el panel del fork abierto (su Cancelar, con su limpieza). True si había uno."""
-    panel = open_panel()
+    panel = open_panel() or _pick_plane_panel()
     if panel is None:
         return False
     try:

@@ -44,7 +44,26 @@ Manager no puede instalar FreeWorks); preguntar al usuario antes, es hacia afuer
   maqueta: FreeWorks queda ANTES de Ventana (FreeCAD ubica los menús nuevos antes de "&Windows";
   así lo hace también el SW real con sus complementos, p. ej. "Simulation"); Ventana y "?" son los
   de FreeCAD con título de SW, sin lo descartado (Siguiente/Anterior quedan; "Reiniciar en modo
-  seguro" queda en "?" y no en FreeWorks > FreeCAD). Falta: que el usuario lo pruebe con el mouse.
+  seguro" queda en "?" y no en FreeWorks > FreeCAD).
+  **01/11 tarde, probado por Claude con el mouse** (FreeCAD de prueba aparte; pedido del usuario
+  "probá todo vos"): Archivo, Edición (gris según selección, Definición, Deshacer), Ver (Frontal,
+  Estructura alámbrica, tecla 0), Insertar > Croquis sobre una cara y de nuevo para cerrarlo,
+  entidades y cotas en el croquis, Extruir sin selección (pide el plano), Evaluar (Propiedades
+  físicas, Ecuaciones), FreeWorks > FreeCAD, Ventana, "?", Ctrl+W, F11, plano (bloque Plano
+  activo, entidades de hoja y cotas de plano, Propiedades de hoja), ensamblaje (Componente >
+  Pieza existente, Relación de posición), otro banco y vuelta, y la salida de emergencia ida y
+  vuelta (con reinicio). Arreglado en el momento: (1) con el panel "seleccionar un plano" abierto,
+  Redondeo desde menú o cinta dejaba un Redondeo vacío con error y la pieza oculta (ya existía):
+  `panel_guard` ahora también cancela ese panel; (2) títulos de submenú en gris si todo lo de
+  adentro está en gris (como SW); (3) líneas separadoras que FreeCAD dejaba ocultas.
+  Hallazgos para el usuario (no arreglados): Gráfico de dependencias da "Graphviz falló": el
+  Graphviz que trae FreeCAD tiene los complementos sin registrar (`dot -c` en D:\Freecad\bin lo
+  arregla; toca la instalación, preguntar); Edición > Definición con una cara elegida abre la
+  última operación (el corte) y no la que creó la cara (SW abre la que la creó; es de
+  SWUI_EditFeature, ya existía); Archivo > Crear ensamblaje desde pieza crea el ensamblaje vacío
+  (SW ya inserta la pieza; es SWUI_NewAssembly); avisos de FreeCAD en inglés ("Close this
+  dialog?", "This will discard all the changes" de Volver a cargar). Sin comparar en SW esta vez:
+  SW 2018 dejó de responder (ventana negra) al empezar; los menús de SW ya estaban relevados.
 Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o comentó el usuario.
 
 ## Fase actual
