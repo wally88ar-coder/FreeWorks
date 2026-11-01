@@ -18,6 +18,33 @@ Manager no puede instalar FreeWorks); preguntar al usuario antes, es hacia afuer
 Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o comentó el usuario.
 
 ## Fase actual
+Pendientes del usuario (31/10, en este orden): 1) Girar cara que a veces no gira — HECHO;
+2) Mover cara que pierde su cara: que la vuelva a encontrar sola guardando cómo era (como
+`SWUI_MateGeom` en `mate_refs.py`) — sin empezar; 3) límites sin arreglo previsto (Equidistanciar
+solo cilindros enteros; Equidistante necesita superficie plana o plano; Hasta el sólido se queda
+con la cara que encontró al aceptar); 4) pruebas del usuario (Brida base de punta a punta,
+pruebas "Vos" del checklist, DXF en CypCut, Convertir en chapa y Mover cara con un STEP suyo).
+- **31/10 noche (23:40), Girar cara arreglado** (pedido del usuario: investigar en el código de
+  FreeCAD). Causa: error de FreeCAD en el Ángulo de salida (PartDesign::Draft): en el primer
+  cálculo pasa la bisagra a las coordenadas de su propia ubicación vieja, antes de copiar la de la
+  operación anterior (`FeatureDraft.cpp`). Si la anterior tiene ubicación propia (primitivas de
+  PartDesign como la caja y el cilindro de las piezas de prueba, un sólido base movido) la bisagra
+  queda corrida: gira mal SIN aviso (cara con agujero a 10°: z 23,2 en vez de 18,8) o falla. Las
+  operaciones con croquis de 1.1.4 quedan en el origen y no lo disparan. Detalle y prueba para
+  reportarlo en NOTAS_TECNICAS.md, "Errores de FreeCAD encontrados" (lo reporta el usuario si
+  quiere). Arreglo (`move_face.py`): `place_draft` le copia la ubicación antes de calcular y la
+  anota en "plc" de la marca; si después cambia la de la anterior, `draft_misplaced` lo marca
+  "desactualizado: Ctrl+Q" (también una vez los Mover cara de antes, sin "plc", si la anterior no
+  está en el origen); mensaje claro si de verdad no entra ("Con ese ángulo la cara atraviesa la
+  pieza..."); `face_rotated` avisa si FreeCAD lo dejó sin girar (con Invertir descarta la cara en
+  silencio, segundo error anotado). Se descartó la "losa" (Extruir + Cortar hasta un plano
+  inclinado, exacta pero no alarga vecinas inclinadas). Probado: sin interfaz (FreeCADCmd: 3
+  posiciones del agujero, 2 sentidos, 5/10/20°), con guion en FreeCAD real (10° arriba 20 480,6,
+  10° abajo 7 948,6, 5°, 30°, 20° abajo avisa; eje fuera de la cara con agujero: normal y altura
+  exactas; mover el agujero -> aviso -> Ctrl+Q -> 7 740,8 exacto; uno "de antes" pide Ctrl+Q una
+  vez) y con el mouse (placa con agujero: bisagra en la arista, Invertir 10° -> 7 948,557 mm³ en
+  Propiedades físicas; 20° avisa en rojo). Sin comparar con SW (qué hace SW cuando la cara
+  atravesaría la pieza: pendiente si el usuario quiere).
 - **31/10 noche (22:50), probados con el mouse** (ventana de prueba aparte): (a) el desarrollo
   de chapa apunta al Cuerpo en vez de a la punta: chapa con Brida base + Brida de arista,
   Aplanar / plegar / Aplanar / Ctrl+R sin el aviso en inglés "Link(s) ... go out of the allowed
@@ -101,6 +128,7 @@ Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o come
     panel. Auxiliares (plano, línea, croquis, SubShapeBinder) ocultos y fuera del árbol, en "aux"
     de la marca. Límite visto: el Ángulo de salida de FreeCAD falla en un sentido con 10° y anda
     con 5° (también con la bisagra en una arista de la cara, o sea ya pasaba): el panel lo avisa.
+    (RESUELTO 31/10 23:40: era un error de FreeCAD con la ubicación; ver Fase actual.)
     Los auxiliares del giro con eje fuera y el anillo del agujero quedan fijos; decisión del
     usuario (31/10): **aviso + Ctrl+Q**. Si la pieza cambia, sale el cartelito "Mover cara1 quedó
     desactualizado porque cambió la pieza: apretá Ctrl+Q para actualizarlo" (también al abrir el

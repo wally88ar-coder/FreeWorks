@@ -86,6 +86,11 @@ Neueste Version oben. / Newest version first.
     'Bend' go out of the allowed scope 'Unfold'" (el desarrollo apunta al Cuerpo). Mover cara
     "Hasta el vértice": un clic en una arista toma su punta más cercana al clic, y cambiar de
     vértice ya no muestra el aviso en inglés "subshape not found Enlace.?Vertex1".
+  - Mover cara > Girar: ya no gira mal ni falla según el sentido. Era un error de FreeCAD en el
+    Ángulo de salida (en el primer cálculo usa una ubicación vieja y corre la bisagra); el fork
+    le da la ubicación correcta antes de calcular y avisa "desactualizado: Ctrl+Q" si después
+    cambia. Si la cara de verdad atravesaría la pieza, lo dice; si FreeCAD la deja sin girar,
+    también.
   - Campos numéricos como SW: un clic marca todo el valor y lo escrito lo reemplaza
     (`swui/fork/spin_select.py`). Ecuaciones no lista el largo de un corte "Por todo".
   - Ecuaciones: las cotas a la vista se actualizan después de cada ecuación y al Cancelar; no

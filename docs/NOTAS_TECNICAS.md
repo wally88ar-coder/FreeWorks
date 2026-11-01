@@ -299,9 +299,10 @@
   "Face1"/"Vertex1").
 - `PartDesign::Draft`: `PullDirection` acepta una arista o una `PartDesign::Line` ("No pull
   direction reference specified" con un plano); `NeutralPlane` acepta un `PartDesign::Plane`.
-  La cara gira hacia el sentido del tiro (sin Invertir). Falla sin mensaje según el sentido y el
-  ángulo aun con la bisagra en una arista de la cara (caja 50x30x10 con agujero: 10° hacia un lado
-  falla, 5° anda): es del Draft, no del fork.
+  La cara gira hacia el sentido del tiro (sin Invertir). Lo que fallaba "según el sentido y el
+  ángulo" (caja 50x30x10 con agujero: 10° hacia un lado falla, 5° anda) era un error de FreeCAD
+  con la ubicación de la operación anterior (ver "Errores de FreeCAD encontrados", 1): arreglado
+  en el fork el 2026-10-31 (`move_face.place_draft` / `draft_misplaced`).
 - Sketch con MapMode "SectionOfRevolution", "Concentric" u "ObjectXZ" sobre una cara cilíndrica:
   inválido. El croquis del anillo va con Placement fijo (MapMode "Deactivated").
 - Las expresiones leen la forma: `Cyl.Shape.Faces[0].Surface.Radius` = 4 (no se usó: depende del
@@ -311,6 +312,41 @@
   `slotCreatedDocument` + QTimer.
 - Un primitivo de PartDesign (AdditiveBox, SubtractiveCylinder) suelto (sin apoyo) ignora
   `AttachmentOffset`: ubicarlo con `Placement` (en las pruebas).
+
+## Errores de FreeCAD encontrados (para reportar)
+Los reporta el usuario si quiere (política de IA de FreeCAD: Claude no publica issues ni PR allá).
+Cada uno con lo que hace el fork mientras tanto. Buscado en los issues de FreeCAD/FreeCAD el
+2026-10-31: no estaban reportados.
+
+1. **PartDesign Draft (Ángulo de salida) gira alrededor de una bisagra corrida en el primer
+   cálculo** (FreeCAD 1.1.4; sigue igual en `main`, semanal 2026-10-28). En
+   `src/Mod/PartDesign/App/FeatureDraft.cpp`, `Draft::execute()` pasa el tiro y el plano neutro a
+   coordenadas locales con `this->getLocation().Inverted()` (líneas ~174 y ~300) ANTES de
+   `this->positionByBaseFeature()` (~315), que recién ahí copia el Placement de la operación
+   anterior. La forma base se usa sin transformar (`baseShape.setTransform(Matrix4D())`), o sea en
+   las coordenadas de la operación anterior: si el Placement del Draft todavía no es el de ella,
+   plano y tiro quedan corridos esa diferencia.
+   - Cuándo pasa: la operación anterior tiene Placement propio. En 1.1.4 las operaciones con
+     croquis (Pad, Pocket, Hole, Fillet, Mirrored...) quedan en el origen y no lo disparan; sí las
+     primitivas de PartDesign (AdditiveBox, SubtractiveCylinder...) ubicadas fuera del origen, y
+     un sólido base movido. Al crear el Draft (Placement identidad) o cuando cambia el Placement
+     de la anterior.
+   - Prueba (FreeCADCmd): Body; AdditiveBox 50x30x10; SubtractiveCylinder R5 H10 en (25,15,0);
+     Draft de la cara de arriba, NeutralPlane = cara x=50, PullDirection = arista de 50 de largo
+     de arriba, 10°. Da volumen 26 746,7 y ZMax 23,225 (bisagra en x=75); lo correcto es
+     20 480,6 y 18,816. Con Reversed y 10° falla sin mensaje ("Draft: "). Un segundo recálculo
+     (`d.touch(); doc.recompute()`) o poner antes `d.Placement = anterior.Placement` da exacto.
+   - Arreglo propuesto: llamar a `positionByBaseFeature()` antes de transformar plano y tiro.
+   - Fork: `move_face.place_draft` copia el Placement antes de calcular y anota el usado en
+     "plc"; `draft_misplaced` marca "desactualizado: Ctrl+Q" si la anterior cambió de ubicación.
+2. **Draft con Reversed descarta en silencio las caras que OpenCASCADE no acepta.**
+   `Draft::execute()` llama `makeElementDraft(..., angle, neutralPlane, reversed)` y en
+   `TopoShape::makeElementDraft` (`src/Mod/Part/App/TopoShapeExpansion.cpp`, ~4718) ese último
+   parámetro es `retry`: si `BRepOffsetAPI_DraftAngle::AddDone()` falla, con retry saca la cara y
+   sigue (solo un FC_ERR en el registro); sin retry no. O sea, el sentido cambia si un error se
+   avisa o se traga, y la operación puede quedar "válida" sin girar nada.
+   - Fork: el panel de Mover cara mira el resultado (`face_rotated`) y avisa "FreeCAD dejó la
+     cara sin girar".
 
 ## Chapa (fase 1): hallazgos con SheetMetal 0.8.26 en FreeCAD 1.1.4
 - SheetMetal se importa por módulos (`SheetMetalBaseCmd`, `SheetMetalCmd`, `SheetMetalUnfoldCmd`):
