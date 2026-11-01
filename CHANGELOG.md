@@ -77,6 +77,10 @@ Neueste Version oben. / Newest version first.
     y **Ctrl+Q** los pone al día (`swui/fork/rebuild_keys.py`), también en cadena con un solo
     Ctrl+Q. Si un Mover cara **pierde su cara** (FreeCAD renumeró las caras) avisa en vez de
     quedar sin hacer nada. El aviso se actualiza también al deshacer y rehacer.
+  - Mover cara "Equidistante de la superficie" queda siempre del lado de la cara (antes podía
+    quedar del otro lado de la superficie). Los croquis del desarrollo de una chapa ya no caen
+    en otro documento abierto. Los auxiliares ocultos tampoco se ven dentro del Cuerpo en el
+    árbol. El menú dice FreeWorks también después de abrir un ensamblaje.
   - Ecuaciones: las cotas a la vista se actualizan después de cada ecuación y al Cancelar; no
     lista el largo sin uso de un Mover cara "Hasta la superficie". El árbol flotante ya no
     muestra los auxiliares ocultos.

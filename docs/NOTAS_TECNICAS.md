@@ -281,6 +281,16 @@
   UpToShape. "UpToFace" acepta una cara de otro objeto y `Offset` (negativo = se queda antes).
   "UpToFace"/"UpToShape" con un vértice: forma inválida. "UpToShape" con un sólido entero (sin
   subelementos o con todas sus caras): no llega ("Unable to reach the selected shape").
+- El `Offset` de "Hasta cara" NO es "antes de la superficie" siempre: con la cara +X de una caja
+  hacia la cara +X de otra que no la tapa (no se superponen al proyectar), -2 quedó 2 mm DESPUÉS
+  (57 en vez de 53); con superficies que la tapan, -2 queda antes. Equidistante usa un plano
+  (FlatFace sobre la superficie + AttachmentOffset en Z, con el signo según el Z del plano).
+- Dentro de un Cuerpo, el árbol de FreeCAD 1.1.4 muestra los objetos con ShowInTree = False
+  (fuera de un Cuerpo los esconde): hay que esconder el renglón (QTreeWidgetItem.setHidden).
+- SheetMetal (SMUnfold.execute) arma los croquis en FreeCAD.ActiveDocument: si se recalcula con
+  otro documento activo, caen ahí.
+- FreeCAD rearma la barra de menús sin emitir workbenchActivated (al abrir un ensamblaje):
+  QEvent ActionAdded/ActionChanged en el menuBar.
 - Plano de referencia por un vértice y paralelo a una cara: MapMode "OXY" (también OZX/OZY) con
   (vértice, arista de la cara, cara). Con solo (vértice, cara) queda inválido; "Translate" no
   sirve para "Hasta cara".

@@ -16,6 +16,29 @@ cerrada; fase 6 acordada).
 Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o comentó el usuario.
 
 ## Fase actual
+- **31/10 noche (22 h), segunda tanda con mouse y teclado** (lo que había quedado solo con
+  guiones): chapa (Brida base con 2 mm y "Brida base1", Brida de arista con 20 mm y "Brida de
+  arista1", Aplanar -> "Chapa desplegada1", DXF que pregunta: Cancelar no toca el archivo,
+  Reemplazar sí; DXF por lotes desde un ensamblaje con dos chapas: Soporte_2mm y Tapa_3mm, las
+  piezas quedan solo con su Body, segunda vez pregunta por los dos: No reemplazar / Cancelar /
+  Reemplazar, bien), Mover cara Hasta el vértice (18 mm, y sigue al vértice: 22), Equidistante
+  (53 mm), Hasta el sólido (38 mm). **Encontrado y arreglado** (repetido con el mouse):
+  - Equidistante quedaba del otro lado (57 en vez de 53) cuando la superficie no tapa la cara:
+    el Offset de FreeCAD cambia de signo según la orientación de la cara. Ahora un plano oculto
+    apoyado en la superficie y corrido la distancia, y "Hasta cara" contra él.
+  - Los croquis del desarrollo de una chapa caían en OTRO documento (el activo) si el
+    desarrollo se recalculaba con otro documento al frente (Croquis1..3 sueltos en una pieza
+    nueva): `sheet_metal.patch_unfold_document` (el desarrollo corre con su documento activo).
+  - Dentro de un Cuerpo FreeCAD muestra los objetos aunque "Show In Tree" esté en No: los
+    auxiliares de Mover cara aparecían en el árbol; `tree_overlay.hide_unlisted` los esconde.
+  - El menú volvía a "LikeSolidWorks UI" al abrir un ensamblaje: `brand` vuelve a ponerle el
+    nombre cada vez que FreeCAD rearma la barra de menús.
+  Visto y no arreglado (anotado): el primer clic en el texto de un botón grande de la cinta
+  (Brida base) a veces no hace nada (sobre el ícono sí); el aviso en inglés de SheetMetal
+  "Link(s) to object(s) 'Bend' go out of the allowed scope 'Unfold'" sale como cartelito al
+  aplanar (es de SheetMetal: el desarrollo vive fuera del Cuerpo); vértices chicos cuesta
+  elegirlos con el mouse (FreeCAD). Para Claude: dibujar en el croquis no se puede probar con
+  este mouse (FreeCAD no recibe el movimiento), y por eso los números van a los atajos 0/1/5.
 - **31/10 noche, prueba con mouse y teclado en FreeCAD real** (pedido del usuario; ventana de
   prueba aparte con copia de la configuración, piezas armadas con guion: placa con agujero de
   croquis "Por todo"). Anduvo: agrandar el agujero Ø10 -> Ø14 con Mover cara (panel, Invertir,
