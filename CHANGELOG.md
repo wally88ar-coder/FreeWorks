@@ -129,6 +129,9 @@ Neueste Version oben. / Newest version first.
   - Sin avisos de "relación corregida" al cambiar de configuración (quedan en el informe).
   - Probado con el mouse contra SW: asistente para taladro de ensamblaje y Propiedades físicas
     con un componente suprimido (los dos lo dejan afuera, igual que SW).
+  - Un componente suprimido se ve con **todo el renglón en gris** en el árbol, como SW.
+  - Con una sola configuración la **tabla de diseño no aparece en el árbol** (suprimir un
+    componente la arma por dentro, SW no muestra ninguna); con dos o más configuraciones aparece.
 - **Decisiones del usuario del 31/10** (checklist):
   - Nombre visible **FreeWorks** (menú y lista de bancos; lo interno no cambia, los
     archivos y la configuración abren igual) (`swui/fork/brand.py`). Paquete (package.xml) y

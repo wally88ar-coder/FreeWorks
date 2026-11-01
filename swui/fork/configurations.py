@@ -257,7 +257,22 @@ def ensure(doc, body=None):
     sheet.set("A%d" % BIND_ROW, "=<<Activa: >> + hiddenref(%s.%s.String)" % (body.Name, PROP))
     _style(sheet, 1)
     sheet.recompute()
+    show_table(doc)
     return sheet
+
+
+def show_table(doc):
+    """
+    Como SW: con una sola configuración la tabla es interna (la arma, por ejemplo, suprimir un
+    componente) y no se ve en el árbol; con dos o más aparece.
+    """
+    sheet = table(doc)
+    view = getattr(sheet, "ViewObject", None) if sheet is not None else None
+    if view is None or not hasattr(view, "ShowInTree"):
+        return
+    want = len(names(doc)) > 1
+    if view.ShowInTree != want:
+        view.ShowInTree = want
 
 
 def _unique_name(doc, wanted):
@@ -315,6 +330,7 @@ def activate(doc, name):
     if getattr(body, PROP) != name:
         setattr(body, PROP, name)
     doc.recompute()
+    show_table(doc)
 
 
 def rename(doc, old, new):

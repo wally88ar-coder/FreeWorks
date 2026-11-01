@@ -44,7 +44,12 @@ Commits locales (sin subir a GitHub): b701dc8 etapa 1, 0ae261d etapa 2, 0d0b348 
   con su configuración (antes cambiaban con la pieza: error 5 de FreeCAD), error "?Face6" de la
   chapa al cambiar, casilla nativa "Suprimido" oculta, configuración activa en el título de la
   lista, barrita que se va sola, copia de componente que quedaba como Cuerpo activo.
-- **Preguntas para el usuario** (decidido por Claude mientras dormía; cambiar si no le gusta):
+- **Preguntas 1 a 6: contestadas por el usuario el 01/11 a las 13:30** (1: como SW, siguen los
+  cambios de la pieza; 2: renglón gris como SW -> hecho, todo el renglón del componente suprimido
+  se atenúa; 3: lo más parecido a SW -> hecho, con una sola configuración la tabla no se ve en el
+  árbol, con dos o más aparece; 4 y 6: informadas, quedan así; 5: queda "Soporte-3mm_3mm.dxf").
+  Probado con el mouse (suprimir, agregar y eliminar configuración, desactivar supresión).
+  Texto original de las preguntas:
   1. Componentes en "Tracking" (siguen los cambios de la pieza, como SW) en vez de "Enabled"
      (copia congelada). Costo: cada cambio de la pieza recopia y el fork reubica las relaciones.
   2. Suprimir componente = ocultar + suprimir sus relaciones; en 1.1.4 sigue cargado en memoria.

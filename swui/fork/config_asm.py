@@ -512,6 +512,7 @@ def suppress(link, on=True, scope="this"):
     for row in rows:
         sheet.set("%s%d" % (cf.col_letter(n), row), "1" if on else "0")
     doc.recompute()
+    _repaint_tree()
 
 
 def _hook_mass():
@@ -1057,6 +1058,26 @@ def config_rows(tree):
     return out
 
 
+def suppressed_rows(tree):
+    """[(top, bottom)] para tree_overlay.EXTRA_GREY: los componentes suprimidos en gris, como SW."""
+    from swui.fork import mates_tree as mt
+
+    out = []
+    if not _in_workbench():
+        return out
+    for item, doc in mt._object_items(tree):
+        obj = mt._object_of(item, doc)
+        try:
+            if obj is None or not is_component(obj) or not is_suppressed(obj):
+                continue
+        except Exception:
+            continue
+        rect = tree.visualItemRect(item)
+        if rect.isValid() and rect.height() > 0:
+            out.append((rect.top(), rect.bottom() + 1))
+    return out
+
+
 def install():
     for name, cls in ((SUPPRESS_CMD, _Suppress), (UNSUPPRESS_CMD, _Unsuppress), (CONFIG_CMD, _ConfigCmd)):
         try:
@@ -1091,6 +1112,8 @@ def install():
 
         if config_rows not in tree_overlay.EXTRA_TEXT:
             tree_overlay.EXTRA_TEXT.append(config_rows)
+        if suppressed_rows not in tree_overlay.EXTRA_GREY:
+            tree_overlay.EXTRA_GREY.append(suppressed_rows)
     except Exception:
         FreeCAD.Console.PrintLog("[SWUI fork] Configuración en el árbol:\n%s\n" % traceback.format_exc())
     if pin_followers not in cf._before:
