@@ -760,8 +760,15 @@ def arrange_menu(menu):
     names = [n for n, _c in COMMANDS]
     ours = [a for a in actions if a.objectName() in names]
     changed = False
+    native_sup = bool(ours) and any(a.objectName() in (SUPPRESS, UNSUPPRESS) for a in ours)
     for action in actions:
         if action.objectName() == FREEZE and action.isVisible():
+            action.setVisible(False)
+            changed = True
+        # La casilla "Suprimido" de FreeCAD repite nuestro Suprimir pero saltea las configuraciones
+        # y los croquis apoyados en la operación: con lo nuestro en el menú, se oculta (SW tiene uno solo)
+        elif (native_sup and action.text().replace("&", "") in ("Suprimido", "Suppressed")
+              and action.isCheckable() and action.isVisible()):
             action.setVisible(False)
             changed = True
     if not ours or actions[0] is ours[0]:

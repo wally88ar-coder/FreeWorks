@@ -653,11 +653,17 @@ def _check_feature_tree(commands, mw, layout, hooked):
         print("  FEHLER: fork: ¿Qué es incorrecto? (mensajes en palabras simples)")
         return False
     class _Act:
-        def __init__(self, name):
-            self.name, self.visible = name, True
+        def __init__(self, name, checkable=False):
+            self.name, self.visible, self.checkable = name, True, checkable
 
         def objectName(self):
             return self.name
+
+        def text(self):
+            return self.name
+
+        def isCheckable(self):
+            return self.checkable
 
         def isSeparator(self):
             return self.name == "Separator"
@@ -680,11 +686,13 @@ def _check_feature_tree(commands, mw, layout, hooked):
             i = rest.index(before)
             self.acts = rest[:i] + list(moved) + rest[i:]
 
-    menu_q = _Menu(["", "Std_ToggleFreeze", ft.EDIT, ft.SUPPRESS, "Separator", "Std_Placement"])
+    menu_q = _Menu(["", "Std_ToggleFreeze", "Suprimido", ft.EDIT, ft.SUPPRESS, "Separator", "Std_Placement"])
+    menu_q.acts[2].checkable = True  # la casilla "Suprimido" de FreeCAD (saltea las configuraciones)
     if (not ft.arrange_menu(menu_q) or [a.name for a in menu_q.acts] != [ft.EDIT, ft.SUPPRESS, "Separator", "",
-                                                                       "Std_ToggleFreeze", "Std_Placement"]
-            or menu_q.acts[4].visible):
-        print("  FEHLER: fork: lo nuestro arriba del clic derecho y sin 'Toggle Freeze'")
+                                                                       "Std_ToggleFreeze", "Suprimido",
+                                                                       "Std_Placement"]
+            or menu_q.acts[4].visible or menu_q.acts[5].visible):
+        print("  FEHLER: fork: lo nuestro arriba del clic derecho, sin 'Toggle Freeze' ni 'Suprimido'")
         return False
     # Etapa B: mover con chequeo, barra arrastrable, STEP al lado
     if (ft.move_blocker(pocket, "up") is None or ft.move_blocker(pad, "down") is None

@@ -201,10 +201,11 @@ def refresh(force=False):
             item.setFlags(QtCore.Qt.ItemFlag.NoItemFlags)
             tree.addTopLevelItem(item)
             return
-        top = QtWidgets.QTreeWidgetItem(["%s Configuraciones" % (doc.Label or doc.Name)])
-        tree.addTopLevelItem(top)
         names = cf.names(doc) or [cf.FIRST]
         act = cf.active(doc) or cf.FIRST
+        # Como SW: "Pieza Configuraciones (Activa)"
+        top = QtWidgets.QTreeWidgetItem(["%s Configuraciones (%s)" % (doc.Label or doc.Name, act)])
+        tree.addTopLevelItem(top)
         for name in names:
             item = QtWidgets.QTreeWidgetItem([("✓ " if name == act else "    ") + name])
             item.setData(0, QtCore.Qt.ItemDataRole.UserRole, name)

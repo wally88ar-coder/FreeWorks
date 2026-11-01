@@ -32,6 +32,11 @@ def _sm():
     return sm
 
 
+def _flats(doc):
+    sm = _sm()
+    return [f for f in (sm.flat_of(b) for b in sm.sheet_bodies(doc)) if f is not None]
+
+
 def refresh_flats(doc):
     """Que cada desarrollo apunte a la cara fija que corresponde a la configuración activa."""
     sm = _sm()
@@ -47,10 +52,45 @@ def refresh_flats(doc):
                 changed = True
         except Exception:
             FreeCAD.Console.PrintLog("[SWUI fork] Cara fija:\n%s\n" % traceback.format_exc())
-    if changed:
+    if changed or any("Touched" in f.State for f in _flats(doc)):
         with sm._active(doc):
             doc.recompute()
+    _hide_flat_sketches(doc)
     return changed
+
+
+def _hide_flat_sketches(doc):
+    """SheetMetal vuelve a crear visibles los croquis del desarrollo en cada recálculo."""
+    try:
+        from swui.fork import sheet_panels as sp
+
+        for flat in _flats(doc):
+            sp._sketches_follow(flat)
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Croquis del desarrollo:\n%s\n" % traceback.format_exc())
+
+
+def _activate_skipping_flats(doc, name, original):
+    """
+    Cambiar de configuración sin recalcular todavía los desarrollos: con la cara fija vieja
+    ("Face6" que en la otra configuración no existe) FreeCAD mostraba el error "Chapa
+    desplegada1: Invalid shape name ?Face6" antes de que refresh_flats la corrigiera (visto con
+    el mouse, 01/11). Primero el resto, después la cara fija, después el desarrollo.
+    """
+    flats = _flats(doc)
+    body = cf.owner(doc)
+    if (not flats or body is None or name not in cf.names(doc)
+            or getattr(body, "TypeId", "") == cf.ASSEMBLY):
+        return original(doc, name)  # ensamblaje: lo maneja config_asm
+    skip = set()
+    for f in flats:
+        skip.add(f)
+        skip.update(f.InListRecursive)
+    cf.before_activate(doc, name)
+    if getattr(body, cf.PROP) != name:
+        setattr(body, cf.PROP, name)
+    doc.recompute([o for o in doc.Objects if o not in skip])
+    return None
 
 
 def _hook_activate():
@@ -59,7 +99,7 @@ def _hook_activate():
     original = cf.activate
 
     def activate(doc, name, _original=original):
-        _original(doc, name)
+        _activate_skipping_flats(doc, name, _original)
         try:
             refresh_flats(doc)
         except Exception:
