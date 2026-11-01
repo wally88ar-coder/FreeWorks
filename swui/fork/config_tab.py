@@ -30,7 +30,8 @@ from swui.fork import configurations as cf
 DOCK_NAME = "SWUI_Configurations"
 TITLE = "Configuraciones"
 POLL_MS = 500
-SCOPES = (("this", "Esta configuración"), ("all", "Todas las configuraciones"))
+SCOPES = (("this", "Esta configuración"), ("all", "Todas las configuraciones"),
+          ("pick", "Especificar las configuraciones..."))
 
 _state = {"dock": None, "tree": None, "sig": None, "timer": None, "scope": "this"}
 
@@ -88,13 +89,59 @@ def show_config(name):
 
 
 def add_config():
+    """Como SW: el panel "Agregar configuración" a la izquierda (no un cuadro aparte)."""
     doc = _doc()
     if not _is_part(doc):
         return
-    name, ok = QtWidgets.QInputDialog.getText(FreeCADGui.getMainWindow(), "Agregar configuración",
-                                              "Nombre de la configuración:", text=cf.next_name(doc))
-    if ok and name.strip():
-        _run(doc, "Agregar configuración", lambda: cf.add(doc, name.strip()))
+    if FreeCADGui.Control.activeDialog():
+        _status("Cerrá primero el panel abierto.")
+        return
+    FreeCADGui.Control.showDialog(_AddPanel(doc))
+
+
+class _AddPanel:
+    def __init__(self, doc):
+        self.doc = doc
+        self.form = QtWidgets.QWidget()
+        self.form.setObjectName("SWUI_AgregarConfiguracion")
+        self.form.setWindowTitle("Agregar configuración")
+        lay = QtWidgets.QVBoxLayout(self.form)
+        lay.addWidget(QtWidgets.QLabel("Nombre de la configuración:"))
+        self.name = QtWidgets.QLineEdit(cf.next_name(doc))
+        self.name.setObjectName("SWUI_NombreConfiguracion")
+        self.name.selectAll()
+        lay.addWidget(self.name)
+        note = QtWidgets.QLabel("Arranca como copia de la configuración activa (%s) y queda activa."
+                                % cf.active(doc) if cf.active(doc) else "Arranca como copia de la pieza.")
+        note.setWordWrap(True)
+        lay.addWidget(note)
+        lay.addStretch(1)
+        self.name.returnPressed.connect(lambda: FreeCADGui.Control.closeDialog() if self.accept() else None)
+        QtCore.QTimer.singleShot(0, self.name.setFocus)
+
+    def accept(self):
+        name = self.name.text().strip()
+        if not name:
+            return False
+        try:
+            cf.names(self.doc)
+        except Exception:
+            return True
+        result = _run(self.doc, "Agregar configuración", lambda: cf.add(self.doc, name))
+        if result is None and name not in cf.names(self.doc):
+            return False  # nombre repetido o inválido: el aviso ya salió, el panel queda abierto
+        _show_tab()
+        return True
+
+    def reject(self):
+        return True
+
+
+def _show_tab():
+    """Después del panel, volver a la pestaña Configuraciones (Tareas queda adelante)."""
+    dock = _state.get("dock")
+    if dock is not None:
+        QtCore.QTimer.singleShot(0, dock.raise_)
 
 
 def rename_config(name):
@@ -257,7 +304,7 @@ def refresh(force=False):
         # Como SW: "Pieza Configuraciones (Activa)"
         top = QtWidgets.QTreeWidgetItem(["%s Configuraciones (%s)" % (doc.Label or doc.Name, act)])
         tree.addTopLevelItem(top)
-        for name in names:
+        for name in sorted(names, key=str.lower):  # como SW: por orden alfabético
             item = QtWidgets.QTreeWidgetItem([("✓ " if name == act else "    ") + name])
             item.setData(0, QtCore.Qt.ItemDataRole.UserRole, name)
             if name == act:
@@ -371,7 +418,16 @@ def _hook_dims():
         scope = _state.get("scope", "this")
         doc.openTransaction("Modificar cota")
         try:
-            cf.configure(doc, target, value, scope)
+            if scope == "pick":
+                picked = [n for n in _state.get("picked") or [] if n in cf.names(doc)]
+                if not picked:
+                    doc.abortTransaction()
+                    _status("Elegí al menos una configuración.")
+                    return False
+                cf.set_values(doc, target, {n: value for n in picked})
+                cf.activate(doc, cf.active(doc))  # la vista con la configuración activa al día
+            else:
+                cf.configure(doc, target, value, scope)
             doc.recompute()
         except Exception:
             doc.abortTransaction()
@@ -380,6 +436,8 @@ def _hook_dims():
         doc.commitTransaction()
         if scope == "this":
             _status("Cota cambiada solo en la configuración %s." % cf.active(doc))
+        elif scope == "pick":
+            _status("Cota cambiada en: %s." % ", ".join(_state.get("picked") or []))
         return True
 
     def _modify(dim, button, _orig=orig_modify):
@@ -397,8 +455,35 @@ def _hook_dims():
             for key, text in SCOPES:
                 combo.addItem(text, key)
             _state["scope"] = "this"
-            combo.currentIndexChanged.connect(lambda i: _state.__setitem__("scope", combo.itemData(i)))
+            # "Especificar las configuraciones..." (SW abre una lista): acá la lista va adentro del
+            # mismo cuadro, porque es un popup y otra ventana lo cerraría
+            picks = QtWidgets.QListWidget(box)
+            picks.setObjectName("SWUI_ModificarConfiguraciones")
+            active = cf.active(doc)
+            for name in sorted(cf.names(doc), key=str.lower):
+                item = QtWidgets.QListWidgetItem(name)
+                item.setFlags(item.flags() | QtCore.Qt.ItemFlag.ItemIsUserCheckable)
+                item.setCheckState(QtCore.Qt.CheckState.Checked if name == active
+                                   else QtCore.Qt.CheckState.Unchecked)
+                picks.addItem(item)
+            picks.setMaximumHeight(min(160, 20 * picks.count() + 6))
+            picks.hide()
+
+            def read_picks(*_a):
+                _state["picked"] = [picks.item(k).text() for k in range(picks.count())
+                                    if picks.item(k).checkState() == QtCore.Qt.CheckState.Checked]
+
+            def scope_changed(i):
+                _state["scope"] = combo.itemData(i)
+                picks.setVisible(_state["scope"] == "pick")
+                read_picks()
+                box.adjustSize()
+
+            picks.itemChanged.connect(read_picks)
+            combo.currentIndexChanged.connect(scope_changed)
+            read_picks()
             box.layout().insertWidget(2, combo)
+            box.layout().insertWidget(3, picks)
             box.adjustSize()
         except Exception:
             FreeCAD.Console.PrintLog("[SWUI fork] Modificar:\n%s\n" % traceback.format_exc())
@@ -455,7 +540,66 @@ def _hook_equations():
     eq.Model.expressions = expressions
 
 
+class _NewFeatures:
+    """
+    Como SW: una operación nueva queda en la configuración activa y suprimida en las demás. Se
+    anota al crearse y se aplica cuando ya no hay panel abierto (mientras se edita, cambiar su
+    supresión la rompería) y fuera de deshacer / rehacer.
+    """
+
+    def __init__(self):
+        self.queue = []  # (documento, operación, configuración activa al crearla)
+        self.timer = None
+
+    def slotCreatedObject(self, obj):
+        try:
+            doc = obj.Document
+            if doc.Restoring or getattr(doc, "Transacting", False) or _state.get("busy_new"):
+                return
+        except Exception:
+            return
+        if not cf.is_new_feature(obj):
+            return
+        self.queue.append((doc.Name, obj.Name, cf.active(doc)))
+        self._later()
+
+    def _later(self):
+        if self.timer is None:
+            self.timer = QtCore.QTimer()
+            self.timer.setInterval(400)
+            self.timer.timeout.connect(self._apply)
+        self.timer.start()
+
+    def _apply(self):
+        try:
+            if FreeCADGui.Control.activeDialog() or (FreeCADGui.ActiveDocument and FreeCADGui.ActiveDocument.getInEdit()):
+                return  # todavía editando: después
+        except Exception:
+            pass
+        queue, self.queue = self.queue, []
+        self.timer.stop()
+        _state["busy_new"] = True
+        try:
+            for doc_name, obj_name, conf in queue:
+                doc = FreeCAD.listDocuments().get(doc_name)
+                feat = doc.getObject(obj_name) if doc is not None else None
+                if feat is None or conf not in cf.names(doc):
+                    continue  # se canceló el panel o se borró
+                try:
+                    others = cf.only_in(doc, feat, conf)
+                except Exception:
+                    FreeCAD.Console.PrintLog("[SWUI fork] Operación nueva:\n%s\n" % traceback.format_exc())
+                    continue
+                if others:
+                    _status("%s queda suprimida en: %s (como SW)." % (feat.Label, ", ".join(others)))
+        finally:
+            _state["busy_new"] = False
+
+
 def install():
+    if _state.get("new_obs") is None:
+        _state["new_obs"] = _NewFeatures()
+        FreeCAD.addDocumentObserver(_state["new_obs"])
     _hook_dims()
     _hook_suppress()
     try:

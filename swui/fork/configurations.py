@@ -537,6 +537,37 @@ def suppress(obj, scope="this"):
     return done
 
 
+def only_in(doc, feat, name):
+    """
+    Operación nueva, como SW: queda en la configuración donde se hizo (name) y suprimida en las
+    demás (opción de SW "Suprimir operaciones nuevas"; decisión del usuario 01/11). Devuelve las
+    configuraciones donde quedó suprimida.
+    """
+    others = [n for n in names(doc) if n != name]
+    if not others or bound_alias(feat, "Suppressed") is not None:
+        return []
+    values = {n: 1 for n in others}
+    values[name] = 0
+    set_values(doc, ("sup", feat), values)
+    sync_attachments(doc)
+    doc.recompute()
+    return others
+
+
+def is_new_feature(obj):
+    """¿Operación de pieza (PartDesign) recién hecha en un documento con configuraciones?"""
+    try:
+        if not obj.isDerivedFrom("PartDesign::Feature") or is_copy(obj):
+            return False
+        doc = obj.Document
+        body = owner(doc)
+        if body is None or getattr(body, "TypeId", "") == ASSEMBLY or not configured(doc):
+            return False
+        return not any(is_copy(p) for p in obj.InList)
+    except Exception:
+        return False
+
+
 def unsuppress(obj, with_children=False, scope="this"):
     from swui.fork import feature_tree as ft
 

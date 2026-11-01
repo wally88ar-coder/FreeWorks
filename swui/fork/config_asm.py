@@ -707,11 +707,21 @@ class _Bar(QtWidgets.QFrame):
         self.combo = QtWidgets.QComboBox(self)
         self.combo.setObjectName("SWUI_ComponentConfigCombo")
         self.combo.setMinimumWidth(130)
+        # como SW: elegir en la lista no cambia nada; aparece un tilde y recién ese tilde lo aplica
+        self.ok = QtWidgets.QToolButton(self)
+        self.ok.setObjectName("SWUI_ComponentConfigOk")
+        self.ok.setText("✓")
+        self.ok.setToolTip("Aplicar la configuración elegida")
+        self.ok.setStyleSheet("QToolButton { color: #1e8c1e; font-weight: bold; }")
+        self.ok.hide()
         lay.addWidget(icon)
         lay.addWidget(self.combo)
+        lay.addWidget(self.ok)
         self.link_name = None
         self.doc_name = None
-        self.combo.activated.connect(self._picked)
+        self.current = None
+        self.combo.activated.connect(self._chosen)
+        self.ok.clicked.connect(lambda *_a: self._picked(self.combo.currentIndex()))
         # como SW: la barra se va sola cuando el mouse se aleja (y la lista no está abierta)
         self._fade = QtCore.QTimer(self)
         self._fade.setInterval(150)
@@ -721,8 +731,8 @@ class _Bar(QtWidgets.QFrame):
         if not self.isVisible():
             self._fade.stop()
             return
-        if self.combo.view().isVisible():
-            return
+        if self.combo.view().isVisible() or self.ok.isVisible():
+            return  # con la lista abierta o un cambio sin confirmar, la barra se queda
         if not self.geometry().adjusted(-FADE_PX, -FADE_PX, FADE_PX, FADE_PX).contains(QtGui.QCursor.pos()):
             self.hide()
             self._fade.stop()
@@ -744,19 +754,27 @@ class _Bar(QtWidgets.QFrame):
             self.setToolTip("Pieza multicuerpo: este sólido muestra la configuración activa de la pieza. "
                             "Para elegir la configuración en el ensamblaje, insertá el sólido «%s»."
                             % owner.Label)
+            self.current = active
         else:
             self.combo.setEnabled(True)
             self.setToolTip("")
+            names = sorted(names, key=str.lower)  # como SW: por orden alfabético
             self.combo.addItems(names)
             cur = current(link)
             if cur in names:
                 self.combo.setCurrentIndex(names.index(cur))
+            self.current = cur
+        self.ok.hide()
         self.combo.blockSignals(False)
         self.adjustSize()
         pos = QtGui.QCursor.pos() + QtCore.QPoint(18, -self.height() - 14)
         self.move(pos)
         self.show()
         self._fade.start()
+
+    def _chosen(self, i):
+        self.ok.setVisible(self.combo.itemText(i) != self.current)
+        self.adjustSize()
 
     def _picked(self, i):
         try:
