@@ -124,9 +124,11 @@ FreeWorks > IA > Puente IA (tilde, arranca apagado) y Conectar la IA... (línea 
 copiar, cambiar la clave). Herramientas: estado, captura, ejecutar_python (respaldo + prueba en
 freecadcmd + un paso de Ctrl+Z + registro en la consola). Código copiado de neka-nat y ghbalf en
 `terceros/`. Test en verde con chequeo de aislamiento. Probado con guion en FreeCAD real y un
-cliente MCP de afuera (todo bien, ver NOTAS). **Falta:** conectar el Claude Code del usuario (no
-tiene `claude` en el PATH; usa la app de escritorio) y probarlo de verdad; preguntar quién prueba
-con el mouse (memoria "implementar sin mouse").
+cliente MCP de afuera (todo bien, ver NOTAS). **Conectado a la app del usuario el 01/11** ("freeworks"
+en su configuración de Claude Code, con el claude.exe de la app; clave en
+FreeWorks-IA/clave.txt): con el puente prendido en un FreeCAD de prueba, Claude Code lo da por
+"Connected". **Falta:** que el usuario reinicie su FreeCAD, prenda el puente y abra una sesión
+nueva de la app para probarlo de punta a punta; preguntar quién prueba con el mouse.
 
 **MENÚS ESTILO SW 2018: HECHOS — 01/11/2026 tarde** (`swui/fork/menus_sw.py`; detalle, pruebas y
 decisiones en "Checklists compartidos" > Menús estilo SW, arriba). Archivo, Edición, Ver,

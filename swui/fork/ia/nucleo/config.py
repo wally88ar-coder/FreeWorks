@@ -2,9 +2,12 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 # SPDX-FileCopyrightText: 2026 wally88ar-coder
 """
-Puerto y clave del puente IA, guardados en las preferencias de FreeCAD
-(BaseApp/Preferences/Mod/SWUI/IA). La clave se crea sola la primera vez y se puede cambiar
-desde FreeWorks > IA > Conectar la IA (la vieja deja de servir).
+Puerto y clave del puente IA. El puerto va en las preferencias de FreeCAD
+(BaseApp/Preferences/Mod/SWUI/IA, Port). La clave va en un archivo propio
+(<datos de usuario>/FreeWorks-IA/clave.txt) y no en user.cfg: FreeCAD reescribe user.cfg al
+cerrarse, y así la clave se puede crear o leer con FreeCAD abierto o cerrado (por ejemplo al
+conectar Claude Code). Se crea sola la primera vez y se puede cambiar desde
+FreeWorks > IA > Conectar la IA (la vieja deja de servir).
 """
 
 import os
@@ -27,17 +30,24 @@ def port():
     return value if 1024 < value < 65536 else DEFAULT_PORT
 
 
+def _token_file():
+    return os.path.join(data_dir(), "clave.txt")
+
+
 def token():
     """La clave actual; si no hay, crea una."""
-    value = _params().GetString("Token", "")
-    if not value:
-        value = new_token()
-    return value
+    try:
+        with open(_token_file(), encoding="ascii") as fh:
+            value = fh.read().strip()
+    except OSError:
+        value = ""
+    return value or new_token()
 
 
 def new_token():
     value = secrets.token_urlsafe(24)
-    _params().SetString("Token", value)
+    with open(_token_file(), "w", encoding="ascii") as fh:
+        fh.write(value)
     return value
 
 
