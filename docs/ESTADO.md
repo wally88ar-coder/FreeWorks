@@ -1,7 +1,7 @@
 # Estado del fork
 
-Última actualización: 2026-11-01 13:00 (configuraciones estilo SW: todo hecho y probado por Claude
-con el mouse contra SW, incluida la pregunta 7 "Como en SW"; falta que lo pruebe el usuario).
+Última actualización: 2026-11-01 13:40 (configuraciones estilo SW: todo hecho y probado por Claude
+con el mouse contra SW; preguntas 1 a 7 contestadas y hechas; falta que lo pruebe el usuario).
 **Próximo paso posible:** publicar la primera versión en la rama "release" (sin ella el Addon
 Manager no puede instalar FreeWorks); preguntar al usuario antes, es hacia afuera.
 

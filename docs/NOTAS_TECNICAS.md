@@ -728,3 +728,10 @@ run.log, borrar los .pyc antes de seguir.
     sola al alejar el mouse sin cambiar nada. Avisos de relaciones al cambiar de
     configuración: `mate_refs._state["quiet"]` durante `set_config` / `settle` (`_quiet_mates`),
     van al informe (PrintLog) en vez de avisar.
+  - Componente suprimido en gris (01/11, pregunta 2 del usuario): `config_asm.suppressed_rows`
+    en `tree_overlay.EXTRA_GREY`, el mismo velo que lo suprimido de las piezas y las relaciones
+    (el estilo del árbol pisa el color del texto: no sirve `setForeground`).
+  - Tabla oculta con una sola configuración (pregunta 3): `configurations.show_table` pone
+    `ShowInTree` de la planilla según haya una o más configuraciones; corre en `ensure` y al
+    final de `activate` (agregar, eliminar y cambiar el nombre pasan por ahí). Fuera de un
+    Cuerpo, FreeCAD 1.1.4 respeta `ShowInTree` (dentro no: ver `tree_overlay.hide_unlisted`).
