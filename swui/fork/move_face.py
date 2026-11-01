@@ -1011,10 +1011,14 @@ class MoveFacePanel(dp.SwPanel):
                 return False
             ref = (target, "")
         elif end == END_VERTEX:
-            if not sub.startswith("Vertex"):
-                return False
             if obj == self.obj:
                 return False  # el vértice de la vista previa se mueve con la cara
+            if sub.startswith("Edge"):
+                # un vértice es difícil de acertar (FreeCAD no le da prioridad, SW sí): un clic en
+                # una arista toma la punta más cercana al clic (visto con el mouse, 2026-10-31)
+                sub = self._edge_end(obj, sub) or ""
+            if not sub.startswith("Vertex"):
+                return False
             ref = (obj, sub)
         else:
             if sub.startswith("Face"):
@@ -1030,6 +1034,38 @@ class MoveFacePanel(dp.SwPanel):
         self.target = ref
         self.active = self.list
         return True
+
+    @staticmethod
+    def _picked_point(obj, sub):
+        """Punto donde se hizo clic (global) sobre obj/sub, de la selección actual, o None."""
+        try:
+            for sel in FreeCADGui.Selection.getSelectionEx():
+                if sel.Object is not obj:
+                    continue
+                for name, point in zip(sel.SubElementNames, sel.PickedPoints):
+                    if name.split(".")[-1] == sub:
+                        return point
+        except Exception:
+            pass
+        return None
+
+    def _edge_end(self, obj, sub):
+        """'EdgeN' tocada -> 'VertexM' de su punta más cercana al clic (en la forma de obj)."""
+        from swui.fork import sketch_model_edges as sme
+
+        point = self._picked_point(obj, sub)
+        try:
+            shape = sme._global_shape(obj)
+            edge = shape.getElement(sub)
+        except Exception:
+            return None
+        if point is None or not edge.Vertexes:
+            return None
+        best = min(edge.Vertexes, key=lambda v: (v.Point - point).Length)
+        for i, v in enumerate(shape.Vertexes):
+            if v.isSame(best) or (v.Point - best.Point).Length < 1e-7:
+                return "Vertex%d" % (i + 1)
+        return None
 
     def _pick(self, obj, sub):
         if self.active is self.target_box:
