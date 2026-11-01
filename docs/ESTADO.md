@@ -1723,7 +1723,8 @@ Etapas:
   cualquier comando SWUI_, Python en un paso de deshacer probado antes en FreeCADCmd, verificar) +
   herramientas de oficio tomadas del puente de SW (`C:\SW-AI-Bridge\sw_mcp_server.py`: ficha de
   intención, chequeos). Puertas: Claude Code (sin costo extra), pestaña "Asistente" en el panel
-  izquierdo (Claude Code por detrás), `IA("...")` en la consola. Código leído el 01/11:
+  izquierdo (Claude Code por detrás). Sin `IA()` en la consola para el usuario (decidido 01/11):
+  la consola solo muestra el registro de los scripts que corrió la IA. Código leído el 01/11:
   neka-nat/freecad-mcp (MIT, commit 8babe99 del 25/10/2026): sirve `rpc_server/gui_dispatch.py`
   (cola al hilo principal: espera arrastre del mouse, menús y ventanas modales; aviso de trabado) y
   `ip_filter.py` (rechaza pedidos de páginas web); le falta deshacer en execute_code y clave en
