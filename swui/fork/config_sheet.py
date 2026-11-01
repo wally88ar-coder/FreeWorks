@@ -328,7 +328,67 @@ def _hook_export():
         sp._Command.Activated = Activated
 
 
+def _flat_lost(flat):
+    """¿El desarrollo quedó con la cara fija perdida ("?Face6") o inválido?"""
+    try:
+        subs = list(flat.baseObject[1]) if flat.baseObject else []
+    except Exception:
+        subs = []
+    return "Invalid" in flat.State or any(str(x).startswith("?") or ".?" in str(x) for x in subs)
+
+
+class _DocObserver:
+    """
+    Después de cualquier cambio en la pieza (un corte de ensamblaje, una operación nueva...) las
+    caras se renumeran y el desarrollo perdía su cara fija: FreeCAD avisaba "Chapa desplegada1:
+    Invalid shape name ?Face6" y quedaba en error hasta exportar (visto con el mouse 01/11).
+    Ahora se vuelve a elegir la cara fija y se recalcula solo.
+    """
+
+    def slotRecomputedDocument(self, doc):
+        if _state.get("fixing"):
+            return
+        try:
+            lost = [f for f in _flats(doc) if _flat_lost(f)]
+        except Exception:
+            return
+        name = doc.Name
+        if not lost:
+            _state["tries"].pop(name, None)
+            return
+        tries = _state["tries"].get(name, 0)
+        if tries >= 2:  # no hay cara fija que sirva: que quede el error de FreeCAD a la vista
+            return
+        _state["tries"][name] = tries + 1
+        from swui.compat import QtCore
+
+        QtCore.QTimer.singleShot(0, lambda: _fix_later(name))
+
+
+def _fix_later(name):
+    doc = FreeCAD.listDocuments().get(name)
+    if doc is None:
+        return
+    _state["fixing"] = True
+    try:
+        if not refresh_flats(doc):
+            for flat in [f for f in _flats(doc) if _flat_lost(f)]:
+                flat.touch()  # misma cara pero quedó en error: probar de nuevo con la pieza al día
+            doc.recompute()
+            _hide_flat_sketches(doc)
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Cara fija del desarrollo:\n%s\n" % traceback.format_exc())
+    finally:
+        _state["fixing"] = False
+
+
+_state = {"fixing": False, "observer": None, "tries": {}}
+
+
 def install():
+    if _state["observer"] is None:
+        _state["observer"] = _DocObserver()
+        FreeCAD.addDocumentObserver(_state["observer"])
     _hook_activate()
     _hook_part_name()
     _hook_panels()

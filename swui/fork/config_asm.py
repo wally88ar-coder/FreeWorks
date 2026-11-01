@@ -578,6 +578,51 @@ def _hook_part_name():
 
     part_name._swui_asm = True
     sm.part_name = part_name
+    _hook_sheet_parts()
+
+
+def _hook_sheet_parts():
+    """
+    DXF por lotes de un ensamblaje: sin los componentes suprimidos, y una vez cada pieza en cada
+    configuración. Cada componente configurado apunta a su propia copia de la pieza: con dos en
+    "3mm" salía "Soporte-3mm_3mm.dxf" dos veces, y el suprimido también (visto con el mouse 01/11).
+    """
+    from swui.fork import sheet_metal as sm
+
+    if getattr(sm.sheet_parts, "_swui_asm", False):
+        return
+    original = sm.sheet_parts
+
+    def sheet_parts(doc, _original=original):
+        bodies = _original(doc)
+        if not any(getattr(o, "TypeId", "") == cf.ASSEMBLY for o in doc.Objects):
+            return bodies
+        used, hidden = set(), set()
+        for link in doc.Objects:
+            try:
+                if not is_component(link):
+                    continue
+                body = link.getLinkedObject(True)
+            except Exception:
+                continue
+            (hidden if is_suppressed(link) else used).add(id(body))
+        out, seen = [], set()
+        for body in bodies:
+            if id(body) in hidden and id(body) not in used:
+                continue  # solo lo usan componentes suprimidos
+            if cf.is_copy(body) and id(body) not in used:
+                continue  # copia que no muestra ningún componente
+            info = copy_info(body)
+            key = ((info[0].FullName, info[1]) if info and info[0] is not None
+                   else (body.Document.Name, body.Name, getattr(body, cf.PROP, None)))
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(body)
+        return out
+
+    sheet_parts._swui_asm = True
+    sm.sheet_parts = sheet_parts
 
 
 # --- Interfaz ----------------------------------------------------------------------------
