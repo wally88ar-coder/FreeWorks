@@ -152,7 +152,7 @@ def read_spec(text):
     """Lo guardado en SWUI_MoveFace (JSON) con valores por omisión."""
     spec = {"mode": OFFSET, "flip": False, "distance": 10.0, "delta": [0.0, 0.0, 0.0],
             "dir": None, "hinge": "", "angle": 10.0, "end": END_DEPTH, "target": None, "gap": 10.0,
-            "axis": None, "aux": {}, "faces": []}
+            "axis": None, "aux": {}, "faces": [], "plc": None}
     try:
         data = json.loads(text or "{}")
         if isinstance(data, dict):
@@ -450,6 +450,23 @@ def place_aux(aux, plc):
     aux.recompute()
 
 
+def face_rotated(before, faces, after, tol=1e-6):
+    """
+    ¿Las caras a girar ya no están donde estaban? El Ángulo de salida a veces no gira nada y no avisa:
+    con Reversed, FreeCAD saca en silencio las caras que OpenCASCADE no acepta (makeElementDraft,
+    1.1.4).
+    """
+    for name in faces:
+        face = before.getElement(name)
+        n, p = face_normal(face), face.CenterOfMass
+        for f in after.Faces:
+            if not is_planar(f) or abs(abs(face_normal(f).dot(n)) - 1) > 1e-9:
+                continue
+            if abs((f.CenterOfMass - p).dot(n)) < tol and abs(f.Area - face.Area) <= tol * max(1.0, face.Area):
+                return False
+    return True
+
+
 def same_plane(a, b, tol=1e-6):
     """Dos Placement de plano (normal = Z local): ¿el mismo plano?"""
     z = FreeCAD.Vector(0, 0, 1)
@@ -516,8 +533,50 @@ def wanted_aux(obj):
     return {"plane": neutral, "line": line}
 
 
+# --- Ángulo de salida con la bisagra corrida (error de FreeCAD 1.1.4, sigue en 26.3) ---------
+# PartDesign::Draft pasa el plano neutro y el tiro a las coordenadas de su propio Placement ANTES de
+# copiar el de la operación anterior (FeatureDraft.cpp, execute: invObjLoc y recién después
+# positionByBaseFeature). Si la operación anterior no está en el origen (un croquis fuera del
+# origen, un agujero...), ese cálculo gira la cara alrededor de una bisagra corrida: sale mal sin
+# aviso o falla (visto 2026-10-31; recalculado otra vez da bien). Al aceptar se le copia la
+# ubicación antes de calcular y se anota en "plc"; si después cambia la de la operación anterior,
+# queda atrasado: aviso + Ctrl+Q, que lo recalcula (ya con la ubicación nueva).
+
+
+def _plc(data):
+    return FreeCAD.Placement(FreeCAD.Vector(*data[:3]), FreeCAD.Rotation(*data[3:]))
+
+
+def plc_data(plc):
+    return list(plc.Base) + list(plc.Rotation.Q)
+
+
+def place_draft(obj, base):
+    """Darle al Ángulo de salida la ubicación de la operación anterior antes de calcular."""
+    if base is not None and not obj.Placement.isSame(base.Placement, 1e-9):
+        obj.Placement = base.Placement
+
+
+def draft_misplaced(obj):
+    """¿Este Mover cara (Ángulo de salida) se calculó con la ubicación vieja de la operación anterior?"""
+    if obj.TypeId != DRAFT:
+        return False
+    base = getattr(obj, "BaseFeature", None)
+    if base is None:
+        return False
+    used = read_spec(getattr(obj, MARK, "")).get("plc")
+    if not used:  # de antes de este arreglo: solo pudo salir mal si la anterior no está en el origen
+        return not base.Placement.isIdentity()
+    try:
+        return not base.Placement.isSame(_plc(used), 1e-7)
+    except Exception:
+        return False
+
+
 def stale(obj):
     """¿Los auxiliares fijos de este Mover cara quedaron atrasados respecto de la pieza?"""
+    if draft_misplaced(obj):
+        return True
     want = wanted_aux(obj)
     if not want:
         return False
@@ -540,7 +599,12 @@ def update(obj):
     """Reubicar los auxiliares fijos (lo mismo que abrir el Mover cara y aceptar). True si cambió algo."""
     if not stale(obj):
         return False
-    want = wanted_aux(obj)
+    if draft_misplaced(obj):
+        spec = read_spec(getattr(obj, MARK, ""))
+        spec["plc"] = plc_data(obj.BaseFeature.Placement)
+        setattr(obj, MARK, json.dumps(spec, sort_keys=True))
+        place_draft(obj, obj.BaseFeature)
+    want = wanted_aux(obj) or {}
     _spec, aux = _spec_aux(obj)
     doc = obj.Document
     for key, value in want.items():
@@ -770,8 +834,9 @@ class MoveFacePanel(dp.SwPanel):
     @property
     def FAIL(self):
         if self.spec["mode"] == ROTATE:
-            # p. ej. girada hacia abajo la cara atravesaría la de enfrente
-            return "FreeCAD no pudo girar la cara así: probá con Invertir dirección o un ángulo menor."
+            # con la ubicación ya corregida (place_draft), falla cuando la cara girada atravesaría
+            # la de enfrente o chocaría con otra
+            return "Con ese ángulo la cara atraviesa la pieza: probá un ángulo menor o el otro sentido."
         if self.spec["mode"] == TRANSLATE and self.spec["end"] != END_DEPTH:
             return "FreeCAD no pudo llevar la cara hasta ahí: probá con otra referencia."
         return "FreeCAD no pudo mover la cara así: probá con una distancia menor."
@@ -1408,7 +1473,9 @@ class MoveFacePanel(dp.SwPanel):
                 if problem:
                     return problem
                 self._drop_aux()
+                self.spec["plc"] = plc_data(self.base.Placement)
                 self._write_spec()
+                place_draft(self.obj, self.base)  # error de FreeCAD: ver draft_misplaced
                 self.obj.Base = (self.base, self.faces)
                 if self.obj.NeutralPlane != (self.base, [neutral]):
                     self.obj.NeutralPlane = (self.base, [neutral])
@@ -1438,7 +1505,9 @@ class MoveFacePanel(dp.SwPanel):
         place_aux(plane, neutral)
         place_aux(pull, line)
         self._drop_aux(("plane", "line"))
+        self.spec["plc"] = plc_data(self.base.Placement)
         self._write_spec()
+        place_draft(self.obj, self.base)  # error de FreeCAD: ver draft_misplaced
         self.obj.Base = (self.base, self.faces)
         if self.obj.NeutralPlane != (plane, [""]):
             self.obj.NeutralPlane = (plane, [""])
@@ -1466,6 +1535,16 @@ class MoveFacePanel(dp.SwPanel):
             self.obj.ReferenceAxis = (sketch, ["V_Axis"])
         self._set("Angle", 360.0)
         return ""
+
+    def _result_problem(self):
+        if self.spec["mode"] != ROTATE or self.obj.TypeId != DRAFT or not self.faces:
+            return ""
+        try:
+            if face_rotated(self.base.Shape, self.faces, self.obj.Shape):
+                return ""
+        except Exception:
+            return ""
+        return "FreeCAD dejó la cara sin girar: probá un ángulo menor o el otro sentido."
 
     def _write_spec(self):
         text = json.dumps(self.spec, sort_keys=True)

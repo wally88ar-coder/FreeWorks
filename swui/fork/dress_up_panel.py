@@ -710,6 +710,10 @@ class SwPanel:
     def _ready(self):
         return True
 
+    def _result_problem(self):
+        """Resultado válido para FreeCAD pero que no hizo lo pedido: texto del aviso, o ""."""
+        return ""
+
     def _new_faces(self):
         return new_faces(self.obj.Shape, self.base.Shape)
 
@@ -727,6 +731,9 @@ class SwPanel:
                 self.valid = obj.isValid() and not obj.Shape.isNull()
                 if not self.valid:
                     problem = self.FAIL
+                else:
+                    problem = self._result_problem()
+                    self.valid = not problem
         except Exception:
             FreeCAD.Console.PrintError("[SWUI fork] %s:\n%s\n" % (self.TRANSACTION, traceback.format_exc()))
             problem = "No se pudo calcular la vista previa."
