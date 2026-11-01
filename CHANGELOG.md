@@ -67,6 +67,15 @@ Neueste Version oben. / Newest version first.
   el desarrollo vuelve a elegir su cara fija; **Exportar DXF** pregunta *Esta configuración /
   Todas las configuraciones* y el nombre lleva la configuración (`Soporte-3mm_3mm.dxf`)
   (`swui/fork/config_sheet.py`).
+- **Configuraciones en ensamblajes** (01/11, etapas 4 y 5): al hacer clic en un componente (árbol
+  o zona gráfica) aparece al lado del cursor una barrita con la **configuración** de su pieza,
+  como la barra contextual de SW (también clic derecho > *Configuración del componente...*). Las
+  relaciones de posición se vuelven a ubicar por geometría al cambiar de configuración y no
+  quedan rotas al reabrir (error de FreeCAD con las copias del componente). Clic derecho >
+  **Suprimir / Desactivar supresión** de componentes (oculta el componente y suprime sus
+  relaciones). La pestaña Configuraciones también sirve en el ensamblaje: con varias, suprimir y
+  elegir la configuración de un componente valen solo para la activa. El DXF por lotes de un
+  ensamblaje saca uno por pieza y configuración usada (`swui/fork/config_asm.py`).
 - **Decisiones del usuario del 31/10** (checklist):
   - Nombre visible **FreeWorks** (menú y lista de bancos; lo interno no cambia, los
     archivos y la configuración abren igual) (`swui/fork/brand.py`). Paquete (package.xml) y

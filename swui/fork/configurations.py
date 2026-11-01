@@ -38,6 +38,7 @@ TABLE_LABEL = "Tabla de diseño"
 FIRST = "Predeterminado"
 HEAD_ROW, BIND_ROW, FIRST_ROW = 1, 2, 3
 SUP = "Sup_"
+CONF = "Conf_"
 OFF = "Deactivated"
 ENUM_PATH = PROP + ".Enum"
 PROP_TITLES = {"Length": "Profundidad", "Length2": "Profundidad 2", "Radius": "Radio", "Size": "Distancia",
@@ -66,6 +67,8 @@ def fmt_value(value):
     """Número para una celda (sin unidad; las cotas toman mm o °)."""
     if isinstance(value, bool):
         return "1" if value else "0"
+    if isinstance(value, str):
+        return text_cell(value)
     v = float(value)
     return str(int(round(v))) if abs(v - round(v)) < 1e-9 else repr(round(v, 9))
 
@@ -89,12 +92,27 @@ def _plain(contents):
 # --- Dónde está ---------------------------------------------------------------
 
 
+ASSEMBLY = "Assembly::AssemblyObject"
+
+
+def is_copy(obj):
+    """¿Es una copia que FreeCAD guarda para un componente en otra configuración? (Copy on change)"""
+    try:
+        return any(p.TypeId == "App::LinkGroup" and p.Name.startswith("CopyOnChangeGroup") for p in obj.InList)
+    except Exception:
+        return False
+
+
 def owner(doc):
-    """El Cuerpo que tiene la lista de configuraciones (o None)."""
-    for obj in getattr(doc, "Objects", []):
-        if getattr(obj, "TypeId", "") == "PartDesign::Body" and PROP in obj.PropertiesList:
-            if any(p.lstrip(".") == ENUM_PATH for p, _e in obj.ExpressionEngine):
-                return obj
+    """El objeto con la lista de configuraciones: el Cuerpo de una pieza o el Ensamblaje (o None)."""
+    objs = list(getattr(doc, "Objects", []))
+    # en un ensamblaje, solo el Ensamblaje: los Cuerpos que hay ahí son copias de componentes
+    kind = ASSEMBLY if any(getattr(o, "TypeId", "") == ASSEMBLY for o in objs) else "PartDesign::Body"
+    for obj in objs:
+        if getattr(obj, "TypeId", "") != kind or PROP not in obj.PropertiesList or is_copy(obj):
+            continue
+        if any(p.lstrip(".") == ENUM_PATH for p, _e in obj.ExpressionEngine):
+            return obj
     return None
 
 
@@ -203,6 +221,9 @@ def _style(sheet, last_col):
 
 
 def _main_body(doc):
+    asm = next((o for o in doc.Objects if getattr(o, "TypeId", "") == ASSEMBLY), None)
+    if asm is not None:
+        return asm
     try:
         import FreeCADGui
 
@@ -221,7 +242,7 @@ def ensure(doc, body=None):
         return sheet
     body = body or _main_body(doc)
     if body is None:
-        raise ValueError("Las configuraciones son de piezas: no hay ningún Cuerpo en el documento.")
+        raise ValueError("No hay una pieza (Cuerpo) ni un ensamblaje en el documento.")
     sheet = doc.addObject("Spreadsheet::Sheet", TABLE_NAME)
     sheet.Label = TABLE_LABEL
     sheet.set("A%d" % HEAD_ROW, text_cell("Configuración"))
@@ -350,6 +371,9 @@ def target_info(target):
     if kind == "sup":
         return (obj, "Suppressed", clean_alias(SUP + obj.Name), "Suprimir %s" % obj.Label,
                 1 if getattr(obj, "Suppressed", False) else 0)
+    if kind == "conf":  # configuración de un componente (ensamblaje)
+        return (obj, PROP, clean_alias(CONF + obj.Name), "Configuración %s" % obj.Label,
+                getattr(obj, PROP, "") or "")
     raise ValueError(kind)
 
 
@@ -438,6 +462,8 @@ def _set_plain(target, value):
         obj.setDatum(target[2], FreeCAD.Units.Quantity("%r %s" % (float(value), unit)))
     elif kind == "prop":
         setattr(obj, target[2], value)
+    elif kind == "conf":
+        setattr(obj, PROP, value)
     else:
         obj.Suppressed = bool(value)
 

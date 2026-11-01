@@ -43,7 +43,9 @@ def _doc():
 
 
 def _is_part(doc):
-    return doc is not None and any(getattr(o, "TypeId", "") == "PartDesign::Body" for o in doc.Objects)
+    """¿Pieza (algún Cuerpo) o ensamblaje? (las dos pueden tener configuraciones)"""
+    return doc is not None and any(getattr(o, "TypeId", "") in ("PartDesign::Body", cf.ASSEMBLY)
+                                   for o in doc.Objects)
 
 
 def _status(text, ms=5000):
@@ -195,7 +197,7 @@ def refresh(force=False):
         _state["sig"] = sig
         tree.clear()
         if sig == (None,):
-            item = QtWidgets.QTreeWidgetItem(["(abrí una pieza)"])
+            item = QtWidgets.QTreeWidgetItem(["(abrí una pieza o un ensamblaje)"])
             item.setFlags(QtCore.Qt.ItemFlag.NoItemFlags)
             tree.addTopLevelItem(item)
             return
