@@ -468,6 +468,40 @@ def configure(doc, target, value, scope="this"):
     doc.recompute()
 
 
+def value_in(doc, target, name):
+    """Valor de target en la configuración name (de la tabla si está atado; si no, el de todas)."""
+    obj, path, _alias, _title, current = target_info(target)
+    alias = bound_alias(obj, path)
+    sheet = table(doc)
+    if alias and sheet is not None:
+        n, row = alias_col(sheet, alias), row_of(doc, name)
+        if n is not None and row is not None:
+            try:
+                value = sheet.get("%s%d" % (col_letter(n), row))
+                return float(getattr(value, "Value", value))
+            except Exception:
+                pass
+    return current
+
+
+def set_values(doc, target, values):
+    """
+    Configurar operación (como SW): {configuración: valor} de una vez. Ata target a la tabla si
+    no lo estaba (las demás configuraciones quedan con el valor actual).
+    """
+    obj, path, alias, title, current = target_info(target)
+    sheet = ensure(doc)
+    n = _add_column(doc, alias, title, current)
+    if bound_alias(obj, path) is None:
+        obj.setExpression(path, "%s.%s" % (sheet.Name, alias))
+    c = col_letter(n)
+    for name, value in values.items():
+        row = row_of(doc, name)
+        if row is not None:
+            sheet.set("%s%d" % (c, row), fmt_value(value))
+    doc.recompute()
+
+
 def _set_plain(target, value):
     kind, obj = target[0], target[1]
     if kind == "sketch":
