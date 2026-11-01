@@ -20,10 +20,34 @@ Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o come
 ## Fase actual
 Pendientes del usuario (31/10, en este orden): 1) Girar cara que a veces no gira — HECHO;
 2) Mover cara que pierde su cara: que la vuelva a encontrar sola guardando cómo era (como
-`SWUI_MateGeom` en `mate_refs.py`) — sin empezar; 3) límites sin arreglo previsto (Equidistanciar
+`SWUI_MateGeom` en `mate_refs.py`) — HECHO 01/11; 3) límites sin arreglo previsto (Equidistanciar
 solo cilindros enteros; Equidistante necesita superficie plana o plano; Hasta el sólido se queda
 con la cara que encontró al aceptar); 4) pruebas del usuario (Brida base de punta a punta,
 pruebas "Vos" del checklist, DXF en CypCut, Convertir en chapa y Mover cara con un STEP suyo).
+- **01/11 (00:05), Mover cara vuelve a encontrar sola lo que FreeCAD pierde** (pedido del usuario,
+  con las referencias a otras piezas incluidas). Investigado: FreeCAD sigue bien a la cara casi
+  siempre (espesor, agujero que deja de atravesar, otro agujero, agujero suprimido); la pierde
+  ("?Face3", operación con error) cuando la cara se PARTE (muesca en el croquis, agujero que corta
+  el costado) y en la cadena con otro Mover cara atrasado (eso ya lo resuelve Ctrl+Q). En un
+  SubShapeBinder (destino en otra pieza) no pone '?': BORRA el elemento y queda apuntando al
+  sólido entero. Hecho (`move_face.py`, "Referencias que FreeCAD pierde o confunde"): después de
+  cada recálculo se guarda la firma (como `mate_refs`) de todo lo que usa cada Mover cara (caras,
+  bisagra, plano neutro y tiro, destino, eje, en la operación, los auxiliares y lo del panel) en
+  "geo" de la marca; si algo quedó perdido, vacío o cambiado por otro, se busca lo más parecido y
+  se corrige, se recalcula y avisa ("Mover cara1: FreeCAD lo había perdido y ya está corregido
+  (...)"). Cara que se mueve y quedó partida: todos los pedazos (mismo plano, dentro de donde
+  estaba). Si no se parece bien: "revisala". Con un Mover cara atrasado antes en el Cuerpo, nada
+  (primero Ctrl+Q). No corrige al abrir ni al deshacer (solo mira). Escribir la marca dejaba la
+  operación "para recalcular": estado Output + NoRecompute. Probado con guion en FreeCAD real:
+  costado partido por una muesca -> mueve los 2 pedazos, volumen 14 334,6 exacto; "Hasta la
+  superficie" de otro Cuerpo cuya cara se parte -> vínculo vacío corregido, válido, mismo
+  volumen; ranura que parte la cara de un tope (FreeCAD la siguió solo) -> nada que hacer;
+  cadena -> sigue pidiendo Ctrl+Q y queda bien. Con el mouse: costado movido 3 mm y agujero Ø10 ->
+  Ø26 (doble clic en la cota, Modificar) que lo parte -> mueve los 2 pedazos, aviso del fork,
+  10 433,089 mm³ en Propiedades físicas = sólido armado aparte. Visto: el error rojo de FreeCAD del
+  primer cálculo ("Sub shape not found ...?Face3") queda en la lista de avisos aunque ya se
+  corrigió (por eso el aviso del fork dice "ya está corregido"). Archivos de antes: guardan la
+  firma la primera vez que se recalculan; si alguno ya estaba perdido, queda el aviso de siempre.
 - **31/10 noche (23:40), Girar cara arreglado** (pedido del usuario: investigar en el código de
   FreeCAD). Causa: error de FreeCAD en el Ángulo de salida (PartDesign::Draft): en el primer
   cálculo pasa la bisagra a las coordenadas de su propia ubicación vieja, antes de copiar la de la
@@ -1544,7 +1568,10 @@ Etapas:
 - `SWUI_EquationNotes` (JSON oculto en el VarSet "Variables globales": comentarios de las
   ecuaciones, clave "Objeto|ruta"): nombre estable (2026-10-31).
 - Marca `SWUI_MoveFace`: claves nuevas "end", "target", "gap", "axis", "aux", "faces"
-  (2026-10-31); los archivos viejos abren con los valores de siempre.
+  (2026-10-31); "plc" (ubicación usada por el Ángulo de salida) y "geo" (firmas de lo elegido,
+  claves "Dueño|Propiedad|i|j" y "spec.hinge/target/axis/dir/faces.N") (2026-11-01). La marca
+  queda con estado Output + NoRecompute (escribirla no deja la operación para recalcular; el
+  estado se guarda en el archivo). Los archivos viejos abren con los valores de siempre.
 - `SWUI_PlaneSpec` (texto JSON en los planos hechos con el panel SW): nombre estable (2026-10-27).
 - `SWUI_FromVertex` (texto JSON oculto en los puntos De / A de Mover/Copiar sólido: vértice y caras
   que se juntan ahí, para volver a encontrarlo): nombre estable (2026-10-30).

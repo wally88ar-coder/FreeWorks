@@ -303,6 +303,15 @@
   ángulo" (caja 50x30x10 con agujero: 10° hacia un lado falla, 5° anda) era un error de FreeCAD
   con la ubicación de la operación anterior (ver "Errores de FreeCAD encontrados", 1): arreglado
   en el fork el 2026-10-31 (`move_face.place_draft` / `draft_misplaced`).
+- Nombres de caras (2026-11-01, FreeCAD 1.1.4): un Pad sobre una cara de la operación anterior
+  sigue bien a la cara aunque cambie de número (espesor, agujero que deja de atravesar, otro
+  agujero, agujero suprimido: Face5 -> Face6 correcto). La da por perdida ("?Face3", "Sub shape
+  not found", operación con error) cuando la cara se parte en dos. En un SubShapeBinder no marca
+  '?': borra el elemento (Support queda `(obj, ('',))`, el sólido entero) y el "Hasta cara" que lo
+  usa salta a otra cara del sólido. A veces sigue a UNO de los pedazos sin avisar.
+- Escribir una propiedad (también un PropertyString propio) deja la operación "Touched" (para
+  recalcular). Con `setPropertyStatus(prop, ["Output", "NoRecompute"])` no; el estado se guarda en
+  el archivo (probado al reabrir).
 - Sketch con MapMode "SectionOfRevolution", "Concentric" u "ObjectXZ" sobre una cara cilíndrica:
   inválido. El croquis del anillo va con Placement fijo (MapMode "Deactivated").
 - Las expresiones leen la forma: `Cyl.Shape.Faces[0].Surface.Radius` = 4 (no se usó: depende del

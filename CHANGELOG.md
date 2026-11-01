@@ -91,6 +91,9 @@ Neueste Version oben. / Newest version first.
     le da la ubicación correcta antes de calcular y avisa "desactualizado: Ctrl+Q" si después
     cambia. Si la cara de verdad atravesaría la pieza, lo dice; si FreeCAD la deja sin girar,
     también.
+  - Mover cara vuelve a encontrar solo lo que FreeCAD pierde al cambiar la pieza (como las
+    relaciones de posición): la cara que mueve, la bisagra, el destino y el eje, también en otras
+    piezas. Si la cara quedó partida, mueve todos los pedazos. Avisa qué corrigió.
   - Campos numéricos como SW: un clic marca todo el valor y lo escrito lo reemplaza
     (`swui/fork/spin_select.py`). Ecuaciones no lista el largo de un corte "Por todo".
   - Ecuaciones: las cotas a la vista se actualizan después de cada ecuación y al Cancelar; no
