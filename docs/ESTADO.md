@@ -1,7 +1,7 @@
 # Estado del fork
 
-Última actualización: 2026-11-01 01:35 (configuraciones estilo SW: plan completo implementado,
-etapas 1 a 5, probado con guiones; falta la prueba con mouse).
+Última actualización: 2026-11-01 13:00 (configuraciones estilo SW: todo hecho y probado por Claude
+con el mouse contra SW, incluida la pregunta 7 "Como en SW"; falta que lo pruebe el usuario).
 **Próximo paso posible:** publicar la primera versión en la rama "release" (sin ella el Addon
 Manager no puede instalar FreeWorks); preguntar al usuario antes, es hacia afuera.
 
@@ -61,6 +61,14 @@ Commits locales (sin subir a GitHub): b701dc8 etapa 1, 0ae261d etapa 2, 0d0b348 
   Probado con el mouse en FreeCAD: relaciones al cambiar la configuración de los componentes,
   guardar y reabrir; cambiar nombre y eliminar configuraciones. Configurar operación y la
   configuración en el árbol: probados con guion (gui_probe), falta con el mouse.
+- 01/11 13:00: **Pregunta 7 contestada "Como en SW" y hecha**: operación nueva suprimida en las
+  otras configuraciones; además, diferencias chicas con SW resueltas: Modificar con "Especificar
+  las configuraciones...", listas en orden alfabético, tilde para confirmar en la barrita del
+  componente, Agregar configuración como panel a la izquierda, sin avisos de relaciones al
+  cambiar de configuración. Probado con guion (gui_probe) y con el mouse (tilde de la barrita;
+  asistente para taladro de ensamblaje y Propiedades físicas con un componente suprimido, en
+  FreeCAD y en SW: los dos lo dejan afuera). Configuraciones: no queda nada abierto de lo
+  hablado; falta que lo pruebe el usuario.
 - 01/11 12:40: terminadas con mouse (FreeCAD y SW) las que seguían con guion: Mover cara con
   configuraciones, corte de ensamblaje con suprimido y componente en otra configuración, DXF por
   lotes (SW no tiene equivalente) y pieza multicuerpo. Arreglos: panel_guard (paneles que dejaban

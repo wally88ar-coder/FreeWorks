@@ -118,6 +118,17 @@ Neueste Version oben. / Newest version first.
     otros paneles: el escucha se daba de baja solo); el desarrollo de chapa ahora reelige su
     cara fija después de cualquier cambio de la pieza ("?Face6"); el DXF por lotes ya no repite
     el mismo archivo ni incluye componentes suprimidos.
+- **Configuraciones: más como SW** (01/11, decisión del usuario "Como en SW"):
+  - Una **operación nueva** queda suprimida en las otras configuraciones (como la opción de SW
+    "Suprimir operaciones nuevas"); con una sola configuración no cambia nada.
+  - *Modificar* de las cotas tiene la tercera opción **Especificar las configuraciones...** con
+    la lista para tildar.
+  - Lista de configuraciones y la de la barrita del componente en **orden alfabético**.
+  - La barrita del componente pide **confirmar con un tilde**, como la barra contextual de SW.
+  - **Agregar configuración** es un panel a la izquierda (Tareas), como el PropertyManager.
+  - Sin avisos de "relación corregida" al cambiar de configuración (quedan en el informe).
+  - Probado con el mouse contra SW: asistente para taladro de ensamblaje y Propiedades físicas
+    con un componente suprimido (los dos lo dejan afuera, igual que SW).
 - **Decisiones del usuario del 31/10** (checklist):
   - Nombre visible **FreeWorks** (menú y lista de bancos; lo interno no cambia, los
     archivos y la configuración abren igual) (`swui/fork/brand.py`). Paquete (package.xml) y

@@ -720,3 +720,11 @@ run.log, borrar los .pyc antes de seguir.
     barrita del componente salía con el panel de relación abierto (ahora no, si hay
     `Control.activeDialog()`); `settle_assembly` usaba la geometría tomada con la copia a medio
     rehacer y avisaba "cara cambiada" al agregar una configuración (ahora prefiere la guardada).
+  - Operación nueva como SW (`config_tab._NewFeatures`, observador del documento): junta las
+    operaciones nuevas y, cuando no hay panel ni edición abiertos, `configurations.only_in` las
+    suprime en las otras configuraciones (columna de supresión en la tabla). No se hace al crear
+    el objeto: el panel todavía lo está armando y suprimirlo ahí rompía la operación.
+  - Barrita del componente: el cambio vale recién con el tilde (`_Bar.ok`); la barrita se va
+    sola al alejar el mouse sin cambiar nada. Avisos de relaciones al cambiar de
+    configuración: `mate_refs._state["quiet"]` durante `set_config` / `settle` (`_quiet_mates`),
+    van al informe (PrintLog) en vez de avisar.
