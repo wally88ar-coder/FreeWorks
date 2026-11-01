@@ -127,8 +127,13 @@ freecadcmd + un paso de Ctrl+Z + registro en la consola). Código copiado de nek
 cliente MCP de afuera (todo bien, ver NOTAS). **Conectado a la app del usuario el 01/11** ("freeworks"
 en su configuración de Claude Code, con el claude.exe de la app; clave en
 FreeWorks-IA/clave.txt): con el puente prendido en un FreeCAD de prueba, Claude Code lo da por
-"Connected". **Falta:** que el usuario reinicie su FreeCAD, prenda el puente y abra una sesión
-nueva de la app para probarlo de punta a punta; preguntar quién prueba con el mouse.
+"Connected". **Probado de punta a punta el 01/11 ~20:30** en el FreeCAD del usuario (reiniciado,
+puente tildado, "Reconectar" en /mcp de la app; la reconexión de un servidor de usuario la hace
+el usuario, no Claude): estado de "aro" y, a pedido ("hacelo sobre aro, es una pieza de
+testing"), placa de prueba 100x60x10 con agujero Ø10 en un Cuerpo nuevo al lado del aro, croquis
+totalmente definidos, 59 214,602 mm³ exacto, prueba aparte bien, respaldo previo, un paso de
+Ctrl+Z; captura con ajustar. Detalle: si se nombran los objetos en el script, `naming.py` no les
+pone nombre SW (con nombres por defecto sí).
 
 **MENÚS ESTILO SW 2018: HECHOS — 01/11/2026 tarde** (`swui/fork/menus_sw.py`; detalle, pruebas y
 decisiones en "Checklists compartidos" > Menús estilo SW, arriba). Archivo, Edición, Ver,
