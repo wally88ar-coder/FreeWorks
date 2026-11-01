@@ -53,6 +53,16 @@ Neueste Version oben. / Newest version first.
 - `tools/test_load.py` also runs on Windows (path comparisons).
 
 **Fork (wally88ar-coder, español)**
+- **Barra de menús como SW 2018** (01/11, `swui/fork/menus_sw.py`): Archivo, Edición, Ver,
+  Insertar, Herramientas, FreeWorks, Ventana y "?", con la estructura del SW real y solo lo que
+  FreeWorks y FreeCAD tienen. Insertar y Herramientas en bloques Pieza / Ensamblaje / Plano /
+  Croquis separados por líneas; lo que no corresponde al documento activo, en gris (en el croquis
+  Pieza sigue activa). Las entradas hacen lo mismo que la cinta (Extruir sin selección pide el
+  plano, etc.). Textos de SW en castellano también en los comandos de FreeCAD (se devuelven al
+  salir del banco); Ctrl+W cierra y F11 es pantalla completa, como SW. Lo útil de FreeCAD sin
+  equivalente en SW, en FreeWorks > FreeCAD (Gráfico de dependencias, Paneles, Apariencia,
+  Engranaje...). Salida de emergencia: FreeWorks > FreeCAD > "Mostrar los menús originales de
+  FreeCAD" (al reiniciar). El menú "FreeWorks" de antes se repartió en su lugar de SW.
 - **Configuraciones como SW** (01/11, etapa 1 de 5: piezas): pestaña **Configuraciones** junto a
   Modelo y Tareas (como el ConfigurationManager): lista con la activa en negrita, doble clic =
   mostrar; clic derecho: Agregar configuración, Cambiar nombre (F2), Eliminar, Editar tabla de

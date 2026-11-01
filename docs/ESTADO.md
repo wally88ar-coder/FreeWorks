@@ -19,6 +19,32 @@ Manager no puede instalar FreeWorks); preguntar al usuario antes, es hacia afuer
   y plan" (https://claude.ai/artifact/26ZuPXVSKWXDnC6tFA3rxz). Se puede, sobre la tabla de
   configuración nativa de la planilla + Suppressed + Link "Copy on change"; plan en etapas 1 a 5,
   IMPLEMENTADO completo el 01/11 01:35 (ver Fase actual).
+- Menús estilo SW 2018 (maqueta interactiva, 2026-11-01, sin código): "Menús de FreeWorks"
+  (https://claude.ai/artifact/AD833geJYQtUpny242DxAC). Estructura relevada del SW real con el
+  mouse (pieza, ensamblaje, plano); Insertar y Herramientas en bloques Pieza / Ensamblaje / Plano /
+  Croquis con separadores, lo que no corresponde en gris; submenú FreeCAD dentro de FreeWorks;
+  listas C1 (SW sí, FreeCAD no) y C2 (FreeCAD con otra interfaz). Para hacerlo:
+  `FreeCADGui.addWorkbenchManipulator` (ya usado para el clic derecho).
+  Decisiones del usuario (01/11): 1) los nativos con panel de FreeCAD que ya están en la cinta (N)
+  van también al menú; 2) sin títulos de bloque, solo separadores (como SW); 3) lo que SW no tiene
+  en el menú va donde está en la maqueta (PDF/DXF en Archivo, Material en Herramientas, ¿Qué es
+  incorrecto? y Reparar en Evaluar, lo del plano en su bloque); 4) barra de menús siempre visible;
+  5) editando un croquis quedan activos Pieza + Croquis; 6) Opciones / Personalizar / Macro abren
+  lo de FreeCAD en el lugar de SW (gestor de complementos en FreeWorks > FreeCAD); 7) lo que en SW
+  es solo clic derecho queda solo en el clic derecho. Sin código todavía.
+  01/11: menús de FreeCAD revisados uno por uno con guion (lista completa del banco FreeWorks y de
+  Part Design, Croquis, Ensamblaje, TechDraw, Part y Planilla); la maqueta suma lo que faltaba
+  (Exportar/Importar, Selección de cuadro, Dimétrica/Trimétrica, Parábola, Hoja, Rosca cosmética,
+  cotas en cadena/coordenadas, más extras en FreeWorks > FreeCAD) y una lista de lo descartado.
+  **01/11 tarde: HECHO** (`swui/fork/menus_sw.py`, pedido del usuario "arrancá a programar").
+  Probado con guion en FreeCAD real (copia de la configuración, capturas): barra completa, gris
+  según entorno (pieza, croquis, ensamblaje, plano), Insertar > Extruir sin selección abre
+  "seleccionar un plano" como la cinta, Insertar > Croquis dentro del croquis lo cierra, estilos
+  de Ver, Ctrl+W / F11, textos devueltos al ir a otro banco y puestos al volver. Diferencias con la
+  maqueta: FreeWorks queda ANTES de Ventana (FreeCAD ubica los menús nuevos antes de "&Windows";
+  así lo hace también el SW real con sus complementos, p. ej. "Simulation"); Ventana y "?" son los
+  de FreeCAD con título de SW, sin lo descartado (Siguiente/Anterior quedan; "Reiniciar en modo
+  seguro" queda en "?" y no en FreeWorks > FreeCAD). Falta: que el usuario lo pruebe con el mouse.
 Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o comentó el usuario.
 
 ## Fase actual

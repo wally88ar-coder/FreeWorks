@@ -37,6 +37,24 @@
   NO llegan (ni con interfaz, probado 2026-10-30). Para "al abrir": `slotCreatedDocument` + QTimer
   (el documento ya está cargado cuando corre). `doc.Recomputing` sí existe.
 - Barra de menú: FreeCAD 1.1 trae `MenuBarLeftArea` / `MenuBarRightArea` como cornerWidgets.
+  Para listar todos los menús: recorrer `menuBar().actions()` y `action.menu()` (emitir
+  `aboutToShow` antes llena los dinámicos); la acción de cada comando tiene objectName = comando.
+  Nombres reales en 1.1.4: `Std_CascadeWindows` (no WindowCascade), ayuda = `Std_FreeCADUserHub`,
+  pantalla completa = `Std_MainFullscreen` (Alt+F11; F11 es `Std_ViewFullscreen`), cerrar = Ctrl+F4.
+  Graphviz viene con FreeCAD (`D:\Freecad\bin\dot.exe`): el Gráfico de dependencias anda sin instalar nada.
+- Menús propios del banco (`swui/fork/menus_sw.py`, probado en 1.1.4): el banco Python arranca con
+  los menús estándar; `removeMenu` + `appendMenu(ruta, comandos)` los reemplazan (rutas de
+  submenús, "Separator", comandos grupo como Std_RecentFiles salen como submenú). Trampas:
+  (1) `reloadActive()` llamado mientras el banco arranca da "Access violation" y deja el banco roto
+  -> armar todo DENTRO de Initialize, antes de que FreeCAD dibuje la barra; (2) sacar "&Help" da
+  "Access violation" (FreeCAD lo usa de referencia; los menús nuevos van antes de "&Windows");
+  `removeMenu` no saca entradas de adentro de un menú, solo menús enteros -> lo de Ventana / Ayuda
+  se oculta con `QAction.setVisible`; (3) los nombres con tilde que se pasan a appendMenu llegan
+  como Latin-1 ("EdiciÃ³n"): se arregla el texto con encode("latin-1").decode("utf-8");
+  (4) con cualquier panel de tareas abierto (el croquis) FreeCAD apaga los comandos sin
+  `"CmdType": "ForEdit"`; (5) FreeCAD no recalcula IsActive al abrir un menú ni al pasar a una
+  hoja (y `FreeCADGui.updateCommands` no existe): se hace a mano en `aboutToShow`.
+  Los subpuntos de Std_DrawStyle (Std_DrawStyleShaded...) no son comandos sueltos: van con índice.
 - Al tabificar paneles, Qt deja barras de pestañas vacías encima de la buena: ocultarlas.
   FreeCAD repone la barra de título del panel Tareas al abrir operaciones: volver a quitarla.
 - Preferencias útiles: `View/RotationMode`, `View/OrbitStyle`, `General/AutoloadModule`,

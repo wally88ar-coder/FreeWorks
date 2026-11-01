@@ -402,7 +402,10 @@ def _make_stubs():
     params["User parameter:BaseApp/MainWindow/DockWindows/OverlayRight"] = dict(ORIGINAL_OVERLAY_RIGHT)
 
     gui = types.ModuleType("FreeCADGui")
-    gui.Workbench = type("Workbench", (), {})
+    # fork: menus_sw saca los menús estándar (listMenus / removeMenu) antes de poner los de SW
+    gui.Workbench = type("Workbench", (), {
+        "listMenus": lambda self: ["&File", "&Edit", "&View", "&Tools", "&Macro", "&Windows", "&Help"],
+        "removeMenu": lambda self, name: None})
     gui.listWorkbenches = lambda: dict(registered)
     gui.addWorkbench = lambda obj: registered.setdefault(type(obj).__name__, obj)
     gui.addCommand = lambda name, obj: commands.setdefault(name, obj)
@@ -763,6 +766,26 @@ def _check_feature_tree(commands, mw, layout, hooked):
     if (fck.COMMAND not in commands or "2 piezas, 1 con problemas" not in report
             or "b.FCStd: CON ERRORES" not in report or "    Croquis2: perdió su cara" not in report):
         print("  FEHLER: fork: chequear carpeta (comando / informe)", report)
+        return False
+    # Menús estilo SW (menus_sw): los comandos propios existen, nada repetido, gris según el entorno
+    ms = sys.modules["swui.fork.menus_sw"]
+    calls, wrappers, labels = ms.plan()
+    targets = set(labels)
+    for entry, _env in wrappers.values():
+        t = entry["target"]
+        targets |= set(t.values()) if isinstance(t, dict) else ({t} if isinstance(t, str) else set())
+    missing = sorted(t for t in targets if t.startswith("SWUI_") and t not in commands and t != ms.ORIGINALS_CMD
+                     and not t.startswith("SWUI_SheetShape_"))
+    names = [n for _p, items in calls for n in items if n != "Separator"]
+    titles = [p[0] for p, _i in calls]
+    if (missing or len(names) != len(set(names))
+            or [t for i, t in enumerate(titles) if t not in titles[:i]]
+            != ["Archivo", "Edición", "Ver", "Insertar", "Herramientas", "FreeWorks", "&Windows"]
+            or not ms.env_ok("P", "C") or ms.env_ok("E", "C") or ms.env_ok("PE", "D") or ms.env_ok("P", None)
+            or ms.resolve({"P": "a", "C": "b"}, "C") != "b" or ms.resolve({"P": "a", "E": "b"}, "C") != "a"
+            or ms.resolve({"C": "a", "D": "b"}, "P") is not None):
+        print("  FEHLER: fork: menús estilo SW (comandos, repetidos, orden, entorno)", missing,
+              sorted({n for n in names if names.count(n) > 1}))
         return False
     # Cotas con doble clic (instant_dims): formato y lectura de valores como SW en castellano
     idm = sys.modules["swui.fork.instant_dims"]

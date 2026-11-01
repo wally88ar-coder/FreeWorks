@@ -244,3 +244,10 @@ def install(workbench=None):
             workbench.appendMenu(MENU, [always_swui.COMMAND])
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] Usar siempre LikeSolidWorks UI:\n%s\n" % traceback.format_exc())
+    try:
+        # al final: reparte en menús estilo SW lo que todos agregaron al menú del banco
+        from swui.fork import menus_sw
+
+        menus_sw.install(workbench)
+    except Exception:
+        FreeCAD.Console.PrintError("[SWUI fork] Menús estilo SW:\n%s\n" % traceback.format_exc())
