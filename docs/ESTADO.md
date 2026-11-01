@@ -1833,6 +1833,7 @@ Etapas:
   guías). A verificar antes de Antigravity: modo sin ventana, límites, MCP. Solo Claude se prueba
   con el rigor del checklist. Los amigos usan la suscripción que ya pagan. API / Ollama: posibles
   más adelante (cliente de ghbalf, `llm/client.py`, 24 proveedores, solo stdlib).
+- **IA: se arranca por la etapa 0, el puente** (usuario, 2026-11-01). Sin empezar a programar.
 
 ## Git
 - `origin` = https://github.com/wally88ar-coder/FreeWorks (renombrado el 2026-10-31; todo
