@@ -1808,6 +1808,13 @@ Etapas:
   cada ~2 años, instalar FreeWorks debe ser un solo paso para sus amigos y hay que corregirlos
   (Windows, clave obligatoria, deshacer). Contra: sus arreglos se traen a mano, como upstream.
   Las herramientas y el panel "Asistente" son propios.
+- **IA aislada del resto** (aprobado por el usuario, 2026-11-01; sección "Arquitectura" del
+  documento de IA): la IA usa a FreeWorks y FreeWorks no importa nada de `swui/fork/ia/` (el test
+  lo verifica). Capas terceros / nucleo / herramientas (un archivo por área) / puertas, cada una usa
+  solo la de abajo. Las herramientas entran por comandos `SWUI_...` o por una función pública
+  documentada del módulo (nunca las `_internas`). Nada propio de la IA en los archivos. Únicos
+  contactos: la pestaña Asistente (envuelve `panel_sw` como Configuraciones) y la función pública
+  de cada módulo que usa su archivo de herramientas.
 
 ## Git
 - `origin` = https://github.com/wally88ar-coder/FreeWorks (renombrado el 2026-10-31; todo
