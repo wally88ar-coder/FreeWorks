@@ -14,8 +14,8 @@
     SOLIDWORKS es una marca de Dassault Systemes; este proyecto no está relacionado
     con Dassault Systemes. Not affiliated with Dassault Systemes.
   </description>
-  <version>0.10.0</version>
-  <date>2026-10-18</date>
+  <version>0.11.0</version>
+  <date>2026-11-01</date>
 
   <maintainer email="347947152+wally88ar-coder@users.noreply.github.com">wally88ar-coder</maintainer>
   <author email="ladewig_dominik@web.de">Dominik Ladewig</author>
@@ -32,7 +32,7 @@
   <url type="repository" branch="release">https://github.com/wally88ar-coder/FreeWorks</url>
   <url type="readme">https://github.com/wally88ar-coder/FreeWorks/blob/release/README.md</url>
 
-  <freecadmin>1.0</freecadmin>
+  <freecadmin>1.1</freecadmin>
 
   <tag>FreeWorks</tag>
   <tag>LikeSolidWorks UI</tag>

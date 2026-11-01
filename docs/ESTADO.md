@@ -5,8 +5,12 @@ con el mouse y comparada con SW; el usuario reinició su FreeCAD y la vio: "se v
 aviso "Cannot find icon: TechDraw_..." que le salió al arrancar quedó arreglado. Croquis vacío que
 se borra como SW. Configuraciones estilo SW: hechas y probadas por Claude. Todo subido a GitHub.
 Falta que el usuario use los menús y las configuraciones en su trabajo y avise lo que aparezca).
-**Próximo paso posible:** publicar la primera versión en la rama "release" (sin ella el Addon
-Manager no puede instalar FreeWorks); preguntar al usuario antes, es hacia afuera.
+**Primera versión publicada (01/11, pedido del usuario "hacé primer release"): FreeWorks 0.11.0**,
+rama "release" + etiqueta v0.11.0 en GitHub (la 0.10.0 era la última del original). Mínimo
+declarado FreeCAD 1.1 (antes 1.0; el fork se probó solo en 1.1.4). Para la próxima: subir versión
+en swui/version.py y package.xml (+ fecha), entrada "## X.Y.Z — fecha" en CHANGELOG y
+tools/freigabe.sh (en Windows hacer los pasos a mano: el script llama a python3 y /tmp).
+Pendiente aparte: README propio en castellano (el Addon Manager muestra el del original).
 
 **Checklists compartidos con el usuario** (se tildan ahí; al cerrar algo, tildarlo también):
 - Todas las fases, incluida la fase 5 en detalle: "Checklists del fork: qué falta en cada fase"

@@ -2,7 +2,9 @@
 
 Neueste Version oben. / Newest version first.
 
-## Unveröffentlicht / Unreleased
+## 0.11.0 — 2026-11-01
+
+Primera versión de FreeWorks (fork de LikeSolidWorks UI). / First FreeWorks release.
 
 **Deutsch**
 - Oberfläche auch auf **Spanisch** (`swui/lang/es.py`), Begriffe wie im
