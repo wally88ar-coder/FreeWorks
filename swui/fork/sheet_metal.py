@@ -595,7 +595,7 @@ def ensure_flat(body, sketches=True):
     import SheetMetalUnfoldCmd
 
     patch_sketch_names()
-    base, tip = sheet_base(body), body.Tip
+    base = sheet_base(body)
     face = fixed_face(body)
     if face is None:
         raise ValueError("No se encontró la cara fija para desplegar la chapa.")
@@ -603,9 +603,14 @@ def ensure_flat(body, sketches=True):
         ensure_k(base)
     flat = flat_of(body)
     doc = body.Document
+    # El desarrollo apunta al Cuerpo (misma forma y nombres de caras que la punta): apuntando a la
+    # punta, que está adentro del Cuerpo, FreeCAD avisaba en inglés "Link(s) to object(s) 'Bend' go
+    # out of the allowed scope 'Unfold'" en cada recálculo (visto con el mouse, 2026-10-31).
+    # Mismo desarrollo (probado: misma área y medidas).
+    source = body
     if flat is None:
         flat = doc.addObject("Part::FeaturePython", "Unfold")
-        SheetMetalUnfoldCmd.SMUnfold(flat, tip, [face])
+        SheetMetalUnfoldCmd.SMUnfold(flat, source, [face])
         if FreeCAD.GuiUp:
             SheetMetalUnfoldCmd.SMUnfoldViewProvider(flat.ViewObject)
         flat.addProperty("App::PropertyString", FLAT_PROP, "SWUI", "Desarrollo de (fork de LikeSolidWorks UI)")
@@ -613,8 +618,8 @@ def ensure_flat(body, sketches=True):
         setattr(flat, FLAT_PROP, body.Name)
         flat.Label = flat_label(body)
         flat.Visibility = False
-    elif flat.baseObject != (tip, [face]):
-        flat.baseObject = (tip, [face])
+    elif flat.baseObject != (source, [face]):
+        flat.baseObject = (source, [face])  # también pasa los desarrollos viejos (apuntaban a la punta)
     if base is not None:
         expr = "%s.%s" % (base.Name, K_PROP)
         if dict(flat.ExpressionEngine).get("KFactor") != expr:
