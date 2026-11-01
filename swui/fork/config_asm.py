@@ -401,8 +401,8 @@ def _point_users(users, name):
 def _hook_rename_delete():
     """
     Como SW: cambiar el nombre de una configuración de la pieza no cambia los componentes que
-    la usan (antes volvían a la primera, visto con el mouse 01/11); borrar una que usa algún
-    componente lo pasa a la activa de la pieza y avisa.
+    la usan (antes volvían a la primera, visto con el mouse 01/11); borrar una que usa un
+    componente de un ensamblaje abierto no se puede (SW tampoco lo deja).
     """
     if getattr(cf.rename, "_swui_asm", False):
         return
@@ -420,13 +420,13 @@ def _hook_rename_delete():
         body = cf.owner(doc)
         part = body is not None and getattr(body, "TypeId", "") != cf.ASSEMBLY
         users = _users(body, name) if part else []
-        _orig(doc, name)
         if users:
-            now = cf.active(doc)
-            for link in _point_users(users, now):
-                FreeCAD.Console.PrintWarning(
-                    "%s usaba la configuración «%s», que se eliminó: ahora usa «%s».\n"
-                    % (link.Label, name, now))
+            # como SW: no se borra una configuración que usa un ensamblaje abierto (SW avisa "No se
+            # puede eliminar ninguna entidad seleccionada"; visto con el mouse 01/11)
+            who = ", ".join(sorted("%s (%s)" % (link.Label, link.Document.Label) for link, _c in users))
+            raise ValueError("No se puede eliminar «%s»: la usa %s. Pasá esos componentes a otra "
+                             "configuración primero." % (name, who))
+        _orig(doc, name)
 
     rename._swui_asm = delete._swui_asm = True
     cf.rename, cf.delete = rename, delete

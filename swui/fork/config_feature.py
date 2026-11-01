@@ -94,7 +94,7 @@ class Dialog(QtWidgets.QDialog):
 
         super().__init__(parent or FreeCADGui.getMainWindow())
         self.feature, self.doc = feature, feature.Document
-        self.setWindowTitle("%s: %s" % (TITLE, feature.Label))
+        self.setWindowTitle("Modificar configuraciones: %s" % feature.Label)  # como SW
         self.cols = columns(feature)
         self.names = cf.names(self.doc)
         self.before = table_values(self.doc, feature)

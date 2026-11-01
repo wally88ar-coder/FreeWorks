@@ -143,6 +143,57 @@ class _Tree(QtWidgets.QTreeWidget):
         self.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._menu)
         self.itemDoubleClicked.connect(self._double)
+        self._editor = None  # cuadrito para el nombre nuevo (F2), encima del renglón
+
+    def start_rename(self, item):
+        """
+        Como SW: el nombre se cambia ahí mismo en la lista (F2), sin cuadro aparte. Un QLineEdit
+        propio encima del renglón: con la edición de Qt el cuadro quedaba suelto ("commitData called
+        with an editor that does not belong to this view") y el Enter mostraba la configuración.
+        """
+        name = self._name(item)
+        if not name:
+            return
+        self._close_editor()
+        rect = self.visualItemRect(item)
+        editor = QtWidgets.QLineEdit(name, self.viewport())
+        editor.setObjectName("SWUI_ConfigRename")
+        editor.setGeometry(rect.x() + 14, rect.y(), max(rect.width() - 14, 120), rect.height())
+        editor.selectAll()
+        editor.setProperty("swui_old", name)
+        editor.installEventFilter(self)
+        editor.show()
+        editor.setFocus()
+        self._editor = editor
+
+    def eventFilter(self, obj, event):
+        if obj is self._editor:
+            if event.type() == QtCore.QEvent.Type.KeyPress and event.key() == QtCore.Qt.Key.Key_Escape:
+                self._close_editor()
+                return True
+            if event.type() == QtCore.QEvent.Type.KeyPress and event.key() in (QtCore.Qt.Key.Key_Return,
+                                                                               QtCore.Qt.Key.Key_Enter):
+                # acá y no con returnPressed: el Enter seguía hasta la lista y mostraba la configuración
+                self._finish_rename(obj.property("swui_old"))
+                return True
+            if event.type() == QtCore.QEvent.Type.FocusOut:
+                QtCore.QTimer.singleShot(0, self._close_editor)
+        return False
+
+    def _close_editor(self):
+        editor, self._editor = self._editor, None
+        if editor is not None:
+            editor.hide()
+            editor.deleteLater()
+            self.setFocus()
+
+    def _finish_rename(self, old):
+        new = self._editor.text().strip() if self._editor is not None else ""
+        self._close_editor()
+        doc = _doc()
+        if new and new != old and doc is not None:
+            QtCore.QTimer.singleShot(0, lambda: _run(doc, "Cambiar nombre de configuración",
+                                                     lambda: cf.rename(doc, old, new)))
 
     def _name(self, item):
         return item.data(0, QtCore.Qt.ItemDataRole.UserRole) if item is not None else None
@@ -160,7 +211,7 @@ class _Tree(QtWidgets.QTreeWidget):
         if name and doc is not None and cf.configured(doc):
             act = menu.addAction("Mostrar configuración", lambda: show_config(name))
             act.setEnabled(name != cf.active(doc))
-            menu.addAction("Cambiar nombre", lambda: rename_config(name))
+            menu.addAction("Cambiar nombre", lambda: self.start_rename(item))
             act = menu.addAction("Eliminar", lambda: delete_config(name))
             act.setEnabled(name != cf.active(doc))
             menu.addSeparator()
@@ -171,7 +222,7 @@ class _Tree(QtWidgets.QTreeWidget):
     def keyPressEvent(self, event):
         name = self._name(self.currentItem())
         if event.key() == QtCore.Qt.Key.Key_F2 and name and cf.configured(_doc()):
-            rename_config(name)
+            self.start_rename(self.currentItem())
             return
         if event.key() in (QtCore.Qt.Key.Key_Return, QtCore.Qt.Key.Key_Enter) and name:
             show_config(name)
