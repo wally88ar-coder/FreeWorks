@@ -1,7 +1,7 @@
 # Estado del fork
 
-Última actualización: 2026-10-31 noche (decisiones del checklist tomadas y hechas; fase 5
-cerrada; fase 6 acordada; repositorio renombrado a FreeWorks y todo subido).
+Última actualización: 2026-11-01 madrugada (Girar cara y Mover cara que pierde su cara: hechos,
+probados con el mouse y subidos a GitHub; checklist repasado con el usuario).
 **Próximo paso posible:** publicar la primera versión en la rama "release" (sin ella el Addon
 Manager no puede instalar FreeWorks); preguntar al usuario antes, es hacia afuera.
 
@@ -20,10 +20,22 @@ Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o come
 ## Fase actual
 Pendientes del usuario (31/10, en este orden): 1) Girar cara que a veces no gira — HECHO;
 2) Mover cara que pierde su cara: que la vuelva a encontrar sola guardando cómo era (como
-`SWUI_MateGeom` en `mate_refs.py`) — HECHO 01/11; 3) límites sin arreglo previsto (Equidistanciar
-solo cilindros enteros; Equidistante necesita superficie plana o plano; Hasta el sólido se queda
-con la cara que encontró al aceptar); 4) pruebas del usuario (Brida base de punta a punta,
-pruebas "Vos" del checklist, DXF en CypCut, Convertir en chapa y Mover cara con un STEP suyo).
+`SWUI_MateGeom` en `mate_refs.py`) — HECHO 01/11, punto resuelto (usuario); 3) límites sin
+arreglo previsto (Equidistanciar solo cilindros enteros; Equidistante necesita superficie plana o
+plano; Hasta el sólido se queda con la cara que encontró al aceptar, aunque ahora la sigue si
+FreeCAD la renumera); 4) pruebas del usuario (Brida base de punta a punta, pruebas "Vos" del
+checklist, DXF en CypCut, Convertir en chapa y Mover cara con un STEP suyo).
+
+**Estado del checklist (repasado con el usuario el 01/11):** todas las decisiones tomadas; fase 5
+cerrada. Quedan solo pruebas "Vos": DXF en CypCut; Convertir en chapa + DXF con un STEP suyo;
+Propiedades físicas de una pieza suya contra SW; Mover cara con un STEP suyo (más, fuera del
+checklist: Brida base sin nada elegido, de punta a punta). Claude a medias: Dobladillo abierto
+(cerrado y corte probados). Anotado sin empezar: chapa (desahogo de pliegue y alivio de esquinas
+propios; elegir qué pliegues desdoblar), planos (rosca simplificada automática; rótulo en
+castellano y coma decimal), Evaluar al actualizar FreeCAD (que Propiedades físicas, al ceder a la
+herramienta nueva, no pierda lo del informe SW). Fase 6 (compatibilidad) acordada, sin empezar y
+fuera del checklist. Tildado el 01/11: "Girar cara alrededor de una arista" columna Claude ->
+Probado. Siguiente: lo que elija el usuario.
 - **01/11 (00:05), Mover cara vuelve a encontrar sola lo que FreeCAD pierde** (pedido del usuario,
   con las referencias a otras piezas incluidas). Investigado: FreeCAD sigue bien a la cara casi
   siempre (espesor, agujero que deja de atravesar, otro agujero, agujero suprimido); la pierde

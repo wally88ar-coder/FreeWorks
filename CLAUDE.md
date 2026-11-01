@@ -84,6 +84,9 @@ un croquis abierto (`swui/from_sketch.py`); términos SW en diálogos de extruir
   **planas**, con operaciones nativas (no FeaturePython: aprobado por el usuario). Equidistanciar /
   Trasladar = Extruir o Cortar con la cara como perfil (componente normal); Girar alrededor de una
   arista de la cara = Ángulo de salida nativo. Límite: con vecinas inclinadas, mover deja escalón.
+  (2026-11-01: Girar ya no falla según el sentido: era un error de FreeCAD en el Ángulo de salida,
+  ver NOTAS_TECNICAS "Errores de FreeCAD encontrados"; y Mover cara vuelve a encontrar sola la
+  cara, la bisagra, el destino o el eje que FreeCAD pierde, como las relaciones de posición.)
 
 Operaciones de pieza que usa (menú Insertar de SW, lista completa en `docs/ESTADO.md` > Alcance):
 todas hechas (Mover/Copiar y Eliminar/Conservar sólido: 2026-10-27, sin
@@ -93,13 +96,15 @@ El usuario NO usa en planos: tablas/notas de plegado, listas de materiales con g
 tolerancias geométricas.
 
 ## Fases (orden propuesto; el usuario puede reordenar)
-Estado al 2026-10-31: fase 0 terminada; fases 1 a 5 con código completo y probadas por Claude
+Estado al 2026-11-01: fase 0 terminada; fases 1 a 5 con código completo y probadas por Claude
 (todo lo de los checklists); **fase 5 CERRADA** (31/10, decisión del usuario: probada por Claude
 con el mouse sobre un conjunto realista y comparada con SW; lo que aparezca usándola se arregla
 sobre la marcha); fases 1 a 4: todas las pruebas del checklist hechas con mouse y teclado (Claude,
-casi todas comparadas con SW; el usuario probó redondeo y girar cara); quedan solo las que
-necesitan algo del usuario (un STEP suyo, una pieza suya, abrir el DXF en CypCut) y que revise
-las decisiones de las fases 1 y 3. Fase 6 (chequeo de compatibilidad) acordada, sin empezar.
+casi todas comparadas con SW; el usuario probó redondeo y girar cara) y todas las decisiones
+tomadas; quedan solo las que necesitan algo del usuario (un STEP suyo, una pieza suya, abrir el
+DXF en CypCut, Brida base de punta a punta) y el Dobladillo abierto (Claude). Repositorio en
+GitHub: wally88ar-coder/FreeWorks (todo subido). Fase 6 (chequeo de compatibilidad) acordada,
+sin empezar.
 Hecho además fuera de las fases: árbol de operaciones estilo SW (barra de retroceso, suprimir,
 mover, cotas con doble clic, reparar referencias...), aristas del modelo dentro del croquis,
 multicuerpo (Fusionar resultado, Alcance, Combinar, simetría de sólidos) y Mover/Copiar /
