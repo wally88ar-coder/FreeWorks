@@ -356,6 +356,23 @@ Cada uno con lo que hace el fork mientras tanto. Buscado en los issues de FreeCA
    avisa o se traga, y la operación puede quedar "válida" sin girar nada.
    - Fork: el panel de Mover cara mira el resultado (`face_rotated`) y avisa "FreeCAD dejó la
      cara sin girar".
+3. **Una unión de Assembly guarda un nombre de cara viejo cuando el vínculo pasa a otra copia
+   (LinkCopyOnChange)** (FreeCAD 1.1.4, encontrado 2026-11-01). Si un `App::Link` con
+   `LinkCopyOnChange` cambia de objeto vinculado (primer cambio de configuración en "Enabled":
+   del original a la copia; o la recopia de "Tracking" cuando cambia la pieza), la unión sigue
+   bien en la sesión pero `Reference1/2` se guarda con el nombre "mapeado" del objeto anterior; al
+   reabrir: `missing element reference ... Face5`, "?Face5", "Broken link in: Reference1". Buscado
+   el 01/11: #14056 (desplazamientos con CopyOnChange en Assembly) se cerró por inactividad, sin
+   arreglo; esto no estaba reportado.
+   - Prueba (FreeCADCmd): Placa con tabla de configuración en el Body (prop. `Configuracion` con
+     estado CopyOnChange); ensamblaje con dos Link "Enabled" (Corta = original, Larga = copia),
+     Distance 0 entre cara de arriba de uno y de abajo del otro; pasar el primero a "Media" y
+     volver; guardar; reabrir -> Reference1 "?Face5". Con "Owned" (copia desde el principio) no pasa.
+   - Lo que NO arregla: volver a asignar la misma referencia, ni `touch()` + recalcular.
+     Lo que SÍ: `j.Reference1 = None` y después `j.Reference1 = [obj, ["Face5", "Face5"]]`, antes
+     de guardar (probado en los dos casos, Enabled y Tracking).
+   - Fork (si se hacen configuraciones): limpiar y volver a poner las referencias de las uniones
+     del componente en cada cambio de configuración o recopia.
 
 ## Chapa (fase 1): hallazgos con SheetMetal 0.8.26 en FreeCAD 1.1.4
 - SheetMetal se importa por módulos (`SheetMetalBaseCmd`, `SheetMetalCmd`, `SheetMetalUnfoldCmd`):
@@ -527,3 +544,48 @@ Cada uno con lo que hace el fork mientras tanto. Buscado en los issues de FreeCA
   y revisar con Get-Process). `taskkill` desde la sesión de Claude dice "No hay ninguna instancia
   activa" para FreeCAD lanzados en otra llamada: cerrarlos con `(Get-Process -Id N).Kill()` fuera
   del sandbox (con permiso del usuario).
+
+## Configuraciones (análisis, 2026-11-01): hallazgos en FreeCAD 1.1.4
+Análisis completo y plan: documento "Configuraciones estilo SW 2018 en FreeWorks: análisis y plan"
+(enlace en `docs/ESTADO.md`). Pruebas en FreeCADCmd 1.1.4 sin el addon (guiones t1 a t8 del
+scratchpad de la sesión del 01/11; se rehacen fácil con lo de abajo).
+- Tabla de configuración nativa (`Spreadsheet/Gui/DlgSheetConf.cpp`, `accept()`): lo que hace el
+  diálogo se repite por guion así (fila 1 = parámetros con alias, filas 2.. = configuraciones):
+  `body.addProperty("App::PropertyEnumeration", "Configuracion", "Configuraciones")`;
+  `body.setPropertyStatus("Configuracion", "CopyOnChange")`;
+  `body.setExpression("Configuracion.Enum", "Tabla.cells[<<A2:|>>]")` (el `|` = columna que crece:
+  una fila nueva aparece sola en la lista); `sh.set("A1", "=hiddenref(Body.Configuracion.String)")`;
+  `sh.setExpression(".cells.Bind.B1.D1", "tuple(.cells, <<B>> + str(hiddenref(Body.Configuracion)+2), <<D>> + str(hiddenref(Body.Configuracion)+2))")`.
+  Después cotas por expresión (`sk.setExpression("Constraints.Ancho", "Tabla.Ancho")`).
+- `Suppressed` de PartDesign acepta expresión (`pk.setExpression("Suppressed", "Tabla.SinAgujero")`,
+  0/1). También `Visibility` de un Link y `Suppressed` de una unión de Assembly.
+- Nombres de configuración: escribirlos con `'` delante (`sh.set("A2", "'2mm")`): si no, "2mm" se
+  vuelve la cantidad "2.0 mm" y "1.5mm" no se puede elegir.
+- Pieza (placa 60x40x10 con agujero / 120x40x6 sin / 90x40x8): ida y vuelta y reabierta, volumen
+  exacto (23 214,602 / 28 800 / 28 171,682).
+- Componentes en otra configuración = `App::Link` con `LinkCopyOnChange` (la propiedad con estado
+  CopyOnChange tiene que estar en el objeto vinculado mismo, `Link.cpp setupCopyOnChange`; el Link
+  la muestra como propia). "Enabled": copia (Body + croquis + Tabla, ocultos, grupo
+  `CopyOnChangeGroup`) recién cuando la configuración difiere; después cambia la copia en el lugar.
+  "Owned": copia enseguida. "Tracking": vuelve a copiar si cambia la pieza original. Cambio en la
+  original (alto 40 -> 50): solo "Tracking" lo lleva a las copias (36 000 exacto). Ver error 3 en
+  "Errores de FreeCAD encontrados" (uniones rotas al reabrir cuando el Link cambia de copia).
+- Configuración del ensamblaje: misma tabla en el `Assembly` (enumeración ahí), columnas con la
+  configuración de cada componente (`b.setExpression("Configuracion", "TablaConjunto.ConfPlaca2")`,
+  texto) y supresión (`Visibility` = `TablaConjunto.SupPlaca2 == 0` + `Suppressed` de sus uniones).
+  Funciona e ida y vuelta. En 1.1.4 los Link no tienen `SuppressibleExtension` (en `main`/26.3 sí,
+  pero solo para elementos de matrices de vínculos, `isSuppressedLinkElement`, PR #32566).
+- Chapa: `Thickness` y `Length` de la Brida base por expresión, bien en todas. El Unfold apunta a
+  "FaceN" del Cuerpo: si una configuración renumera (agujero suprimido) queda "?Face15" e inválido;
+  reelegida la cara (como `sheet_metal.ensure_flat`) sale bien. Para "DXF de cada configuración":
+  activar, recalcular, `ensure_flat`, exportar, volver.
+- Mover cara (Pad con una cara como perfil): Corta -> Larga lo sigue FreeCAD; Larga -> Media lo
+  pierde ("?Face2") y no vuelve. Falta probar el reencuentro de `move_face.py` con cotas muy
+  distintas.
+- 26.3 (`releases/FreeCAD-26-3`): `DlgSheetConf.cpp` y `PropertyLinks.cpp` cambiaron de versión de
+  archivo pero la tabla y CopyOnChange siguen; nuevo Assembly "Snapshot" (`CommandCreateSnapshot.py`:
+  posiciones y visibilidad de componentes). Nada de configuraciones completas.
+- Issues abiertos de la tabla: #30370 (insertar filas arriba deja la fila corrida), #15247 (no guarda el rango), #15249 (se duplica al renombrar),
+  #14578 (no recalcula), #19182 (variantes y redondeos).
+- `freecadcmd` imprime lo de `print` recién al final y mezclado con el registro: volcar a JSON
+  después de cada paso.

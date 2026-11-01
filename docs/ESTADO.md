@@ -1,7 +1,7 @@
 # Estado del fork
 
-Última actualización: 2026-11-01 madrugada (Girar cara y Mover cara que pierde su cara: hechos,
-probados con el mouse y subidos a GitHub; checklist repasado con el usuario).
+Última actualización: 2026-11-01 01:00 (análisis de configuraciones estilo SW terminado, documento
+compartido abajo; antes: Girar cara y Mover cara que pierde su cara, hechos y subidos).
 **Próximo paso posible:** publicar la primera versión en la rama "release" (sin ella el Addon
 Manager no puede instalar FreeWorks); preguntar al usuario antes, es hacia afuera.
 
@@ -15,9 +15,26 @@ Manager no puede instalar FreeWorks); preguntar al usuario antes, es hacia afuer
 - Simulación (análisis, 2026-10-30): "Simulación estilo SW: cómo llevar FEM de FreeCAD al fork"
   (https://claude.ai/artifact/7DSbVCfT2vjP1oiYfw9Mcd). Pestaña Simulación sobre FEM nativo
   (CalculiX y Gmsh ya vienen con 1.1.4), plan en etapas 0 a 5, decisiones pendientes del usuario.
+- Configuraciones (análisis, 2026-11-01): "Configuraciones estilo SW 2018 en FreeWorks: análisis
+  y plan" (https://claude.ai/artifact/26ZuPXVSKWXDnC6tFA3rxz). Se puede, sobre la tabla de
+  configuración nativa de la planilla + Suppressed + Link "Copy on change"; plan en etapas 1 a 5,
+  decisiones pendientes del usuario en cada una.
 Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o comentó el usuario.
 
 ## Fase actual
+**01/11 (01:00), análisis de configuraciones estilo SW — TERMINADO, sin código del addon** (pedido
+del usuario). Lo que usa en SW (respondido el 01/11): piezas (cotas, suprimir operaciones, tabla de
+diseño en Excel), chapa con DXF de cada configuración, ensamblajes (componente en otra
+configuración, suprimir componentes); nada en planos. Conclusión: se puede con lo nativo de 1.1.4
+(tabla de configuración de Spreadsheet, `Suppressed` por expresión, App::Link con
+LinkCopyOnChange); piezas y chapa muy parecidas a SW; ensamblajes parecidos, con dos defectos de
+FreeCAD a tapar (uniones rotas al reabrir cuando el componente cambia de copia, error 3 de
+NOTAS_TECNICAS; copias que no siguen a la pieza salvo "Tracking"); Excel no incrustado (editar en
+Excel y traer con un botón). Probado en FreeCADCmd (hallazgos en NOTAS_TECNICAS, "Configuraciones").
+En SW se miró el ConfigurationManager y el panel de Tabla de diseño (pieza cerrada sin guardar).
+Esperando que el usuario lea el documento y decida si se hace y las decisiones de la etapa 1.
+Si se hace: cambiar en CLAUDE.md el límite "no hay configuraciones equivalentes a SW".
+
 Pendientes del usuario (31/10, en este orden): 1) Girar cara que a veces no gira — HECHO;
 2) Mover cara que pierde su cara: que la vuelva a encontrar sola guardando cómo era (como
 `SWUI_MateGeom` en `mate_refs.py`) — HECHO 01/11, punto resuelto (usuario); 3) límites sin
