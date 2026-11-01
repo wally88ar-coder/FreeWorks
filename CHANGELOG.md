@@ -81,6 +81,10 @@ Neueste Version oben. / Newest version first.
     quedar del otro lado de la superficie). Los croquis del desarrollo de una chapa ya no caen
     en otro documento abierto. Los auxiliares ocultos tampoco se ven dentro del Cuerpo en el
     árbol. El menú dice FreeWorks también después de abrir un ensamblaje.
+  - Aplanar una chapa ya no muestra el aviso en inglés de SheetMetal "Link(s) to object(s)
+    'Bend' go out of the allowed scope 'Unfold'" (el desarrollo apunta al Cuerpo). Mover cara
+    "Hasta el vértice": un clic en una arista toma su punta más cercana al clic, y cambiar de
+    vértice ya no muestra el aviso en inglés "subshape not found Enlace.?Vertex1".
   - Campos numéricos como SW: un clic marca todo el valor y lo escrito lo reemplaza
     (`swui/fork/spin_select.py`). Ecuaciones no lista el largo de un corte "Por todo".
   - Ecuaciones: las cotas a la vista se actualizan después de cada ecuación y al Cancelar; no

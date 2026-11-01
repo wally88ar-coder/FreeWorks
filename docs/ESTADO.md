@@ -16,13 +16,17 @@ cerrada; fase 6 acordada).
 Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o comentó el usuario.
 
 ## Fase actual
-- **31/10 noche (22:30), hecho pero SIN probar con el mouse** (decisión del usuario sobre los
-  detalles vistos): (a) el desarrollo de chapa apunta al Cuerpo en vez de a la punta, para que no
-  salga el aviso en inglés "Link(s) ... go out of the allowed scope 'Unfold'" (probado sin GUI:
-  mismo desarrollo, misma área); (b) en Mover cara "Hasta el vértice", un clic en una arista toma
-  la punta más cercana al clic (`MoveFacePanel._edge_end`). Falta: probar los dos con el mouse
-  (piezas en el scratchpad mouse2/: ChapaMouse, FinMouse) y anotarlo en el checklist. El clic
-  sin efecto en el texto de "Brida base" queda como está (usuario: "queda ahí").
+- **31/10 noche (22:50), probados con el mouse** (ventana de prueba aparte): (a) el desarrollo
+  de chapa apunta al Cuerpo en vez de a la punta: chapa con Brida base + Brida de arista,
+  Aplanar / plegar / Aplanar / Ctrl+R sin el aviso en inglés "Link(s) ... go out of the allowed
+  scope 'Unfold'"; Exportar DXF sigue bien (100 × 84,71, CONTORNO y PLEGADO). (b) Mover cara
+  "Hasta el vértice" con clic en una arista vertical de la Marca: cerca de abajo -> 12 mm, cerca
+  de arriba -> 18 mm (correctos), también cambiando dentro del panel y editando después.
+  **Encontrado y arreglado** (repetido con el mouse): al cambiar de vértice salía en inglés
+  "PositionBySupport: AttachEngine3D: subshape not found Enlace.?Vertex1" (el plano auxiliar
+  quedaba un instante apuntando al vértice viejo del enlace): `MoveFacePanel._bound` suelta lo
+  apoyado en el enlace antes de cambiarlo. El clic sin efecto en el texto de "Brida base" queda
+  como está (usuario: "queda ahí").
 - **31/10 noche (22 h), segunda tanda con mouse y teclado** (lo que había quedado solo con
   guiones): chapa (Brida base con 2 mm y "Brida base1", Brida de arista con 20 mm y "Brida de
   arista1", Aplanar -> "Chapa desplegada1", DXF que pregunta: Cancelar no toca el archivo,

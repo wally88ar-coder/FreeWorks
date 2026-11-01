@@ -1377,6 +1377,13 @@ class MoveFacePanel(dp.SwPanel):
         keep.append("binder")
         support = [(obj, (sub,) if sub else ())]
         if [(o, tuple(s)) for o, s in binder.Support] != support:
+            # Lo apoyado en el enlace (el plano del vértice) se suelta antes: si no, al cambiar el
+            # enlace FreeCAD marca su referencia "?Vertex1" y avisa en inglés "subshape not found"
+            # (visto con el mouse, 2026-10-31). _apply_translate lo vuelve a apoyar enseguida.
+            for dep in binder.InList:
+                if any(o is binder for o, _ in getattr(dep, "AttachmentSupport", [])):
+                    dep.MapMode = "Deactivated"
+                    dep.AttachmentSupport = []
             binder.Support = support
         binder.recompute()
         if sub.startswith("Vertex"):
