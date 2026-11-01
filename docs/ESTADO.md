@@ -75,6 +75,21 @@ Manager no puede instalar FreeWorks); preguntar al usuario antes, es hacia afuer
   corte; ensamblaje "(f) Placa4<1>" + "Fijo (Body)"; textos; SVG). Sin probar con el mouse: la
   ventana fantasma negra de SW tapaba la pantalla. Detalle visto: la relación fija se llama
   "Fijo (Body)" y no "Fijo (Placa4<1>)".
+  **01/11 16 h, probados con el mouse** (SW reiniciado por el usuario): Definición con la cara
+  de arriba abre la extrusión; aviso de Volver a cargar en castellano; Gráfico de dependencias
+  dibuja; Crear ensamblaje desde pieza deja "(f) Placa<1>" fija. Comparado con SW 2018 con el
+  mouse (pieza Base de comparar_fase5): Definición con la cara abre Saliente-Extruir1 (igual);
+  Crear ensamblaje desde pieza en SW abre "Empezar ensamblaje" con la pieza elegida y ✓ la deja
+  en el origen (FreeWorks la mete directo: un clic menos); Extruir sin selección pide plano/cara/
+  croquis (igual); Insertar > Croquis: SW no gira la vista (FreeWorks sí) y dentro del croquis la
+  entrada se llama "Salir del croquis" -> HECHO igual (`label_c`); al salir, SW borra un croquis
+  vacío (FreeWorks lo deja). Con un panel abierto (Extruir) SW pone en gris todo Insertar >
+  Operaciones; FreeWorks las deja activas y al elegir una cancela el panel (decisión del 31/10
+  para la cinta) — consultar si el menú debe ser como SW. Arreglado además: Definición de la
+  extrusión abierta -> Redondeo -> Cancelar dejaba la pieza oculta (ya pasaba desde la cinta):
+  `SwPanel.reject` muestra la punta después de deshacer. Sigue el aviso en inglés "Fillet not
+  possible on selected shapes" en ese caso (de FreeCAD). Por error se abrió en SW el ensamblaje
+  "Revisión mesa H3015" (Abrir reciente): se cerró con "No guardar", sin cambios.
 Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o comentó el usuario.
 
 ## Fase actual

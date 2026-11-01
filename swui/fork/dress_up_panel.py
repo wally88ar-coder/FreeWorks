@@ -849,6 +849,12 @@ class SwPanel:
         return body is None or body.Tip == self.obj
 
     def reject(self):
+        from swui.fork import feature_tree as ft
+
+        try:
+            body = ft.body_of(self.obj)
+        except Exception:
+            body = None
         self._close()
         self._restore_visibility()
         self._show_tip()
@@ -857,6 +863,15 @@ class SwPanel:
         if self.gdoc.getInEdit() is not None:
             self.gdoc.resetEdit()
         self.doc.recompute()
+        # Deshecha una operación nueva, la punta vuelve a la anterior; si la había ocultado otro
+        # panel (Definición de la extrusión abierta -> Redondeo -> Cancelar), la pieza quedaba
+        # invisible (visto con el mouse, 01/11; pasaba igual desde la cinta)
+        try:
+            tip = body.Tip if body is not None else None
+            if tip is not None and not tip.Visibility:
+                tip.Visibility = True
+        except Exception:
+            pass
         return True
 
 

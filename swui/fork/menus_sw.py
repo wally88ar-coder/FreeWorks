@@ -49,9 +49,10 @@ SEP = "---"
 SW_KEYS = (("Ctrl+W", "Std_CloseActiveWindow"), ("F11", "Std_MainFullscreen"))
 
 
-def E(label, target, env=None, k=None, index=None, tip=None):
-    """Entrada: target = comando, {entorno: comando} o una función."""
-    return {"label": label, "target": target, "env": env, "k": k, "index": index, "tip": tip}
+def E(label, target, env=None, k=None, index=None, tip=None, label_c=None):
+    """Entrada: target = comando, {entorno: comando} o una función; label_c = texto en el croquis."""
+    return {"label": label, "target": target, "env": env, "k": k, "index": index, "tip": tip,
+            "label_c": label_c}
 
 
 def S(label, items, env=None):
@@ -339,7 +340,8 @@ def menus():
             E("Formato de línea...", "SWUI_LineFormat", env="D"),
             SEP,
             # Croquis
-            E("Croquis", {"P": "PartDesign_NewSketch", "C": "Sketcher_LeaveSketch"}, env="PC"),
+            E("Croquis", {"P": "PartDesign_NewSketch", "C": "Sketcher_LeaveSketch"}, env="PC",
+              label_c="Salir del croquis"),  # como SW: dentro del croquis cambia el nombre
         ]),
         ("Herramientas", [
             E("Selección de cuadro", "Std_BoxSelection"),
@@ -917,6 +919,9 @@ def _refresh_states():
             wrapper = wrappers.get(action.objectName())
             if wrapper is not None:
                 action.setEnabled(wrapper.IsActive())
+                other = wrapper.entry.get("label_c")
+                if other:
+                    action.setText(other if current_env() == "C" else wrapper.entry["label"])
         for action in FreeCADGui.getMainWindow().menuBar().actions():
             if action.menu() is not None:
                 _grey_submenus(action.menu(), 0)
