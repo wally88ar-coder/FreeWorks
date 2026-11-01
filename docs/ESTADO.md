@@ -1713,6 +1713,23 @@ Etapas:
   el 2026-10-31, FreeCAD los sigue bien (ver fase 5); no hace falta arreglo.
 - (Arreglado el 31/10: "EjeMatriz" y "PlanoSimetria" ya no aparecen en el árbol.)
 - Croquis: la relación hecha desde el panel se llama "Constraint1" en la lista (SW: "Sobre entidad1"...).
+- **IA en FreeWorks** (analizado 01/11, sin plan ni código; inspiración: MecAgent = agente que maneja
+  el CAD, Leo AI = conocimiento del taller). Idea: "puente IA" adentro de FreeWorks (servidor local,
+  apagado por defecto, con clave) con herramientas generales (ver árbol/selección/vista, correr
+  cualquier comando SWUI_, Python en un paso de deshacer probado antes en FreeCADCmd, verificar) +
+  herramientas de oficio tomadas del puente de SW (`C:\SW-AI-Bridge\sw_mcp_server.py`: ficha de
+  intención, chequeos). Puertas: Claude Code (sin costo extra), pestaña "Asistente" en el panel
+  izquierdo (Claude Code por detrás), `IA("...")` en la consola. Código leído el 01/11:
+  neka-nat/freecad-mcp (MIT, commit 8babe99 del 25/10/2026): sirve `rpc_server/gui_dispatch.py`
+  (cola al hilo principal: espera arrastre del mouse, menús y ventanas modales; aviso de trabado) y
+  `ip_filter.py` (rechaza pedidos de páginas web); le falta deshacer en execute_code y clave en
+  local; su servidor MCP externo pide `uvx`. ghbalf/freecad-ai (LGPL-2.1, commit 08d637d del
+  16/10/2026, "alpha", solo probado en Linux): sirve `mcp/transport.py` + `gui_server.py`
+  (servidor MCP HTTP adentro de FreeCAD, solo stdlib, clave opcional), `core/executor.py`
+  (respaldo + prueba en freecadcmd + transacción; su corte por tiempo usa SIGALRM y en Windows no
+  hace nada) y `tools/registry.py`; su panel de chat (~3.300 líneas) y sus 50 herramientas
+  genéricas, no. Otros vistos: spkane (Apache-2.0), iplayfast (idea de un solo registro para chat,
+  consola y servidor).
 
 ## Problemas reportados por el usuario (todos resueltos)
 - 2026-10-26 (archivo "fallo multiples solidos.FCStd" en Documentos\FreeCAD pruebas, captura):
@@ -1773,6 +1790,13 @@ Etapas:
   Motivo: el usuario actualiza poco (~2 años por versión) y sus archivos tienen que abrir siempre.
 - Desarrollar para la 1.1.4 aunque una versión nueva ya traiga la función (el usuario no la va a
   tener); cada función cede a lo nativo si la versión de FreeCAD lo trae.
+- **IA: código ajeno copiado adentro, no dependencias** (usuario, 2026-11-01). Si se hace, los
+  pedazos útiles de neka-nat/freecad-mcp y ghbalf/freecad-ai se copian a una carpeta propia
+  (`swui/fork/ia/`), adaptados, con aviso de autor y licencia en cada archivo y la versión de
+  origen anotada en NOTAS_TECNICAS; no se instalan sus complementos. Motivo: el usuario actualiza
+  cada ~2 años, instalar FreeWorks debe ser un solo paso para sus amigos y hay que corregirlos
+  (Windows, clave obligatoria, deshacer). Contra: sus arreglos se traen a mano, como upstream.
+  Las herramientas y el panel "Asistente" son propios.
 
 ## Git
 - `origin` = https://github.com/wally88ar-coder/FreeWorks (renombrado el 2026-10-31; todo
