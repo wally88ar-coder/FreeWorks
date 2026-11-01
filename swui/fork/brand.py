@@ -46,8 +46,29 @@ def _on_workbench(name):
         QtCore.QTimer.singleShot(0, rename_menu)
 
 
+class _MenuBarFilter(QtCore.QObject):
+    """
+    FreeCAD rearma la barra de menús también sin cambiar de banco (p. ej. al abrir un ensamblaje
+    y pasar la cinta a Ensamblaje: volvía "LikeSolidWorks UI", visto con el mouse, 2026-10-31):
+    cada vez que entra o cambia un menú, se le vuelve a poner el nombre.
+    """
+
+    def eventFilter(self, obj, event):
+        try:
+            if event.type() in (QtCore.QEvent.Type.ActionAdded, QtCore.QEvent.Type.ActionChanged):
+                action = event.action()
+                if action is not None and menu_title(action.text()) != action.text():
+                    QtCore.QTimer.singleShot(0, rename_menu)
+        except Exception:
+            pass
+        return False
+
+
+_filter = None
+
+
 def install():
-    global _connected
+    global _connected, _filter
     try:
         wb = FreeCADGui.listWorkbenches().get(WB_NAME)
         if wb is not None:
@@ -60,4 +81,10 @@ def install():
             _connected = True
         except Exception:
             FreeCAD.Console.PrintLog("[SWUI fork] Nombre FreeWorks: señal no disponible.\n")
+    if _filter is None:
+        try:
+            _filter = _MenuBarFilter()
+            FreeCADGui.getMainWindow().menuBar().installEventFilter(_filter)
+        except Exception:
+            _filter = None
     QtCore.QTimer.singleShot(0, rename_menu)

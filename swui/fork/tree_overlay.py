@@ -346,9 +346,37 @@ _filter = None
 def refresh():
     for overlay in list(_overlays.values()):
         try:
+            hide_unlisted(overlay.tree)
             overlay.update()
         except Exception:
             pass
+
+
+def hide_unlisted(tree):
+    """
+    Dentro de un Cuerpo, FreeCAD 1.1.4 muestra los objetos aunque tengan "Show In Tree" en No
+    (visto con el mouse, 2026-10-31: los auxiliares de Mover cara). Se esconden esos renglones.
+    """
+    from swui.fork import feature_tree as ft
+
+    def walk(item, doc, in_body):
+        obj = _obj(doc, item)
+        if in_body and obj is not None:
+            try:
+                hidden = obj.ViewObject is not None and not obj.ViewObject.ShowInTree
+            except Exception:
+                hidden = False
+            if hidden != item.isHidden():
+                item.setHidden(hidden)
+        inside = in_body or (obj is not None and getattr(obj, "TypeId", "") == ft.BODY)
+        for i in range(item.childCount()):
+            walk(item.child(i), doc, inside)
+
+    for i in range(tree.topLevelItemCount()):
+        top = tree.topLevelItem(i)
+        doc = _doc_of(top)
+        if doc is not None:
+            walk(top, doc, False)
 
 
 def _later_refresh():
