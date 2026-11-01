@@ -619,6 +619,16 @@ scratchpad de la sesión del 01/11; se rehacen fácil con lo de abajo).
 - `freecadcmd` imprime lo de `print` recién al final y mezclado con el registro: volcar a JSON
   después de cada paso.
 
+## Archivos .pyc rotos (01/11): FreeCAD colgado al cerrar
+Con un FreeCADCmd y un FreeCAD con interfaz corriendo a la vez (pruebas) y los .py del addon
+cambiando, un .pyc de `swui/**/__pycache__` quedó roto: el informe se llenó de "XXX lineno: 448,
+opcode: 55", "SystemError: unknown opcode" en los eventFilter y al final "RecursionError"; el
+FreeCAD de prueba no terminaba (`os._exit` no llegaba) y quedaba ocupando ~580 MB. Arreglo: borrar
+los .pyc de `swui/__pycache__`, `swui/fork/__pycache__`, `swui/commands/__pycache__`,
+`swui/lang/__pycache__` y `tools/__pycache__` (Python los rehace; están en .gitignore). Prevención:
+no correr pruebas con interfaz y FreeCADCmd al mismo tiempo; si aparece "unknown opcode" en
+run.log, borrar los .pyc antes de seguir.
+
 ## Configuraciones (implementación, etapas 1 a 5, 2026-11-01)
 - Módulos: `configurations.py` (núcleo sin interfaz: tabla, lista, Esta/Todas, suprimir con
   apoyo de croquis por expresión), `config_tab.py` (pestaña, Modificar, Suprimir del árbol,

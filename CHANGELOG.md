@@ -107,6 +107,10 @@ Neueste Version oben. / Newest version first.
   - Arreglos vistos con el mouse: con un componente elegido, el menú Archivo ya no queda en
     "Más opciones"; la barrita no aparece con el panel de relación de posición abierto; sin
     avisos de "cara cambiada" en las relaciones al agregar una configuración en la pieza.
+  - Comparado con SW con el mouse (01/11, mediodía): F2 cambia el nombre ahí mismo en la lista
+    (sin cuadro aparte); no se puede eliminar una configuración que usa un componente de un
+    ensamblaje abierto (SW tampoco deja) y avisa cuál la usa; la ventana de Configurar
+    operación se llama "Modificar configuraciones", como en SW.
 - **Decisiones del usuario del 31/10** (checklist):
   - Nombre visible **FreeWorks** (menú y lista de bancos; lo interno no cambia, los
     archivos y la configuración abren igual) (`swui/fork/brand.py`). Paquete (package.xml) y

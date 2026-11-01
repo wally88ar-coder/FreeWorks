@@ -61,10 +61,13 @@ Commits locales (sin subir a GitHub): b701dc8 etapa 1, 0ae261d etapa 2, 0d0b348 
   Probado con el mouse en FreeCAD: relaciones al cambiar la configuración de los componentes,
   guardar y reabrir; cambiar nombre y eliminar configuraciones. Configurar operación y la
   configuración en el árbol: probados con guion (gui_probe), falta con el mouse.
-- Falta: comparar en SW con el mouse las relaciones al cambiar de configuración y el cambio de
-  nombre (SW se colgó por falta de memoria el 01/11; el usuario lo reinició). Límite que queda:
-  en una pieza multicuerpo solo el sólido principal puede estar en otra configuración dentro de
-  un ensamblaje; y suprimir la única operación de un sólido no lo hace desaparecer (FreeCAD).
+- 01/11 mediodía: hecha con el mouse la comparación en SW (relaciones al cambiar la configuración
+  de un componente, guardar y reabrir; cambiar nombre: SW lo sigue y avisa; eliminar una en uso:
+  SW no deja -> FreeWorks ahora tampoco; Modificar configuraciones). En FreeCAD con el mouse:
+  Configurar operación (cotas de Larga y supresión del agujero), F2 en la lista, configuración
+  al lado del nombre del componente. Límites que quedan: en una pieza multicuerpo solo el sólido
+  principal puede estar en otra configuración dentro de un ensamblaje; suprimir la única
+  operación de un sólido no lo hace desaparecer (FreeCAD).
 
 Pendientes del usuario (31/10, en este orden): 1) Girar cara que a veces no gira — HECHO;
 2) Mover cara que pierde su cara: que la vuelva a encontrar sola guardando cómo era (como
