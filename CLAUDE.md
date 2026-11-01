@@ -105,7 +105,9 @@ tomadas; quedan solo las que necesitan algo del usuario (un STEP suyo, una pieza
 DXF en CypCut, Brida base de punta a punta) y el Dobladillo abierto (Claude). Repositorio en
 GitHub: wally88ar-coder/FreeWorks (todo subido). Fase 6 (chequeo de compatibilidad) acordada,
 sin empezar.
-Hecho además fuera de las fases: configuraciones estilo SW en piezas, chapa (DXF de todas) y
+Hecho además fuera de las fases: barra de menús como SW 2018 (2026-11-01, `swui/fork/menus_sw.py`;
+maqueta, decisiones y pruebas en `docs/ESTADO.md`; croquis vacío que se borra al cerrarlo,
+`swui/fork/empty_sketch.py`); configuraciones estilo SW en piezas, chapa (DXF de todas) y
 ensamblajes (2026-11-01, `swui/fork/config*.py`; análisis y plan en el documento enlazado en
 `docs/ESTADO.md`); árbol de operaciones estilo SW (barra de retroceso, suprimir,
 mover, cotas con doble clic, reparar referencias...), aristas del modelo dentro del croquis,

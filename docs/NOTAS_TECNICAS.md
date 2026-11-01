@@ -55,6 +55,18 @@
   `"CmdType": "ForEdit"`; (5) FreeCAD no recalcula IsActive al abrir un menú ni al pasar a una
   hoja (y `FreeCADGui.updateCommands` no existe): se hace a mano en `aboutToShow`.
   Los subpuntos de Std_DrawStyle (Std_DrawStyleShaded...) no son comandos sueltos: van con índice.
+  Los submenús (QAction con menu()) no se ponen grises solos: `_grey_submenus` los apaga si todo
+  lo de adentro está gris; FreeCAD deja ocultos algunos separadores (antes de un submenú):
+  `_show_separators`. El texto de un QAction de comando se puede cambiar al vuelo (Insertar >
+  Croquis pasa a "Salir del croquis" en `aboutToShow`).
+- Graphviz que viene con FreeCAD 1.1.4 (D:\Freecad\bin): sin registrar sus complementos ("Format
+  png not recognized... dot -c"); `dot.exe -c` una vez en esa carpeta lo arregla (hecho el 01/11
+  con permiso del usuario). Otra PC con FreeCAD recién instalado va a necesitar lo mismo (fase 6).
+- Cancelar un panel nativo de PartDesign desde Python: `abortTransaction()` primero, después
+  `resetEdit()` (que si no confirma) y `Control.closeDialog()`; la edición deja oculta la punta del
+  cuerpo: volver a mostrarla (`dress_up_panel._cancel_native_edit`, `SwPanel.reject`).
+- Croquis vacío: observador de documento (`slotCreatedObject`, croquis nuevos de la sesión) + de
+  Gui (`slotResetEdit`) y borrar fuera del aviso con QTimer (`swui/fork/empty_sketch.py`).
 - Al tabificar paneles, Qt deja barras de pestañas vacías encima de la buena: ocultarlas.
   FreeCAD repone la barra de título del panel Tareas al abrir operaciones: volver a quitarla.
 - Preferencias útiles: `View/RotationMode`, `View/OrbitStyle`, `General/AutoloadModule`,

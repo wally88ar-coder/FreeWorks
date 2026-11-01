@@ -1,7 +1,9 @@
 # Estado del fork
 
-Última actualización: 2026-11-01 13:40 (configuraciones estilo SW: todo hecho y probado por Claude
-con el mouse contra SW; preguntas 1 a 7 contestadas y hechas; falta que lo pruebe el usuario).
+Última actualización: 2026-11-01 16:45 (barra de menús estilo SW 2018: hecha, probada por Claude
+con el mouse y comparada con SW, decisiones del usuario aplicadas; croquis vacío que se borra como
+SW; todo subido a GitHub. Configuraciones estilo SW: hechas y probadas. Falta que el usuario pruebe
+las dos cosas en su FreeCAD, reiniciándolo).
 **Próximo paso posible:** publicar la primera versión en la rama "release" (sin ella el Addon
 Manager no puede instalar FreeWorks); preguntar al usuario antes, es hacia afuera.
 
@@ -19,19 +21,19 @@ Manager no puede instalar FreeWorks); preguntar al usuario antes, es hacia afuer
   y plan" (https://claude.ai/artifact/26ZuPXVSKWXDnC6tFA3rxz). Se puede, sobre la tabla de
   configuración nativa de la planilla + Suppressed + Link "Copy on change"; plan en etapas 1 a 5,
   IMPLEMENTADO completo el 01/11 01:35 (ver Fase actual).
-- Menús estilo SW 2018 (maqueta interactiva, 2026-11-01, sin código): "Menús de FreeWorks"
-  (https://claude.ai/artifact/AD833geJYQtUpny242DxAC). Estructura relevada del SW real con el
-  mouse (pieza, ensamblaje, plano); Insertar y Herramientas en bloques Pieza / Ensamblaje / Plano /
-  Croquis con separadores, lo que no corresponde en gris; submenú FreeCAD dentro de FreeWorks;
-  listas C1 (SW sí, FreeCAD no) y C2 (FreeCAD con otra interfaz). Para hacerlo:
-  `FreeCADGui.addWorkbenchManipulator` (ya usado para el clic derecho).
+- Menús estilo SW 2018 (maqueta interactiva, 2026-11-01; muestra cómo quedó programado): "Menús
+  de FreeWorks" (https://claude.ai/artifact/AD833geJYQtUpny242DxAC). Estructura relevada del SW
+  real con el mouse (pieza, ensamblaje, plano); Insertar y Herramientas en bloques Pieza /
+  Ensamblaje / Plano / Croquis con separadores, lo que no corresponde en gris; submenú FreeCAD
+  dentro de FreeWorks; listas C1 (SW sí, FreeCAD no) y C2 (FreeCAD con otra interfaz). Hecho con
+  `removeMenu` / `appendMenu` del banco dentro de Initialize (no con el manipulador; ver NOTAS).
   Decisiones del usuario (01/11): 1) los nativos con panel de FreeCAD que ya están en la cinta (N)
   van también al menú; 2) sin títulos de bloque, solo separadores (como SW); 3) lo que SW no tiene
   en el menú va donde está en la maqueta (PDF/DXF en Archivo, Material en Herramientas, ¿Qué es
   incorrecto? y Reparar en Evaluar, lo del plano en su bloque); 4) barra de menús siempre visible;
   5) editando un croquis quedan activos Pieza + Croquis; 6) Opciones / Personalizar / Macro abren
   lo de FreeCAD en el lugar de SW (gestor de complementos en FreeWorks > FreeCAD); 7) lo que en SW
-  es solo clic derecho queda solo en el clic derecho. Sin código todavía.
+  es solo clic derecho queda solo en el clic derecho. (Programado después: ver abajo.)
   01/11: menús de FreeCAD revisados uno por uno con guion (lista completa del banco FreeWorks y de
   Part Design, Croquis, Ensamblaje, TechDraw, Part y Planilla); la maqueta suma lo que faltaba
   (Exportar/Importar, Selección de cuadro, Dimétrica/Trimétrica, Parábola, Hoja, Rosca cosmética,
@@ -106,10 +108,21 @@ Manager no puede instalar FreeWorks); preguntar al usuario antes, es hacia afuer
 Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o comentó el usuario.
 
 ## Fase actual
+**MENÚS ESTILO SW 2018: HECHOS — 01/11/2026 tarde** (`swui/fork/menus_sw.py`; detalle, pruebas y
+decisiones en "Checklists compartidos" > Menús estilo SW, arriba). Archivo, Edición, Ver,
+Insertar, Herramientas, FreeWorks, Ventana y "?"; gris según pieza / ensamblaje / plano / croquis;
+entradas por el mismo camino que la cinta; salida de emergencia a los menús originales. Probado
+por Claude con el mouse y comparado con SW 2018. Arreglados en el camino (ya existían): panel
+"seleccionar un plano" + Redondeo, Editar operación con una cara (la que la creó), Crear
+ensamblaje desde pieza con la pieza adentro, pieza oculta al cancelar un panel, Graphviz
+registrado, avisos en castellano, "Fijo (Placa<1>)", Redondeo callado con otro panel abierto.
+Nuevo: croquis vacío que se borra al cerrarlo (`swui/fork/empty_sketch.py`). Commits 6bff380 a
+e060802, subidos. Falta: prueba del usuario.
+
 **CONFIGURACIONES ESTILO SW: PLAN COMPLETO IMPLEMENTADO — terminado el 01/11/2026 a las 01:35**
 (el usuario pidió de noche "implementá la planificación total, anotá la hora cuando termines").
-Commits locales (sin subir a GitHub): b701dc8 etapa 1, 0ae261d etapa 2, 0d0b348 etapas 4 y 5,
-759c99a suprimir por tabla + masa. Detalle técnico: NOTAS_TECNICAS, "Configuraciones
+Commits b701dc8 etapa 1, 0ae261d etapa 2, 0d0b348 etapas 4 y 5, 759c99a suprimir por tabla +
+masa (subidos a GitHub el 01/11 tarde, junto con los menús). Detalle técnico: NOTAS_TECNICAS, "Configuraciones
 (implementación)"; errores 3 y 4 de FreeCAD encontrados en el camino.
 - Etapa 1 (piezas) + 3 (tabla, sin Excel): pestaña **Configuraciones** junto a Modelo y Tareas;
   doble clic = mostrar; clic derecho Agregar / Cambiar nombre (F2) / Eliminar / Editar tabla de
