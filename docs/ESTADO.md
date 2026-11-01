@@ -1,9 +1,10 @@
 # Estado del fork
 
-Última actualización: 2026-11-01 16:45 (barra de menús estilo SW 2018: hecha, probada por Claude
-con el mouse y comparada con SW, decisiones del usuario aplicadas; croquis vacío que se borra como
-SW; todo subido a GitHub. Configuraciones estilo SW: hechas y probadas. Falta que el usuario pruebe
-las dos cosas en su FreeCAD, reiniciándolo).
+Última actualización: 2026-11-01 17:00 (barra de menús estilo SW 2018: hecha, probada por Claude
+con el mouse y comparada con SW; el usuario reinició su FreeCAD y la vio: "se ven un lujo"; el
+aviso "Cannot find icon: TechDraw_..." que le salió al arrancar quedó arreglado. Croquis vacío que
+se borra como SW. Configuraciones estilo SW: hechas y probadas por Claude. Todo subido a GitHub.
+Falta que el usuario use los menús y las configuraciones en su trabajo y avise lo que aparezca).
 **Próximo paso posible:** publicar la primera versión en la rama "release" (sin ella el Addon
 Manager no puede instalar FreeWorks); preguntar al usuario antes, es hacia afuera.
 
@@ -117,7 +118,10 @@ por Claude con el mouse y comparado con SW 2018. Arreglados en el camino (ya exi
 ensamblaje desde pieza con la pieza adentro, pieza oculta al cancelar un panel, Graphviz
 registrado, avisos en castellano, "Fijo (Placa<1>)", Redondeo callado con otro panel abierto.
 Nuevo: croquis vacío que se borra al cerrarlo (`swui/fork/empty_sketch.py`). Commits 6bff380 a
-e060802, subidos. Falta: prueba del usuario.
+8b38b71, subidos. 01/11 17 h: el usuario reinició su FreeCAD y vio los menús ("se ven un lujo");
+le salieron 11 avisos "Cannot find icon: TechDraw_..." al arrancar -> arreglado (los íconos de
+TechDraw de los menús van por ruta, `menus_sw._pixmap`; en prueba 0 avisos) y confirmado por él.
+Falta: que los use en su trabajo (lo que aparezca se arregla sobre la marcha).
 
 **CONFIGURACIONES ESTILO SW: PLAN COMPLETO IMPLEMENTADO — terminado el 01/11/2026 a las 01:35**
 (el usuario pidió de noche "implementá la planificación total, anotá la hora cuando termines").
