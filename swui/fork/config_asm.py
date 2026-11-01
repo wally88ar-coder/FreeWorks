@@ -289,7 +289,18 @@ def set_config(link, name, scope="this"):
             doc.recompute()
     finally:
         _state["busy"] = False
+    _repaint_tree()
     return link.LinkedObject
+
+
+def _repaint_tree():
+    """La configuración al lado del nombre del componente (config_rows) se dibuja de nuevo."""
+    try:
+        from swui.fork import tree_overlay
+
+        tree_overlay.refresh()
+    except Exception:
+        pass
 
 
 def pinned(link):
@@ -819,6 +830,7 @@ def _settle_later(names):
                 FreeCAD.Console.PrintLog("[SWUI fork] Ensamblaje al día:\n%s\n" % traceback.format_exc())
     finally:
         _state["settling"] = False
+    _repaint_tree()
 
 
 def _refresh_later(doc_name, name):
@@ -921,6 +933,42 @@ class _Menu:
             return []
 
 
+def tree_suffix(link):
+    """" (Larga)": la configuración del componente, como SW la muestra al lado del nombre."""
+    if len(part_configs(link)) > 1:
+        name = current(link)
+    else:
+        other = other_body_configs(link)
+        name = other[1] if other else None
+    return " (%s)" % name if name else ""
+
+
+def config_rows(tree):
+    """[(x, y, alto, texto)] para tree_overlay.EXTRA_TEXT: la configuración al lado de cada componente."""
+    from swui.fork import mates_tree as mt, tree_overlay
+
+    out = []
+    if not _in_workbench() or tree.state() == QtWidgets.QAbstractItemView.EditingState:
+        return out  # renombrando con F2: taparía el editor
+    view = tree.viewport().rect()
+    metrics = tree.fontMetrics()
+    for item, doc in mt._object_items(tree):
+        rect = tree.visualItemRect(item)
+        if not rect.isValid() or rect.height() <= 0 or not rect.intersects(view):
+            continue
+        obj = mt._object_of(item, doc)
+        try:
+            if obj is None or not is_component(obj):
+                continue
+            suffix = tree_suffix(obj)
+        except Exception:
+            continue
+        if suffix:
+            x = rect.x() + 4 + tree_overlay._icon_width(item) + 6 + metrics.horizontalAdvance(item.text(0))
+            out.append((x, rect.y(), rect.height(), suffix))
+    return out
+
+
 def install():
     for name, cls in ((SUPPRESS_CMD, _Suppress), (UNSUPPRESS_CMD, _Unsuppress), (CONFIG_CMD, _ConfigCmd)):
         try:
@@ -950,6 +998,13 @@ def install():
             FreeCAD.Console.PrintLog("[SWUI fork] Menú de componentes: no se pudo agregar.\n")
     _hook_activate()
     _hook_rename_delete()
+    try:
+        from swui.fork import tree_overlay
+
+        if config_rows not in tree_overlay.EXTRA_TEXT:
+            tree_overlay.EXTRA_TEXT.append(config_rows)
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Configuración en el árbol:\n%s\n" % traceback.format_exc())
     if pin_followers not in cf._before:
         cf._before.append(pin_followers)
     try:
