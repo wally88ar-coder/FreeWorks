@@ -554,6 +554,36 @@ def patch_sketch_names():
     edges_to_sketch_object._swui = True
     tools.edges_to_sketch_object = staticmethod(edges_to_sketch_object) if isinstance(
         tools.__dict__.get("edges_to_sketch_object"), staticmethod) else edges_to_sketch_object
+    patch_unfold_document()
+    return True
+
+
+def patch_unfold_document():
+    """
+    SheetMetal arma los croquis del desarrollo en FreeCAD.ActiveDocument: si el desarrollo se
+    recalcula estando activo OTRO documento, los croquis caen ahí, sueltos (visto con el mouse,
+    2026-10-31: Croquis1..3 de ChapaMouse dentro de una pieza nueva). Mientras corre el desarrollo,
+    el documento activo es el suyo (sm._active). Si SheetMetal cambia, queda como antes.
+    """
+    try:
+        import SheetMetalUnfoldCmd
+
+        cls = SheetMetalUnfoldCmd.SMUnfold
+        orig = cls.execute
+    except Exception:
+        return False
+    if getattr(orig, "_swui", False):
+        return True
+
+    def execute(self, fp):
+        doc = getattr(fp, "Document", None)
+        if doc is None or FreeCAD.ActiveDocument is doc:
+            return orig(self, fp)
+        with _active(doc):
+            return orig(self, fp)
+
+    execute._swui = True
+    cls.execute = execute
     return True
 
 

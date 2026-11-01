@@ -1539,3 +1539,6 @@ def install():
         if name not in from_sketch.PROFILE_FEATURES:
             from_sketch.PROFILE_FEATURES = tuple(from_sketch.PROFILE_FEATURES) + (name,)
     sheet_tab.install()
+    # croquis del desarrollo en su documento y con nombre estable, también en archivos abiertos
+    # (sin pasar por Aplanar/DXF): si SheetMetal no está, no hace nada
+    QtCore.QTimer.singleShot(0, lambda: sm.available() and sm.patch_sketch_names())
