@@ -73,6 +73,9 @@ Neueste Version oben. / Newest version first.
 - Un croquis nuevo que se cierra sin dibujar nada se borra, como SW (`swui/fork/empty_sketch.py`;
   un paso de deshacer lo devuelve). Los que ya tenían algo, los del fork y los que usa una
   operación no se tocan. Dentro del croquis, Insertar > Croquis dice "Salir del croquis", como SW.
+- La relación fija del primer componente dice "Fijo (Placa<1>)" (antes "Fijo (Body)").
+- Redondeo o Chaflán con el panel de otra operación abierto lo cancelan y arrancan callados (antes
+  quedaba un redondeo vacío con el aviso en inglés "Fillet not possible on selected shapes").
 - **Configuraciones como SW** (01/11, etapa 1 de 5: piezas): pestaña **Configuraciones** junto a
   Modelo y Tareas (como el ConfigurationManager): lista con la activa en negrita, doble clic =
   mostrar; clic derecho: Agregar configuración, Cambiar nombre (F2), Eliminar, Editar tabla de

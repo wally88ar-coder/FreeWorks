@@ -1505,6 +1505,38 @@ EMPTY_START = {
 }
 
 
+def _cancel_native_edit():
+    """
+    Panel nativo de FreeCAD abierto editando una operación (p. ej. Edición > Definición de la
+    extrusión) y se aprieta Redondeo: como SW, se cancela ese panel y el Redondeo arranca callado.
+    Antes FreeCAD lo cerraba por su cuenta y creaba el redondeo vacío recalculado ("Fillet not
+    possible on selected shapes", en inglés; visto con el mouse, 01/11). Los paneles del fork ya
+    los canceló panel_guard; un croquis abierto no se toca. True si quedó sin panel.
+    """
+    from swui.fork import feature_tree as ft
+
+    gdoc = FreeCADGui.ActiveDocument
+    vp = gdoc.getInEdit() if gdoc is not None else None
+    obj = getattr(vp, "Object", None)
+    if obj is None or not obj.isDerivedFrom("PartDesign::Feature"):
+        return False
+    doc = obj.Document
+    body = ft.body_of(obj)
+    try:
+        if doc.HasPendingTransaction:
+            doc.abortTransaction()  # antes de resetEdit, que la confirmaría
+        gdoc.resetEdit()
+        if FreeCADGui.Control.activeDialog():
+            FreeCADGui.Control.closeDialog()
+        doc.recompute()
+        tip = body.Tip if body is not None else None
+        if tip is not None and not tip.Visibility:
+            tip.Visibility = True  # la edición ocultaba la punta
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Cancelar el panel abierto:\n%s\n" % traceback.format_exc())
+    return not FreeCADGui.Control.activeDialog()
+
+
 def start_empty(command):
     """
     Redondeo o chaflán sin nada elegido. FreeCAD los crea vacíos y los recalcula
@@ -1516,7 +1548,7 @@ def start_empty(command):
     spec = EMPTY_START.get(command)
     if spec is None or not _in_workbench() or FreeCADGui.Selection.getSelectionEx():
         return False
-    if FreeCADGui.Control.activeDialog():
+    if FreeCADGui.Control.activeDialog() and not _cancel_native_edit():
         return False
     gdoc = FreeCADGui.ActiveDocument
     body = gdoc.ActiveView.getActiveObject("pdbody") if gdoc is not None else None

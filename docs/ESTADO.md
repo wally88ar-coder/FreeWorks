@@ -95,6 +95,14 @@ Manager no puede instalar FreeWorks); preguntar al usuario antes, es hacia afuer
   sin propiedades SWUI_ y sin que lo use nada fuera de su Cuerpo, se borra (transacción "Croquis
   vacío"). Probado con el mouse en FreeCAD: Insertar > Croquis + Salir del croquis -> no queda;
   con un punto -> queda; cerrado con dos Esc -> no queda.
+  **Decisiones del usuario (01/11 16:30) sobre lo que quedaba de los menús:** con un panel
+  abierto, el menú se comporta como la cinta (activo; elegir otra operación cancela el panel) y
+  no en gris como SW; el separador que falta en FreeWorks > FreeCAD queda así; la vista SÍ gira de
+  frente al abrir un croquis (como ahora); "Fijo (Body)" -> HECHO "Fijo (Placa<1>)" (la unión
+  fija sigue el nombre del componente: `mates_sw`, slotChangedObject Label); aviso "Fillet not
+  possible" -> HECHO (`dress_up_panel._cancel_native_edit`: con el panel nativo de una operación
+  abierto, Redondeo/Chaflán lo cancelan y arrancan callados). Ambos probados con el mouse.
+  Subido a GitHub (pedido del usuario). Falta: que el usuario reinicie su FreeCAD y lo pruebe.
 Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o comentó el usuario.
 
 ## Fase actual

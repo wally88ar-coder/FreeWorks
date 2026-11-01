@@ -435,6 +435,21 @@ class _CompanionObserver:
             QtCore.QTimer.singleShot(2000, lambda n=doc.Name: _relabel_later(n))
 
     def slotChangedObject(self, obj, prop):
+        if prop == "Label":
+            # el componente se renombra después de fijarlo (al insertarlo entra como "Body" y pasa
+            # a "(f) Placa<1>"): la unión que lo fija lo sigue ("Fijo (Body)" visto con el mouse, 01/11)
+            try:
+                if obj.Document.Restoring:
+                    return
+                for o in obj.InList:
+                    if (getattr(o, "ObjectToGround", None) is obj
+                            and o.Label.startswith(("Fijo", "GroundedJoint"))):
+                        want = grounded_label(obj.Label)
+                        if o.Label != want:
+                            o.Label = want
+            except Exception:
+                pass
+            return
         if prop == "ObjectToGround":
             try:
                 if not obj.Document.Restoring and obj.Label.startswith("GroundedJoint") and obj.ObjectToGround:
