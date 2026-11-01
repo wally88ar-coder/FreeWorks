@@ -64,6 +64,17 @@ Manager no puede instalar FreeWorks); preguntar al usuario antes, es hacia afuer
   (SW ya inserta la pieza; es SWUI_NewAssembly); avisos de FreeCAD en inglés ("Close this
   dialog?", "This will discard all the changes" de Volver a cargar). Sin comparar en SW esta vez:
   SW 2018 dejó de responder (ventana negra) al empezar; los menús de SW ya estaban relevados.
+  **Los 4 hallazgos, arreglados (pedido del usuario "arreglá los 4")**: (1) `dot -c` corrido en
+  D:\Freecad\bin (Graphviz registrado, genera SVG); (2) Editar operación / Editar croquis con una
+  cara elegida van a la operación que creó la cara (`feature_tree._picked_face_creator`, usa
+  `creator` como la marca celeste); (3) Archivo > Crear ensamblaje desde pieza: ensamblaje nuevo
+  con la pieza adentro y fija (`menus_sw._assembly_from_part`, por `assembly_drop._safe_insert`;
+  pide guardar la pieza si nunca se guardó y el ensamblaje, como al arrastrar); (4) "Close this
+  dialog?" y el aviso de Volver a cargar en castellano (`es_texts`, también el texto
+  informativo). Verificado con guion en FreeCAD real (Definición -> Extruir1 con la punta en el
+  corte; ensamblaje "(f) Placa4<1>" + "Fijo (Body)"; textos; SVG). Sin probar con el mouse: la
+  ventana fantasma negra de SW tapaba la pantalla. Detalle visto: la relación fija se llama
+  "Fijo (Body)" y no "Fijo (Placa4<1>)".
 Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o comentó el usuario.
 
 ## Fase actual

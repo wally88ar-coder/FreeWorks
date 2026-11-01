@@ -71,6 +71,50 @@ def _edit_table():
     config_tab.edit_table()
 
 
+def _assembly_from_part():
+    """
+    Archivo > Crear ensamblaje desde pieza, como SW: ensamblaje nuevo (archivo propio, como
+    SWUI_NewAssembly) con la pieza activa adentro, fija en el origen. Antes solo creaba el
+    ensamblaje vacío (visto con el mouse, 01/11). El vínculo necesita la pieza guardada.
+    """
+    import os
+
+    doc = FreeCAD.ActiveDocument
+    if doc is None:
+        return
+    if not getattr(doc, "FileName", ""):
+        path, _flt = QtWidgets.QFileDialog.getSaveFileName(
+            FreeCADGui.getMainWindow(), "Guardar la pieza (el ensamblaje la toma de su archivo)",
+            os.path.join(os.path.expanduser("~"), (doc.Label or doc.Name) + ".FCStd"),
+            "Archivo de FreeCAD (*.FCStd)")
+        if not path:
+            return
+        if not path.lower().endswith(".fcstd"):
+            path += ".FCStd"
+        doc.saveAs(path)
+    path = doc.FileName
+    from swui.commands import new_assembly
+
+    new = new_assembly.create()
+    if new is not None:
+        _insert_when_ready(new, path, 20)
+
+
+def _insert_when_ready(doc, path, tries):
+    """new_assembly arma el ensamblaje un instante después: esperarlo y meter la pieza."""
+    try:
+        asms = [o for o in doc.Objects if o.TypeId == "Assembly::AssemblyObject"]
+    except Exception:
+        return  # el documento se cerró
+    if not asms:
+        if tries > 0:
+            QtCore.QTimer.singleShot(150, functools.partial(_insert_when_ready, doc, path, tries - 1))
+        return
+    from swui import assembly_drop
+
+    assembly_drop._safe_insert(asms[0], [path])
+
+
 def _language_items():
     try:
         from swui import i18n
@@ -91,7 +135,8 @@ def menus():
             E("Cerrar", "Std_CloseActiveWindow"),
             SEP,
             E("Crear dibujo desde pieza", "SWUI_NewDrawing", env="PE"),
-            E("Crear ensamblaje desde pieza", "SWUI_NewAssembly", env="P"),
+            E("Crear ensamblaje desde pieza", _assembly_from_part, env="P",
+              tip="Ensamblaje nuevo con esta pieza adentro, fija en el origen (como SW)"),
             SEP,
             E("Guardar", "Std_Save"),
             E("Guardar como...", "Std_SaveAs"),

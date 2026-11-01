@@ -4,7 +4,8 @@
 """
 Textos de FreeCAD 1.1.4 que quedan en inglés con el idioma en castellano (vistos con el mouse,
 2026-10-31): "Save As..." en el menú Archivo y la pregunta al cerrar un documento con cambios
-("Save all changes to document ... before closing?", botón "Discard").
+("Save all changes to document ... before closing?", botón "Discard"); 01/11: "Close this
+dialog?" (con un panel abierto) y el aviso de Volver a cargar.
 
 Solo cambia textos al mostrarse el menú o la ventana (filtro de eventos de Qt sobre la
 aplicación, que mira únicamente QMenu y QMessageBox); lo que no está en las tablas queda igual.
@@ -39,6 +40,11 @@ MESSAGES = [
      r"¿Guardar los cambios del documento '\1' antes de cerrar?"),
     (re.compile(r"^Save changes to document '(.*)' before closing\?$"),
      r"¿Guardar los cambios del documento '\1' antes de cerrar?"),
+    # "Un diálogo ya está abierto en el panel de tareas" + esto, y Archivo > Volver a cargar
+    # (vistos con el mouse, 01/11; el primero va como texto informativo)
+    (re.compile(r"^Close this dialog\?$"), "¿Cerrarlo?"),
+    (re.compile(r"^This will discard all the changes since the last file save\.$"),
+     "Se van a perder todos los cambios hechos desde la última vez que se guardó."),
 ]
 
 # botones y títulos de paneles de tareas (QToolButton/QPushButton) que FreeCAD deja en inglés
@@ -72,6 +78,9 @@ def _fix_box(box):
     new = message_text(box.text())
     if new:
         box.setText(new)
+    new = message_text(box.informativeText())
+    if new:
+        box.setInformativeText(new)
     for button in box.buttons():
         new = BUTTONS.get(button.text())
         if new:

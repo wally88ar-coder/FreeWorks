@@ -940,6 +940,32 @@ class _Command:
         return None
 
 
+def _picked_face_creator():
+    """
+    Con una cara elegida en la vista, la operación que la creó (la que el árbol marca en celeste),
+    como SW. Sin esto, Editar operación abría la última del sólido: con la tapa de una placa con
+    agujero elegida abría el corte (visto con el mouse desde Edición > Definición, 01/11).
+    """
+    try:
+        sels = FreeCADGui.Selection.getSelectionEx()
+    except Exception:
+        return None
+    for sel in sels:
+        obj = sel.Object
+        faces = [s for s in sel.SubElementNames if s.startswith("Face")]
+        if not faces:
+            continue
+        if obj.isDerivedFrom("PartDesign::Body"):
+            obj = obj.Tip
+        if obj is None or not is_feature(obj) or body_of(obj) is None:
+            continue
+        try:
+            return creator(obj, obj.Shape.getElement(faces[0])) or obj
+        except Exception:
+            return obj
+    return None
+
+
 class _EditFeature(_Command):
     menu = "Editar operación"
     tip = "Abre el diálogo de la operación para cambiar sus valores"
@@ -950,7 +976,7 @@ class _EditFeature(_Command):
         for obj in selected():  # las del fork viven fuera de los Cuerpos
             if dp.opener(obj) is not None:
                 return obj
-        return _first(is_feature)
+        return _picked_face_creator() or _first(is_feature)
 
     def Activated(self):
         from swui.fork import dress_up_panel as dp
@@ -971,6 +997,9 @@ class _EditSketch(_Command):
         obj = _first(lambda o: is_sketch(o) or is_feature(o))
         if obj is None or is_sketch(obj):
             return obj
+        maker = _picked_face_creator()  # cara elegida: el croquis de la operación que la creó, como SW
+        if maker is not None and _profile_sketch(maker) is not None:
+            return _profile_sketch(maker)
         return _profile_sketch(obj)
 
     def Activated(self):
