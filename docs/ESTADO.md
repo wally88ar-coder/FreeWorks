@@ -122,6 +122,16 @@ Pendiente aparte: README propio en castellano (el Addon Manager muestra el del o
 Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o comentó el usuario.
 
 ## Fase actual
+**IA, ETAPA 1 (toda la interfaz): ANÁLISIS HECHO 01/11 noche, sin código** (pedido del usuario
+"encaremos etapa 1, análisis profundo"). Pestaña "Etapa 1: análisis" del documento de IA
+(https://claude.ai/artifact/DkYTFWvqPi9Fc5VEvhHEEj#57b020e6-0296): 16 herramientas en 4 grupos
+(13 sobre funciones públicas que ya existen, 2 nativas, 1 nueva); clave: ventanilla en `SwPanel`
+(campos / poner / elegir / aceptar) + conductor genérico para todos los paneles SW; nativas
+(Extruir, Cortar, croquis) se crean directo; elegir caras por descripción geométrica con
+`mate_refs` y `move_face.first_face_hit`; pasos 1a mirar, 1b cambiar valores, 1c paneles,
+1d ensamblaje. **6 decisiones del usuario pendientes** (en el documento). Riesgo principal:
+IA y usuario a la vez (FreeWorks cancela el panel abierto al correr otro comando).
+
 **IA, ETAPA 0 (EL PUENTE): HECHA — 01/11/2026 noche** (pedido del usuario "empezá";
 `swui/fork/ia/`; plan en el documento de IA, detalle técnico en NOTAS_TECNICAS "IA, etapa 0").
 FreeWorks > IA > Puente IA (tilde, arranca apagado) y Conectar la IA... (línea para Claude Code,
