@@ -129,7 +129,8 @@ Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o come
 (campos / poner / elegir / aceptar) + conductor genérico para todos los paneles SW; nativas
 (Extruir, Cortar, croquis) se crean directo; elegir caras por descripción geométrica con
 `mate_refs` y `move_face.first_face_hit`; pasos 1a mirar, 1b cambiar valores, 1c paneles,
-1d ensamblaje. **6 decisiones del usuario pendientes** (en el documento). Riesgo principal:
+1d ensamblaje. **Las 6 decisiones del usuario, tomadas** (ver Decisiones; mixto + regla "panel =
+cara de una función"). Próximo: programar 1a + 1b. Riesgo principal:
 IA y usuario a la vez (FreeWorks cancela el panel abierto al correr otro comando).
 
 **IA, ETAPA 0 (EL PUENTE): HECHA — 01/11/2026 noche** (pedido del usuario "empezá";
@@ -1894,6 +1895,11 @@ Etapas:
   paneles delicados, cartel sobre la vista + barra de estado mientras dura; si llega un clic que
   no mandó la IA, el panel se cancela sin aplicar nada y avisa. Las operaciones sin panel no lo
   necesitan. Anotado en el documento de la etapa 1 (paso 1c) y en sus riesgos.
+- **IA etapa 1, decisiones del usuario (2026-11-01, todas tomadas):** con un panel o croquis del
+  usuario abierto, la IA no toca nada, espera y avisa; cara/arista ambigua -> pregunta cuál, con
+  candidatas y posición; un solo Ctrl+Z por pedido (probar si FreeCAD lo deja con paneles; si no,
+  herramienta "deshacer el último pedido"); la IA no pone nombres (los SW los pone FreeWorks) salvo
+  pedido; orden 1a + 1b juntos, después 1c (paneles) y 1d (ensamblaje).
 - **IA: privacidad = nube con cuidados** (usuario, 2026-11-01): puente apagado por defecto; mandar
   lo mínimo (capturas solo cuando hacen falta, el Asistente avisa al mandar una); lo que viajó
   queda en el registro de la consola; modo confidencial para piezas de clientes (aviso en archivos
