@@ -1756,6 +1756,11 @@ Etapas:
   el 2026-10-31, FreeCAD los sigue bien (ver fase 5); no hace falta arreglo.
 - (Arreglado el 31/10: "EjeMatriz" y "PlanoSimetria" ya no aparecen en el árbol.)
 - Croquis: la relación hecha desde el panel se llama "Constraint1" en la lista (SW: "Sobre entidad1"...).
+- **Refactoring de las 6 herramientas delicadas** (pedido del usuario 01/11, sin fecha; tarea
+  tildable en el checklist compartido, sección "IA en FreeWorks"): pasar su lógica de adentro del
+  panel a funciones públicas (regla "panel = cara de una función"): Mover cara, planos/ejes/
+  puntos SW, Mover/Copiar sólido, Eliminar/Conservar sólido, chapa, taladro/corte de ensamblaje.
+  De a una, repitiendo sus pruebas del checklist con el mouse.
 - **IA en FreeWorks** (analizado 01/11, sin plan ni código; inspiración: MecAgent = agente que maneja
   el CAD, Leo AI = conocimiento del taller). Idea: "puente IA" adentro de FreeWorks (servidor local,
   apagado por defecto, con clave) con herramientas generales (ver árbol/selección/vista, correr
@@ -1885,6 +1890,10 @@ Etapas:
 - **Regla para todo lo nuevo: panel = cara de una función** (usuario, 2026-11-01; también en
   CLAUDE.md): la lógica de cada herramienta nueva va en una función pública que se pueda llamar
   sin el panel; así las delicadas quedan acotadas a esas 6.
+- **IA: aviso de "no toques el mouse"** (usuario, 2026-11-01): cuando la IA maneja uno de los 6
+  paneles delicados, cartel sobre la vista + barra de estado mientras dura; si llega un clic que
+  no mandó la IA, el panel se cancela sin aplicar nada y avisa. Las operaciones sin panel no lo
+  necesitan. Anotado en el documento de la etapa 1 (paso 1c) y en sus riesgos.
 - **IA: privacidad = nube con cuidados** (usuario, 2026-11-01): puente apagado por defecto; mandar
   lo mínimo (capturas solo cuando hacen falta, el Asistente avisa al mandar una); lo que viajó
   queda en el registro de la consola; modo confidencial para piezas de clientes (aviso en archivos
