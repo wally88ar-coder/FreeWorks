@@ -12,20 +12,8 @@ los pasos que aparecieron desde entonces.
 """
 
 from swui.fork.ia.herramientas import comun as c
+from swui.fork.ia.nucleo.deshacer import new_steps  # noqa: F401  (también lo usan paneles y el test)
 from swui.fork.ia.terceros.registry import ToolDefinition, ToolParam, ToolResult
-
-
-def new_steps(current, snap):
-    """Cuántos pasos de arriba de `current` son nuevos respecto de `snap` (lista de deshacer al
-    empezar, el más nuevo primero). Aguanta que FreeCAD haya tirado los más viejos (tope de pasos).
-    None si el historial ya no coincide (p. ej. el usuario deshizo cosas)."""
-    if not snap:
-        return len(current)
-    for k in range(len(current)):
-        rest = current[k:]
-        if rest == snap[:len(rest)]:
-            return k
-    return None
 
 
 def pedido(accion, titulo="", documento=None):

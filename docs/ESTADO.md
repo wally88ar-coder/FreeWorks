@@ -122,6 +122,31 @@ Pendiente aparte: README propio en castellano (el Addon Manager muestra el del o
 Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o comentó el usuario.
 
 ## Fase actual
+**IA ETAPA 1, PASO 1c: HECHO — 01/11 noche (23:20).** `herramientas/paneles.py` (conductor: abre el
+panel con su comando, elige con la selección, pone valores por la etiqueta del campo, OK/Cancelar,
+como una persona; cartel "no toques el mouse" adentro del área de la vista; un clic o tecla de
+verdad cancela sin aplicar y avisa), `pieza_operar.py` (croquis totalmente definido con
+coordenadas globales: rectángulo / círculo / polígono; extruir, cortar, revolución, redondeo,
+chaflán, matriz lineal y circular, simetría, taladro métrico con ajuste), `chapa.py` (DXF con nombre
+automático, no pisa sin permiso, por lotes en ensamblajes). **Decisión tomada de noche (revisar):**
+el conductor maneja el panel por sus campos visibles y la selección en vez de agregarle 4 métodos
+a `SwPanel` como decía el análisis: así FreeWorks no cambia nada y sirve también para paneles que
+no son SwPanel. Probado en FreeCAD real con cliente de afuera y mouse: Mover cara 5 mm (exacto),
+Plano a 15 de una cara (con su SWUI_PlaneSpec), Eje por un agujero (SWUI_RefSpec), Mover/Copiar
+50 mm, Eliminar/Conservar, Brida base (9600 / 6400 exactos, SWUI_KFactor), Brida de arista 25,
+Dobladillo abierto 12; pieza entera solo con herramientas (placa, 2 taladros M6 Ø6,6 + matriz,
+redondeo R5 de 4 aristas, corte, simetría, matriz circular, chaflán, revolución): todos los
+volúmenes exactos; DXF con capas CONTORNO / PLEGADO. Clic ajeno durante el panel -> cancelado.
+**Arreglos encontrados en las pruebas:** (1) body.newObject no mueve la punta en matrices y
+simetrías -> la IA la mueve (`feature_tree.set_tip`); (2) base del redondeo tomada después de crearlo
+(era el propio redondeo) -> antes; (3) "Distancia" encajaba con "Equidistanciar" -> etiqueta
+exacta primero; (4) **FreeWorks:** el aviso de pieza retrocedida y la copia STEP reaccionaban a
+`saveCopy` (respaldos) -> solo al guardado del archivo (`feature_tree._DocObserver`, revisar); (5) con
+un panel abierto, una consulta abría un paso de deshacer y mezclaba lo del panel (una segunda
+consulta con el mismo título llegó a deshacer) -> con panel abierto las consultas no abren paso, los
+cambios esperan, y "cambió" se mide comparando la lista entera (`nucleo/deshacer.py`).
+Sin probar: Convertir en chapa, Corte de chapa (necesitan una chapa importada), Combinar.
+
 **IA ETAPA 1, PASOS 1a + 1b: HECHOS — 01/11 noche** (trabajo nocturno pedido por el usuario:
 "etapa 1 y análisis etapa 3 hasta que termines"). Herramientas nuevas en
 `swui/fork/ia/herramientas/`: `pieza_ver.py` (geometria, elegir, cotas, configuraciones, medir,
@@ -1757,6 +1782,14 @@ Etapas:
 ## Falta / ideas pendientes
 - Fase 1: chapa hecha; pendientes chicos: desahogos de pliegue, elegir qué pliegues desdoblar
   (Convertir en chapa un sólido macizo: el usuario no lo necesita, 2026-10-31).
+- **Muescas de plegado en el DXF** (idea de las "Bend Notches" de SW 2025; decidido por el usuario
+  el 01/11, sin código): NO en el 3D (un corte en la zona del doblez arriesga el desplegado de
+  SheetMetal; un croquis no llega al corte). Las calcula Exportar DXF desde las mismas líneas de
+  plegado de la capa PLEGADO, así siempre caen en su lugar: V de 2 × 2 mm (profundidad × ancho en
+  el borde), con la punta en la línea de plegado (centro del doblez), en los dos extremos de cada
+  pliegue, recortando el contorno (capa CONTORNO, para que la corte el láser). Casilla en la
+  exportación, **apagada por defecto** (también en lotes). Verla en el desarrollo antes de
+  exportar. Probar después en CypCut (usuario). Anidado: no, es CAM.
 - Simulación FEM como pestaña "Simulación" con flujo SW (estudio, material, sujeciones, cargas,
   malla, ejecutar, resultados): conversada, sin empezar; es grande.
 - Panel Ver/Datos (propiedades de FreeCAD): se deja por ahora; el usuario va a ver si le sirve.

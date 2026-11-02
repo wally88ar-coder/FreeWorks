@@ -32,6 +32,7 @@ import traceback
 import FreeCAD
 
 from swui.fork.ia.nucleo import config, puente, respaldo
+from swui.fork.ia.nucleo.deshacer import new_steps
 
 TEST_TIMEOUT = 90  # segundos para la prueba aparte (incluye arrancar freecadcmd)
 RUN_TIMEOUT = 180  # segundos en el hilo principal antes de avisar que quedó trabado
@@ -118,6 +119,8 @@ def _freecadcmd():
 def _prepare(read_only, test):
     doc = FreeCAD.ActiveDocument
     res = {"doc": doc.Name if doc is not None else "", "copy": "", "backup": "", "new_backup": False}
+    if doc is not None and doc.HasPendingTransaction and not read_only:
+        raise RuntimeError("hay un panel abierto con cambios sin aceptar: aceptalo o cancelalo antes")
     if doc is None or not doc.Objects or read_only:
         return res
     res["backup"], res["new_backup"] = respaldo.ensure(doc)
@@ -207,11 +210,19 @@ def _run(code, title, doc_name, read_only=False):
     doc = FreeCAD.getDocument(doc_name) if doc_name else None
     before = {o.Name for o in doc.Objects} if doc else set()
     bad_before = set(_invalid(doc)) if doc else set()
+    undo_before = list(doc.UndoNames) if doc else []
     out = io.StringIO()
     step = "IA: %s" % title
+    # Con un panel abierto hay un paso de deshacer pendiente: abrir otro lo cierra y mezcla lo del
+    # panel con lo nuestro (visto el 01/11). Una consulta corre sin paso propio; un cambio, no corre.
+    pending = bool(doc) and doc.HasPendingTransaction
+    if pending and not read_only:
+        return {"ok": False, "error": "Hay un panel abierto con cambios sin aceptar: aceptalo o cancelalo antes "
+                "de correr un script que cambia la pieza.", "output": "", "undone": False}
     if not read_only:
         log(code, title)
-    if doc:
+    own = bool(doc) and not pending
+    if own:
         doc.openTransaction(step)
     try:
         with contextlib.redirect_stdout(out):
@@ -219,24 +230,24 @@ def _run(code, title, doc_name, read_only=False):
         if not read_only:
             for d in FreeCAD.listDocuments().values():
                 d.recompute()
-        if doc:
+        if own:
             doc.commitTransaction()
-        # FreeCAD descarta las transacciones vacías: si quedó el paso, el script cambió algo
-        changed = bool(doc) and bool(doc.UndoNames) and doc.UndoNames[0] == step
+        # FreeCAD descarta las transacciones vacías: si apareció un paso nuevo, el script cambió algo
+        changed = own and new_steps(list(doc.UndoNames), undo_before) not in (0, None)
         if read_only and changed:
             doc.undo()
             doc.recompute()
             return {"ok": False, "error": "El script estaba marcado 'solo leer' pero cambió el "
                     "documento: se deshizo.", "output": out.getvalue()[-MAX_OUTPUT:], "undone": True}
     except BaseException:
-        if doc:
+        if own:
             try:
                 doc.abortTransaction()
                 doc.recompute()
             except Exception:
                 pass
         return {"ok": False, "error": traceback.format_exc()[-3000:], "output": out.getvalue()[-MAX_OUTPUT:],
-                "undone": bool(doc)}
+                "undone": own}
     active = FreeCAD.ActiveDocument
     res = {"ok": True, "output": out.getvalue()[-MAX_OUTPUT:],
            "documento": active.Label if active else "", "cambio": changed}

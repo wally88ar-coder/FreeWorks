@@ -110,6 +110,10 @@ def user_busy():
 
 
 def require_free():
+    """Para lo que cambia la pieza: ni un panel del usuario ni uno de la IA a medio terminar (abrir
+    un paso de deshacer con otro pendiente mezcla los cambios, visto el 01/11)."""
+    if _state["ia_panel"]:
+        raise Problema("La IA tiene un panel abierto: terminalo (panel aceptar o cancelar) antes de otra cosa.")
     busy = user_busy()
     if busy:
         raise Problema(busy)

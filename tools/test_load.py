@@ -5576,7 +5576,13 @@ def check_ia():
         "repair_refs": {"problems": ["doc"]},
         "move_face": {"stale_in": ["doc"]},
         "material": {"all_materials": [], "assign": ["objs", "info"]},
+        "sheet_metal": {"write_dxf": ["body", "path"], "dxf_filename": ["part", "thick", "material"],
+                        "part_name": ["body"], "thickness": ["body"], "material_name": ["body"],
+                        "sheet_bodies": ["doc"], "sheet_parts": ["doc"], "flat_of": ["body"],
+                        "is_sheet_body": ["body"]},
+        "panel_guard": {"open_panel": [], "cancel_open": []},
     }
+    contract["feature_tree"].update({"is_feature": ["obj"]})
     for mod, funcs in contract.items():
         path = os.path.join(ADDON, "swui", "fork", mod + ".py")
         tree = ast.parse(open(path, encoding="utf-8").read())
