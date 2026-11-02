@@ -856,4 +856,4 @@ que usan está en `tools/test_load.py` (`check_ia`): si una cambia de firma, el 
   SO_EXCLUSIVEADDRUSE (`terceros/mcp_http.py`, marcado "FreeWorks:").
 - Pruebas: un FreeCAD de prueba cerrado con `os._exit` mientras tenía un panel de la IA abierto
   quedó con un hilo al 100 % y la memoria creciendo (taskkill: "no hay instancia activa"); se
-  cerró con `Invoke-CimMethod Terminate`. En las pruebas, cancelar el panel antes de cerrar.
+  cerró con `Invoke-CimMethod Terminate`. Es solo del `os._exit` de las pruebas: cerrando la ventana como el usuario (documentos y `mw.close()`) después de usar un panel de la IA, FreeCAD sale en ~8 s (probado 01/11).
