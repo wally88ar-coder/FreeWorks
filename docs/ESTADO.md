@@ -1,6 +1,12 @@
 # Estado del fork
 
-Última actualización: 2026-11-01 21:00 (**IA, etapa 0 (el puente): hecha, conectada a la app de
+Última actualización: 2026-11-01, charla libre desde el celular (sin código): a partir de un PDF
+comparativo SW / Fusion / FreeCAD que pasó el usuario se decidieron y anotaron en "Falta / ideas"
+y en Decisiones: **muescas de plegado** en el DXF, **pestaña y ranura** (no urgente),
+**tornillería** sobre el addon Fasteners (análisis empezado; falta un permiso del usuario desde la
+PC) y **estructuras con Cuerpos nativos** (Structure System de SW investigado, código de
+FrameForge leído; próximo: plan para aprobar). Anidado descartado (es CAM).
+Antes, 2026-11-01 21:00 (**IA, etapa 0 (el puente): hecha, conectada a la app de
 Claude del usuario y probada de punta a punta**; ver Fase actual. El checklist compartido tiene
 una sección "IA en FreeWorks" con la columna Vos vacía. Subida a GitHub como trabajo sin
 publicar: no está en la versión 0.11.0 de la rama "release").
@@ -1551,7 +1557,8 @@ Plan aprobado por el usuario (2026-10-26), por etapas:
     Combinar: **etapa C completa**. Probado por él: "quedó muy bien Combinar". El "Dividir" de SW
     (partir un sólido con un plano en varios Cuerpos) queda sin hacer; está verificado que se
     puede con herramientas nativas (ver arriba, BOPTools Slice + CompoundFilter) si algún día lo pide.
-- D. Soldadas, después de la chapa.
+- D. Soldadas, después de la chapa. (01/11: investigado y decidido, Cuerpos nativos; ver "Piezas
+  soldadas / estructuras" en "Falta / ideas".)
 
 ## Plan: fase 2 (aprobado por el usuario el 2026-10-26)
 Idea: paneles propios estilo PropertyManager de SW, con la lista de aristas/caras/operaciones
@@ -1790,6 +1797,72 @@ Etapas:
   pliegue, recortando el contorno (capa CONTORNO, para que la corte el láser). Casilla en la
   exportación, **apagada por defecto** (también en lotes). Verla en el desarrollo antes de
   exportar. Probar después en CypCut (usuario). Anidado: no, es CAM.
+- **Tornillería / Fijaciones inteligentes estilo SW** (pedido del usuario 01/11, análisis empezado,
+  sin código). En SW usa Fijaciones inteligentes; tipos: tornillos/tuercas/arandelas, autoclinchantes
+  PEM, remaches y remaches rosca, espárragos/varilla; para ver el conjunto, lista de compras (conteo
+  por medida, no tabla con globos) y planos. Base: addon Fasteners (shaise/FreeCAD_FastenersWB,
+  0.5.67 del 10/09/2026, **GPL-2.0+**: se usa como dependencia, no se copia código). Leído el código
+  (bajado aislado al scratchpad, NO instalado en Mod): trae ISO/DIN/ASME, PEM (tuerca, espárrago,
+  separador), varilla roscada, tuerca para soldar, insertos; **no trae remaches ni remaches rosca**.
+  Se pega a una arista circular (propiedad BaseObject) y la sigue al recalcular; Diámetro "Auto"
+  según el agujero; el **largo no es automático** (lo calcularía FreeWorks, como SW: espesores +
+  arandela + tuerca); "Generate BOM" arma una planilla Tipo/Cantidad (base de la lista de compras);
+  "Simplify shape" lo pasa a sólido común. Son Part::FeaturePython: sin el addon el archivo no se
+  puede recalcular/editar (como SheetMetal). Falta probarlo en 1.1.4 (correrlo quedó frenado por
+  permiso: código bajado de internet), con Ensamblaje/relaciones y en TechDraw. **Pendiente del
+  usuario:** aprobar desde la PC el permiso para correr el addon en la prueba aislada (dijo
+  "dejalo pendiente", 01/11, estaba en el celular). El addon NO está instalado en Mod: se carga
+  solo desde una carpeta temporal en las pruebas (`git clone
+  https://github.com/shaise/FreeCAD_FastenersWB`, leído en el commit fddd07a). Guion de la primera
+  prueba ya escrito (placa con agujero, tornillo ISO 4762 Auto, largo y rosca, tuerca, arandela,
+  PEM, varilla, seguir a la placa, BOM): rehacerlo, la copia del scratchpad es temporal.
+- **Piezas soldadas / estructuras** (investigado 01/11; **DECIDIDO por el usuario: Cuerpos nativos,
+  usando código de FrameForge cuando sea útil y esté probado**; sin plan ni código; próximo paso:
+  plan en criollo para que lo apruebe). SW: Weldments sigue
+  vivo en 2026; el **Structure System** (2019) es un modo avanzado DENTRO de Weldments, no lo
+  reemplaza. Miembros primarios (sobre segmento de croquis o arista, intersección de planos,
+  punto + largo/hasta punto/hasta plano, intersección cara-plano) y secundarios (entre dos
+  primarios); perfiles distintos en una sola operación; al salir, Gestión de esquinas por tipo
+  (simple, dos miembros: plano/cuerpo/inglete, complejas de 3+), orden de recorte y separación;
+  partir miembros; 2024: esquina abierta; 2025: elementos de unión que recortan, globos con tipo
+  de recorte, botones Crear/Editar separados, perfiles favoritos, cordón de ranura; 2026: mejor
+  selección en esquinas complejas, propiedades de la lista de cortes en las de configuración.
+  FreeCAD 1.1.4 no trae nada propio (BIM/Arch Structure no sirve). Addon candidato: **FrameForge**
+  (lukh/frameforge, v0.2.1 del 14/04/2026, último cambio 16/06/2026, LGPL-3.0, sucesor de MetalWB):
+  vigas desde croquis o aristas, recortar, desfasar, inglete, agujeros desde croquis, lista de
+  cortes con ángulos, largo y material; sus objetos son FeaturePython (motor ajeno, como
+  SheetMetal). Alternativa "asistente, no motor": cada miembro = Cuerpo nativo (perfil barrido
+  por la arista) + recortes nativos, como el multicuerpo (la elegida). El usuario en SW:
+  bastidores a ejes con caños, esquinas a tope con los largueros pasantes, lista de cortes.
+  **Código de FrameForge leído sin ejecutar (01/11, commit 38511e7, ~6.700 líneas):** cada viga es
+  un Part::FeaturePython con AttachExtension "NormalToEdge" sobre la arista del croquis; la sección
+  la dibuja en Python según la familia (tablas EN en JSON: ángulos, UPN/UPE, IPE/IPN/HE, tubo
+  cuadrado/rectangular, caño redondo, planchuela, redondo, aluminio V/T-slot, madera, o un croquis
+  propio) y la **extruye recta** con el largo de la arista (no sigue curvas), con prolongación A/B
+  y biselado de puntas hasta ±60°. Esquinas: un objeto aparte por viga, a mano y de a una: "End
+  Trim" (ajuste perfecto = corta con el cuerpo de la otra viga; simple = con una cara plana) o "End
+  Miter" (inglete por la bisectriz de dos aristas con punta común). Sin miembros secundarios, sin
+  intersección de planos, sin gestión de esquinas automática ni separación. Agujeros desde croquis.
+  Lista de cortes agrupada (familia, medida, largo, ángulos, material, peso y precio por metro),
+  globos e IDs. Contras: importa FreeCADGui/Assembly/Arch al cargar (no anda en FreeCADCmd), usa el
+  documento activo al recalcular, 0.1→0.2 cambió la estructura interna ("hagan respaldo"); tablas
+  sin los espesores finos de caño de acá (cuadrado desde 2 mm; rectangular 40x20x1,5 mín.).
+  Licencia: **LGPL-3.0-only** (archivo LICENSE y package.xml; el README dice "GPLv3" por error).
+  Se puede copiar código a FreeWorks (LGPL-2.1-or-later admite pasar a la 3) con su aviso y
+  dejando esas partes en LGPL-3.0-only, como el código ajeno de la IA; pero el conjunto quedaría
+  en la práctica bajo LGPL-3. Las medidas de perfiles son datos; conviene tabla propia con caños
+  del mercado argentino. **Recomendación de Claude: Cuerpos
+  nativos** (la viga = croquis de sección con el mismo acople NormalToEdge + Pad/barrido nativo,
+  sigue curvas; recortes = operaciones nativas armadas por FreeWorks al crear; esquinas con flujo
+  SW; lista de cortes y peso con el material de Evaluar), tomando de FrameForge las ideas (lista
+  agrupada, peso/precio por metro, inglete por bisectriz, ajuste perfecto). **Aprobada por el
+  usuario el 01/11** ("iremos por nativo utilizando código de FrameForge si es útil y está
+  probado"). Código que se copie: con su aviso de autor y licencia (LGPL-3.0-only), en una carpeta
+  de terceros como el de la IA, y probado en FreeCADCmd antes de usarlo. Para volver a bajarlo:
+  `git clone https://github.com/lukh/frameforge` (leído en el commit 38511e7; la copia del
+  scratchpad de la sesión es temporal).
+- **Pestaña y ranura de chapa** (Tab and Slot de SW 2019/2020; pedido del usuario 01/11: "es útil,
+  no es urgente"; SheetMetal no la trae). Implementar en algún momento.
 - Simulación FEM como pestaña "Simulación" con flujo SW (estudio, material, sujeciones, cargas,
   malla, ejecutar, resultados): conversada, sin empezar; es grande.
 - Panel Ver/Datos (propiedades de FreeCAD): se deja por ahora; el usuario va a ver si le sirve.
@@ -1867,6 +1940,13 @@ Etapas:
   FreeCAD, no acepta caras). Resuelto con el panel propio.
 
 ## Decisiones
+- **Estructuras / piezas soldadas (usuario, 01/11):** con Cuerpos nativos de FreeCAD (como el
+  multicuerpo), NO con el addon FrameForge como dependencia; se puede copiar código de FrameForge
+  (LGPL-3.0-only) cuando sea útil y esté probado, con su aviso. Detalle en "Falta / ideas".
+- **Muescas de plegado (usuario, 01/11):** calculadas por Exportar DXF desde las líneas de plegado
+  (no en el 3D): V 2 × 2 mm en el centro del doblez, en los dos extremos, casilla apagada por
+  defecto. Detalle en "Falta / ideas".
+- **Anidado de chapa: no** (usuario, 01/11): es CAM, no CAD.
 - Similitud total con SW: panel de tareas solo a la izquierda (sin opción a la derecha),
   LikeSolidWorks UI como único banco, todo módulo nuevo (chapa, FEM) como pestaña de la cinta
   sobre las herramientas nativas.

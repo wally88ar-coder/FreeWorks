@@ -95,6 +95,13 @@ un croquis abierto (`swui/from_sketch.py`); términos SW en diálogos de extruir
   ver NOTAS_TECNICAS "Errores de FreeCAD encontrados"; y Mover cara vuelve a encontrar sola la
   cara, la bisagra, el destino o el eje que FreeCAD pierde, como las relaciones de posición.)
 
+- (Decidido 2026-11-01, sin código; detalle en `docs/ESTADO.md` > "Falta / ideas" y Decisiones.)
+  **Piezas soldadas / estructuras** con Cuerpos nativos (no FrameForge como dependencia; su código,
+  LGPL-3.0, se puede copiar si es útil y está probado); próximo: plan para aprobar.
+  **Tornillería** estilo Fijaciones inteligentes sobre el addon Fasteners (análisis empezado).
+  **Muescas de plegado** calculadas al exportar el DXF. **Pestaña y ranura** (no urgente).
+  Anidado: no (es CAM).
+
 Operaciones de pieza que usa (menú Insertar de SW, lista completa en `docs/ESTADO.md` > Alcance):
 todas hechas (Mover/Copiar y Eliminar/Conservar sólido: 2026-10-27, sin
 Restricciones por decisión del usuario); Superficie y Operación Cierre, por ahora no.
