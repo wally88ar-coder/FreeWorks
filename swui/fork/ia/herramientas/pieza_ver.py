@@ -56,10 +56,13 @@ def geometria(objeto, documento=None, que="caras", tipo=None, con_creador=True):
                 info["creada_por"] = _creator_label(tip, tip_faces, i)
             items.append(info)
     if que in ("aristas", "todo"):
+        seams = _seams(shape)
         for i, edge in enumerate(shape.Edges):
             info = c.edge_info(edge, "Edge%d" % (i + 1))
             if tipo and not info["tipo"].startswith(tipo):
                 continue
+            if i in seams:
+                info["costura"] = True  # línea de unión de un cilindro: no es una arista de verdad
             items.append(info)
     bb = shape.BoundBox
     data = {"objeto": c.label_of(obj), "volumen": c.r(shape.Volume),
@@ -70,6 +73,23 @@ def geometria(objeto, documento=None, que="caras", tipo=None, con_creador=True):
         data["recortado"] = "se muestran %d de %d: filtrá por tipo" % (MAX_ITEMS, len(items))
     return ToolResult(success=True, output="%s: %d caras, %d aristas (coordenadas globales, mm)."
                       % (c.label_of(obj), len(shape.Faces), len(shape.Edges)), data=data)
+
+
+def _seams(shape):
+    """Índices de las aristas que son costura de una cara curva (la recta de un agujero)."""
+    out = set()
+    for face in shape.Faces:
+        if type(face.Surface).__name__ == "Plane":
+            continue
+        for e in face.Edges:
+            try:
+                if e.isSeam(face):
+                    for i, g in enumerate(shape.Edges):
+                        if g.isSame(e):
+                            out.add(i)
+            except Exception:
+                pass
+    return out
 
 
 # --- elegir -----------------------------------------------------------------------------
@@ -111,8 +131,11 @@ def elegir(objeto, documento=None, elemento="cara", tipo=None, normal=None, radi
     nvec = c.direction(normal) if normal is not None else None
     tip, tip_faces = _tip_faces(obj) if (kind == "cara" and creada_por) else (None, [])
     elems = shape.Faces if kind == "cara" else shape.Edges
+    seams = _seams(shape) if kind == "arista" else set()
     found = []
     for i, el in enumerate(elems):
+        if i in seams:
+            continue  # las costuras de los cilindros no se eligen
         name = ("Face%d" if kind == "cara" else "Edge%d") % (i + 1)
         info = c.face_info(el, name) if kind == "cara" else c.edge_info(el, name)
         if creada_por and tip is not None and len(tip_faces) == len(elems):

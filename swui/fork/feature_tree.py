@@ -41,6 +41,7 @@ NOMBRES INTERNOS ESTABLES: SWUI_SuppressedMapMode queda guardado en los
 archivos del usuario. No cambiarlo nunca (ver docs/ESTADO.md, Decisiones).
 """
 
+import os
 import traceback
 
 import FreeCAD
@@ -734,6 +735,11 @@ class _Observer:
     def slotFinishSaveDocument(self, doc, filename):
         from swui.compat import QtCore
 
+        # FreeCAD 1.1.4 avisa también con saveCopy (una copia, p. ej. un respaldo): ahí no va el
+        # aviso de retroceso ni la copia STEP, que son del archivo del usuario (01/11)
+        if filename and doc.FileName and os.path.normcase(os.path.abspath(filename)) != \
+                os.path.normcase(os.path.abspath(doc.FileName)):
+            return
         name = doc.Name
         QtCore.QTimer.singleShot(0, lambda: _check_saved_later(name, filename))
 
