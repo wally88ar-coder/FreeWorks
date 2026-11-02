@@ -1873,6 +1873,18 @@ Etapas:
   con el rigor del checklist. Los amigos usan la suscripción que ya pagan. API / Ollama: posibles
   más adelante (cliente de ghbalf, `llm/client.py`, 24 proveedores, solo stdlib).
 - **IA: se arranca por la etapa 0, el puente** (usuario, 2026-11-01). Sin empezar a programar.
+- **IA etapa 1: camino mixto** (usuario, 2026-11-01). Sin panel (objeto nativo o función pública
+  de FreeWorks, mismo resultado): Extruir, Cortar, Revolución, Barrido, Hélice, croquis,
+  Redondeo, Chaflán, matrices y simetría de operaciones, Ángulo de salida, Taladro (con los
+  cálculos de `hole_panel`), relaciones SW, matriz/simetría de componentes, configuraciones,
+  cotas, árbol, material, DXF, multicuerpo. Con el panel en pantalla (conductor genérico sobre
+  `SwPanel`), porque la lógica de FreeWorks vive adentro del panel: Mover cara (marca, firma,
+  auxiliares, corrección del error de Draft), planos/ejes/puntos SW (`_save_spec`), Mover/Copiar
+  sólido (`_sync_points`), Eliminar/Conservar sólido (`accept`), chapa (bridas, dobladillo,
+  convertir, corte, desarrollo), taladro/corte de ensamblaje.
+- **Regla para todo lo nuevo: panel = cara de una función** (usuario, 2026-11-01; también en
+  CLAUDE.md): la lógica de cada herramienta nueva va en una función pública que se pueda llamar
+  sin el panel; así las delicadas quedan acotadas a esas 6.
 - **IA: privacidad = nube con cuidados** (usuario, 2026-11-01): puente apagado por defecto; mandar
   lo mínimo (capturas solo cuando hacen falta, el Asistente avisa al mandar una); lo que viajó
   queda en el registro de la consola; modo confidencial para piezas de clientes (aviso en archivos

@@ -43,6 +43,13 @@
   panel izquierdo con Modelo y Tareas en pestañas.
 - Código propio del fork en `swui/fork/` (comentarios en español): cambia tablas y funciones del
   original desde afuera, sin editar sus archivos. Detalle en `docs/NOTAS_TECNICAS.md`.
+- **Panel = cara de una función** (decidido por el usuario, 2026-11-01): toda herramienta NUEVA
+  de FreeWorks deja su lógica (crear la operación, sus marcas SWUI_, auxiliares, nombres) en una
+  función pública documentada que se pueda llamar sin abrir el panel ni hacer clics; el panel
+  solo junta los datos y la llama. Así la IA (y las pruebas con guion) la usan directo. Las
+  únicas que hoy tienen la lógica adentro del panel son 6 (Mover cara, planos/ejes/puntos SW,
+  Mover/Copiar sólido, Eliminar/Conservar sólido, chapa, taladro/corte de ensamblaje): la IA las
+  maneja por el panel; si alguna se toca a fondo, aprovechar para pasar su lógica a funciones.
 
 ## Lo que el original ya resuelve (no rehacer)
 Cinta tipo CommandManager; croquis (colores azul/negro, panel de relaciones aplicables, línea
