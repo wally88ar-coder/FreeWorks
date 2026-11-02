@@ -122,6 +122,22 @@ Pendiente aparte: README propio en castellano (el Addon Manager muestra el del o
 Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o comentó el usuario.
 
 ## Fase actual
+**IA ETAPA 1, PASOS 1a + 1b: HECHOS — 01/11 noche** (trabajo nocturno pedido por el usuario:
+"etapa 1 y análisis etapa 3 hasta que termines"). Herramientas nuevas en
+`swui/fork/ia/herramientas/`: `pieza_ver.py` (geometria, elegir, cotas, configuraciones, medir,
+propiedades_fisicas, verificar), `pieza_cambiar.py` (cambiar_cota, arbol, configuracion,
+material, comando), `pedido.py` (deshacer un pedido entero), `comun.py`. Test: contrato de 33
+funciones de FreeWorks que usa la IA + `new_steps`. Probado en FreeCAD real con cliente de
+afuera (35 pedidos: volúmenes exactos, cara de arriba / agujero / arista ambigua -> candidatas,
+configuraciones por separado, croquis abierto -> no toca) y con el mouse (panel de Redondeo
+abierto con clic -> la IA avisa y no toca; cancelado -> cambia; agujero resaltado). Hallazgos:
+(1) FreeCAD NO anida transacciones (abrir una con otra abierta cierra la de afuera y lo que sigue
+queda sin paso): "un Ctrl+Z por pedido" no es posible con paneles -> herramienta `pedido`
+(empezar / ver / deshacer: deshace de una vez los pasos nuevos; probado: 3 pasos -> pieza
+exacta). (2) Std_DlgPreferences tarda en abrir: el vigilante de ventanitas mira cada 200 ms
+durante 10 s y la cierra sin aceptar. (3) Visto, NO de la IA: Redondeo desde la cinta sin nada
+elegido muestra el aviso en inglés "Fillet: Fillet not possible on selected shapes".
+
 **IA, ETAPA 1 (toda la interfaz): ANÁLISIS HECHO 01/11 noche, sin código** (pedido del usuario
 "encaremos etapa 1, análisis profundo"). Pestaña "Etapa 1: análisis" del documento de IA
 (https://claude.ai/artifact/DkYTFWvqPi9Fc5VEvhHEEj#57b020e6-0296): 16 herramientas en 4 grupos

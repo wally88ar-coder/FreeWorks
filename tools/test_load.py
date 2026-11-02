@@ -5554,6 +5554,54 @@ def check_ia():
                     if re.search(r"swui\.fork\.ia\.%s\b|from\s+swui\.fork\.ia\s+import\s+[^\n]*\b%s\b" % (up, up), src):
                         print("  FEHLER: IA: %s/%s usa la capa de arriba %s" % (layer, f, up))
                         ok = False
+    # 2b) Contrato de las ventanillas: las funciones de FreeWorks que usan las herramientas de la IA
+    #     siguen existiendo con esos parámetros (si cambian, hay que tocar swui/fork/ia/herramientas)
+    import ast
+
+    contract = {
+        "feature_tree": {"creator": ["feature", "face"], "features": ["body"], "body_of": ["obj"],
+                         "is_sketch": ["obj"], "suppress": ["obj"], "unsuppress": ["obj", "with_children"],
+                         "move": ["feature", "direction"], "rollback_target": ["feats", "selected"],
+                         "set_tip": ["body", "tip"]},
+        "instant_dims": {"dims_of": ["obj"], "apply_value": ["dim", "value"], "parse": ["text", "kind"],
+                         "fmt": ["value", "kind"]},
+        "equations": {"sketch_dim_names": ["constraints"], "feature_dim_names": ["type_id", "props"]},
+        "configurations": {"names": ["doc"], "active": ["doc"], "configured": ["doc"],
+                           "value_in": ["doc", "target", "name"], "set_values": ["doc", "target", "values"],
+                           "configure": ["doc", "target", "value", "scope"], "activate": ["doc", "name"],
+                           "add": ["doc", "name"], "rename": ["doc", "old", "new"], "delete": ["doc", "name"]},
+        "measure_sw": {"measure": ["shapes", "mode"]},
+        "mass_props": {"components": ["doc", "hidden"], "compute": ["parts"],
+                       "report": ["result", "rhos", "names", "notes"]},
+        "repair_refs": {"problems": ["doc"]},
+        "move_face": {"stale_in": ["doc"]},
+        "material": {"all_materials": [], "assign": ["objs", "info"]},
+    }
+    for mod, funcs in contract.items():
+        path = os.path.join(ADDON, "swui", "fork", mod + ".py")
+        tree = ast.parse(open(path, encoding="utf-8").read())
+        defs = {n.name: [a.arg for a in n.args.args] for n in tree.body if isinstance(n, ast.FunctionDef)}
+        for fn, args in funcs.items():
+            if fn not in defs or defs[fn][:len(args)] != args:
+                print("  FEHLER: IA: la ventanilla %s.%s(%s) cambió o no está (hay: %s)"
+                      % (mod, fn, ", ".join(args), defs.get(fn)))
+                ok = False
+    # 2c) "Deshacer el último pedido": cuántos pasos nuevos hay arriba de la lista de deshacer
+    try:
+        from swui.fork.ia.herramientas.pedido import new_steps
+
+        cases = [((["c", "b", "a"], ["a"]), 2), ((["x", "y", "a", "b"], ["a", "b", "c"]), 2),
+                 ((["a", "b"], ["a", "b"]), 0), ((["b", "c"], ["a", "b", "c"]), None), ((["z"], []), 1)]
+        for (cur, snap), want in cases:
+            if new_steps(cur, snap) != want:
+                print("  FEHLER: IA: pedido.new_steps(%s, %s) = %s, se esperaba %s"
+                      % (cur, snap, new_steps(cur, snap), want))
+                ok = False
+    except Exception:
+        import traceback
+
+        print("  FEHLER: IA: pedido\n%s" % traceback.format_exc())
+        ok = False
     # 3) Servidor MCP copiado: saludo, lista y llamada a una herramienta de prueba
     try:
         from swui.fork.ia.terceros import mcp_http, mcp_protocol, mcp_server
@@ -5598,7 +5646,9 @@ def check_ia():
         print("  FEHLER: IA: servidor MCP\n%s" % traceback.format_exc())
         ok = False
     if ok:
-        print("  IA       : fork: aislada (solo el enganche la importa, capas en orden), MCP responde, clave obligatoria")
+        print("  IA       : fork: aislada (solo el enganche la importa, capas en orden), MCP responde, clave obligatoria,")
+        print("             ventanillas de FreeWorks que usa la IA sin cambios (%d funciones)"
+              % sum(len(f) for f in contract.values()))
     return ok
 
 
