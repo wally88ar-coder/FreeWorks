@@ -2,7 +2,9 @@
 
 Última actualización: 2026-11-01 ~24 h (trabajo nocturno pedido por el usuario): **IA, etapa 1
 completa (1a a 1d), probada por Claude en FreeCAD de prueba; commits locales, sin subir**. Ver
-Fase actual. Siguiente en la cola: análisis de la etapa 3 (el Asistente adentro de FreeWorks).
+Fase actual. **Análisis de la etapa 3 (pestaña Asistente adentro de FreeWorks): hecho**, en la
+pestaña "Etapa 3: análisis" del documento de IA, con 6 decisiones para el usuario (la principal:
+instalar Claude Code aparte para que FreeWorks lo lance, porque el de la app no tiene sesión propia).
 Antes, 2026-11-01, charla libre desde el celular (sin código): a partir de un PDF
 comparativo SW / Fusion / FreeCAD que pasó el usuario se decidieron y anotaron en "Falta / ideas"
 y en Decisiones: **muescas de plegado** en el DXF, **pestaña y ranura** (no urgente),
@@ -131,6 +133,19 @@ Pendiente aparte: README propio en castellano (el Addon Manager muestra el del o
 Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o comentó el usuario.
 
 ## Fase actual
+**IA, ETAPA 3 (Asistente adentro): ANÁLISIS HECHO 01/11 ~24 h, sin código.** Pestaña "Etapa 3:
+análisis" del documento de IA. Resumen: FreeWorks lanza por detrás el programa de IA del usuario
+(`claude -p` con `--input-format/--output-format stream-json`, `--mcp-config` +
+`--strict-mcp-config` + `--allowedTools` = solo el puente, `--permission-mode plan` para
+Planificar, `--resume` para seguir la charla, `--append-system-prompt` con las reglas); verificado
+en el claude.exe 2.1.309 de la app. Ese claude.exe no tiene sesión propia ("Not logged in") y su
+ruta cambia con cada actualización -> recomendado instalar Claude Code aparte e iniciar sesión una
+vez. Motores: Claude Code, Codex CLI, Gemini/Antigravity (a verificar instalándolos), Ollama más
+adelante. Plan 3a-3d. **Decisiones del usuario pendientes** (en el documento): instalación,
+Planificar por defecto o no, lugar de la pestaña, dónde se guarda la charla, modelo, y si se
+arranca la 3a o primero prueba la etapa 1. Riesgo a revisar: condiciones de uso de la
+suscripción desde otro programa, antes de compartir con amigos.
+
 **IA ETAPA 1 COMPLETA — 01/11 ~24 h** (1a+1b mirar/elegir/cambiar, 1c paneles y operaciones,
 1d ensamblaje). La IA ya puede, solo con herramientas: ver la pieza por números, elegir caras sin
 ambigüedad (o preguntar), cambiar cotas y configuraciones, manejar el árbol, crear la pieza entera
