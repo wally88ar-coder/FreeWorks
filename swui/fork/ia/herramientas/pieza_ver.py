@@ -358,7 +358,8 @@ def register(registry):
                      "Ø10 (tipo='cilindrica', diametro=10, agujero=true); arista recta de 100 paralela a X "
                      "(elemento='arista', tipo='recta', largo=100, normal='X'). Si encaja con más de una, NO "
                      "elige: devuelve las candidatas y hay que preguntarle al usuario cuál (decisión del "
-                     "usuario)."),
+                     "usuario). Los números de cara (FaceN) cambian después de cada operación: volvé a "
+                     "elegir antes de usar una cara en otra operación (visto el 01/11)."),
         parameters=[_OBJ, _DOC,
                     ToolParam("elemento", "string", "cara o arista", required=False, enum=["cara", "arista"],
                               default="cara"),

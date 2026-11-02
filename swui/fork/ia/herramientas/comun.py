@@ -97,8 +97,11 @@ def user_busy():
         editing = gdoc.getInEdit() if gdoc is not None else None
     except Exception:
         editing = None
-    if editing is not None:
-        obj = editing.Object
+    obj = getattr(editing, "Object", None) if editing is not None else None
+    if editing is not None and ("Assembly" in type(editing).__name__ or
+                                (obj is not None and obj.TypeId == "Assembly::AssemblyObject")):
+        editing = None  # el ensamblaje activo está "en edición" siempre: no es algo abierto por el usuario
+    if editing is not None and obj is not None:
         what = "el croquis" if obj.TypeId.startswith("Sketcher::") else "el panel de"
         return "Tenés abierto %s %s. Cerralo y sigo (no toqué nada)." % (what, obj.Label)
     try:

@@ -14,6 +14,7 @@ original) y la clave (token) es obligatoria: sin clave no arranca.
 import hmac
 import json
 import logging
+import socket  # FreeWorks: puerto exclusivo en Windows
 import threading
 import time
 import uuid
@@ -592,6 +593,15 @@ class HTTPServerTransport:
 
         class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
             daemon_threads = True
+            # FreeWorks: en Windows SO_REUSEADDR deja que OTRO programa escuche en el mismo puerto
+            # y reciba los pedidos (con la clave): puerto exclusivo (visto el 01/11 con un FreeCAD
+            # que quedó colgado escuchando en el mismo puerto que el nuevo).
+            allow_reuse_address = not hasattr(socket, "SO_EXCLUSIVEADDRUSE")
+
+            def server_bind(self):
+                if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+                    self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+                super().server_bind()
 
         return ThreadedHTTPServer((self._host, self._port), RequestHandler)
 

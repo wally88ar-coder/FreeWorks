@@ -12,8 +12,8 @@ funciones internas.
 
 def register_all(registry):
     """Cargar todas las herramientas en el registro (lo llama la puerta que prende el puente)."""
-    from swui.fork.ia.herramientas import (chapa, paneles, pedido, pieza_cambiar, pieza_operar, pieza_ver,
-                                           python, ver)
+    from swui.fork.ia.herramientas import (chapa, ensamblaje, paneles, pedido, pieza_cambiar, pieza_operar,
+                                           pieza_ver, python, ver)
 
     ver.register(registry)
     python.register(registry)
@@ -23,4 +23,5 @@ def register_all(registry):
     paneles.register(registry)  # etapa 1c: las 6 delicadas, por el panel en pantalla
     pieza_operar.register(registry)  # etapa 1c: operaciones directas (mismo resultado sin panel)
     chapa.register(registry)  # DXF del desarrollo, sin panel
+    ensamblaje.register(registry)  # etapa 1d: componentes, relaciones, matrices y simetría
     return registry

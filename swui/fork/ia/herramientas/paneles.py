@@ -368,7 +368,46 @@ def _select(refs):
     for ref in refs:
         name, _, sub = str(ref).partition(".")
         obj = c.find(doc, name)
-        FreeCADGui.Selection.addSelection(doc.Name, obj.Name, sub)
+        asm = _assembly_of(obj)
+        if asm is not None:  # componente: se elige dentro del ensamblaje, como un clic en la pantalla
+            from swui.fork.ia.herramientas import ensamblaje
+
+            FreeCADGui.Selection.addSelection(doc.Name, asm.Name, ensamblaje._path(doc, asm, ref))
+        else:
+            FreeCADGui.Selection.addSelection(doc.Name, obj.Name, sub)
+
+
+def _assembly_of(obj):
+    for parent in obj.InList:
+        if parent.TypeId == "Assembly::AssemblyObject" and obj in parent.Group:
+            return parent
+    return None
+
+
+def _sketch_in_edit():
+    import FreeCADGui
+
+    gdoc = FreeCADGui.ActiveDocument
+    vp = gdoc.getInEdit() if gdoc is not None else None
+    obj = getattr(vp, "Object", None)
+    return obj if obj is not None and obj.TypeId.startswith("Sketcher::") else None
+
+
+def _draw(elementos):
+    """Dibujar en el croquis que abrió el panel (coordenadas globales) y salir del croquis, como el
+    usuario: el panel sigue solo (p. ej. el taladro de ensamblaje muestra las piezas afectadas)."""
+    import FreeCADGui
+
+    from swui.fork.ia.herramientas import pieza_operar
+
+    sk = _sketch_in_edit()
+    if sk is None:
+        raise c.Problema("No hay un croquis abierto por el panel (¿falta elegir la cara?).")
+    for el in elementos or []:
+        pieza_operar._add_element(sk, el)
+    sk.recompute()
+    FreeCADGui.ActiveDocument.resetEdit()
+    return sk.Label
 
 
 # --- La herramienta (hilo del servidor) -------------------------------------------------
@@ -420,7 +459,8 @@ def _open(operacion, preseleccion):
     return True
 
 
-def panel(accion, operacion=None, referencias=None, campo=None, valor=None, valores=None, preseleccion=None):
+def panel(accion, operacion=None, referencias=None, campo=None, valor=None, valores=None, preseleccion=None,
+          elementos=None):
     import FreeCADGui
 
     if accion in ("abrir", "hacer"):
@@ -457,6 +497,15 @@ def panel(accion, operacion=None, referencias=None, campo=None, valor=None, valo
         if accion == "elegir":
             return ToolResult(success=True, output="Elegido: %s." % ", ".join(referencias or []),
                               data=_gui(_snapshot, name="ver panel"))
+    if accion == "croquis":
+        label = _gui(lambda: _draw(elementos), name="croquis")
+        deadline = time.time() + 10
+        while time.time() < deadline and not _gui(lambda: bool(FreeCADGui.Control.activeDialog()), name="panel?"):
+            time.sleep(0.4)
+        time.sleep(0.8)
+        _check_touched()
+        return ToolResult(success=True, output="Dibujado en %s y cerrado el croquis." % label,
+                          data=_gui(_snapshot, name="ver panel"))
     if accion == "poner" or (accion == "hacer" and valores):
         pairs = valores.items() if (accion == "hacer" or valores) else [(campo, valor)]
         done = []
@@ -522,11 +571,13 @@ def register(registry):
             "antes, p. ej. 'Body.Face6'); 'ver' (campos con id, etiqueta, valor y opciones, y los avisos del panel); "
             "'elegir' referencias como clics ('Objeto.FaceN'; con campo=id de una caja de referencia, la activa "
             "antes); 'poner' un valor (campo + valor, o valores={campo: valor}); 'aceptar' (OK) o 'cancelar'. "
+            "'croquis' dibuja (elementos, coordenadas globales) en el croquis que abrió el panel y lo cierra (taladro y "
+            "corte de ensamblaje: elegir la cara, después croquis con puntos o el perfil). "
             "'hacer' = abrir + elegir + poner + aceptar en una llamada. No uses esto para lo que tiene herramienta "
             "propia sin panel."),
         parameters=[
-            ToolParam("accion", "string", "abrir, ver, elegir, poner, aceptar, cancelar o hacer",
-                      enum=["abrir", "ver", "elegir", "poner", "aceptar", "cancelar", "hacer"]),
+            ToolParam("accion", "string", "abrir, ver, elegir, croquis, poner, aceptar, cancelar o hacer",
+                      enum=["abrir", "ver", "elegir", "croquis", "poner", "aceptar", "cancelar", "hacer"]),
             ToolParam("operacion", "string", "Qué panel (abrir/hacer)", required=False, enum=list(OPS)),
             ToolParam("preseleccion", "array", "Lo elegido antes de abrir ('Objeto.FaceN')", required=False,
                       items={"type": "string"}),
@@ -536,5 +587,8 @@ def register(registry):
             ToolParam("valor", "string", "Valor para el campo (número, opción de la lista, true/false)",
                       required=False),
             ToolParam("valores", "object", "Varios campos a la vez: {campo: valor}", required=False),
+            ToolParam("elementos", "array", "Para accion='croquis': [{tipo: punto|circulo|rectangulo|poligono, "
+                      "centro: [x,y,z], diametro, ancho, alto, desde, hasta, puntos}] en coordenadas globales",
+                      required=False, items={"type": "object"}),
         ],
         handler=c.guarded(panel), category="operar", main_thread=False))

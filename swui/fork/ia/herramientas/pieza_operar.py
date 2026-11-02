@@ -208,13 +208,20 @@ def _add_element(sk, el):
             sk.addConstraint(Sketcher.Constraint("Coincident", g, 3, -1, 1))
         else:
             _fix_point(sk, g, 3, m)
+    elif kind == "punto":
+        m = _local(sk, el["centro"])
+        g = sk.addGeometry(Part.Point(m))
+        if m.Length < 1e-9:
+            sk.addConstraint(Sketcher.Constraint("Coincident", g, 1, -1, 1))
+        else:
+            _fix_point(sk, g, 1, m)
     elif kind == "poligono":
         pts = [_local(sk, p) for p in el["puntos"]]
         if len(pts) < 3:
             raise c.Problema("Un polígono necesita al menos 3 puntos.")
         _polyline(sk, pts)
     else:
-        raise c.Problema("Elemento \"%s\" desconocido (rectangulo, circulo, poligono)." % kind)
+        raise c.Problema("Elemento \"%s\" desconocido (rectangulo, circulo, punto, poligono)." % kind)
 
 
 def croquis(sobre, elementos, cuerpo=None, documento=None):
@@ -457,7 +464,7 @@ def register(registry):
                      "plana ('Body.FaceN') o un plano de referencia. Elementos con coordenadas GLOBALES (las de "
                      "'geometria'): {'tipo':'rectangulo','centro':[x,y,z],'ancho':a,'alto':b} (ancho sobre el eje X "
                      "local del croquis) o {'tipo':'rectangulo','desde':[x,y,z],'hasta':[x,y,z]}; "
-                     "{'tipo':'circulo','centro':[x,y,z],'diametro':d}; {'tipo':'poligono','puntos':[[x,y,z],...]}. "
+                     "{'tipo':'circulo','centro':[x,y,z],'diametro':d}; {'tipo':'punto','centro':[x,y,z]}; {'tipo':'poligono','puntos':[[x,y,z],...]}. "
                      "Devuelve los ejes locales. Después: extruir / cortar / revolucion."),
         parameters=[ToolParam("sobre", "string", "XY, XZ, YZ, 'Body.FaceN' o un plano de referencia"),
                     ToolParam("elementos", "array", "Lista de elementos", items={"type": "object"}),

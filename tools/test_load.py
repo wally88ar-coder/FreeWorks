@@ -5581,10 +5581,20 @@ def check_ia():
                         "sheet_bodies": ["doc"], "sheet_parts": ["doc"], "flat_of": ["body"],
                         "is_sheet_body": ["body"]},
         "panel_guard": {"open_panel": [], "cancel_open": []},
+        "mates_sw": {"create_joint": ["asm", "key", "refs", "value"], "applicable": ["kinds"],
+                     "entities_from_selection": ["asm"], "solve": ["asm"], "joints_of": ["asm"],
+                     "grounded_joint": ["asm", "comp"], "key_of": ["joint"], "ensure_active": []},
+        "component_patterns": {"pick_from_selection": ["asm"], "direction_object": ["asm", "ref", "name", "axis"],
+                               "make_linear": ["asm", "seeds", "dir1", "count1", "spacing1", "flip1"],
+                               "make_circular": ["asm", "seeds", "axis", "count", "total", "equal", "flip"],
+                               "make_mirror": ["asm", "seeds", "plane", "opposite", "label"], "mark_own": ["obj"]},
+        "assembly_drop": {"insert_files": ["assembly", "paths"]},  # del original (swui/), no del fork
     }
     contract["feature_tree"].update({"is_feature": ["obj"]})
     for mod, funcs in contract.items():
         path = os.path.join(ADDON, "swui", "fork", mod + ".py")
+        if not os.path.isfile(path):
+            path = os.path.join(ADDON, "swui", mod + ".py")
         tree = ast.parse(open(path, encoding="utf-8").read())
         defs = {n.name: [a.arg for a in n.args.args] for n in tree.body if isinstance(n, ast.FunctionDef)}
         for fn, args in funcs.items():
