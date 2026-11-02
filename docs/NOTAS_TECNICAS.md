@@ -823,3 +823,37 @@ Plan y decisiones: documento "IA en FreeWorks: análisis y plan" (enlace en `doc
   los 90 s sin tocar la pieza; un `doc.undo()` deshace la placa entera; apagar y prender desde el
   menú (tilde). Sin probar: Claude Code real conectado (falta el permiso del usuario para tocar su
   configuración de Claude Code).
+
+## IA, etapa 1: hallazgos en FreeCAD 1.1.4 (2026-11-01)
+Herramientas en `swui/fork/ia/herramientas/` (una por área); el contrato de funciones de FreeWorks
+que usan está en `tools/test_load.py` (`check_ia`): si una cambia de firma, el test falla.
+- **No hay transacciones anidadas:** `openTransaction` con otra pendiente cierra la de afuera y lo
+  que sigue queda sin paso. Con un panel abierto (que tiene la suya) las consultas no abren paso y
+  los cambios esperan (`comun.require_free`); "cambió" = `nucleo/deshacer.new_steps` (compara la
+  lista `UndoNames` entera, no el nombre del primer paso). Un pedido entero se deshace con la
+  herramienta `pedido` (empezar / deshacer). FreeCAD descarta las transacciones vacías.
+- `body.newObject` no mueve la punta (Tip) en matrices ni simetrías; en un redondeo/chaflán la
+  punta pasa a ser el nuevo: la base se toma ANTES de crearlo. `pieza_operar._make` llama a
+  `feature_tree.set_tip`.
+- `slotFinishSaveDocument` llega también con `saveCopy`: el observador de FreeWorks
+  (`feature_tree._DocObserver`) solo cuenta el guardado si el archivo es `doc.FileName`.
+- Ensamblaje: el ensamblaje activo está "en edición" siempre y su ViewProvider no tiene `.Object`
+  (`comun.user_busy` lo tolera). Referencias: se eligen dentro del ensamblaje
+  (`addSelection(doc, asm.Name, "Link.Body.FaceN")`) y se leen con
+  `mates_sw.entities_from_selection`, igual que el panel. `asm.solve()` devuelve 0 aunque una
+  relación choque con otras (la deja sin cumplir; 1.1.4 no tiene getLastConflicting ni similares):
+  `ensamblaje._unmet` mide caras/ejes después de resolver y aborta.
+- Conductor de paneles (`paneles.py`): campos visibles dentro de `Gui::TaskView::TaskView`
+  (etiqueta por formulario, layout, título de la caja o buddy; primero la etiqueta exacta),
+  escritura con QTest en QuantitySpinBox, selección con `Gui.Selection.addSelection`, OK/Cancelar.
+  Un filtro de eventos cancela el panel ante un clic o tecla espontáneos (QTest también es
+  espontáneo: bandera `typing` mientras escribe la IA). Cartel hijo de `mw.centralWidget()` (la
+  cinta lo tapaba). Paso `croquis`: dibuja en el croquis en edición y `resetEdit()`; el panel sigue
+  solo (taladro/corte de ensamblaje).
+- Los FaceN cambian después de cada operación: volver a elegir.
+- **Puerto del puente en Windows:** `HTTPServer.allow_reuse_address` = SO_REUSEADDR, que en Windows
+  deja que otro proceso escuche en el mismo puerto y reciba los pedidos (con la clave). Se usa
+  SO_EXCLUSIVEADDRUSE (`terceros/mcp_http.py`, marcado "FreeWorks:").
+- Pruebas: un FreeCAD de prueba cerrado con `os._exit` mientras tenía un panel de la IA abierto
+  quedó con un hilo al 100 % y la memoria creciendo (taskkill: "no hay instancia activa"); se
+  cerró con `Invoke-CimMethod Terminate`. En las pruebas, cancelar el panel antes de cerrar.

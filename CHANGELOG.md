@@ -15,6 +15,16 @@ Neueste Version oben. / Newest version first.
   neka-nat/freecad-mcp (cola al hilo principal, MIT) y ghbalf/freecad-ai (servidor MCP,
   LGPL-2.1+), en `swui/fork/ia/terceros/`. Aislada: nada de FreeWorks la importa salvo el
   enganche (lo verifica el test).
+- **IA, etapa 1: toda la interfaz** (`swui/fork/ia/herramientas/`). Mirar la pieza por números
+  y elegir caras o aristas por descripción (si hay más de una, pregunta); cambiar cotas,
+  configuraciones, material y el árbol; crear piezas (croquis definido, extruir, cortar,
+  revolución, redondeo, chaflán, matrices, simetría, taladro métrico); las operaciones cuyo
+  trabajo está en el panel (mover cara, geometría de referencia, sólidos, chapa, taladro y corte
+  de ensamblaje) se hacen en el panel en pantalla con el aviso "no toques el mouse" (un clic tuyo
+  lo cancela sin aplicar); DXF de chapa; ensamblajes (insertar, relaciones SW que se verifican
+  después de resolver, fijar, matriz y simetría de componentes); `pedido` deshace de una vez
+  todo lo de un pedido.
+- Puente IA: puerto exclusivo en Windows (otro programa ya no puede escuchar en el mismo).
 - IA: **un solo respaldo por documento**, el de antes del primer cambio de la IA desde que
   guardaste; **al guardar se borra** (aceptaste lo que hizo la IA). Las consultas (`solo_leer`)
   no hacen copia, y si cambian algo se deshacen. El aviso "un paso de Ctrl+Z" sale solo cuando

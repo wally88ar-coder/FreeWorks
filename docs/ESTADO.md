@@ -1,6 +1,9 @@
 # Estado del fork
 
-Última actualización: 2026-11-01, charla libre desde el celular (sin código): a partir de un PDF
+Última actualización: 2026-11-01 ~24 h (trabajo nocturno pedido por el usuario): **IA, etapa 1
+completa (1a a 1d), probada por Claude en FreeCAD de prueba; commits locales, sin subir**. Ver
+Fase actual. Siguiente en la cola: análisis de la etapa 3 (el Asistente adentro de FreeWorks).
+Antes, 2026-11-01, charla libre desde el celular (sin código): a partir de un PDF
 comparativo SW / Fusion / FreeCAD que pasó el usuario se decidieron y anotaron en "Falta / ideas"
 y en Decisiones: **muescas de plegado** en el DXF, **pestaña y ranura** (no urgente),
 **tornillería** sobre el addon Fasteners (análisis empezado; falta un permiso del usuario desde la
@@ -128,6 +131,36 @@ Pendiente aparte: README propio en castellano (el Addon Manager muestra el del o
 Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o comentó el usuario.
 
 ## Fase actual
+**IA ETAPA 1 COMPLETA — 01/11 ~24 h** (1a+1b mirar/elegir/cambiar, 1c paneles y operaciones,
+1d ensamblaje). La IA ya puede, solo con herramientas: ver la pieza por números, elegir caras sin
+ambigüedad (o preguntar), cambiar cotas y configuraciones, manejar el árbol, crear la pieza entera
+(croquis, extruir, cortar, revolución, redondeo, chaflán, matrices, simetría, taladro), las 6
+delicadas por el panel en pantalla, chapa + DXF, y ensamblajes (insertar, relaciones SW, fijar,
+matriz y simetría de componentes, taladro y corte de ensamblaje). **Para revisar con el usuario:**
+(a) cambio en FreeWorks `feature_tree._DocObserver` (el aviso de pieza retrocedida y la copia STEP
+ya no reaccionan a las copias de respaldo); (b) el conductor maneja los paneles por sus campos
+visibles en vez de agregarle métodos a los paneles (FreeWorks no cambia); (c) un panel deja
+varios pasos de Ctrl+Z (así los arma el panel): para "un Ctrl+Z por pedido" la IA usa la
+herramienta `pedido`. Sin probar: Convertir en chapa, Corte de chapa, Combinar; que el usuario le
+pida algo a la IA él mismo con estas herramientas (abrir una conversación nueva en la app con el
+puente prendido).
+
+**IA ETAPA 1, PASO 1d (ensamblaje): HECHO — 01/11 ~24 h.** `herramientas/ensamblaje.py`:
+componentes, insertar_componente, relacion (coincidente, paralela, perpendicular, tangente,
+concéntrica, bloquear, distancia, ángulo), fijar / flotar, matriz_componentes (lineal / circular),
+simetria_componentes; taladro y corte de ensamblaje por `panel` con el paso nuevo `croquis` (dibuja
+puntos o el perfil en el croquis que abre el panel y lo cierra). Probado en FreeCAD de prueba con
+Base + Tapa + Perno: coincidente, concéntricas, paralela, matriz de 3 pernos, simetría (perno en
+-20 = espejo exacto), flotar/fijar; taladro M6 de ensamblaje en Base y Tapa (342,1 y 171,1 mm³ =
+Ø6,6 exacto) y corte pasante 10x10 (1000 y 500 mm³ exactos). **Hallazgos:** (1) FreeCAD 1.1.4
+resuelve 0 una relación que choca con otras y la deja sin cumplir (distancia 5 entre caras ya
+coincidentes) -> la IA mide la geometría después de resolver y no la deja si no se cumple (como
+SW); (2) **seguridad:** en Windows el servidor del puente dejaba que otro programa escuchara en el
+mismo puerto (SO_REUSEADDR) y recibiera los pedidos con la clave -> puerto exclusivo
+(SO_EXCLUSIVEADDRUSE); lo vi porque un FreeCAD de prueba colgado seguía escuchando; (3) los números
+de cara cambian después de cada operación (Face7 -> Face5 tras el taladro): la descripción de
+`elegir` le dice a la IA que vuelva a elegir.
+
 **IA ETAPA 1, PASO 1c: HECHO — 01/11 noche (23:20).** `herramientas/paneles.py` (conductor: abre el
 panel con su comando, elige con la selección, pone valores por la etiqueta del campo, OK/Cancelar,
 como una persona; cartel "no toques el mouse" adentro del área de la vista; un clic o tecla de
