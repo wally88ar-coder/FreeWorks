@@ -883,3 +883,17 @@ que usan está en `tools/test_load.py` (`check_ia`): si una cambia de firma, el 
 - Probar sin el mouse real: QMouseEvent Move, Move, Press, Release al viewport en el punto de
   `view.getPointOnViewport` (y Qt = alto - y/ratio) selecciona en el croquis como un clic.
   La cinta: botón `SWUI_Btn_<comando>` (`findChild(QToolButton, ...)`).
+- Matriz de FreeCAD: `addRectangularArray(geos, vector, clone, n_dirección, n_perpendicular,
+  separación_con_relaciones, escala_perp)`: la segunda dirección va a -90° con escala +1 y a +90°
+  (como SW) con escala negativa. Cada instancia: las entidades en orden + una línea constructiva;
+  copia también las cotas de cada instancia (cada copia con su largo): `_follow_original` las
+  cambia por Igual al original. Solo direcciones a 90°: si no, copias sueltas con `addCopy`.
+- `addCopy(geos, V(0,0,0), False)` duplica con relaciones internas: base de Escala con copias.
+- Cambiar geometría sin el resolvedor: `geos = list(sketch.Geometry)`, modificar, `sketch.Geometry
+  = geos` (conserva relaciones y constructiva); `moveGeometry` arrastra todo el croquis.
+- `setExpression("Constraints[i]", "Constraints.Nombre")` ata una cota a otra (Equidistanciar);
+  `renameConstraint(i, nombre)`. FreeCAD muestra "Nombre = valor" en las cotas con nombre.
+- Mouse en la vista: los eventos llegan a un `QOpenGLWidget` (viewport del QGraphicsView);
+  punto del plano del croquis = `view.getPointOnFocalPlane(x, y)` (coordenadas Coin) proyectado
+  por `getViewDirection()`. La herramienta de mouse de Claude NO genera movimientos sueltos
+  (solo el de cada clic): lo que sigue al mouse se prueba con eventos simulados.

@@ -79,6 +79,7 @@ TEXTS = {
     "Elemente spiegeln": "Mirror Entities",
     "Lineares Skizzenmuster": "Linear Sketch Pattern",
     "Elemente verschieben": "Move Entities",
+    "Elemente kopieren": "Copy Entities",  # fork
     "Elemente drehen": "Rotate Entities",
     "Elemente skalieren": "Scale Entities",
     "Deckungs-\ngleich": "Coincident",

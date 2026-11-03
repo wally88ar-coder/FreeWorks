@@ -42,6 +42,11 @@ Pendiente aparte: README propio en castellano (el Addon Manager muestra el del o
   y plan" (https://claude.ai/artifact/26ZuPXVSKWXDnC6tFA3rxz). Se puede, sobre la tabla de
   configuración nativa de la planilla + Suppressed + Link "Copy on change"; plan en etapas 1 a 5,
   IMPLEMENTADO completo el 01/11 01:35 (ver Fase actual).
+- Auditoría de errores (2026-11-02, solo lectura): "Auditoría: arreglos en FreeCAD y addons"
+  (https://claude.ai/artifact/WHPoJddTt6Q7KU4YZKaxQX). Pedidos de GitHub de FreeCAD (PartDesign,
+  Sketcher, Assembly, TechDraw), SheetMetal, Fasteners y addons de estructuras, clasificados;
+  recomienda empezar por "Material interior" de SheetMetal (Python) y los dos errores del Ángulo
+  de salida como PR del usuario; vigilar #32967 antes de pasar a 26.3. Decisiones pendientes.
 - Menús estilo SW 2018 (maqueta interactiva, 2026-11-01; muestra cómo quedó programado): "Menús
   de FreeWorks" (https://claude.ai/artifact/AD833geJYQtUpny242DxAC). Estructura relevada del SW
   real con el mouse (pieza, ensamblaje, plano); Insertar y Herramientas en bloques Pieza /
@@ -174,6 +179,52 @@ pasos: FreeCAD ayuda menos).
   cualquier entidad); un punto de la línea de simetría sin relación queda "sobre la línea" (para
   que la copia no se separe); "Respecto a" solo acepta líneas (como SW 2018; FreeCAD permitiría
   también un punto).
+- **Mover, Copiar, Girar, Escalar, Matriz lineal y Equidistanciar: HECHAS 02/11 ~24 h** (pedido del
+  usuario antes de irse a dormir: "seguí con todas, probando todo con mouse"). Código:
+  `swui/fork/sketch_transform.py` (Mover/Copiar/Girar/Escala/Matriz) y `swui/fork/sketch_offset.py`
+  (Equidistanciar), sobre la base `EntityPanel` (ahora con grupos por herramienta, casillas de
+  punto que se eligen con clic en la vista enganchado a los puntos del croquis, y mouse en la
+  vista para la vista previa que lo sigue). Tabla `TOOLS` en `sketch_entities.py`: los 6 botones
+  nativos de la cinta y del menú Herramientas > Herramientas de croquizar cambiados; **Copiar
+  entidades** sumado al desplegable de Mover y al menú (SW lo tiene; el original no). Pruebas sin
+  interfaz: `tools/fork/test_sketch_entities.py` (17 casos, ninguno con redundancias).
+  **Relevado en SW 2018 con el mouse** (paneles abiertos sin selección desde Herramientas >
+  Herramientas de croquizar; en la cinta de SW "Mover entidades" se ve gris sin selección pero
+  desde el menú anda): Mover/Copiar = "Entidades a mover/copiar" + "Conservar relaciones";
+  Parámetros Desde/Hasta ("Punto inicial", texto "Desde punto definido", el clic de destino
+  mueve y el panel QUEDA abierto con Repetir) o X/Y (ΔX, ΔY, Repetir); SW recuerda el último modo.
+  Girar = "Centro de rotación" + ángulo. Escala = "Ajustar escala con" + factor + Copiar.
+  Matriz = Dirección 1/2 (eje, espaciado, Acotar espacio, cantidad, ángulo; la 2 gris hasta poner
+  más de 1), "Entidades para la matriz", "Instancias para ignorar"; un clic en una entidad va a la
+  lista aunque Dirección 1 se vea activa. Equidistanciar = solo Parámetros (10 mm, Agregar cotas,
+  Invertir, Seleccionar cadena, Bidireccional, Tapas Arcos/Líneas, Geometría base / de
+  equidistancia); clic en la entidad toma la cadena, vista previa del lado del mouse, otro clic la
+  ubica y TERMINA; esquinas en punta; una sola cota.
+  **Probadas por Claude con el mouse real en FreeCAD** (de prueba, D:\Freecad): los 6 botones
+  activos sin selección; desplegable Mover/Copiar/Girar/Escalar; Mover Desde/Hasta (punto
+  inicial enganchado a la esquina, clic de destino exacto, panel abierto, Repetir, ✓, dos Ctrl+Z);
+  Copiar X/Y (ΔY 15 con vista previa al escribir, Enter); Girar 45° alrededor del origen (el foco
+  pasa solo al ángulo); Escala ×2 con copia desde el centro del círculo; Matriz 2×2 (Dirección 2
+  se habilita sola); Equidistanciar la L hacia afuera (cadena, clic del lado, termina; mismo
+  resultado que SW: (0,-10)-(40,-10)-(40,20)); Simetría sigue andando con la base nueva.
+  Arreglado en la prueba: Mover/Copiar terminaban con el clic de destino (SW deja el panel
+  abierto y habilita Repetir).
+  **Límite de la prueba**: la herramienta de mouse de Claude no manda movimientos "sueltos" del
+  mouse (solo el que acompaña a un clic; visto con un registro de eventos), así que la vista
+  previa que SIGUE al mouse (Desde/Hasta, lado de Equidistanciar) se probó con eventos simulados
+  y no con el mouse real: **que la pruebe el usuario**. Con clics muy seguidos (0,7 s) a veces
+  el croquis no tomaba el clic (con 1,2 s siempre); con mano humana no debería pasar.
+  **Diferencias con SW que quedan** (para decidir con el usuario): (1) en Desde/Hasta SW mueve las
+  entidades mismas siguiendo al mouse; FreeWorks muestra la vista previa amarilla; (2) Matriz:
+  sin el recuadro sobre la vista (Separación / Instancias), sin "Mostrar n.º de instancias",
+  "Corregir dirección de eje X", "Acotar ángulo entre ejes" ni "Instancias para ignorar"; con la
+  Dirección 2 no perpendicular salen copias sueltas (la matriz de FreeCAD es solo a 90°); la
+  matriz de FreeCAD llena la vista de íconos de relaciones (líneas constructivas de la matriz);
+  (3) Equidistanciar: la cota se ve "Equidistancia1 = 10 mm" (FreeCAD muestra el nombre de las
+  cotas con nombre; hace falta para atar las otras); SW tiene una relación "Equidistante" propia,
+  FreeWorks usa Paralela / concéntrica + cotas atadas; (4) Escala saca las relaciones con lo que
+  no se escala (SW no tiene "Conservar relaciones" en Escala; si se dejaban, el resolvedor
+  deshacía la escala); (5) Matriz circular de SW (también en su menú) no está: el fork no la tenía.
 
 **IA, ETAPA 3 (Asistente adentro): ANÁLISIS HECHO 01/11 ~24 h, sin código.** Pestaña "Etapa 3:
 análisis" del documento de IA. Resumen: FreeWorks lanza por detrás el programa de IA del usuario

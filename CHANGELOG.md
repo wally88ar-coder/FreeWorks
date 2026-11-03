@@ -14,6 +14,19 @@ Neueste Version oben. / Newest version first.
   coincidente), círculos iguales, sin relaciones redundantes. Por debajo, la función del croquis
   de FreeCAD (`addSymmetric`); la lógica se puede llamar sin panel: `mirror_entities`. También en
   Herramientas > Herramientas de croquizar > Simetría.
+- **Mover, Copiar, Girar, Escalar, Matriz lineal y Equidistanciar entidades como SW**
+  (`swui/fork/sketch_transform.py`, `swui/fork/sketch_offset.py`). Igual que Simetría: botones
+  siempre activos, panel SW con los mismos grupos y casillas que SW 2018 (relevados con el
+  mouse), entidades por clic, vista previa amarilla. Mover/Copiar: Desde/Hasta (Punto inicial
+  enganchado a los puntos del croquis, clic de destino, el panel queda abierto, Repetir) o X/Y,
+  y Conservar relaciones. Girar: centro y ángulo. Escala: punto, factor, Copiar y número de
+  copias. Matriz lineal: dos direcciones (espaciado, Acotar espacio, cantidad, ángulo); las
+  copias siguen al original (Igual). Equidistanciar: clic en una entidad toma la cadena, el lado
+  sigue al mouse y otro clic termina; esquinas en punta, una sola cota (las demás atadas a ella),
+  Invertir, Bidireccional, Tapas en extremos (arcos o líneas), geometría constructiva. Copiar
+  entidades se suma al desplegable de Mover. Funciones públicas: `move_entities`,
+  `copy_entities`, `rotate_entities`, `scale_entities`, `linear_pattern`, `offset_entities`.
+  Pruebas sin interfaz: `tools/fork/test_sketch_entities.py`.
 - **IA, etapa 0: el puente** (`swui/fork/ia/`). FreeWorks > IA > **Puente IA** (se tilda; arranca
   apagado) deja que la IA de tu suscripción (Claude Code primero) maneje FreeWorks por MCP, solo
   en esta PC (127.0.0.1:47115) y con clave; **Conectar la IA...** muestra la línea para conectarla

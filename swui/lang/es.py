@@ -81,6 +81,7 @@ TEXTS = {
     "Elemente spiegeln": "Simetría de entidades",
     "Lineares Skizzenmuster": "Matriz lineal de croquis",
     "Elemente verschieben": "Mover entidades",
+    "Elemente kopieren": "Copiar entidades",  # fork
     "Elemente drehen": "Girar entidades",
     "Elemente skalieren": "Escalar entidades",
     "Deckungs-\ngleich": "Coinci-\ndente",

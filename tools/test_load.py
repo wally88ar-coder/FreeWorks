@@ -96,7 +96,12 @@ _FALLBACKS = {}
 
 
 # fork: la pestaña Evaluar cambia la tabla del original desde swui/fork/evaluate_tab.py
-FORK_REPLACED = {"Std_Measure": "SWUI_Measure", "Sketcher_Symmetry": "SWUI_SketchMirror"}
+FORK_REPLACED = {"Std_Measure": "SWUI_Measure", "Sketcher_Symmetry": "SWUI_SketchMirror",
+                 # fork: herramientas de entidades del croquis (swui/fork/sketch_entities.py)
+                 "Sketcher_Translate": "SWUI_SketchMove", "Sketcher_Rotate": "SWUI_SketchRotate",
+                 "Sketcher_Scale": "SWUI_SketchScale", "Sketcher_RectangularArray": "SWUI_SketchLinearPattern",
+                 "Sketcher_Offset": "SWUI_SketchOffset"}
+FORK_ADDED = ["SWUI_SketchCopy"]  # fork: Copiar entidades, en el desplegable después de Mover
 
 
 def _fork_layout_commands():
@@ -114,10 +119,10 @@ FORK_TABS = ("Chapa",)  # fork: pestañas propias (título en castellano, sin tr
 def _expected_buttons():
     """Welche Knopf-IDs gebaut und welche Befehle ausgelassen werden muessen."""
     available = ({c.split("#")[0] for c in _all_layout_commands() + _fork_layout_commands()}
-                 | EXTRA_AVAILABLE | set(FORK_REPLACED.values())) - MISSING
+                 | EXTRA_AVAILABLE | set(FORK_REPLACED.values()) | set(FORK_ADDED)) - MISSING
     built, skipped = [], []
     layout_ids = [FORK_REPLACED.get(c, c) for c in _all_layout_commands()]  # fork
-    layout_ids += [c for c in _fork_layout_commands() if c not in layout_ids]  # fork
+    layout_ids += [c for c in _fork_layout_commands() + FORK_ADDED if c not in layout_ids]  # fork
     for cid in layout_ids:
         cmd = cid.split("#")[0]
         if cmd in available:
@@ -442,7 +447,7 @@ def _make_stubs():
         (
             {c.split("#")[0] for c in _all_layout_commands() + _fork_layout_commands()}
             | EXTRA_AVAILABLE
-            | set(FORK_REPLACED.values())  # fork: botones nativos cambiados por los propios
+            | set(FORK_REPLACED.values()) | set(FORK_ADDED)  # fork: botones nativos cambiados por los propios
         )
         - MISSING
     )
@@ -1791,7 +1796,7 @@ def run(split_namespace):
     print("  Symbole  : %d eigene Skizzen-Symbole vorhanden, gültig, im Ribbon mit Vorrang" % len(svgs))
 
     # --- Aufteilung wie im SW-CommandManager ----------------------------
-    if "Sketcher_Offset" not in built:
+    if "Sketcher_Offset" not in built and "SWUI_SketchOffset" not in built:  # fork: Equidistanciar SW
         print("  FEHLER: Offset-Elemente fehlt im Ribbon")
         return False
     qtw = sys.modules["PySide.QtWidgets"]
@@ -4823,7 +4828,7 @@ def run(split_namespace):
                 return  # fork: textos en castellano sin tr() (convención del fork)
             keys_l.append(entry[1])
             cmd_ = commands.get(entry[0])
-            if cmd_ is not None and entry[0] not in FORK_REPLACED.values():  # fork: ayuda en castellano
+            if cmd_ is not None and entry[0] not in set(FORK_REPLACED.values()) | set(FORK_ADDED):  # fork: ayuda en castellano
                 tip_ = cmd_.GetResources().get("ToolTip")
                 if tip_:
                     keys_l.append(tip_)

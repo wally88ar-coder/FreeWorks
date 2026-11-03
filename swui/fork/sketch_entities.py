@@ -508,6 +508,12 @@ class EntityPanel:
         self.watch.start()
         self.app_keys = _AppKeys(self)
         QtWidgets.QApplication.instance().installEventFilter(self.app_keys)
+        self.hover = None  # punto del croquis bajo el mouse (vistas previas que lo siguen)
+        self.mouse = _ViewMouse(self)
+        self.viewports = []
+        for vp in _viewports():
+            vp.installEventFilter(self.mouse)
+            self.viewports.append(vp)
 
     # --- interfaz
 
@@ -536,19 +542,41 @@ class EntityPanel:
         head.addWidget(self.ok)
         head.addWidget(self.cancel)
         box.addLayout(head)
-        msg = QtWidgets.QLabel(self.MESSAGE)
-        msg.setWordWrap(True)
-        msg.setStyleSheet("background: #FFFBE0; border: 1px solid #E0D890; padding: 4px;")
-        box.addWidget(msg)
+        if self.MESSAGE:
+            msg = QtWidgets.QLabel(self.MESSAGE)
+            msg.setWordWrap(True)
+            msg.setStyleSheet("background: #FFFBE0; border: 1px solid #E0D890; padding: 4px;")
+            box.addWidget(msg)
+        self.activators = []  # guardados: si no, Python los borra
+        self.boxes = {}  # casillas de selección {nombre: widget}; la activa se pinta
+        self.points = {}  # casillas de punto {nombre: Vector del croquis o None}
+        self.entities = None
+        self._build_body(box)
+        self.message = QtWidgets.QLabel()
+        self.message.setWordWrap(True)
+        self.message.setStyleSheet("color: %s;" % MISSING_COLOR)
+        self.message.hide()
+        box.addWidget(self.message)
+        self.widget = w
+        self._paint_active()
+
+    def _build_body(self, box):
+        """Como el panel de Simetría de SW: grupo Opciones con la lista y lo propio."""
         group = QtWidgets.QGroupBox("Opciones")
         self.options = QtWidgets.QVBoxLayout(group)
         self.options.addWidget(QtWidgets.QLabel(self.ENTITIES_LABEL))
+        self.options.addWidget(self._make_list())
+        self._build_options(self.options)
+        box.addWidget(group)
+
+    def _make_list(self):
+        """Lista de entidades (casilla "entities"), con Supr y clic derecho Borrar como SW."""
+        from swui.fork.dress_up_panel import QAction
+
         self.entities = QtWidgets.QListWidget()
         self.entities.setMinimumHeight(70)
         self.entities.setMaximumHeight(110)
         self.entities.setContextMenuPolicy(QtCore.Qt.ActionsContextMenu)
-        from swui.fork.dress_up_panel import QAction
-
         act = QAction("Borrar", self.entities)
         act.triggered.connect(lambda *_a: self.remove_current())
         self.entities.addAction(act)
@@ -557,18 +585,24 @@ class EntityPanel:
         self.entities.addAction(act)
         self.keys = _Keys(self)
         self.entities.installEventFilter(self.keys)
-        self.activators = [_Activate(self, "entities")]  # guardados: si no, Python los borra
-        self.entities.viewport().installEventFilter(self.activators[0])
-        self.options.addWidget(self.entities)
-        self._build_options(self.options)
-        box.addWidget(group)
-        self.message = QtWidgets.QLabel()
-        self.message.setWordWrap(True)
-        self.message.setStyleSheet("color: %s;" % MISSING_COLOR)
-        self.message.hide()
-        box.addWidget(self.message)
-        self.widget = w
-        self._paint_active()
+        self.activators.append(_Activate(self, "entities"))
+        self.entities.viewport().installEventFilter(self.activators[-1])
+        self.boxes["entities"] = self.entities
+        return self.entities
+
+    def _ref_box(self, name):
+        """Casilla de una sola referencia (línea, punto): un clic la activa."""
+        edit = QtWidgets.QLineEdit()
+        edit.setReadOnly(True)
+        self.activators.append(_Activate(self, name))
+        edit.installEventFilter(self.activators[-1])
+        self.boxes[name] = edit
+        return edit
+
+    def _point_box(self, name):
+        """Casilla de un punto: se elige con un clic en la vista (se engancha a los puntos)."""
+        self.points[name] = None
+        return self._ref_box(name)
 
     def _build_options(self, layout):
         pass
@@ -578,12 +612,16 @@ class EntityPanel:
         self._paint_active()
 
     def _paint_active(self):
-        self.entities.setStyleSheet(self.active_qss if self.active == "entities" else "")
+        for name, w in self.boxes.items():
+            w.setStyleSheet(self.active_qss if self.active == name else "")
 
     def _refresh_list(self):
-        self.entities.clear()
-        for g in self.geos:
-            self.entities.addItem(sw_name(self.sketch, g))
+        if self.entities is not None:
+            self.entities.clear()
+            for g in self.geos:
+                self.entities.addItem(sw_name(self.sketch, g))
+        for name, p in self.points.items():
+            self.boxes[name].setText("" if p is None else point_text(p))
 
     # --- selección
 
@@ -635,6 +673,8 @@ class EntityPanel:
         self.update()
 
     def remove_current(self):
+        if self.entities is None:
+            return
         row = self.entities.currentRow()
         if 0 <= row < len(self.geos):
             del self.geos[row]
@@ -653,6 +693,48 @@ class EntityPanel:
         self._draw()
 
     def _refresh_other(self):
+        pass
+
+    # --- mouse en la vista
+
+    def view_event(self, vp, event, kind):
+        """
+        Mouse en la vista 3D con el panel abierto. Con una casilla de punto activa, el clic
+        elige el punto (enganchado a un punto del croquis cercano) y no le llega al croquis.
+        Si la vista previa sigue al mouse, el clic termina (como SW). True: el evento no sigue.
+        """
+        if kind == "move":
+            self.hover = sketch_point(self.sketch, vp, event)
+            if self._follows_mouse():
+                self._draw()
+            return False
+        if event.button() != QtCore.Qt.LeftButton:
+            return False
+        if self.active in self.points:
+            p = snap_point(self.sketch, vp, event)
+            if p is not None:
+                self.points[self.active] = p
+                self._point_picked(self.active)
+                self.update()
+            return True
+        if self._follows_mouse():
+            self.hover = snap_point(self.sketch, vp, event) if self.SNAP_TARGET else \
+                sketch_point(self.sketch, vp, event)
+            QtCore.QTimer.singleShot(0, self._click_follow)
+            return True
+        return False
+
+    def _click_follow(self):
+        """Clic con la vista previa siguiendo al mouse: por defecto termina (Equidistanciar)."""
+        self.accept()
+
+    SNAP_TARGET = False  # el clic que termina se engancha a los puntos (Mover: Hasta)
+
+    def _follows_mouse(self):
+        """¿La vista previa sigue al mouse ahora? (Desde/Hasta, lado de Equidistanciar)"""
+        return False
+
+    def _point_picked(self, name):
         pass
 
     def _overlays(self):
@@ -743,6 +825,12 @@ class EntityPanel:
             QtWidgets.QApplication.instance().removeEventFilter(self.app_keys)
         except Exception:
             pass
+        for vp in self.viewports:
+            try:
+                vp.removeEventFilter(self.mouse)
+            except Exception:
+                pass
+        self.viewports = []
         try:
             FreeCADGui.Selection.removeObserver(self.observer)
         except Exception:
@@ -760,6 +848,116 @@ class EntityPanel:
             sketch_relations.refresh()
         except Exception:
             pass
+
+
+class _ViewMouse(QtCore.QObject):
+    """Filtro en las vistas 3D mientras el panel está abierto."""
+
+    def __init__(self, panel):
+        super().__init__()
+        self.panel = panel
+        self.swallow_release = False
+
+    def eventFilter(self, vp, event):
+        t = event.type()
+        try:
+            if t == QtCore.QEvent.MouseMove:
+                return self.panel.view_event(vp, event, "move")
+            if t == QtCore.QEvent.MouseButtonPress:
+                if self.panel.view_event(vp, event, "press"):
+                    self.swallow_release = True
+                    return True
+            elif t == QtCore.QEvent.MouseButtonRelease and self.swallow_release:
+                self.swallow_release = False
+                return True
+        except Exception:
+            FreeCAD.Console.PrintError("[SWUI fork] Mouse en la vista:\n%s\n" % traceback.format_exc())
+        return False
+
+
+def _viewports():
+    out = []
+    try:
+        mdi = FreeCADGui.getMainWindow().findChild(QtWidgets.QMdiArea)
+        for sub in mdi.subWindowList():
+            view = sub.widget()
+            if view is None or view.metaObject().className() != "Gui::View3DInventor":
+                continue
+            for gv in view.findChildren(QtWidgets.QGraphicsView):
+                out.append(gv.viewport())
+    except Exception:
+        pass
+    return out
+
+
+def _event_coin(vp, event):
+    """Posición del mouse en coordenadas de Coin (píxeles reales, y desde abajo)."""
+    pos = event.position() if hasattr(event, "position") else QtCore.QPointF(event.pos())
+    r = vp.devicePixelRatioF()
+    return pos.x() * r, (vp.height() - pos.y()) * r
+
+
+def sketch_point(sketch, vp, event):
+    """Punto del plano del croquis (coordenadas del croquis) bajo el mouse."""
+    try:
+        view = FreeCADGui.ActiveDocument.ActiveView
+        cx, cy = _event_coin(vp, event)
+        get = getattr(view, "getPointOnFocalPlane", None) or view.getPoint
+        p = get(int(cx), int(cy))
+        d = view.getViewDirection()
+        inv = sketch.getGlobalPlacement().inverse()
+        pl = inv.multVec(p)
+        dl = inv.Rotation.multVec(d)
+        if abs(dl.z) > 1e-9:
+            pl = pl + dl * (-pl.z / dl.z)
+        return FreeCAD.Vector(pl.x, pl.y, 0)
+    except Exception:
+        return None
+
+
+SNAP_PX = 8
+
+
+def sketch_vertices(sketch):
+    """Puntos del croquis para enganchar: extremos, centros, puntos sueltos y el origen."""
+    out = [FreeCAD.Vector(0, 0, 0)]
+    for g, geo in enumerate(sketch.Geometry):
+        for pos in point_positions(geo):
+            try:
+                out.append(sketch.getPoint(g, pos))
+            except Exception:
+                pass
+    return out
+
+
+def snap_point(sketch, vp, event):
+    """El punto del croquis cerca del mouse (SNAP_PX), o si no el punto del plano bajo el mouse."""
+    try:
+        view = FreeCADGui.ActiveDocument.ActiveView
+        cx, cy = _event_coin(vp, event)
+        plc = sketch.getGlobalPlacement()
+        best = None
+        for p in sketch_vertices(sketch):
+            q = view.getPointOnViewport(plc.multVec(p))
+            dist = math.hypot(q[0] - cx, q[1] - cy)
+            if dist <= SNAP_PX * vp.devicePixelRatioF() and (best is None or dist < best[0]):
+                best = (dist, p)
+        if best is not None:
+            return FreeCAD.Vector(best[1].x, best[1].y, 0)
+    except Exception:
+        pass
+    return sketch_point(sketch, vp, event)
+
+
+def point_text(p):
+    """Cómo se ve un punto elegido en su casilla."""
+    if p.Length < 1e-7:
+        return "Origen"
+    return "Punto (%s; %s)" % (mm_text(p.x), mm_text(p.y))
+
+
+def mm_text(v):
+    return ("%.2f" % v).replace(".", ",")
 
 
 class _Activate(QtCore.QObject):
@@ -793,16 +991,8 @@ class MirrorPanel(EntityPanel):
         self.copy.toggled.connect(lambda *_a: self._draw())
         layout.addWidget(self.copy)
         layout.addWidget(QtWidgets.QLabel("Con respecto a:"))
-        self.axis_box = QtWidgets.QLineEdit()
-        self.axis_box.setReadOnly(True)
-        self.activators.append(_Activate(self, "axis"))
-        self.axis_box.installEventFilter(self.activators[-1])
+        self.axis_box = self._ref_box("axis")
         layout.addWidget(self.axis_box)
-
-    def _paint_active(self):
-        super()._paint_active()
-        if hasattr(self, "axis_box"):
-            self.axis_box.setStyleSheet(self.active_qss if self.active == "axis" else "")
 
     def _pick(self, geo):
         if self.active == "entities" and geo < 0 and is_line(self.sketch, geo):
@@ -920,24 +1110,54 @@ def active_panel():
 # --- Comandos ---------------------------------------------------------------
 
 
-class _MirrorCommand:
+# (comando, botón nativo que reemplaza, ícono, texto, ayuda, "módulo:clase del panel")
+TOOLS = [
+    (MIRROR, "Sketcher_Symmetry", "Sketcher_Symmetry", "Simetría de entidades",
+     "Simetría de entidades del croquis respecto de una línea (como SW).",
+     "swui.fork.sketch_entities:MirrorPanel"),
+    ("SWUI_SketchMove", "Sketcher_Translate", "Sketcher_Translate", "Mover entidades",
+     "Mover entidades del croquis Desde/Hasta o por X/Y (como SW).",
+     "swui.fork.sketch_transform:MovePanel"),
+    ("SWUI_SketchCopy", None, "Sketcher_Copy", "Copiar entidades",
+     "Copiar entidades del croquis Desde/Hasta o por X/Y (como SW).",
+     "swui.fork.sketch_transform:CopyPanel"),
+    ("SWUI_SketchRotate", "Sketcher_Rotate", "Sketcher_Rotate", "Girar entidades",
+     "Girar entidades del croquis alrededor de un punto (como SW).",
+     "swui.fork.sketch_transform:RotatePanel"),
+    ("SWUI_SketchScale", "Sketcher_Scale", "Sketcher_Scale", "Escalar entidades",
+     "Escalar entidades del croquis desde un punto, con o sin copias (como SW).",
+     "swui.fork.sketch_transform:ScalePanel"),
+    ("SWUI_SketchLinearPattern", "Sketcher_RectangularArray", "Sketcher_RectangularArray",
+     "Matriz lineal de croquis", "Matriz lineal de entidades del croquis en una o dos direcciones (como SW).",
+     "swui.fork.sketch_transform:PatternPanel"),
+    ("SWUI_SketchOffset", "Sketcher_Offset", "Sketcher_Offset", "Equidistanciar entidades",
+     "Equidistanciar entidades del croquis (como SW): clic en una entidad y otro del lado elegido.",
+     "swui.fork.sketch_offset:OffsetPanel"),
+]
+
+
+def panel_class(spec):
+    import importlib
+
+    module, name = spec.split(":")
+    return getattr(importlib.import_module(module), name)
+
+
+class _ToolCommand:
+    def __init__(self, icon, menu, tip, spec):
+        self.icon, self.menu, self.tip, self.spec = icon, menu, tip, spec
+
     def GetResources(self):
-        return {
-            "Pixmap": "Sketcher_Symmetry",
-            "MenuText": "Simetría de entidades",
-            "ToolTip": "Simetría de entidades del croquis respecto de una línea (como SW): "
-                       "elegir antes o después de hacer clic.",
-            "CmdType": "ForEdit",
-        }
+        return {"Pixmap": self.icon, "MenuText": self.menu, "ToolTip": self.tip, "CmdType": "ForEdit"}
 
     def IsActive(self):
         return editing_sketch() is not None
 
     def Activated(self):
         try:
-            open_panel(MirrorPanel)
+            open_panel(panel_class(self.spec))
         except Exception:
-            FreeCAD.Console.PrintError("[SWUI fork] Simetría de entidades:\n%s\n" % traceback.format_exc())
+            FreeCAD.Console.PrintError("[SWUI fork] %s:\n%s\n" % (self.menu, traceback.format_exc()))
 
 
 # --- Enganches ---------------------------------------------------------------
@@ -968,7 +1188,10 @@ def _wrap_relations():
         pass
 
 
-REPLACE = {"Sketcher_Symmetry": MIRROR}
+REPLACE = {native: cmd for cmd, native, *_r in TOOLS if native}
+COPY = "SWUI_SketchCopy"
+# Copiar entidades va en el desplegable después de Mover, como en SW (el original no lo tenía)
+COPY_ENTRY = (COPY, "Elemente kopieren", {})
 
 
 def install_ribbon():
@@ -976,9 +1199,13 @@ def install_ribbon():
     from swui import ribbon_layout
 
     def walk(items):
-        for i, entry in enumerate(items):
+        for i, entry in enumerate(list(items)):
             if isinstance(entry, tuple) and entry and entry[0] in REPLACE:
-                items[i] = (REPLACE[entry[0]],) + tuple(entry[1:])
+                index = items.index(entry)
+                items[index] = (REPLACE[entry[0]],) + tuple(entry[1:])
+                if entry[0] == "Sketcher_Translate" and not any(
+                        isinstance(e, tuple) and e[0] == COPY for e in items):
+                    items.insert(index + 1, COPY_ENTRY)
             elif isinstance(entry, dict):
                 for key in ("flyout", "stack"):
                     if isinstance(entry.get(key), list):
@@ -996,10 +1223,11 @@ def install():
     global _installed
     if _installed:
         return
-    try:
-        FreeCADGui.addCommand(MIRROR, _MirrorCommand())
-    except Exception:
-        pass  # ya registrado
+    for cmd, _native, icon, menu, tip, spec in TOOLS:
+        try:
+            FreeCADGui.addCommand(cmd, _ToolCommand(icon, menu, tip, spec))
+        except Exception:
+            pass  # ya registrado
     install_ribbon()
     try:
         _wrap_relations()
