@@ -168,7 +168,7 @@ pasos: FreeCAD ayuda menos).
   iguala el tamaño); FreeWorks pone Simétrico entre centros + Igual. SW mantiene las dos
   horizontales; FreeWorks saca la de una línea unida si sobra con la simetría de sus extremos.
   Vista que giró sola una vez al abrir el panel la primera vez: no se repitió (anotar si aparece).
-  En SW quedó abierta la "Pieza1" de prueba (sin guardar) y la cinta en gris después de un clic.
+  La "Pieza1" de prueba de SW se cerró sin guardar (SW queda abierto, vacío).
   Decisiones tomadas solo (revisar con el usuario): con Respecto a vacío, un eje del croquis
   clickeado va a Respecto a; una línea constructiva clickeada en Entidades se simetriza (como
   cualquier entidad); un punto de la línea de simetría sin relación queda "sobre la línea" (para
