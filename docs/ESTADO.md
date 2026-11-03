@@ -152,12 +152,23 @@ pasos: FreeCAD ayuda menos).
   grados de libertad), Ctrl+Z en un paso, ✓ sin entidades avisa, Esc cierra solo el panel, el
   panel de relaciones del original vuelve después. Arreglado en la prueba: el clic en "Respecto a"
   no la activaba (filtro de eventos sin guardar, Python lo borraba).
-  **Sin probar con el mouse real**: el permiso de mouse "FreeCAD" apunta al FreeCAD 1.0 de
-  Program Files, no al de prueba (D:\Freecad, 1.1.4), y el de SW (proceso sldworks.exe) quedó
-  denegado (el usuario ya se había ido a dormir). **Pendiente: dar esos permisos y comparar con
-  SW 2018** (qué relaciones pone SW, colores de la vista previa, qué pasa si se preelige la línea
-  constructiva, Esc). Queda abierto un SW 2018 vacío que lancé para comparar (no se pudo cerrar
-  desde la consola).
+  **02/11 ~23:20, probada por Claude con el mouse real en FreeCAD y comparada con SW 2018** (permisos
+  dados por el usuario): botón activo sin selección, 4 entidades por clic, segundo clic saca,
+  Con respecto a + línea, vista previa, Enter y ✓ aceptan, arrastrar una esquina mueve la copia,
+  preelegido entra a la lista y activa Con respecto a, Esc cierra solo el panel. En SW: mismo
+  flujo (el botón también anda sin selección; la constructiva clickeada entra a la lista; segundo
+  clic la saca; vista previa amarilla). **Diferencias encontradas y ya igualadas**: (1) SW une la
+  línea perpendicular que toca el eje con su copia en UNA línea con el punto medio sobre el eje
+  (ATMIDDLE): ahora igual (`_merge_end`/`_merge`, la línea se cambia en la lista de geometrías:
+  `moveGeometry` arrastra todo el croquis con el resolvedor y lo desarma); (2) textos del panel
+  ("Entidades para simetría:", "Con respecto a:", mensaje de SW); (3) SW llama "Arco" también al
+  círculo; (4) la casilla activa del panel de croquis de SW es celeste (#CCE4F7 aproximado; no se
+  pudo medir el píxel del JPG), no rosada como en los paneles de operaciones del fork.
+  Diferencias que quedan: SW deja la copia del círculo con relación Simétrica (que en SW también
+  iguala el tamaño); FreeWorks pone Simétrico entre centros + Igual. SW mantiene las dos
+  horizontales; FreeWorks saca la de una línea unida si sobra con la simetría de sus extremos.
+  Vista que giró sola una vez al abrir el panel la primera vez: no se repitió (anotar si aparece).
+  En SW quedó abierta la "Pieza1" de prueba (sin guardar) y la cinta en gris después de un clic.
   Decisiones tomadas solo (revisar con el usuario): con Respecto a vacío, un eje del croquis
   clickeado va a Respecto a; una línea constructiva clickeada en Entidades se simetriza (como
   cualquier entidad); un punto de la línea de simetría sin relación queda "sobre la línea" (para

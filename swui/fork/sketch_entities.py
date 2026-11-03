@@ -37,6 +37,9 @@ TOL = 1e-6
 PICKED_COLOR = (0.26, 0.53, 0.71)  # celeste SW (igual que look_sw / dress_up_panel)
 AXIS_COLOR = (0.85, 0.2, 0.6)  # la línea de simetría elegida
 PREVIEW_COLOR = (1.0, 0.86, 0.0)  # amarillo de la vista previa de SW
+# Casilla activa: celeste en los paneles de croquis de SW 2018 (visto en Simetría, 02/11;
+# los paneles de operaciones del fork usan el rosado de dress_up_panel)
+ACTIVE_QSS = "background: #CCE4F7;"
 PICKED_WIDTH = 4
 PREVIEW_WIDTH = 2
 
@@ -171,11 +174,75 @@ def mirror_entities(sketch, geo_ids, axis_geo, copy=True):
     return new
 
 
+def _merge_end(sketch, geo, axis_geo, axis):
+    """
+    Posición del extremo de una línea perpendicular al eje que cae sobre él, si nada más
+    que el eje lo toca; si no, None. SW une esa línea con su copia en una sola (comparado
+    en SW 2018, 02/11): queda una línea con el punto medio sobre el eje.
+    """
+    line = sketch.Geometry[geo]
+    if _geo_type(line) != "LineSegment":
+        return None
+    d = line.EndPoint - line.StartPoint
+    if d.Length < TOL or abs(d.normalize().dot(axis[1])) > 1e-7:
+        return None
+    for pos in (1, 2):
+        p = sketch.getPoint(geo, pos)
+        if (reflect(p, axis) - p).Length >= 1e-4:
+            continue
+        for c in sketch.Constraints:
+            refs = [(getattr(c, "First", -2000), getattr(c, "FirstPos", 0)),
+                    (getattr(c, "Second", -2000), getattr(c, "SecondPos", 0)),
+                    (getattr(c, "Third", -2000), getattr(c, "ThirdPos", 0))]
+            if (geo, pos) in refs and any(g not in (geo, axis_geo, -2000) for g, _p in refs):
+                return None  # unido a otra entidad: no se puede estirar
+        return pos
+    return None
+
+
+def _merge(sketch, geo, pos, axis_geo, axis):
+    """Estirar la línea hasta su reflejo (una sola línea, punto medio sobre el eje)."""
+    import Sketcher
+
+    for index in range(len(sketch.Constraints) - 1, -1, -1):
+        c = sketch.Constraints[index]
+        if (getattr(c, "First", None), getattr(c, "FirstPos", None)) == (geo, pos) or \
+                (getattr(c, "Second", None), getattr(c, "SecondPos", None)) == (geo, pos):
+            sketch.delConstraint(index)  # lo que lo ataba al eje
+    far = sketch.getPoint(geo, 3 - pos)
+    # Sin el resolvedor (moveGeometry arrastra todo el croquis): la línea, cambiada en la lista
+    geos = list(sketch.Geometry)
+    line = geos[geo]
+    if pos == 1:
+        line.StartPoint = reflect(far, axis)
+    else:
+        line.EndPoint = reflect(far, axis)
+    geos[geo] = line
+    sketch.Geometry = geos
+    sketch.solve()
+    sym = Sketcher.Constraint("Symmetric", geo, 1, geo, 2, axis_geo)
+    if _try_add(sketch, sym):
+        return
+    # La simetría de los extremos ya fija la dirección: la horizontal/vertical de la línea sobra
+    for index in range(len(sketch.Constraints) - 1, -1, -1):
+        c = sketch.Constraints[index]
+        if c.Type in ("Horizontal", "Vertical", "Perpendicular") and geo in (c.First, getattr(c, "Second", -2000)):
+            sketch.delConstraint(index)
+    _try_add(sketch, sym)
+
+
 def _mirror(sketch, geo_ids, axis_geo, axis, copy):
+    merged = {}
+    if copy:
+        for g in geo_ids:
+            pos = _merge_end(sketch, g, axis_geo, axis)
+            if pos:
+                merged[g] = pos
+    rest = [g for g in geo_ids if g not in merged]
     old_constraints = list(sketch.Constraints)
     count = len(old_constraints)
-    new = list(sketch.addSymmetric(geo_ids, axis_geo, 0) or [])
-    if len(new) != len(geo_ids):
+    new = list(sketch.addSymmetric(rest, axis_geo, 0) or []) if rest else []
+    if len(new) != len(rest):
         raise RuntimeError("FreeCAD no hizo la simetría.")
     if not copy:
         # Las entidades pasan al otro lado con sus relaciones propias (copiadas por FreeCAD)
@@ -196,7 +263,7 @@ def _mirror(sketch, geo_ids, axis_geo, axis, copy):
 
     find = _coincident_groups(sketch, geo_ids, old_constraints)
     done = set()
-    for orig, twin in zip(geo_ids, new):
+    for orig, twin in zip(rest, new):
         geo = sketch.Geometry[orig]
         twin_pos = point_positions(sketch.Geometry[twin])
         for pos in point_positions(geo):
@@ -221,10 +288,18 @@ def _mirror(sketch, geo_ids, axis_geo, axis, copy):
                 _try_add(sketch, Sketcher.Constraint("Symmetric", orig, pos, twin, match, axis_geo))
         if _geo_type(geo) in ("Circle", "Ellipse", "ArcOfCircle"):
             _try_add(sketch, Sketcher.Constraint("Equal", orig, twin))
+    for g, pos in merged.items():
+        _merge(sketch, g, pos, axis_geo, axis)
+        end = sketch.getPoint(g, pos)
+        for twin in new:  # el extremo nuevo, unido a las copias que llegan ahí
+            for tpos in point_positions(sketch.Geometry[twin]):
+                if (sketch.getPoint(twin, tpos) - end).Length < 1e-4:
+                    _try_add(sketch, Sketcher.Constraint("Coincident", g, pos, twin, tpos))
     for c in copied:
         _try_add(sketch, c)
     sketch.solve()
-    return new
+    twins = dict(zip(rest, new))
+    return [twins.get(g, g) for g in geo_ids]  # una línea unida es su propia copia
 
 
 def mirror_preview(sketch, geo_ids, axis_geo, number=48):
@@ -292,18 +367,22 @@ def parse_sub(sketch, sub):
 
 
 def sw_name(sketch, geo):
-    """Nombre como en la lista de SW (Línea3, Arco1, Punto2...), contando por tipo."""
+    """Nombre como en la lista de SW (Línea3, Arco1, Punto2...); SW llama Arco también al círculo."""
     if geo == -1:
         return "Eje horizontal"
     if geo == -2:
         return "Eje vertical"
     if geo <= -3:
         return "Referencia%d" % (-geo - 2)
-    names = {"LineSegment": "Línea", "Circle": "Círculo", "ArcOfCircle": "Arco", "Point": "Punto",
-             "Ellipse": "Elipse", "ArcOfEllipse": "Arco de elipse", "BSplineCurve": "Spline"}
-    kind = _geo_type(sketch.Geometry[geo])
-    n = sum(1 for g in sketch.Geometry[:geo + 1] if _geo_type(g) == kind)
-    return "%s%d" % (names.get(kind, "Entidad"), n)
+    names = {"LineSegment": "Línea", "Circle": "Arco", "ArcOfCircle": "Arco", "Point": "Punto",
+             "Ellipse": "Elipse", "ArcOfEllipse": "Elipse parcial", "BSplineCurve": "Spline"}
+
+    def label(g):
+        return names.get(_geo_type(g), "Entidad")
+
+    name = label(sketch.Geometry[geo])
+    n = sum(1 for g in sketch.Geometry[:geo + 1] if label(g) == name)
+    return "%s%d" % (name, n)
 
 
 def editing_sketch():
@@ -433,7 +512,7 @@ class EntityPanel:
     # --- interfaz
 
     def _build(self):
-        from swui.fork.dress_up_panel import ACTIVE_QSS, MISSING_COLOR
+        from swui.fork.dress_up_panel import MISSING_COLOR
 
         self.active_qss = ACTIVE_QSS
         w = QtWidgets.QFrame()
@@ -699,9 +778,9 @@ class _Activate(QtCore.QObject):
 
 class MirrorPanel(EntityPanel):
     TITLE = "Simetría"
-    MESSAGE = ("Seleccione las entidades a simetrizar y una línea de croquis o arista lineal "
-               "respecto a la cual realizar la simetría.")
-    ENTITIES_LABEL = "Entidades a simetrizar:"
+    MESSAGE = ("Seleccione las entidades para crear la simetría y una línea de croquis o una "
+               "arista lineal del modelo con respecto a las que crear la simetría.")
+    ENTITIES_LABEL = "Entidades para simetría:"
     NOTHING = "Elija las entidades a simetrizar."
 
     def __init__(self, sketch):
@@ -713,7 +792,7 @@ class MirrorPanel(EntityPanel):
         self.copy.setChecked(True)
         self.copy.toggled.connect(lambda *_a: self._draw())
         layout.addWidget(self.copy)
-        layout.addWidget(QtWidgets.QLabel("Respecto a:"))
+        layout.addWidget(QtWidgets.QLabel("Con respecto a:"))
         self.axis_box = QtWidgets.QLineEdit()
         self.axis_box.setReadOnly(True)
         self.activators.append(_Activate(self, "axis"))
@@ -756,7 +835,7 @@ class MirrorPanel(EntityPanel):
         if not self.geos:
             return self.NOTHING
         if self.axis is None:
-            return "Elija la línea respecto a la cual hacer la simetría (Respecto a)."
+            return "Elija la línea con respecto a la cual crear la simetría (Con respecto a)."
         return ""
 
     def _run(self):
