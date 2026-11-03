@@ -133,6 +133,13 @@ def install(workbench=None):
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] Aristas del modelo en el croquis:\n%s\n" % traceback.format_exc())
     try:
+        # Simetría de entidades... siempre activas, con panel SW (antes de que se arme la cinta)
+        from swui.fork import sketch_entities
+
+        sketch_entities.install()
+    except Exception:
+        FreeCAD.Console.PrintError("[SWUI fork] Entidades del croquis:\n%s\n" % traceback.format_exc())
+    try:
         from swui.fork import equations, evaluate_tab, mass_props, material, measure_sw, tree_strip
 
         material.install()

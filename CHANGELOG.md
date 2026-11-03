@@ -5,6 +5,15 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Simetría de entidades del croquis como SW** (`swui/fork/sketch_entities.py`). El botón ya no
+  está en gris sin selección: abre arriba del panel del croquis el recuadro "Simetría" (✓ / ✗,
+  mensaje, Entidades a simetrizar, Copiar, Respecto a), se marcan las entidades con clics (otro
+  clic la saca; Supr o clic derecho Borrar en la lista), vista previa amarilla al momento, Enter
+  acepta y Esc cancela sin cerrar el croquis. Lo ya elegido antes de hacer clic entra a la lista.
+  La copia queda unida al original con relaciones Simétrico (un punto por lugar; sobre la línea,
+  coincidente), círculos iguales, sin relaciones redundantes. Por debajo, la función del croquis
+  de FreeCAD (`addSymmetric`); la lógica se puede llamar sin panel: `mirror_entities`. También en
+  Herramientas > Herramientas de croquizar > Simetría.
 - **IA, etapa 0: el puente** (`swui/fork/ia/`). FreeWorks > IA > **Puente IA** (se tilda; arranca
   apagado) deja que la IA de tu suscripción (Claude Code primero) maneje FreeWorks por MCP, solo
   en esta PC (127.0.0.1:47115) y con clave; **Conectar la IA...** muestra la línea para conectarla

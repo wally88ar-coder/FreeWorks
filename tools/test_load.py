@@ -96,7 +96,7 @@ _FALLBACKS = {}
 
 
 # fork: la pestaña Evaluar cambia la tabla del original desde swui/fork/evaluate_tab.py
-FORK_REPLACED = {"Std_Measure": "SWUI_Measure"}
+FORK_REPLACED = {"Std_Measure": "SWUI_Measure", "Sketcher_Symmetry": "SWUI_SketchMirror"}
 
 
 def _fork_layout_commands():
@@ -114,7 +114,7 @@ FORK_TABS = ("Chapa",)  # fork: pestañas propias (título en castellano, sin tr
 def _expected_buttons():
     """Welche Knopf-IDs gebaut und welche Befehle ausgelassen werden muessen."""
     available = ({c.split("#")[0] for c in _all_layout_commands() + _fork_layout_commands()}
-                 | EXTRA_AVAILABLE) - MISSING
+                 | EXTRA_AVAILABLE | set(FORK_REPLACED.values())) - MISSING
     built, skipped = [], []
     layout_ids = [FORK_REPLACED.get(c, c) for c in _all_layout_commands()]  # fork
     layout_ids += [c for c in _fork_layout_commands() if c not in layout_ids]  # fork
@@ -442,6 +442,7 @@ def _make_stubs():
         (
             {c.split("#")[0] for c in _all_layout_commands() + _fork_layout_commands()}
             | EXTRA_AVAILABLE
+            | set(FORK_REPLACED.values())  # fork: botones nativos cambiados por los propios
         )
         - MISSING
     )
@@ -4822,7 +4823,7 @@ def run(split_namespace):
                 return  # fork: textos en castellano sin tr() (convención del fork)
             keys_l.append(entry[1])
             cmd_ = commands.get(entry[0])
-            if cmd_ is not None:
+            if cmd_ is not None and entry[0] not in FORK_REPLACED.values():  # fork: ayuda en castellano
                 tip_ = cmd_.GetResources().get("ToolTip")
                 if tip_:
                     keys_l.append(tip_)

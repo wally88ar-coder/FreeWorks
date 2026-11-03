@@ -857,3 +857,29 @@ que usan está en `tools/test_load.py` (`check_ia`): si una cambia de firma, el 
 - Pruebas: un FreeCAD de prueba cerrado con `os._exit` mientras tenía un panel de la IA abierto
   quedó con un hilo al 100 % y la memoria creciendo (taskkill: "no hay instancia activa"); se
   cerró con `Invoke-CimMethod Terminate`. Es solo del `os._exit` de las pruebas: cerrando la ventana como el usuario (documentos y `mw.close()`) después de usar un panel de la IA, FreeCAD sale en ~8 s (probado 01/11).
+
+## Herramientas de entidades del croquis (02/11): hallazgos en FreeCAD 1.1.4
+- Los botones nativos Sketcher_Symmetry / Offset / Translate / Rotate / Scale /
+  RectangularArray están en gris sin geometría elegida (toman la selección al clic y no dejan
+  sumar después). Funciones del croquis usables desde Python (probadas): `addSymmetric(geos,
+  refGeo, refPos)` (devuelve los números nuevos; respecto de una línea, un eje -1/-2 o un punto:
+  refPos 1/2/3), `addCopy(geos, vector, clone)`, `addMove(geos, vector)`,
+  `addRectangularArray(geos, vector, clone, filas, columnas, separación, escala)`,
+  `delGeometries`, y en cada geometría `rotate/scale/translate/mirror`. `Part.Wire.makeOffset2D`
+  en una cadena abierta: con `openResult=True` da un solo lado; con False el contorno de los dos
+  lados con puntas redondeadas.
+- `addSymmetric` copia las relaciones internas (coincidente, horizontal, radio...) pero NO pone
+  relación Simétrico entre original y copia (no tiene la opción del botón nativo). En una copia
+  simétrica, las de arco salen con inicio/fin cambiados: buscar el punto reflejado por posición.
+- Redundancias: después de `solve()`, `RedundantConstraints`, `ConflictingConstraints`,
+  `PartiallyRedundantConstraints`, `MalformedConstraints` (números desde 1). Agregar una relación
+  y sacarla si aparece alguna nueva es simple y robusto (`sketch_entities._try_add`).
+- Selección en el croquis: `Edge3` = geometría 2, `ExternalEdge1` = -3, `H_Axis`/`V_Axis` = -1/-2,
+  `VertexN` -> `getGeoVertexIndex(N-1)`; `ExternalGeo[-g-1]` da la geometría de un número negativo
+  (0 eje H, 1 eje V, 2... referencias).
+- Panel propio dentro del croquis: se inserta arriba del TaskPanel del croquis como el panel de
+  relaciones del original (`sketch_relations._task_panel`). Un filtro de eventos creado inline
+  (`w.installEventFilter(Filtro())`) lo borra Python: guardarlo en un atributo.
+- Probar sin el mouse real: QMouseEvent Move, Move, Press, Release al viewport en el punto de
+  `view.getPointOnViewport` (y Qt = alto - y/ratio) selecciona en el croquis como un clic.
+  La cinta: botón `SWUI_Btn_<comando>` (`findChild(QToolButton, ...)`).

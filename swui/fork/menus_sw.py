@@ -381,7 +381,7 @@ def menus():
                 E("Partir entidades", "Sketcher_Split"),
                 E("Geometría constructiva", "Sketcher_ToggleConstruction"),
                 SEP,
-                E("Simetría", "Sketcher_Symmetry"),
+                E("Simetría", "SWUI_SketchMirror"),
                 E("Mover", "Sketcher_Translate"),
                 E("Girar", "Sketcher_Rotate"),
                 E("Escala", "Sketcher_Scale"),

@@ -133,6 +133,37 @@ Pendiente aparte: README propio en castellano (el Addon Manager muestra el del o
 Al empezar una sesión, leerlos (docs tools, `read`) para ver qué tildó o comentó el usuario.
 
 ## Fase actual
+**HERRAMIENTAS DE ENTIDADES DEL CROQUIS COMO SW — 02/11 (pedido del usuario).** Problema: en el
+croquis, Simetría / Matriz lineal / Mover / Girar / Escalar / Equidistanciar entidades estaban en
+gris sin selección (FreeCAD toma la selección al clic). Decidido con el usuario (02/11, después de
+una animación y de pedir "esforzate más"): **panel único estilo SW** (entidades + parámetros +
+vista previa juntos), NO el camino de dos pasos (recuadro de entidades + panel nativo). Se puede
+respetando lo nativo: las funciones del croquis de FreeCAD que se usan desde Python
+(`addSymmetric`, `addCopy`, `addMove`, `addRectangularArray`, `Part.Wire.makeOffset2D`, y
+`rotate`/`scale` de cada geometría) probadas en 1.1.4. Orden aprobado: Simetría, Mover/Copiar,
+Matriz lineal, Equidistanciar, Girar/Escala (para estas dos el usuario puede preferir los dos
+pasos: FreeCAD ayuda menos).
+- **Simetría: HECHA** (`swui/fork/sketch_entities.py`, base común `EntityPanel` + `MirrorPanel` +
+  función `mirror_entities`). Probada con guion sin GUI (línea+arco tangente+círculo con cotas: la
+  copia sigue al original al cambiar cotas; media silueta con puntas sobre la línea; sin Copiar)
+  y en FreeCAD real con **clics simulados** sobre la vista (eventos de mouse al viewport: mismo
+  camino de selección del croquis) y teclas: botón activo sin selección, elegir 4 entidades, otro
+  clic saca, clic en Respecto a + línea, vista previa, Enter acepta (sin redundancias, mismos
+  grados de libertad), Ctrl+Z en un paso, ✓ sin entidades avisa, Esc cierra solo el panel, el
+  panel de relaciones del original vuelve después. Arreglado en la prueba: el clic en "Respecto a"
+  no la activaba (filtro de eventos sin guardar, Python lo borraba).
+  **Sin probar con el mouse real**: el permiso de mouse "FreeCAD" apunta al FreeCAD 1.0 de
+  Program Files, no al de prueba (D:\Freecad, 1.1.4), y el de SW (proceso sldworks.exe) quedó
+  denegado (el usuario ya se había ido a dormir). **Pendiente: dar esos permisos y comparar con
+  SW 2018** (qué relaciones pone SW, colores de la vista previa, qué pasa si se preelige la línea
+  constructiva, Esc). Queda abierto un SW 2018 vacío que lancé para comparar (no se pudo cerrar
+  desde la consola).
+  Decisiones tomadas solo (revisar con el usuario): con Respecto a vacío, un eje del croquis
+  clickeado va a Respecto a; una línea constructiva clickeada en Entidades se simetriza (como
+  cualquier entidad); un punto de la línea de simetría sin relación queda "sobre la línea" (para
+  que la copia no se separe); "Respecto a" solo acepta líneas (como SW 2018; FreeCAD permitiría
+  también un punto).
+
 **IA, ETAPA 3 (Asistente adentro): ANÁLISIS HECHO 01/11 ~24 h, sin código.** Pestaña "Etapa 3:
 análisis" del documento de IA. Resumen: FreeWorks lanza por detrás el programa de IA del usuario
 (`claude -p` con `--input-format/--output-format stream-json`, `--mcp-config` +
