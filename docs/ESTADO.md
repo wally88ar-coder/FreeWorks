@@ -1,6 +1,9 @@
 # Estado del fork
 
-Última actualización: 2026-11-01 ~24 h (trabajo nocturno pedido por el usuario): **IA, etapa 1
+Última actualización: 2026-11-03 ~0 h: **herramientas de entidades del croquis como SW (Simetría, Mover,
+Copiar, Girar, Escalar, Matriz lineal, Equidistanciar): hechas, probadas por Claude con el mouse
+y comparadas con SW**; ver Fase actual (falta que el usuario pruebe la vista previa que sigue al
+mouse). Antes, 2026-11-01 ~24 h (trabajo nocturno pedido por el usuario): **IA, etapa 1
 completa (1a a 1d), probada por Claude en FreeCAD de prueba; commits locales, sin subir**. Ver
 Fase actual. **Análisis de la etapa 3 (pestaña Asistente adentro de FreeWorks): hecho**, en la
 pestaña "Etapa 3: análisis" del documento de IA, con 6 decisiones para el usuario (la principal:
