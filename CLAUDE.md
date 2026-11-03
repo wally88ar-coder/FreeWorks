@@ -130,7 +130,10 @@ puertas, código ajeno copiado con su aviso; plan, etapas 1 a 5 y decisiones en 
 IA enlazado en `docs/ESTADO.md`); árbol de operaciones estilo SW (barra de retroceso, suprimir,
 mover, cotas con doble clic, reparar referencias...), aristas del modelo dentro del croquis,
 multicuerpo (Fusionar resultado, Alcance, Combinar, simetría de sólidos) y Mover/Copiar /
-Eliminar/Conservar sólidos. Próximo: lo que elija el usuario después de probar. Ver `docs/ESTADO.md`.
+Eliminar/Conservar sólidos; herramientas de entidades del croquis como SW (2026-11-02,
+`swui/fork/sketch_entities.py` + `sketch_transform.py` + `sketch_offset.py`: Simetría, Mover,
+Copiar, Girar, Escalar, Matriz lineal, Equidistanciar, siempre activas, panel único SW sobre
+funciones nativas del croquis; falta que el usuario pruebe la vista previa que sigue al mouse). Próximo: lo que elija el usuario después de probar. Ver `docs/ESTADO.md`.
 Trabajo de planos (TechDraw, sin número de fase): rosca simplificada automática, rótulo en
 castellano, coma decimal; ver "Falta" en `docs/ESTADO.md`.
 0. Puesta en marcha: remotos (origin = fork, upstream = original), verificar que carga y que el
