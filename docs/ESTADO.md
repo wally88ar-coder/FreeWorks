@@ -4,7 +4,7 @@
 Copiar, Girar, Escalar, Matriz lineal, Equidistanciar): hechas, probadas por Claude con el mouse
 y comparadas con SW**; ver Fase actual (falta que el usuario pruebe la vista previa que sigue al
 mouse). Antes, 2026-11-01 ~24 h (trabajo nocturno pedido por el usuario): **IA, etapa 1
-completa (1a a 1d), probada por Claude en FreeCAD de prueba; commits locales, sin subir**. Ver
+completa (1a a 1d), probada por Claude en FreeCAD de prueba; subida a GitHub el 03/11 junto con las herramientas de croquis**. Ver
 Fase actual. **Análisis de la etapa 3 (pestaña Asistente adentro de FreeWorks): hecho**, en la
 pestaña "Etapa 3: análisis" del documento de IA, con 6 decisiones para el usuario (la principal:
 instalar Claude Code aparte para que FreeWorks lo lance, porque el de la app no tiene sesión propia).
