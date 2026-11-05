@@ -1,5 +1,16 @@
 # Estado del fork
 
+**04/11 ~23 h, problema del usuario (captura): "Access violation" al tocar el ojo del origen en una
+pieza nueva vacía, vista en blanco.** Causa (etapa B): `plane_look` movía el cuadradito de FreeCAD
+(`SoShapeScale`, primer hijo del `SoFCSelection` del plano) a un SoSwitch propio; FreeCAD lo sigue
+buscando como primer hijo. Arreglo: no se mueve nada de FreeCAD; se esconde con su `scaleFactor` en
+0 (se devuelve en pieza vacía) y lo nuestro va al final. Además la pieza nueva de la página de
+Inicio quedaba con "Origen de Coordenadas001" y todo a la vista: `origin_planes` ya no mira el banco
+al crearse el origen, sino después (0 y 1,5 s). Probado con guion: pieza vacía con el origen
+prendido muestra los planitos de FreeCAD, carpeta "Origen". **Falta repetir con el mouse** lo del
+usuario (Inicio > Cuerpo paramétrico, ojo del origen, mouse sobre la vista): su FreeCAD estaba
+abierto con el error y no se tocó.
+
 **04/11 noche, planos dibujados como SW, etapa B: HECHA con las recomendaciones de Claude** (pedido
 del usuario "Sí, arrancá"; `swui/fork/plane_look.py`): contorno azul sin relleno, nombre en el plano
 (Arial negrita cursiva, tamaño fijo en pantalla con SoShapeScale), planos de referencia con el mismo

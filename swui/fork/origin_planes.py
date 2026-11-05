@@ -286,10 +286,14 @@ def _apply_planes_later():
 def _new_origin(doc_name, name):
     """Pieza nueva: nombres claros y planos ocultos (como SW), sin marcar nada."""
     try:
+        if not _in_workbench():
+            return
         doc = FreeCAD.getDocument(doc_name)
         origin = doc.getObject(name)
-        if origin is None:
+        seen = _state.setdefault("seen_origins", set())  # una sola vez por origen (dos intentos)
+        if origin is None or (doc_name, name) in seen:
             return
+        seen.add((doc_name, name))
         if origin.Label.startswith("Origen de Coordenadas") or origin.Label.startswith("Origin"):
             origin.Label = ORIGIN_LABEL
         for f in origin.OriginFeatures:
@@ -424,13 +428,17 @@ class _AppObserver:
             _apply_planes_later()
 
     def slotCreatedObject(self, obj):
+        # Sin mirar el banco acá: la pieza nueva de la página de Inicio ("Cuerpo paramétrico") se
+        # crea en Part Design y recién después always_swui vuelve a FreeWorks (visto en el FreeCAD
+        # del usuario, 04/11: quedaba "Origen de Coordenadas001" con todo a la vista).
         try:
-            if obj.TypeId != ORIGIN or getattr(obj.Document, "Restoring", False) or not _in_workbench():
+            if obj.TypeId != ORIGIN or getattr(obj.Document, "Restoring", False):
                 return
             doc_name, name = obj.Document.Name, obj.Name
         except Exception:
             return
-        QtCore.QTimer.singleShot(0, lambda: _new_origin(doc_name, name))
+        for ms in (0, 1500):
+            QtCore.QTimer.singleShot(ms, lambda: _new_origin(doc_name, name))
 
     def slotCreatedDocument(self, doc):
         name = doc.Name

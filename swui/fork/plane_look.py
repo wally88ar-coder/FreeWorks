@@ -188,17 +188,21 @@ def _origin_nodes(plane):
             break
     if sel is None:
         return None
+    # El cuadradito de FreeCAD (SoShapeScale) NO se mueve de lugar: FreeCAD lo busca como primer hijo
+    # del SoFCSelection; moverlo a otro switch dio "Access violation" en el FreeCAD del usuario al
+    # tocar el ojo del origen (04/11). Se esconde poniendo su scaleFactor en 0.
+    if sel.getNumChildren() < 1 or _type(sel.getChild(0)) != "SoShapeScale":
+        return None
     known = _state["nodes"].get(key)
     # pivy da un objeto Python nuevo por cada nodo pedido: comparar con findChild, no con "is"
     if known is not None and sel.findChild(known["ours"]) >= 0:
         return known
-    native = [sel.getChild(i) for i in range(sel.getNumChildren()) if _type(sel.getChild(i)) == "SoShapeScale"]
-    if len(native) != 1:
+    try:
+        native = coin.cast(sel.getChild(0), "SoBaseKit")
+        scale = coin.cast(native.getField("scaleFactor"), "SoSFFloat")
+        native_scale = scale.getValue() or 1.0
+    except Exception:
         return None
-    hide = coin.SoSwitch()
-    hide.whichChild = -1
-    sel.removeChild(native[0])
-    hide.addChild(native[0])
     ours = coin.SoSwitch()
     ours.whichChild = 0
     sep = coin.SoSeparator()
@@ -212,10 +216,9 @@ def _origin_nodes(plane):
     for n in (color, style, coords, lines, label["sep"]):
         sep.addChild(n)
     ours.addChild(sep)
-    sel.addChild(hide)
-    sel.addChild(ours)
-    nodes = {"kind": "origin", "sel": sel, "hide": hide, "ours": ours, "coords": coords,
-             "lines": lines, "label": label}
+    sel.addChild(ours)  # al final: los hijos de FreeCAD quedan en su lugar
+    nodes = {"kind": "origin", "sel": sel, "ours": ours, "coords": coords,
+             "lines": lines, "label": label, "native_scale": native_scale}
     _state["nodes"][key] = nodes
     return nodes
 
@@ -246,6 +249,18 @@ def _datum_nodes(plane):
     return nodes
 
 
+def _native_scale(nodes, value):
+    """Tamaño del cuadradito de FreeCAD (0 = no se ve). Se vuelve a pedir el nodo cada vez."""
+    from pivy import coin
+
+    sel = nodes["sel"]
+    if sel.getNumChildren() < 1 or _type(sel.getChild(0)) != "SoShapeScale":
+        return
+    scale = coin.cast(coin.cast(sel.getChild(0), "SoBaseKit").getField("scaleFactor"), "SoSFFloat")
+    if abs(scale.getValue() - value) > 1e-9:
+        scale.setValue(value)
+
+
 def _update(plane, corners):
     rect = local_rect(plane, corners)
     if plane.TypeId == ORIGIN_PLANE:
@@ -253,10 +268,10 @@ def _update(plane, corners):
         if nodes is None:
             return
         if rect is None:  # pieza sin sólidos: el cuadradito de FreeCAD
-            nodes["hide"].whichChild = 0
+            _native_scale(nodes, nodes["native_scale"])
             nodes["ours"].whichChild = -1
             return
-        nodes["hide"].whichChild = -1
+        _native_scale(nodes, 0.0)
         nodes["ours"].whichChild = 0
         x0, y0, x1, y1 = rect
         pts = [(x0, y0, 0), (x1, y0, 0), (x1, y1, 0), (x0, y1, 0), (x0, y0, 0)]
