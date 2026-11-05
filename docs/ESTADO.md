@@ -1,5 +1,24 @@
 # Estado del fork
 
+**05/11 ~00:05, agarraderas de los planos y nombres encima, como SW: HECHOS** (pedido del usuario
+"Hacé agarraderas como SW y los nombres por encima como SW, no hace falta que vuelvan al tamaño
+automático, de hecho SW no lo hace"). `swui/fork/plane_handles.py`: plano elegido entero -> 8 puntos
+celestes (capa SoAnnotation en la raíz de la vista, sin elegirse); filtro del mouse en la vista
+solo con un plano elegido; clic a menos de 9 px de una agarradera la toma (FreeCAD no recibe el
+clic), el rectángulo sigue al punto del plano bajo el mouse, al soltar se guarda en la propiedad
+oculta `SWUI_PlaneRect` (App::PropertyFloatList [x0,y0,x1,y1] en coordenadas del plano, **nombre
+estable**, Output+NoRecompute) en el paso "Tamaño del plano"; Esc durante el arrastre lo cancela.
+`plane_look.py`: nombres en otra capa encima de todo (SoAnnotation en la raíz, como las vistas
+previas del croquis; adentro del SoFCSelection dejaba la vista en blanco), prendidos solo si el
+plano se dibuja (switch del plano, de su Origen y de su Cuerpo; origin_planes avisa en vista previa
+y Ver > Planos). Probado con guion (eventos simulados: esquina +30/+20 -> 29,9/20,1 mm, conserva el
+tamaño al cambiar la pieza, Ctrl+Z) y **con el mouse en FreeCAD de prueba**: agarraderas como SW,
+arrastre real de la esquina (la vista no gira), Ctrl+Z / Ctrl+Y (arreglado en la prueba: el dibujo
+no se actualizaba al deshacer -> slotUndoDocument/slotRedoDocument), nombres encima de la pieza
+("Planta" sobre la cara de arriba, como SW), ojo del Origen apaga/prende sin errores, pasar el
+mouse y clics sobre planos sin "Access violation". Visto: la primera corrida de un guion después de
+cambiar el código puede pasar el tiempo límite (compila los .pyc). Falta que lo pruebe el usuario.
+
 **04/11 ~23:20, pieza vacía (captura del usuario: "no se ve como en SW").** Con la pieza sin sólidos
 quedaba el dibujo de FreeCAD (cuadraditos de colores). Relevado en SW con el mouse: pieza vacía con
 Planos primarios = tres rectángulos de ~178 x 110 mm centrados en el origen, cruzados, con el nombre

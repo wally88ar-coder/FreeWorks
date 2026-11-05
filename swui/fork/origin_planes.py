@@ -166,6 +166,16 @@ def _in_workbench():
         return False
 
 
+def _labels(doc):
+    """Los nombres de los planos (plane_look) van en otra capa: seguir lo que se ve."""
+    try:
+        from swui.fork import plane_look
+
+        plane_look.refresh_labels(doc)
+    except Exception:
+        pass
+
+
 def _quiet(doc, fn):
     """Cambios de dibujo propios: sin que los vea el observador y sin marcar el archivo."""
     gdoc = None
@@ -185,6 +195,7 @@ def _quiet(doc, fn):
                 gdoc.Modified = False
         except Exception:
             pass
+        _labels(doc)
 
 
 def _sync_origin(origin, kind):
@@ -222,6 +233,7 @@ def _sync_origin(origin, kind):
         _state["busy"] -= 1
     if not planes_drawn():
         _apply_planes_drawn(origin.Document, restore=False)
+    _labels(origin.Document)
 
 
 def _flush():

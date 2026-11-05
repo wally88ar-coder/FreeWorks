@@ -128,6 +128,9 @@ def install(workbench=None):
         from swui.fork import plane_look  # dibujo de los planos como SW (etapa B)
 
         plane_look.install()
+        from swui.fork import plane_handles  # agarraderas para cambiar el tamaño, como SW
+
+        plane_handles.install()
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] Planos principales:\n%s\n" % traceback.format_exc())
     try:

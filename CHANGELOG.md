@@ -5,6 +5,12 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Agarraderas de los planos y nombres encima, como SW 2018** (`swui/fork/plane_handles.py`,
+  `plane_look.py`). Un plano elegido muestra 8 agarraderas celestes; arrastrando una, el plano
+  cambia de tamaño y desde ahí lo conserva (no vuelve al automático, como SW). Se guarda en la
+  propiedad oculta `SWUI_PlaneRect` del plano, con Ctrl+Z / Ctrl+Y. Los nombres de los planos se
+  dibujan siempre encima de la pieza. Pieza vacía: rectángulos de 178 x 110 mm en el origen, como
+  SW. Arreglado: "Access violation" al tocar el ojo del origen (no se mueve más el dibujo de FreeCAD).
 - **Planos dibujados como SW 2018** (`swui/fork/plane_look.py`, etapa B). Cada plano (los del origen
   y los de referencia) es un rectángulo azul fino alrededor de la pieza, agrandado 5 % por lado
   (medido en SW), en su lugar y siguiendo a la pieza al recalcular, con su nombre en el plano y del
