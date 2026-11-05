@@ -1,5 +1,14 @@
 # Estado del fork
 
+**04/11 ~23:20, pieza vacía (captura del usuario: "no se ve como en SW").** Con la pieza sin sólidos
+quedaba el dibujo de FreeCAD (cuadraditos de colores). Relevado en SW con el mouse: pieza vacía con
+Planos primarios = tres rectángulos de ~178 x 110 mm centrados en el origen, cruzados, con el nombre
+arriba a la izquierda (medido de frente contra un cuadrado de 100 mm en un croquis, 2,3 px/mm; el
+croquis no cambia el tamaño; al alejar se achican: tamaño en mm). Hecho igual (`plane_look.EMPTY_RECT`)
+y el nombre en negrita sin cursiva (de frente SW lo muestra derecho). Probado con guion: isométrica
+y frente iguales a las capturas de SW; clic en el borde = Planta. Falta con el mouse (el FreeCAD del
+usuario estaba abierto).
+
 **04/11 ~23 h, problema del usuario (captura): "Access violation" al tocar el ojo del origen en una
 pieza nueva vacía, vista en blanco.** Causa (etapa B): `plane_look` movía el cuadradito de FreeCAD
 (`SoShapeScale`, primer hijo del `SoFCSelection` del plano) a un SoSwitch propio; FreeCAD lo sigue

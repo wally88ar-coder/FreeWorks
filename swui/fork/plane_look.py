@@ -38,6 +38,9 @@ BODY = "PartDesign::Body"
 ORIGIN_PLANE = "App::Plane"
 DATUM_PLANE = "PartDesign::Plane"
 MARGIN = 0.05  # 5 % por lado, medido en SW
+# Pieza sin sólidos: SW dibuja cada plano de ~178 x 110 mm centrado en el origen (medido con el mouse
+# el 04/11 contra un cuadrado de 100 mm en el croquis, a 2,3 px/mm; un croquis no lo cambia).
+EMPTY_RECT = (-89.0, -55.0, 89.0, 55.0)
 COLOR = (0.12, 0.12, 0.85)  # azul de los planos de SW
 # Nombre dentro de un SoShapeScale (tamaño fijo en pantalla). Medido con el mouse en 1.1.4 a
 # 1366x768: con fuente 10 el texto sale de ~7 px y cambiar scaleFactor no lo cambia (se toma el de
@@ -151,7 +154,7 @@ def _label_node(text):
         pass
     inner = coin.SoSeparator()
     font = coin.SoFont()
-    font.name = "Arial:Bold Italic"
+    font.name = "Arial:Bold"  # SW: negrita derecha (de frente se ve sin cursiva)
     font.size = LABEL_FONT
     shift = coin.SoTranslation()
     shift.translation = (LABEL_FONT * 0.25, -LABEL_FONT * 1.2, 0)  # adentro del rectángulo, arriba a la izquierda
@@ -262,14 +265,10 @@ def _native_scale(nodes, value):
 
 
 def _update(plane, corners):
-    rect = local_rect(plane, corners)
+    rect = local_rect(plane, corners) or EMPTY_RECT  # pieza sin sólidos: el tamaño de SW
     if plane.TypeId == ORIGIN_PLANE:
         nodes = _origin_nodes(plane)
         if nodes is None:
-            return
-        if rect is None:  # pieza sin sólidos: el cuadradito de FreeCAD
-            _native_scale(nodes, nodes["native_scale"])
-            nodes["ours"].whichChild = -1
             return
         _native_scale(nodes, 0.0)
         nodes["ours"].whichChild = 0
@@ -280,7 +279,7 @@ def _update(plane, corners):
         nodes["lines"].numVertices.setValue(len(pts))
     else:
         nodes = _datum_nodes(plane)
-        if nodes is None or rect is None:
+        if nodes is None:
             return
         x0, y0, x1, y1 = rect
         pts = [(x1, y1, 0), (x0, y1, 0), (x0, y0, 0), (x1, y0, 0)]
