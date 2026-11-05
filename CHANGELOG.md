@@ -5,6 +5,11 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Planos dibujados como SW 2018** (`swui/fork/plane_look.py`, etapa B). Cada plano (los del origen
+  y los de referencia) es un rectángulo azul fino alrededor de la pieza, agrandado 5 % por lado
+  (medido en SW), en su lugar y siguiendo a la pieza al recalcular, con su nombre en el plano y del
+  mismo tamaño en pantalla. Un clic en el borde lo elige como siempre. Solo dibujo: nada en el
+  archivo; pieza sin sólidos: el dibujo de FreeCAD.
 - **Planos principales como SW 2018** (`swui/fork/origin_planes.py`, relevado en SW con el mouse
   el 04/11). El ojo de cada plano, eje y punto del origen es el que manda: la carpeta se prende y
   apaga sola (antes, con la carpeta oculta, un plano con el ojo abierto no se veía). Pieza nueva

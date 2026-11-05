@@ -125,6 +125,9 @@ def install(workbench=None):
         from swui.fork import origin_planes
 
         origin_planes.install()
+        from swui.fork import plane_look  # dibujo de los planos como SW (etapa B)
+
+        plane_look.install()
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] Planos principales:\n%s\n" % traceback.format_exc())
     try:
