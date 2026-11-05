@@ -11,6 +11,13 @@ el croquis o la cara y listo.
 Acá, al elegir algo que está dentro de un Cuerpo (en la vista o en el árbol, sin ningún
 panel abierto), ese Cuerpo pasa a ser el activo. Es lo mismo que el doble clic de FreeCAD
 sobre el Cuerpo, hecho solo; no guarda nada propio en el archivo.
+
+Además (pedido del usuario, 04/11): una pieza nueva arrancaba con el Cuerpo elegido y
+Extruir daba el error de FreeCAD "El objeto seleccionado debe pertenecer al cuerpo
+activo" (FreeCAD tomaba el Cuerpo como si fuera el croquis). Como en SW, con la pieza
+entera elegida Extruir / Cortar / Revolución / Croquis piden el plano o la cara
+(`pick_plane` no cuenta un Cuerpo entero como selección), y el Cuerpo recién creado no
+queda elegido.
 """
 
 import traceback
@@ -77,7 +84,62 @@ class _Observer:
         QtCore.QTimer.singleShot(0, lambda: _activate(doc, obj))
 
 
+# --- Cuerpo entero elegido = nada elegido (como SW) ---------------------------------
+
+DESELECT_MS = (0, 300, 1000)  # FreeCAD elige el Cuerpo nuevo un rato después de crearlo
+
+
+def without_whole_bodies(sel):
+    """sel = [(objeto, [subelementos])]: saca los Cuerpos elegidos enteros (sin cara ni arista)."""
+    return [(o, s) for o, s in sel if s or getattr(o, "TypeId", "") != BODY]
+
+
+def _hook_pick_plane():
+    from swui import pick_plane
+
+    original = pick_plane._selection
+    if getattr(original, "_swui_auto_body", False):
+        return
+
+    def wrapped():
+        return without_whole_bodies(original())
+
+    wrapped._swui_auto_body = True
+    pick_plane._selection = wrapped
+
+
+def _deselect_new_body(doc_name, body_name):
+    """Si lo único elegido es el Cuerpo recién creado, entero: no dejar nada elegido."""
+    try:
+        if FreeCADGui.activeWorkbench().name() != WB_NAME:
+            return
+        sels = FreeCADGui.Selection.getSelectionEx(doc_name)
+        if len(sels) == 1 and sels[0].Object.Name == body_name and not sels[0].SubElementNames:
+            FreeCADGui.Selection.clearSelection(doc_name)
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Cuerpo nuevo sin elegir:\n%s\n" % traceback.format_exc())
+
+
+class _DocObserver:
+    def slotCreatedObject(self, obj):
+        try:
+            if obj.TypeId != BODY:
+                return
+            doc_name, name = obj.Document.Name, obj.Name
+        except Exception:
+            return
+        for ms in DESELECT_MS:
+            QtCore.QTimer.singleShot(ms, lambda: _deselect_new_body(doc_name, name))
+
+
 def install():
     if _state["observer"] is None:
         _state["observer"] = _Observer()
         FreeCADGui.Selection.addObserver(_state["observer"])
+    if _state.get("doc_observer") is None:
+        _state["doc_observer"] = _DocObserver()
+        FreeCAD.addDocumentObserver(_state["doc_observer"])
+    try:
+        _hook_pick_plane()
+    except Exception:
+        FreeCAD.Console.PrintError("[SWUI fork] Cuerpo entero = sin selección:\n%s\n" % traceback.format_exc())

@@ -5,6 +5,11 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Pieza nueva sin nada elegido y Extruir con el Cuerpo elegido** (`swui/fork/auto_body.py`,
+  reportado por el usuario el 04/11). FreeCAD dejaba elegido el Cuerpo recién creado y Extruir
+  daba "El objeto seleccionado debe pertenecer al cuerpo activo". Ahora el Cuerpo nuevo no queda
+  elegido y, como en SW, con el Cuerpo entero elegido Extruir / Cortar / Revolución / Croquis
+  piden el plano o la cara.
 - **Simetría de entidades del croquis como SW** (`swui/fork/sketch_entities.py`). El botón ya no
   está en gris sin selección: abre arriba del panel del croquis el recuadro "Simetría" (✓ / ✗,
   mensaje, Entidades a simetrizar, Copiar, Respecto a), se marcan las entidades con clics (otro

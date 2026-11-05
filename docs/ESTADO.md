@@ -1,5 +1,16 @@
 # Estado del fork
 
+**04/11, problema del usuario (capturas): pieza nueva con el Cuerpo elegido y Extruir con error
+"El objeto seleccionado debe pertenecer al cuerpo activo".** Causa: FreeCAD deja elegido el Cuerpo
+al crearlo (visto con guion: elegido enseguida de `PartDesign_Body`) y `pick_plane.handle` le
+pasaba esa selección a FreeCAD como si fuera un croquis. Arreglo en `swui/fork/auto_body.py`: un
+Cuerpo elegido entero no cuenta como selección para Extruir / Cortar / Revolución / Croquis (se
+abre "seleccionar un plano", como SW con la pieza elegida en el árbol) y el Cuerpo recién creado
+se deselecciona. Probado con guion en FreeCAD real: nada elegido después de crear la pieza; Cuerpo
+elegido + Extruir -> panel de plano, sin ventana de error. Falta que lo pruebe el usuario
+(reiniciando FreeCAD). Visto en su captura, sin tocar: el origen se llama "Origen de Coordenadas001"
+(sin investigar).
+
 Última actualización: 2026-11-03 ~0 h: **herramientas de entidades del croquis como SW (Simetría, Mover,
 Copiar, Girar, Escalar, Matriz lineal, Equidistanciar): hechas, probadas por Claude con el mouse
 y comparadas con SW**; ver Fase actual (falta que el usuario pruebe la vista previa que sigue al
