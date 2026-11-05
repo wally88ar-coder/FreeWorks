@@ -1966,8 +1966,31 @@ Etapas:
   cinta del addon; sin fecha).
 
 ## Falta / ideas pendientes
-- **Planos principales como SW** (análisis 04/11; etapa A HECHA el 04/11, ver arriba; etapa B por
-  analizar). Medido con guion en FreeCAD 1.1.4 real: (1) el contenedor "Origen de Coordenadas001"
+- **Planos principales como SW** (análisis 04/11; etapa A HECHA el 04/11, ver arriba). **Etapa B
+  (dibujo como SW): ANALIZADA el 04/11, sin código, esperando decisiones del usuario.** Relevado en
+  SW 2018 con el mouse (bloque 100x60x20 corrido 10 mm del origen, vista Superior, medido en
+  píxeles): el plano es el rectángulo de la caja de la pieza proyectada en él, agrandado 5 % por
+  lado en cada dirección (100 -> 5 mm, 60 -> 3 mm; con 200 de largo, 10 mm), NO se estira hasta el
+  origen; queda en su lugar (Vista lateral en x=0 aunque la pieza empiece en x=10, con el mismo
+  ancho que Planta); sigue a la pieza al reconstruir; contorno azul fino sin relleno, oculto detrás
+  de la pieza, nombre arriba a la izquierda, en el plano y del mismo tamaño en pantalla; elegido:
+  celeste con 8 agarraderas; arrastrar una agarradera lo agranda a mano y desde ahí conserva ese
+  tamaño (los otros siguen a la pieza). FreeCAD 1.1.4: el plano del origen es `SoShapeScale`
+  (cuadradito del mismo tamaño en pantalla) dentro de `SoFCSelection` del switch del plano; un
+  `PartDesign::Plane` es un rectángulo (Coordinate3 + SoBrepEdgeSet/FaceSet, ResizeMode Automatic
+  le dio 60x60 con una pieza de 100x60). **Prueba de concepto hecha** (guion, scratchpad
+  probe8): pasar el cuadradito a un SoSwitch apagado y poner al lado, dentro del mismo
+  `SoFCSelection`, un Separator con el rectángulo (caja del Cuerpo + 5 %, en coordenadas del plano)
+  y el nombre: `getObjectInfo` sobre el borde da el plano (se elige como siempre), el resaltado de
+  elegido lo pinta, aguanta recalcular y prender/apagar; el elegir/ocultar de la etapa A sigue
+  andando porque está en el mismo switch. Nada en el archivo. Falta: color SW, actualizar al
+  recalcular (observador), nombre en el plano, planos de referencia propios, pieza vacía,
+  ensamblajes, y un chequeo para la fase 6 (si FreeCAD cambia el dibujo, volver al nativo).
+  Decisiones para el usuario: (1) estilo: contorno azul sin relleno como su SW, o con relleno
+  translúcido; (2) nombre: dibujado en el plano como SW o derecho a la pantalla (más legible, más
+  simple); (3) agarraderas para agrandar a mano: guardan el tamaño en el archivo (propiedad SWUI_
+  nueva, nombre estable) — hacerlas o no; (4) planos de referencia propios con el mismo dibujo (sí,
+  recomendado); (5) ensamblajes (planos del ensamblaje y de componentes) después. Medido con guion en FreeCAD 1.1.4 real: (1) el contenedor "Origen de Coordenadas001"
   manda: oculto, no se dibuja ningún plano aunque el plano tenga el ojo abierto; prenderlo prende
   TODOS sus hijos (ejes, planos, punto) y apagarlo los apaga (los planos prendidos a mano quedaron
   con el ojo abierto sin verse); (2) un plano del origen (`App::Plane`) es un cuadradito en el
