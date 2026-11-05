@@ -39,10 +39,11 @@ ORIGIN_PLANE = "App::Plane"
 DATUM_PLANE = "PartDesign::Plane"
 MARGIN = 0.05  # 5 % por lado, medido en SW
 COLOR = (0.12, 0.12, 0.85)  # azul de los planos de SW
-# Nombre: fuente de 10 unidades dentro de un SoShapeScale. Medido en 1.1.4: con scaleFactor 15 el
-# texto de 10 unidades sale de ~10 px; con 22, ~15 px (como el de SW a 1366x768).
-LABEL_SCALE = 30
-LABEL_FONT = 10.0
+# Nombre dentro de un SoShapeScale (tamaño fijo en pantalla). Medido con el mouse en 1.1.4 a
+# 1366x768: con fuente 10 el texto sale de ~7 px y cambiar scaleFactor no lo cambia (se toma el de
+# fábrica); SW lo dibuja de ~14 px -> fuente 20.
+LABEL_SCALE = 1
+LABEL_FONT = 20.0
 WB_NAME = "LikeSolidWorksUIWorkbench"
 
 _state = {"obs": None, "pending": set(), "nodes": {}}
@@ -136,9 +137,18 @@ def _label_node(text):
     """Nombre en el plano, del mismo tamaño en pantalla (SoShapeScale de FreeCAD)."""
     from pivy import coin
 
+    # El nombre va encima de la pieza, como en SW (visto con 200 mm de largo): sin prueba de
+    # profundidad solo para el texto. OJO: un SoAnnotation adentro del SoFCSelection deja TODA la
+    # vista de FreeCAD en blanco (probado con el mouse, 04/11).
     sep = coin.SoSeparator()
     trans = coin.SoTranslation()
     sep.addChild(trans)
+    try:
+        depth = coin.SoDepthBuffer()
+        depth.test = False
+        sep.addChild(depth)
+    except Exception:
+        pass
     inner = coin.SoSeparator()
     font = coin.SoFont()
     font.name = "Arial:Bold Italic"

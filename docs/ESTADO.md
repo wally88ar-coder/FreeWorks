@@ -6,8 +6,15 @@ del usuario "Sí, arrancá"; `swui/fork/plane_look.py`): contorno azul sin relle
 dibujo, sin agarraderas (tamaño automático), ensamblajes después. Probado con guion en FreeCAD de
 prueba (capturas iso y superior, igual disposición que SW: Vista lateral en x=0 fuera de Planta;
 largo 100 -> 200 y los rectángulos lo siguen; clic en el borde = el plano; elegido se pinta).
-**Falta la prueba con el mouse**: el usuario estaba usando su FreeCAD en ese momento (no se tocó;
-la ventana de prueba se cerró). Hallazgos: pivy da un objeto Python nuevo por nodo (comparar con
+**Probada con el mouse el 04/11 ~22:45** (pedido del usuario; FreeCAD de prueba, bloque 100x60x20
+corrido 10 mm como en SW): Planos primarios desde el menú; vista superior igual a SW (margen 5 mm =
+18 px con 3,56 px/mm, Vista lateral en x=0, Alzado abajo); clic en el borde elige Planta (celeste,
+como SW); Length 100 -> 200 en Datos: margen 10 mm, igual a SW; Ver > Planos apaga/prende; Alzado
+elegido con Planos apagado se ve. Arreglado en la prueba: el nombre salía de ~7 px (SW ~14):
+`SoShapeScale` ignora el scaleFactor puesto así, se agrandó la fuente (20); un `SoAnnotation`
+para dibujar el nombre encima dejó TODA la vista en blanco -> `SoDepthBuffer` sin prueba de
+profundidad. Diferencia que queda: SW dibuja el nombre siempre encima de la pieza; en FreeWorks la
+pieza puede taparlo en parte (se ve "Pla…" en vista superior con 200 mm). Hallazgos: pivy da un objeto Python nuevo por nodo (comparar con
 findChild, no con `is`); SoShapeScale: texto de 10 unidades con scaleFactor 15 sale de ~10 px;
 SoAsciiText necesita SoFont con tamaño (con 1 no se ve). Pendiente de decidir más adelante:
 agarraderas para agrandar a mano (guardarían el tamaño en el archivo) y planos del ensamblaje.
