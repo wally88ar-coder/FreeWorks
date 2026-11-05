@@ -5,6 +5,14 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Planos principales como SW 2018** (`swui/fork/origin_planes.py`, relevado en SW con el mouse
+  el 04/11). El ojo de cada plano, eje y punto del origen es el que manda: la carpeta se prende y
+  apaga sola (antes, con la carpeta oculta, un plano con el ojo abierto no se veía). Pieza nueva
+  con los planos ocultos, como SW; la carpeta se llama "Origen" y el punto "Punto de origen" (antes
+  "Origen de Coordenadas001"). Un plano oculto elegido en el árbol se dibuja mientras está elegido.
+  Ver > Ocultar/Mostrar > **Planos** (apaga el dibujo de todos sin cambiar lo de cada uno) y
+  **Planos primarios** (muestra u oculta los tres). Al abrir un archivo, los ojos quedan como lo
+  que se ve, sin marcarlo cambiado.
 - **Pieza nueva sin nada elegido y Extruir con el Cuerpo elegido** (`swui/fork/auto_body.py`,
   reportado por el usuario el 04/11). FreeCAD dejaba elegido el Cuerpo recién creado y Extruir
   daba "El objeto seleccionado debe pertenecer al cuerpo activo". Ahora el Cuerpo nuevo no queda

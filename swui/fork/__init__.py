@@ -121,6 +121,13 @@ def install(workbench=None):
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] Cuerpo activo automático:\n%s\n" % traceback.format_exc())
     try:
+        # planos principales como SW (ojo de cada plano, elegido visible, Ver > Ocultar/Mostrar)
+        from swui.fork import origin_planes
+
+        origin_planes.install()
+    except Exception:
+        FreeCAD.Console.PrintError("[SWUI fork] Planos principales:\n%s\n" % traceback.format_exc())
+    try:
         from swui.fork import preselect_status
 
         preselect_status.install()

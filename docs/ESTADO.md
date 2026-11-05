@@ -1,5 +1,29 @@
 # Estado del fork
 
+**04/11, planos principales como SW, etapa A: HECHA** (pedido del usuario; `swui/fork/origin_planes.py`).
+Relevado antes en SW 2018 con el mouse (pedido del usuario: "no asumas su comportamiento"): pieza
+nueva con Alzado/Planta/Vista lateral ocultos y sueltos en el árbol; un plano oculto elegido en el
+árbol se dibuja (contorno celeste con agarraderas y su nombre) y la barrita contextual trae Mostrar;
+mostrado: contorno azul fino sin relleno, con el nombre en cursiva, rodeando la pieza (etapa B);
+Ver > Ocultar/Mostrar > Planos apaga el dibujo de todos y al prenderlo vuelven los que estaban
+mostrados; Ver > Ocultar/Mostrar > Planos primarios muestra los tres y al apagarlo los oculta a
+todos (también uno mostrado a mano); con Planos apagado, elegir un plano en el árbol igual lo dibuja;
+el Origen elegido se marca con un punto (Ver > Orígenes estaba apagado). Hecho igual en FreeWorks:
+ojo de cada plano/eje/punto independiente (la carpeta se prende/apaga sola; su ojo prende los tres
+planos o apaga todo), plano elegido visible (solo el dibujo, SwitchNode), Ver > Ocultar/Mostrar >
+Planos (preferencia SWUI/VerPlanos) y Planos primarios (primer Cuerpo de la pieza), pieza nueva con
+planos ocultos (como SW), carpeta "Origen" y "Punto de origen" en piezas nuevas (las viejas no se
+renombran), archivos viejos con ojos cerrados al abrir sin marcarlos cambiados. Probado con guion
+(estados exactos, archivo viejo) y con el mouse en FreeCAD de prueba (elegir Planta, ojo, deseleccionar,
+ojos de Alzado y de la carpeta, los dos comandos del menú, elegir con Planos apagado, Extruir sin
+selección con el panel de plano y Cancelar). **Decisiones tomadas por Claude (revisar):** pieza nueva
+con planos ocultos (como SW; para verlos: Planos primarios o el ojo); ojo de la carpeta = los tres
+planos; "Planos primarios" = los del primer Cuerpo (multicuerpo); ejes y punto elegidos también se
+dibujan; los planos de referencia propios no (falta). Diferencias: mientras un plano oculto está
+elegido el árbol le muestra el ojo abierto (FreeCAD dibuja el ojo según lo que se ve); SW tiene
+barrita contextual con Mostrar y FreeWorks usa el ojo del árbol. Etapa B (dibujo como SW): por
+analizar con el usuario. Falta que lo pruebe el usuario.
+
 **04/11, problema del usuario (capturas): pieza nueva con el Cuerpo elegido y Extruir con error
 "El objeto seleccionado debe pertenecer al cuerpo activo".** Causa: FreeCAD deja elegido el Cuerpo
 al crearlo (visto con guion: elegido enseguida de `PartDesign_Body`) y `pick_plane.handle` le
@@ -1942,6 +1966,25 @@ Etapas:
   cinta del addon; sin fecha).
 
 ## Falta / ideas pendientes
+- **Planos principales como SW** (análisis 04/11; etapa A HECHA el 04/11, ver arriba; etapa B por
+  analizar). Medido con guion en FreeCAD 1.1.4 real: (1) el contenedor "Origen de Coordenadas001"
+  manda: oculto, no se dibuja ningún plano aunque el plano tenga el ojo abierto; prenderlo prende
+  TODOS sus hijos (ejes, planos, punto) y apagarlo los apaga (los planos prendidos a mano quedaron
+  con el ojo abierto sin verse); (2) un plano del origen (`App::Plane`) es un cuadradito en el
+  cuadrante positivo, chico (~10 % de la pieza), sin propiedad de tamaño ni nombre en la vista
+  (sus propiedades de vista: Transparency, Selectable...); (3) los planos de referencia
+  (`PartDesign::Plane`) sí traen `ResizeMode` Automatic/Manual + Length/Width; (4) el "001": la
+  traducción llama "Origen de Coordenadas" al contenedor y al punto, FreeCAD le suma 001 al primero
+  (solo Label). SW 2018: Alzado/Planta/Vista lateral sueltos en el árbol, ocultos de fábrica, ojo
+  propio cada uno, rectángulo translúcido centrado y algo más grande que la pieza (crece con ella),
+  un plano oculto elegido en el árbol se ve mientras está elegido, Ver > Ocultar/Mostrar > Planos
+  apaga todos. Propuesta en dos etapas: (A) comportamiento, solo visibilidad nativa: ojo de cada
+  plano independiente (el fork maneja el contenedor), plano elegido en el árbol visible mientras
+  está elegido, Ver > Planos, nombre del contenedor, pieza nueva con planos ocultos o a la vista
+  (decide el usuario); (B) dibujo SW: rectángulo translúcido propio sobre la vista (pivy, nada en
+  el archivo), centrado y del tamaño de la pieza + margen, con nombre, y el cuadradito nativo
+  invisible; clic en el rectángulo = elegir el plano. Sin verificar: que un plano con
+  Transparency 100 siga eligiéndose; si 26.3 cambia el dibujo del origen.
 - Fase 1: chapa hecha; pendientes chicos: desahogos de pliegue, elegir qué pliegues desdoblar
   (Convertir en chapa un sólido macizo: el usuario no lo necesita, 2026-10-31).
 - **Muescas de plegado en el DXF** (idea de las "Bend Notches" de SW 2025; decidido por el usuario

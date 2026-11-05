@@ -858,6 +858,24 @@ que usan está en `tools/test_load.py` (`check_ia`): si una cambia de firma, el 
   quedó con un hilo al 100 % y la memoria creciendo (taskkill: "no hay instancia activa"); se
   cerró con `Invoke-CimMethod Terminate`. Es solo del `os._exit` de las pruebas: cerrando la ventana como el usuario (documentos y `mw.close()`) después de usar un panel de la IA, FreeCAD sale en ~8 s (probado 01/11).
 
+## Planos del origen (04/11): hallazgos en FreeCAD 1.1.4
+- `App::Origin` manda sobre sus hijos (ejes, planos, punto): oculto, no se dibuja ninguno aunque
+  tengan Visibility True; prenderlo o apagarlo NO cambia la Visibility de los hijos. FreeCAD crea
+  la carpeta oculta con todos los hijos en True.
+- `App::Plane` no tiene tamaño (cuadradito en el cuadrante +, ~10 % de la pieza); `PartDesign::Plane`
+  sí (`ResizeMode` Automatic/Manual, Length, Width).
+- Dibujar sin tocar el ojo: `vo.SwitchNode.whichChild` (-1 oculto; 0 plano a la vista; la carpeta
+  usa 1). Sobrevive a recalcular y a cambiar la selección; FreeCAD lo rehace solo al cambiar
+  Visibility. El ojo del árbol se dibuja según lo que se ve (switch), pero el clic en el ojo usa la
+  propiedad Visibility.
+- Cambiar Visibility marca el documento modificado: `FreeCADGui.getDocument(n).Modified = False`
+  lo devuelve (se usa en los cambios propios: abrir archivo, vista previa).
+- `FreeCADGui.runCommand` de un comando "Checkable" llama `Activated(0)` siempre: en pruebas,
+  `QAction.trigger()` (objectName = comando), como un clic de menú.
+- Pruebas: un guion que hace `saveAs` y después cierra dejó el FreeCAD de prueba colgado (cerrado
+  con `Invoke-CimMethod Terminate` filtrando por la línea de comando del guion). Evitar guardar en
+  las pruebas o terminar con `os._exit` sin cerrar documentos.
+
 ## Herramientas de entidades del croquis (02/11): hallazgos en FreeCAD 1.1.4
 - Los botones nativos Sketcher_Symmetry / Offset / Translate / Rotate / Scale /
   RectangularArray están en gris sin geometría elegida (toman la selección al clic y no dejan

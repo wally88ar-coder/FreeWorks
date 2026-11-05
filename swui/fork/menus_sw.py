@@ -220,6 +220,11 @@ def menus():
                 E("Zoom alejar", "Std_ViewZoomOut"),
                 E("Ampliar selección", "Std_ViewFitSelection"),
             ]),
+            # como SW 2018 (relevado con el mouse el 04/11): origin_planes.py
+            S("Ocultar/Mostrar", [
+                E("Planos", "SWUI_ViewPlanes"),
+                E("Planos primarios", "SWUI_ViewPrimaryPlanes"),
+            ]),
             SEP,
             E("Pantalla completa", "Std_MainFullscreen"),
         ]),
