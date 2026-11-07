@@ -134,6 +134,12 @@ def install(workbench=None):
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] Planos principales:\n%s\n" % traceback.format_exc())
     try:
+        from swui.fork import esc_deselect  # Esc deselecciona, como SW
+
+        esc_deselect.install()
+    except Exception:
+        FreeCAD.Console.PrintError("[SWUI fork] Esc deselecciona:\n%s\n" % traceback.format_exc())
+    try:
         from swui.fork import preselect_status
 
         preselect_status.install()

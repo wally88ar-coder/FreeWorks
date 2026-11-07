@@ -1,5 +1,14 @@
 # Estado del fork
 
+**06/11, Esc deselecciona, como SW: HECHO** (pedido del usuario: "al apretar ESC no debería
+deseleccionarse el plano seleccionado?"). Relevado en SW con el mouse: Alzado elegido, Esc -> nada
+elegido (en SW vale para cualquier selección). `swui/fork/esc_deselect.py`: filtro de la aplicación,
+solo con el foco en la vista 3D o el árbol, sin panel de tareas, sin objeto en edición, sin arrastre
+de agarraderas ni cotas del doble clic, fuera de campos de texto; no se come la tecla. Probado con
+mouse y teclado en FreeCAD de prueba: plano elegido en la vista, Planta elegida en el árbol y cara de
+la pieza -> Esc las suelta; con el croquis abierto Esc sigue saliendo del croquis como antes.
+Falta que lo pruebe el usuario.
+
 **06/11, arreglado: clic en el fondo elegía un plano (y clics seguidos alternaban plano / Cuerpo)**
 (reportado por el usuario con su archivo "test planos"). Causa: el cuadradito nativo del plano, que
 escondemos con scaleFactor 0, seguía siendo elegible. Con la cámara guardada en el archivo, 192 de

@@ -5,6 +5,9 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Esc deselecciona, como SW 2018** (`swui/fork/esc_deselect.py`): con algo elegido (plano, cara,
+  arista, operación) en la vista 3D o en el árbol, Esc deja sin nada elegido. Con un panel abierto o
+  editando un croquis, Esc sigue haciendo lo de siempre.
 - **Arreglado: un clic en el fondo de la vista elegía un plano** (y clics seguidos alternaban plano
   y Cuerpo). El cuadrado de FreeCAD que queda escondido debajo del dibujo SW ya no se puede elegir;
   un plano se elige solo con un clic en su borde, como en SW (`swui/fork/plane_look.py`).
