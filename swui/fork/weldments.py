@@ -13,7 +13,10 @@ motor): cada miembro es un PartDesign::Body con
              alargue inicial (las esquinas alargan el miembro que pasa)
 y los recortes son operaciones nativas dentro del Cuerpo:
     a tope / T / ajuste a otro miembro: Pocket con la ENVOLVENTE (contorno exterior lleno) del otro
-             miembro, barrida por su misma Ruta y con sus mismos largos (fórmulas): sigue sola;
+             miembro, barrida por su misma Ruta y con sus mismos largos (fórmulas): sigue sola.
+             A tope y T: corte PLANO como SW (en los caños cuadrados la envolvente es el rectángulo sin
+             radios: la punta queda recta a ras de la cara; pedido del usuario 07/11); ajuste a otro
+             miembro: corte contra el sólido (con radios). Caño redondo: siempre la forma del caño;
     inglete y recorte contra una cara: SubtractiveBox del lado a sacar (inglete: acoplado al vértice
              de la esquina; cara: a la cara). El ángulo del inglete se calcula al crearlo.
 
@@ -547,8 +550,19 @@ def _extend_for(body, end, value, cid):
     _apply_ext(body, end, tags)
 
 
-def _envelope_cut(target, tool, cid):
-    """En `target`, sacar la envolvente llena del miembro `tool` (barrida por su Ruta, con sus largos)."""
+def _envelope_loops(kind, dims, planar=True):
+    """Contorno de la envolvente de un miembro. planar (esquinas a tope y T, como el "corte plano"
+    de SW): en caños cuadrados y rectangulares, el rectángulo sin radios, para que la punta del otro
+    quede cortada recta a ras de la cara y no copie el radio de la esquina. Si no, el contorno real."""
+    if planar and kind in ("Caño cuadrado", "Caño rectangular"):
+        w, h = extent(kind, dims)
+        return _wp()._box(w, h)
+    return profile_loops(kind, dims, outer_only=True)
+
+
+def _envelope_cut(target, tool, cid, planar=True):
+    """En `target`, sacar la envolvente llena del miembro `tool` (barrida por su Ruta, con sus largos).
+    planar: corte plano a ras de la cara (esquinas); si no, contra el sólido (ajuste a otro miembro)."""
     doc = target.Document
     troute, tpad, tsk = _route_of(tool), _pad_of(tool), _profile_of(tool)
     b = target.newObject("PartDesign::SubShapeBinder", "RutaRecorte")
@@ -564,7 +578,7 @@ def _envelope_cut(target, tool, cid):
     sk.MapMode = "NormalToEdge"
     sk.MapPathParameter = 0.0
     sk.AttachmentOffset = tsk.AttachmentOffset
-    _fill_sketch(sk, profile_loops(tool.SWUI_WeldKind, list(tool.SWUI_WeldDims), outer_only=True),
+    _fill_sketch(sk, _envelope_loops(tool.SWUI_WeldKind, list(tool.SWUI_WeldDims), planar),
                  bool(getattr(tool, "SWUI_WeldMirror", False)))
     pk = target.newObject("PartDesign::Pocket", "Recorte")
     pk.Label = "Recorte contra " + tool.Label
@@ -727,7 +741,8 @@ def _reshape(body, kind=None, size=None, rotation=None, anchor=None, mirror=None
     if (kind, size, new_mirror) != (old_kind, old_size, old_mirror) or dims != old_dims or redraw:
         _refill(sk, loops, new_mirror)
         for env in envelopes:
-            _refill(env, profile_loops(kind, dims, outer_only=True), new_mirror)
+            planar = not getattr(env, "SWUI_WeldCorner", "").startswith("trim|")
+            _refill(env, _envelope_loops(kind, dims, planar), new_mirror)
         old_name = profile_text(old_kind, old_size)
         if not body.Label.startswith(old_name):
             old_name = "%s %s" % (old_kind, old_size)  # archivos viejos: "UPN UPN 80 (1)"
@@ -899,7 +914,7 @@ def trim_to_member(member, tool, extend=True):
         # pedacito suelto del otro lado del caño (visto con guion, 07/11)
         if extend and need > 1e-6:
             _extend_for(member, end, need, cid)
-    _envelope_cut(member, tool, cid)
+    _envelope_cut(member, tool, cid, planar=False)
     member.Document.recompute()
 
 

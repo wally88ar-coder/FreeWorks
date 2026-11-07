@@ -43,6 +43,14 @@ familias con esquinas tope/inglete/ninguno, cambio de tipo, tapa y lista de cort
 copias de "bug estructura" y "bug estructura2" editadas; con interfaz, el panel con las 12 familias,
 IPE 120 sobre su marco, Datos > Sección CIRSOC y capturas de frente de cada perfil. Falta que lo
 pruebe el usuario.
+**07/11 noche, CORTE PLANO EN ESQUINAS (visto por el usuario con los radios: "el caño se corta a 90°
+y vos lo extruiste hasta el otro, en el radio quedó como extruido"): HECHO.** A tope y en T, el caño
+cuadrado o rectangular que llega se corta recto a ras de la cara del que pasa (como el "corte plano"
+de SW, que es el predeterminado); queda el huequito del radio, que llena la soldadura. Caño redondo:
+sigue con la boca de pescado (decisión de Claude, anotada para consultar). Recortar/Alargar contra
+un miembro: sigue contra el sólido. Archivos viejos: se corrigen al editar el miembro. Probado sin
+interfaz (marco y T en 4 familias, ajuste, giro, las 12 familias, copias de "bug estructura") y con
+interfaz (captura de la esquina como la del usuario). Falta que lo pruebe el usuario.
 
 **07/11 tarde, "bug estructura2" del usuario (marco de 4 caños, de inglete a tope desaparecían los
 dos largueros): ARREGLADO.** Los caños seguían bien (sin interfaz todo daba bien); era la vista: al

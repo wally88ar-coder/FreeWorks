@@ -933,6 +933,11 @@ que usan está en `tools/test_load.py` (`check_ia`): si una cambia de firma, el 
 - Radio de tabla más grande que el tramo donde va (ángulo 1 3/4 x 1/8: r1 = 3,5 con ala de 3,2) da una
   cara inválida: `weld_profiles.contour` lo achica al 95 % del tramo.
 - `Face.MatrixOfInertia` de una cara en XY: A11 = Ix (alrededor del eje X), A22 = Iy.
+- Corte plano de las esquinas (07/11, pedido del usuario): la envolvente de recorte de un caño
+  cuadrado o rectangular es el rectángulo SIN radios (`weldments._envelope_loops`); así la punta del
+  otro queda recta a ras de la cara, como el "corte plano" de SW. Las envolventes de "Recortar/Alargar"
+  contra un miembro (marca SWUI_WeldCorner "trim|...") siguen con el contorno real; `_reshape` las
+  distingue por esa marca al redibujarlas. Archivos viejos: las esquinas se rehacen al editar.
 
 - Borrar desde un guion la última operación de un Cuerpo de PartDesign (body.removeObject + 
   doc.removeObject) deja la Tip en la anterior pero OCULTA: el Cuerpo se ve a través de su Tip, así

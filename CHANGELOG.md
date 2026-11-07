@@ -34,6 +34,10 @@ Neueste Version oben. / Newest version first.
   Cada miembro guarda las propiedades de sección de la tabla (área, peso, inercias, módulos, radios de
   giro, torsión, alabeo), visibles en Datos > Sección CIRSOC y listas para un futuro cálculo por
   elementos finitos. Los archivos viejos abren igual; al editar el miembro pasan al dibujo con radios.
+  Esquinas a tope y T con corte plano, como SW: en los caños cuadrados y rectangulares el caño que
+  llega se corta recto a ras de la cara del que pasa (antes copiaba el radio de la esquina y lo
+  rellenaba); el caño redondo sigue con la boca de pescado y "Recortar/Alargar" contra un miembro
+  sigue ajustando contra el sólido.
 - **Arreglado: Vista de sección no se sacaba con el botón después de reconstruir la pieza.**
 - **Barrita sobre la vista con Vista de sección y Estilo de visualización, como SW 2018**
   (`swui/fork/view_bar.py`, `section_view.py`). Vista de sección con panel SW (plano, invertir,
