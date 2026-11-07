@@ -5,6 +5,8 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Clic sobre lo que ya está elegido lo suelta, como SW 2018** (`swui/fork/click_toggle.py`). Antes
+  FreeCAD pasaba a elegir lo que lo contiene (plano -> Origen -> Cuerpo).
 - **Esc deselecciona, como SW 2018** (`swui/fork/esc_deselect.py`): con algo elegido (plano, cara,
   arista, operación) en la vista 3D o en el árbol, Esc deja sin nada elegido. Con un panel abierto o
   editando un croquis, Esc sigue haciendo lo de siempre.

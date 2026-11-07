@@ -137,6 +137,9 @@ def install(workbench=None):
         from swui.fork import esc_deselect  # Esc deselecciona, como SW
 
         esc_deselect.install()
+        from swui.fork import click_toggle  # clic sobre lo elegido lo suelta (no sube a Origen/Cuerpo)
+
+        click_toggle.install()
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] Esc deselecciona:\n%s\n" % traceback.format_exc())
     try:

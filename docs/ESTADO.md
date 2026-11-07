@@ -1,5 +1,16 @@
 # Estado del fork
 
+**06/11, clic sobre lo ya elegido lo suelta, como SW: HECHO** (reporte del usuario: clics seguidos
+sobre Vista lateral iban plano -> Origen -> Cuerpo -> plano). Es de FreeCAD 1.1.4: un clic sobre lo
+elegido elige lo que lo contiene. Relevado en SW con el mouse: Vista lateral elegida + clic en su
+borde -> nada elegido; cara elegida + clic -> nada elegido; nunca sube a Origen ni a la pieza.
+`swui/fork/click_toggle.py`: filtro de la aplicación solo en el widget de dibujo de la vista 3D
+(el clic sube a los padres: mirarlos daba un "apretar" sin "soltar"), clic izquierdo sin teclas y
+sin mover; si FreeCAD subió a lo que contiene lo elegido, deselecciona. Ctrl + clic sigue como en
+FreeCAD. Probado con guion (4 clics: plano, nada, plano, nada) y con el mouse en FreeCAD de prueba
+(borde de Vista lateral y cara de la pieza). Un clic justo sobre una agarradera la toma (no cambia la
+selección), como SW. Falta que lo pruebe el usuario.
+
 **06/11, Esc deselecciona, como SW: HECHO** (pedido del usuario: "al apretar ESC no debería
 deseleccionarse el plano seleccionado?"). Relevado en SW con el mouse: Alzado elegido, Esc -> nada
 elegido (en SW vale para cualquier selección). `swui/fork/esc_deselect.py`: filtro de la aplicación,
