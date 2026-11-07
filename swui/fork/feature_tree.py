@@ -587,10 +587,22 @@ def creator(feature, face):
     return found
 
 
+def _sketch3d(obj):
+    """El Croquis 3D de lo elegido (la carpeta, una línea o sus cotas), o None."""
+    try:
+        from swui.fork import sketch3d
+
+        return sketch3d.sketch_of(obj)
+    except Exception:
+        return None
+
+
 def menu_commands(objs):
     """Comandos del clic derecho para lo seleccionado (vacío si no es de un cuerpo)."""
     from swui.fork import dress_up_panel as dp
 
+    if objs and _sketch3d(objs[0]) is not None:
+        return [EDIT_SKETCH]  # Croquis 3D (fuera de los Cuerpos), como SW
     if objs and dp.opener(objs[0]) is not None:
         return [EDIT]  # Mover/Copiar o Eliminar sólidos (fuera de los Cuerpos)
     objs = [o for o in objs if body_of(o) is not None and (is_feature(o) or is_sketch(o))]
@@ -1000,6 +1012,9 @@ class _EditSketch(_Command):
     tip = "Abre el croquis de la operación"
 
     def target(self):
+        for o in selected():
+            if _sketch3d(o) is not None:
+                return _sketch3d(o)
         obj = _first(lambda o: is_sketch(o) or is_feature(o))
         if obj is None or is_sketch(obj):
             return obj
@@ -1009,7 +1024,13 @@ class _EditSketch(_Command):
         return _profile_sketch(obj)
 
     def Activated(self):
-        FreeCADGui.ActiveDocument.setEdit(self.target())
+        target = self.target()
+        if _sketch3d(target) is not None:
+            from swui.fork import sketch3d_panel
+
+            sketch3d_panel.open_sketch(target, draw=False)
+            return
+        FreeCADGui.ActiveDocument.setEdit(target)
 
 
 class _Suppress(_Command):

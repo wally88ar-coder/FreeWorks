@@ -26,6 +26,7 @@ Funciones públicas:
     create_members(doc, edges, kind, size, rotation=0, anchor="Centro", mirror=False) -> [Cuerpo]
     find_corners(members), apply_corner(corner, treatment, passing=None), remove_corner(...)
     corner_state(corner), set_profile(bodies, rotation=None, anchor=None)
+    edit_members(group, edges, kind, size, rotation, anchor, mirror, treatment=None), route_edge(body)
     trim_to_member(member, tool), trim_to_face(member, (obj, "FaceN")), extend_to_face(...)
     cut_list(doc) -> filas, cut_list_csv(rows), cut_list_sheet(doc, rows)
     end_cap(member, end, thickness, inset), gusset(a, b, size, thickness)
@@ -656,49 +657,177 @@ def corner_state(corner):
     return "tope", (b if cut_in[0] == a else a)
 
 
-def set_profile(bodies, rotation=None, anchor=None):
-    """Cambiar "Girar ángulo" (grados) y/o "Ubicar perfil" de miembros ya hechos, como Editar
-    operación del Miembro estructural de SW. Gira el perfil en su lugar (y las envolventes que otros
-    miembros usan para recortarse contra él) y rehace las esquinas de esos miembros con el mismo
-    tratamiento que tenían."""
-    if not bodies:
-        return
-    doc = bodies[0].Document
-    for body in bodies:
-        sk = _profile_of(body)
-        old_rot = float(getattr(body, "SWUI_WeldRotation", 0.0))
-        new_rot = old_rot if rotation is None else float(rotation)
-        new_anchor = anchor or getattr(body, "SWUI_WeldAnchor", "Centro")
-        yaw = sk.AttachmentOffset.Rotation.toEuler()[0]
-        auto = yaw - old_rot  # el giro que el perfil necesita para apoyarse en el esqueleto
-        w, h = extent(body.SWUI_WeldKind, list(body.SWUI_WeldDims))
-        rot = FreeCAD.Rotation(V(0, 0, 1), auto + new_rot)
-        sk.AttachmentOffset = FreeCAD.Placement(rot.multVec(_anchor_point(new_anchor, w, h)) * -1, rot)
-        _add_prop(body, "SWUI_WeldRotation", "App::PropertyFloat", new_rot)
-        _add_prop(body, "SWUI_WeldAnchor", "App::PropertyString", new_anchor)
-        route = _route_of(body)
-        for o in doc.Objects:
-            if o is sk or o.TypeId != "Sketcher::SketchObject" or not o.AttachmentSupport:
-                continue
-            binder = o.AttachmentSupport[0][0]
-            if binder.TypeId == "PartDesign::SubShapeBinder" and binder.Support and binder.Support[0][0] == route:
-                o.AttachmentOffset = sk.AttachmentOffset
-    doc.recompute()
+def _envelopes_of(body):
+    """Croquis de envolvente que OTROS miembros usan para recortarse contra `body`."""
+    route = _route_of(body)
+    sk = _profile_of(body)
+    out = []
+    for o in body.Document.Objects:
+        if o is sk or o.TypeId != "Sketcher::SketchObject" or not o.AttachmentSupport:
+            continue
+        binder = o.AttachmentSupport[0][0]
+        if binder.TypeId == "PartDesign::SubShapeBinder" and binder.Support and binder.Support[0][0] == route:
+            out.append(o)
+    return out
+
+
+def _refill(sk, loops, mirror):
+    try:
+        sk.deleteAllGeometry()
+    except Exception:
+        for i in reversed(range(sk.GeometryCount)):
+            sk.delGeometry(i)
+    _fill_sketch(sk, loops, mirror)
+
+
+def _reshape(body, kind=None, size=None, rotation=None, anchor=None, mirror=None):
+    """Cambiar en su lugar el perfil de un miembro (tipo, tamaño, giro, ubicación, simetría) y las
+    envolventes que otros usan para recortarse contra él. Sin tocar las esquinas."""
+    sk = _profile_of(body)
+    old_kind, old_size = body.SWUI_WeldKind, body.SWUI_WeldSize
+    old_rot = float(getattr(body, "SWUI_WeldRotation", 0.0))
+    old_mirror = bool(getattr(body, "SWUI_WeldMirror", False))
+    kind = kind or old_kind
+    size = size or old_size
+    new_rot = old_rot if rotation is None else float(rotation)
+    new_anchor = anchor or getattr(body, "SWUI_WeldAnchor", "Centro")
+    new_mirror = old_mirror if mirror is None else bool(mirror)
+    dims = list(body.SWUI_WeldDims) if (kind, size) == (old_kind, old_size) else [float(x) for x in dims_of(kind, size)]
+    envelopes = _envelopes_of(body)
+    if (kind, size, new_mirror) != (old_kind, old_size, old_mirror):
+        _refill(sk, profile_loops(kind, dims), new_mirror)
+        for env in envelopes:
+            _refill(env, profile_loops(kind, dims, outer_only=True), new_mirror)
+        old_name = "%s %s" % (old_kind, old_size)
+        if body.Label.startswith(old_name):
+            body.Label = "%s %s%s" % (kind, size, body.Label[len(old_name):])
+        for env in envelopes:  # "Envolvente de <miembro>" y su recorte siguen el nombre nuevo
+            env.Label = "Envolvente de " + body.Label
+    yaw = sk.AttachmentOffset.Rotation.toEuler()[0]
+    auto = yaw - old_rot  # el giro que el perfil necesita para apoyarse en el esqueleto
+    w, h = extent(kind, dims)
+    rot = FreeCAD.Rotation(V(0, 0, 1), auto + new_rot)
+    sk.AttachmentOffset = FreeCAD.Placement(rot.multVec(_anchor_point(new_anchor, w, h)) * -1, rot)
+    for env in envelopes:
+        env.AttachmentOffset = sk.AttachmentOffset
+    _add_prop(body, "SWUI_WeldKind", "App::PropertyString", kind)
+    _add_prop(body, "SWUI_WeldSize", "App::PropertyString", size)
+    _add_prop(body, "SWUI_WeldDims", "App::PropertyFloatList", [float(x) for x in dims])
+    _add_prop(body, "SWUI_WeldRotation", "App::PropertyFloat", new_rot)
+    _add_prop(body, "SWUI_WeldAnchor", "App::PropertyString", new_anchor)
+    _add_prop(body, "SWUI_WeldMirror", "App::PropertyBool", new_mirror)
+
+
+def _redo_corners(doc, bodies, treatment=None, new=()):
+    """Rehacer las esquinas de esos miembros: con `treatment` todas iguales; sin él, cada una con el
+    que tenía; las de un miembro recién agregado (nombres en `new`), a tope como SW.
+    Primero se sacan todas y después se rehacen: así una punta compartida por dos esquinas vuelve a
+    cero antes de medirla de nuevo (también en archivos viejos sin el alargue guardado)."""
     names = set(b.Name for b in bodies)
     todo = []
     for c in find_corners(members(doc)):
         if c["a"].Name not in names and c["b"].Name not in names:
             continue
         state = corner_state(c)
+        if treatment is not None and c["a"].Name in names and c["b"].Name in names:
+            state = (treatment, None)
+        elif state is None and (c["a"].Name in new or c["b"].Name in new):
+            state = ("tope", None)
         if state is not None:
             todo.append((c, state))
-    # primero sacar todas y después rehacerlas: así una punta compartida por dos esquinas vuelve a
-    # cero antes de medirla de nuevo (también en archivos viejos sin el alargue guardado)
     for c, _state in todo:
         remove_corner(c["a"], c["b"])
-    for c, (treatment, passing) in todo:
-        apply_corner(c, treatment, passing)
+    for c, (treat, passing) in todo:
+        apply_corner(c, treat, passing)
     doc.recompute()
+
+
+def set_profile(bodies, rotation=None, anchor=None):
+    """Cambiar "Girar ángulo" (grados) y/o "Ubicar perfil" de miembros ya hechos. Gira el perfil en
+    su lugar (y las envolventes que otros miembros usan para recortarse contra él) y rehace las
+    esquinas de esos miembros con el mismo tratamiento que tenían."""
+    if not bodies:
+        return
+    doc = bodies[0].Document
+    for body in bodies:
+        _reshape(body, rotation=rotation, anchor=anchor)
+    doc.recompute()
+    _redo_corners(doc, bodies)
+
+
+def route_edge(body):
+    """(objeto, "EdgeN") de la línea del esqueleto sobre la que está el miembro."""
+    sup = _route_of(body).Support
+    obj, subs = sup[0]
+    return obj, (subs[0] if isinstance(subs, (tuple, list)) else subs)
+
+
+def _forget(body):
+    """Sacar de los otros miembros todo lo que depende de `body` (esquinas, recortes contra él)."""
+    doc = body.Document
+    for c in find_corners(members(doc)):
+        if body in (c["a"], c["b"]):
+            remove_corner(c["a"], c["b"])
+    for other in members(doc):
+        if other is body:
+            continue
+        for o in list(other.Group):
+            cid = getattr(o, "SWUI_WeldCorner", "")
+            if cid.startswith("trim|") and body.Name in cid.split("|"):
+                other.removeObject(o)
+                doc.removeObject(o.Name)
+        tags = _ext_tags(other)
+        gone = [k for k in tags if k.startswith("trim|") and body.Name in k.split("|")]
+        for k in gone:
+            end = tags.pop(k)[0]
+            _set_ext_tags(other, tags)
+            _apply_ext(other, end, tags)
+    doc.recompute()
+
+
+def edit_members(group, edges, kind, size, rotation=0.0, anchor="Centro", mirror=False, treatment=None):
+    """Editar operación de un Miembro estructural ya hecho, como SW: mismas opciones que al crearlo.
+    `group` = la carpeta "Miembro estructuralN"; `edges` = las líneas del esqueleto que quedan (las
+    que se sacan borran su caño, las nuevas lo agregan); los caños que siguen se cambian EN SU LUGAR
+    (no se borran: las tapas, cartelas y recortes apoyados en ellos no se pierden). `treatment`:
+    "tope", "inglete", "ninguno" o None (cada esquina como estaba; las nuevas, a tope).
+    Devuelve los miembros de la carpeta."""
+    doc = group.Document
+    current = [m for m in group.Group if is_member(m)]
+    keys = [(o.Name, sub) for o, sub in edges]
+    keep, drop = [], []
+    for m in current:
+        try:
+            obj, sub = route_edge(m)
+            key = (obj.Name, sub)
+        except Exception:
+            key = None
+        (keep if key in keys else drop).append(m)
+    for m in drop:
+        _forget(m)
+        group.removeObject(m)
+        m.removeObjectsFromDocument()
+        doc.removeObject(m.Name)
+    have = []
+    for m in keep:
+        obj, sub = route_edge(m)
+        have.append((obj.Name, sub))
+    for m in keep:
+        _reshape(m, kind, size, rotation, anchor, mirror)
+    doc.recompute()
+    n = len(current)
+    new = set()
+    for o, sub in edges:
+        if (o.Name, sub) in have:
+            continue
+        n += 1
+        b = create_member(doc, (o, sub), kind, size, rotation, anchor, mirror,
+                          label="%s %s (%d)" % (kind, size, n))
+        group.addObject(b)
+        new.add(b.Name)
+    bodies = [m for m in group.Group if is_member(m)]
+    _redo_corners(doc, bodies, treatment, new)
+    return bodies
 
 
 def apply_corners(bodies, treatment="tope"):

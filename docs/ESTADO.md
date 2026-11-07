@@ -24,6 +24,19 @@ deleted" al elegir una línea: panel cerrado por FreeCAD sin Cancelar dejaba el 
 ahora usa panel_guard (track/orphaned) y se apaga solo, y reabrir con otro abierto lo cierra
 guardando. Probado por guion con cursor y teclas de verdad; falta que el usuario lo vuelva a probar.
 
+**07/11 tarde, Editar operación del Miembro estructural completo y Editar croquis del Croquis 3D**
+(pregunta del usuario: "¿cómo edito la operación desde el panel?"; "si"): clic derecho > Editar
+operación sobre la carpeta "Miembro estructuralN" o un caño reabre el panel de Miembro estructural
+con los valores actuales (tipo, tamaño, líneas, giro, ubicación, simetría; esquinas "Como están" o
+todas iguales). `weldments.edit_members`: los caños que siguen se cambian EN SU LUGAR (perfil y
+envolventes rehechos, nombre al tamaño nuevo), las líneas sacadas borran su caño y lo que dependía de
+él (esquinas, recortes contra él), las nuevas agregan caño con esquina a tope; así no se pierden
+tapas, cartelas ni recortes. Reemplaza al panel chico de giro/ubicación de un rato antes. Croquis 3D:
+clic derecho > Editar croquis (además del doble clic). Probado por guion sobre una copia de "bug
+estructura": 40x40 a 50x50 con giro 0, sacar y volver a poner una pata, todo a inglete y de vuelta a
+tope: sin interferencias ni errores; panel abierto de verdad, Aceptar y Deshacer. Falta que lo pruebe
+el usuario.
+
 **07/11 tarde, "bug estructura" del usuario (mesa con esquinas tope > inglete > tope):** no era de
 las esquinas: los 8 caños tenían Girar ángulo = -2° (casi seguro la ruedita del mouse sobre la cajita
 al bajar el panel), y las uniones quedaban torcidas. Arreglado: (1) las cajitas y listas de los

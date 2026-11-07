@@ -10,7 +10,8 @@ Neueste Version oben. / Newest version first.
   enganchan a X, Y o Z, a puntos, al origen y a vértices de la pieza; Tab cambia el plano (Alzado,
   Vista lateral, Planta) y Ctrl + clic toma una cara o un plano; el largo se escribe mientras se
   dibuja y queda como cota (D1@Croquis3D1, visible en Ecuaciones). Relaciones A lo largo de X/Y/Z,
-  Paralela, Igual y Fijar; líneas negras (definidas) y azules. Hecho con líneas nativas de FreeCAD
+  Paralela, Igual y Fijar; líneas negras (definidas) y azules. Se edita con doble clic o con clic
+  derecho > Editar croquis. Hecho con líneas nativas de FreeCAD
   atadas con fórmulas: abre sin FreeWorks. Solo líneas (sin arcos) y sin resolvedor libre.
   Después de la primera prueba del usuario: el largo se escribe en la misma cajita con cota gris
   que usa el croquis 2D; enganche a puntos más grande; arreglado el error "QListWidget already
@@ -20,8 +21,9 @@ Neueste Version oben. / Newest version first.
   esqueleto, con vista previa), Esquinas (a tope eligiendo cuál pasa, o inglete), Recortar/Alargar
   (contra otro miembro o una cara plana), Tapa de extremo, Cartela y Lista de cortes (largos,
   ángulos y peso; CSV para Excel o planilla para los planos). Todo con operaciones nativas de FreeCAD.
-  Después de la prueba del usuario ("bug estructura"): Editar operación sobre la carpeta del Miembro
-  estructural cambia Girar ángulo y Ubicar perfil de miembros ya hechos (rehace las esquinas); las
+  Después de la prueba del usuario ("bug estructura"): Editar operación (clic derecho sobre la carpeta
+  del Miembro estructural o un caño) reabre el mismo panel con todo editable, como SW: tipo, tamaño,
+  líneas, giro, ubicación, simetría y esquinas; los caños se cambian en su lugar, sin borrarlos; las
   cajitas y listas de los paneles ya no cambian con la ruedita si no se hizo clic en ellas; en una
   esquina de tres caños, cambiar una esquina ya no acorta la punta que usa la otra.
 - **Arreglado: Vista de sección no se sacaba con el botón después de reconstruir la pieza.**

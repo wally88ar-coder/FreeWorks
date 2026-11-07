@@ -12,8 +12,9 @@ funciones de weldments.py (regla "panel = cara de una función").
   Lista de cortes      tabla agrupada; exportar CSV (Excel) o insertarla como planilla
   Tapa de extremo      cara de la punta de un miembro, espesor y separación del borde
   Cartela              dos miembros en esquina, tamaño y espesor
-  Editar miembro       (clic derecho > Editar operación sobre la carpeta "Miembro estructuralN")
-                       girar ángulo y ubicar perfil de miembros ya hechos; las esquinas se rehacen
+  Editar miembro       clic derecho > Editar operación sobre la carpeta "Miembro estructuralN" (o un
+                       caño): el mismo panel con los valores actuales, todo editable; los caños se
+                       cambian en su lugar (no se pierden tapas, cartelas ni recortes apoyados en ellos)
 
 Las cajitas numéricas y las listas desplegables de estos paneles no toman la ruedita del mouse si no
 se hizo clic en ellas: la ruedita baja el panel (un -2° puesto sin querer torcía todos los caños,
@@ -163,7 +164,7 @@ class _Base:
         return True
 
     def getStandardButtons(self):
-        return int(QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel)
+        return QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel
 
 
 def _selected_edges():
@@ -183,13 +184,49 @@ def _selected_edges():
 class MemberPanel(_Base):
     title = "Miembro estructural"
 
-    def __init__(self):
+    KEEP = "Como están"
+
+    def __init__(self, group=None):
+        """Sin `group`: Miembro estructural nuevo. Con `group` (carpeta "Miembro estructuralN"):
+        Editar operación, como SW: el mismo panel con los valores actuales; los caños se cambian en
+        su lugar (weldments.edit_members)."""
         super().__init__()
+        self.edit = group
         self.bodies = []
         self.group = None
         self.edges = []
         self.form = self._build()
+        if group is not None:
+            self._load(group)
         self._selection_changed()
+
+    def _load(self, group):
+        self.bodies = [m for m in group.Group if w.is_member(m)]
+        self.group = group
+        self.edges = [w.route_edge(m) for m in self.bodies]
+        first = self.bodies[0]
+        for wdg in (self.kind, self.size, self.rot, self.anchor, self.mirror, self.corner):
+            wdg.blockSignals(True)
+        names = [self.kind.itemText(i) for i in range(self.kind.count())]
+        if first.SWUI_WeldKind in names:
+            self.kind.setCurrentIndex(names.index(first.SWUI_WeldKind))
+        self.kind.blockSignals(False)
+        self._fill_sizes()
+        self.size.blockSignals(True)
+        sizes = [self.size.itemText(i) for i in range(self.size.count())]
+        if first.SWUI_WeldSize in sizes:
+            self.size.setCurrentIndex(sizes.index(first.SWUI_WeldSize))
+        self.rot.setValue(float(getattr(first, "SWUI_WeldRotation", 0.0)))
+        anchors = list(w.ANCHORS)
+        if getattr(first, "SWUI_WeldAnchor", "Centro") in anchors:
+            self.anchor.setCurrentIndex(anchors.index(first.SWUI_WeldAnchor))
+        self.mirror.setChecked(bool(getattr(first, "SWUI_WeldMirror", False)))
+        self.corner.insertItem(0, self.KEEP)
+        self.corner.setCurrentIndex(0)
+        for wdg in (self.kind, self.size, self.rot, self.anchor, self.mirror, self.corner):
+            wdg.blockSignals(False)
+        self._timer.stop()
+        self._refresh_list()
 
     def _build(self):
         f = QtWidgets.QWidget()
@@ -290,7 +327,17 @@ class MemberPanel(_Base):
     def _refresh_list(self):
         self.list.clear()
         for o, sub in self.edges:
-            self.list.addItem("%s@%s" % (sub.replace("Edge", "Línea"), o.Label))
+            parent = None
+            try:
+                from swui.fork import sketch3d
+
+                parent = sketch3d.sketch_of(o) if sketch3d.is_line(o) else None
+            except Exception:
+                pass
+            if parent is not None:  # línea de un Croquis 3D: "Línea3D2@Croquis3D1", como SW
+                self.list.addItem("%s@%s" % (o.Label, parent.Label))
+            else:
+                self.list.addItem("%s@%s" % (sub.replace("Edge", "Línea"), o.Label))
 
     def _remove_current(self):
         i = self.list.currentRow()
@@ -300,10 +347,32 @@ class MemberPanel(_Base):
             self._changed()
 
     def _clear_preview(self):
+        if self.edit is not None:
+            return  # editando: los caños se cambian en su lugar, no se borran
         _remove_bodies(self.doc, self.bodies, self.group)
         self.bodies, self.group = [], None
 
+    def _treatment(self):
+        text = self.corner.currentText()
+        if text == self.KEEP:
+            return None
+        return dict(CORNER_TEXTS)[text]
+
+    def _preview_edit(self):
+        if not self.edges or not self.size.currentText():
+            return  # sin líneas no se borra la operación entera: Aceptar avisa
+        try:
+            self.bodies = w.edit_members(self.edit, self.edges, self.kind.currentText(), self.size.currentText(),
+                                         self.rot.value(), self.anchor.currentText(), self.mirror.isChecked(),
+                                         self._treatment())
+            self.doc.recompute()
+        except Exception:
+            FreeCAD.Console.PrintError("[SWUI fork] Editar miembro estructural:\n%s\n" % traceback.format_exc())
+
     def _preview(self):
+        if self.edit is not None:
+            self._preview_edit()
+            return
         self._clear_preview()
         if not self.edges or not self.size.currentText():
             self.doc.recompute()
@@ -320,6 +389,11 @@ class MemberPanel(_Base):
             FreeCAD.Console.PrintError("[SWUI fork] Miembro estructural:\n%s\n" % traceback.format_exc())
 
     def _apply_final(self):
+        if self.edit is not None:
+            if not self.edges:
+                raise ValueError("dejá al menos una línea (para sacar el miembro entero, borralo del árbol)")
+            self._preview()
+            return
         if not self.bodies:
             self._preview()
         if not self.bodies:
@@ -389,57 +463,6 @@ class CornersPanel(_Base):
 # --- Editar miembro estructural --------------------------------------------------------------------
 
 
-class EditMemberPanel(_Base):
-    """Editar operación de un Miembro estructural ya hecho (como SW): girar ángulo y ubicar perfil.
-    Llama a weldments.set_profile, que gira los perfiles en su lugar y rehace las esquinas."""
-
-    title = "Miembro estructural"
-
-    def __init__(self, bodies, label=""):
-        super().__init__()
-        self.bodies = bodies
-        self.label = label
-        self.form = self._build()
-
-    def _build(self):
-        f = QtWidgets.QWidget()
-        f.setWindowTitle(self.title)
-        lay = QtWidgets.QVBoxLayout(f)
-        first = self.bodies[0]
-        info = QtWidgets.QLabel("%s: %d miembros de %s %s" % (self.label or "Miembro estructural", len(self.bodies),
-                                                            first.SWUI_WeldKind, first.SWUI_WeldSize))
-        info.setWordWrap(True)
-        lay.addWidget(info)
-        conf = QtWidgets.QGroupBox("Configuración")
-        c = QtWidgets.QFormLayout(conf)
-        self.rot = QtWidgets.QDoubleSpinBox()
-        self.rot.setRange(-360, 360)
-        self.rot.setSuffix(" °")
-        self.rot.setValue(float(getattr(first, "SWUI_WeldRotation", 0.0)))
-        self.rot.valueChanged.connect(self._changed)
-        self.anchor = QtWidgets.QComboBox()
-        self.anchor.addItems(list(w.ANCHORS))
-        current = getattr(first, "SWUI_WeldAnchor", "Centro")
-        if current in w.ANCHORS:
-            self.anchor.setCurrentIndex(list(w.ANCHORS).index(current))
-        self.anchor.currentIndexChanged.connect(self._changed)
-        c.addRow("Girar ángulo", self.rot)
-        c.addRow("Ubicar perfil", self.anchor)
-        lay.addWidget(conf)
-        hint = QtWidgets.QLabel("Las esquinas de estos miembros se rehacen con el mismo tratamiento que tenían.")
-        hint.setWordWrap(True)
-        lay.addWidget(hint)
-        lay.addStretch(1)
-        return f
-
-    def _preview(self):
-        try:
-            w.set_profile(self.bodies, self.rot.value(), self.anchor.currentText())
-            self.doc.recompute()
-        except Exception:
-            FreeCAD.Console.PrintError("[SWUI fork] Editar miembro estructural:\n%s\n" % traceback.format_exc())
-
-
 def _member_group(obj):
     """Carpeta "Miembro estructuralN" de lo elegido (la carpeta, un caño o su extrusión), o None."""
     if obj is None:
@@ -453,9 +476,8 @@ def _member_group(obj):
 
 
 def open_edit_member(group):
-    bodies = [m for m in group.Group if w.is_member(m)]
-    if bodies:
-        _open(EditMemberPanel, bodies, group.Label)
+    if any(w.is_member(m) for m in group.Group):
+        _open(MemberPanel, group)
 
 
 # --- Recortar / Alargar ------------------------------------------------------------------------------
