@@ -249,23 +249,28 @@ def _profile_rotation(sketch_pl, normal, edge_dir):
     return math.degrees(math.atan2(-n.dot(xl), n.dot(yl)))
 
 
-def _pad_of(body):
-    for o in body.Group:
-        if o.TypeId == "PartDesign::Pad" and o.Name.startswith("Miembro"):
-            return o
-    return None
-
-
 def _route_of(body):
+    """La Ruta del miembro: el primer SubShapeBinder del Cuerpo (se busca por cómo está armado, no
+    por el nombre: FreeWorks les cambia el nombre a los croquis y operaciones nuevos, como SW)."""
     for o in body.Group:
-        if o.TypeId == "PartDesign::SubShapeBinder" and o.Label.startswith("Ruta"):
+        if o.TypeId == "PartDesign::SubShapeBinder":
             return o
     return None
 
 
 def _profile_of(body):
+    """El croquis del perfil: acoplado a la Ruta y usado por la extrusión del miembro."""
+    pad = _pad_of(body)
+    if pad is not None and pad.Profile:
+        prof = pad.Profile[0] if isinstance(pad.Profile, tuple) else pad.Profile
+        return prof
+    return None
+
+
+def _pad_of(body):
+    """La extrusión del miembro: el primer Pad del Cuerpo."""
     for o in body.Group:
-        if o.TypeId == "Sketcher::SketchObject" and o.Label.startswith("Perfil"):
+        if o.TypeId == "PartDesign::Pad":
             return o
     return None
 
@@ -776,7 +781,22 @@ def cut_list(doc):
                                     "unit_kg": kg, "assumed_steel": assumed, "members": []})
         g["qty"] += 1
         g["members"].append(b.Label)
-    rows = sorted(groups.values(), key=lambda g: (g["profile"], -g["length"]))
+    # tapas y cartelas (como SW: van en la lista como chapas, sin largo ni ángulos)
+    for b in doc.Objects:
+        desc = getattr(b, "SWUI_WeldPlate", "")
+        if not desc:
+            continue
+        try:
+            rho, assumed = _density(b)
+            kg = b.Shape.Volume * rho
+        except Exception:
+            continue
+        g = groups.setdefault(("chapa", desc), {"qty": 0, "profile": desc, "length": None, "angle1": "",
+                                                "angle2": "", "unit_kg": kg, "assumed_steel": assumed,
+                                                "members": []})
+        g["qty"] += 1
+        g["members"].append(b.Label)
+    rows = sorted(groups.values(), key=lambda g: (g["length"] is None, g["profile"], -(g["length"] or 0)))
     for i, r in enumerate(rows):
         r["n"] = i + 1
         r["total_kg"] = r["unit_kg"] * r["qty"]
@@ -784,14 +804,20 @@ def cut_list(doc):
 
 
 def _angle_text(a):
+    if a == "":
+        return ""
     return "a medida" if a is None else _fmt(a)
+
+
+def _length_text(x):
+    return "" if x is None else _fmt(x)
 
 
 def cut_list_csv(rows):
     """Texto CSV para Excel en castellano (punto y coma, coma decimal)."""
     lines = ["Nº;Cant.;Perfil;Largo (mm);Ángulo 1;Ángulo 2;Peso unit. (kg);Peso total (kg)"]
     for r in rows:
-        lines.append(";".join([str(r["n"]), str(r["qty"]), r["profile"], _fmt(r["length"]),
+        lines.append(";".join([str(r["n"]), str(r["qty"]), r["profile"], _length_text(r["length"]),
                                _angle_text(r["angle1"]), _angle_text(r["angle2"]),
                                _fmt(round(r["unit_kg"], 2)), _fmt(round(r["total_kg"], 2))]))
     total = sum(r["total_kg"] for r in rows)
@@ -812,7 +838,8 @@ def cut_list_sheet(doc, rows, name="ListaDeCortes"):
     for c, h in zip(cols, heads):
         sheet.set("%s1" % c, h)
     for i, r in enumerate(rows):
-        vals = [r["n"], r["qty"], r["profile"], round(r["length"], 1), _angle_text(r["angle1"]),
+        vals = [r["n"], r["qty"], r["profile"], "" if r["length"] is None else round(r["length"], 1),
+                _angle_text(r["angle1"]),
                 _angle_text(r["angle2"]), round(r["unit_kg"], 2), round(r["total_kg"], 2)]
         for c, v in zip(cols, vals):
             sheet.set("%s%d" % (c, i + 2), ("'" + v) if isinstance(v, str) else str(v))
@@ -863,6 +890,9 @@ def end_cap(member, end, thickness=3.0, inset=0.0):
     pad.Profile = sk
     pad.Length = float(thickness)
     _add_prop(body, "SWUI_WeldPart", "App::PropertyString", "tapa")
+    w_, h_ = extent(kind, dims)
+    _add_prop(body, "SWUI_WeldPlate", "App::PropertyString", "Tapa de extremo %sx%s e=%s" % (
+        _fmt(w_ - 2 * inset), _fmt(h_ - 2 * inset), _fmt(thickness)))
     doc.recompute()
     return body
 
@@ -871,16 +901,24 @@ def gusset(a, b, size=80.0, thickness=6.0):
     """Cartela triangular (como SW) en la esquina entre dos miembros, en el plano de los dos, centrada
     en su espesor. Un Cuerpo aparte, ubicado al crearla."""
     doc = a.Document
-    corners = [c for c in find_corners([a, b])]
-    if not corners:
-        raise ValueError("Los miembros no forman una esquina")
-    c = corners[0]
-    p = c["point"]
-    ua = _away(a, c["end_a"]) if c["end_a"] is not None else None
-    ub = _away(b, c["end_b"])
-    if ua is None:  # T: la cartela va del lado del miembro b
-        a0, a1, da = axis(a)
-        ua = da
+    # la esquina = el cruce de los ejes (no de las líneas del esqueleto: un miembro alargado con
+    # Recortar/Alargar no llega en el esqueleto; visto con el mouse 07/11)
+    a0, a1, da = axis(a)
+    b0, b1, db = axis(b)
+    w0 = a0 - b0
+    aa, bb, cc, dd, ee = da.dot(da), da.dot(db), db.dot(db), da.dot(w0), db.dot(w0)
+    den = aa * cc - bb * bb
+    if abs(den) < 1e-9:
+        raise ValueError("Los miembros están en línea")
+    sa = (bb * ee - cc * dd) / den
+    sb = (aa * ee - bb * dd) / den
+    pa, pb = a0 + da * sa, b0 + db * sb
+    if (pa - pb).Length > 1.0:
+        raise ValueError("Los miembros no forman una esquina (sus ejes no se cruzan)")
+    p = (pa + pb) * 0.5
+    # cada lado de la cartela va hacia donde está la mayor parte del miembro
+    ua = da if ((a0 + a1) * 0.5 - p).dot(da) >= 0 else da * -1
+    ub = db if ((b0 + b1) * 0.5 - p).dot(db) >= 0 else db * -1
     n = ua.cross(ub)
     if n.Length < 1e-9:
         raise ValueError("Los miembros están en línea")
@@ -909,5 +947,7 @@ def gusset(a, b, size=80.0, thickness=6.0):
     pad.SideType = "Symmetric"
     pad.Length = float(thickness)
     _add_prop(body, "SWUI_WeldPart", "App::PropertyString", "cartela")
+    _add_prop(body, "SWUI_WeldPlate", "App::PropertyString", "Cartela %sx%s e=%s" % (
+        _fmt(size), _fmt(size), _fmt(thickness)))
     doc.recompute()
     return body

@@ -204,9 +204,13 @@ class MemberPanel(_Base):
         self.list = QtWidgets.QListWidget()
         self.list.setMaximumHeight(110)
         v.addWidget(self.list)
-        hint = QtWidgets.QLabel("Elegí las líneas del croquis esqueleto en la vista (otro clic la saca).")
+        hint = QtWidgets.QLabel("Hacé clic en las líneas del croquis esqueleto: cada clic suma una línea, "
+                                "otro clic en la misma la saca.")
         hint.setWordWrap(True)
         v.addWidget(hint)
+        rm = QtWidgets.QPushButton("Quitar la línea marcada de la lista")
+        rm.clicked.connect(self._remove_current)
+        v.addWidget(rm)
         lay.addWidget(seg)
         conf = QtWidgets.QGroupBox("Configuración")
         c = QtWidgets.QFormLayout(conf)
@@ -244,15 +248,36 @@ class MemberPanel(_Base):
         self._changed()
 
     def _selection_changed(self):
-        edges = _selected_edges()
-        keys = [(o.Name, s) for o, s in edges]
-        if keys == [(o.Name, s) for o, s in self.edges]:
+        # como SW: cada clic SUMA la línea (FreeCAD reemplaza la selección en cada clic común);
+        # otro clic en una línea que ya está la saca. Las caras de los miembros de la vista previa
+        # no cuentan.
+        picked = _selected_edges()
+        if not picked:
             return
-        self.edges = edges
-        self.list.clear()
-        for o, s in edges:
-            self.list.addItem("%s - %s" % (o.Label, s.replace("Edge", "Línea ")))
+        for o, sub in picked:
+            keys = [(e[0].Name, e[1]) for e in self.edges]
+            key = (o.Name, sub)
+            if key in keys:
+                self.edges.pop(keys.index(key))
+            else:
+                self.edges.append((o, sub))
+        # la selección de FreeCAD se vacía: así el próximo clic en la misma línea la vuelve a elegir
+        # (y la saca de la lista), como SW
+        QtCore.QTimer.singleShot(0, FreeCADGui.Selection.clearSelection)
+        self._refresh_list()
         self._changed()
+
+    def _refresh_list(self):
+        self.list.clear()
+        for o, sub in self.edges:
+            self.list.addItem("%s - %s" % (o.Label, sub.replace("Edge", "Línea ")))
+
+    def _remove_current(self):
+        i = self.list.currentRow()
+        if 0 <= i < len(self.edges):
+            self.edges.pop(i)
+            self._refresh_list()
+            self._changed()
 
     def _clear_preview(self):
         _remove_bodies(self.doc, self.bodies, self.group)
@@ -375,6 +400,11 @@ class TrimPanel(_Base):
         b2 = QtWidgets.QPushButton("Elegir el límite (otro miembro o una cara plana)")
         b2.clicked.connect(lambda: self._activate("boundary"))
         v2.addWidget(b2)
+        self.as_body = QtWidgets.QRadioButton("Cuerpo (ajuste exacto contra el miembro)")
+        self.as_face = QtWidgets.QRadioButton("Cara plana (corte recto en el plano de la cara)")
+        self.as_body.setChecked(True)
+        v2.addWidget(self.as_body)
+        v2.addWidget(self.as_face)
         self.kind_lbl = QtWidgets.QLabel("")
         v2.addWidget(self.kind_lbl)
         lay.addWidget(self.b_box)
@@ -415,7 +445,13 @@ class TrimPanel(_Base):
                 self.t_list.addItem(member.Label)
         else:
             el = sub.split(".")[-1] if sub else ""
-            if member is not None and not el.startswith("Face"):
+            if member is not None and self.as_body.isChecked():
+                # como SW: si el límite es otro miembro, por defecto es el cuerpo (ajuste exacto)
+                self.boundary = ("member", member)
+                self.b_text.setText(member.Label)
+                self.kind_lbl.setText("Ajuste exacto contra el miembro (cuerpo)")
+                self._face_pick = (leaf, el) if el.startswith("Face") else None
+            elif member is not None and not el.startswith("Face"):
                 self.boundary = ("member", member)
                 self.b_text.setText(member.Label)
                 self.kind_lbl.setText("Ajuste exacto contra el miembro (cuerpo)")
@@ -464,7 +500,7 @@ class EndCapPanel(_Base):
         g = QtWidgets.QFormLayout(f)
         self.face = QtWidgets.QLineEdit()
         self.face.setReadOnly(True)
-        g.addRow("Cara de la punta", self.face)
+        g.addRow("Punta", self.face)
         self.thick = QtWidgets.QDoubleSpinBox()
         self.thick.setRange(0.5, 100)
         self.thick.setValue(3.0)
@@ -474,14 +510,15 @@ class EndCapPanel(_Base):
         self.inset.setSuffix(" mm")
         g.addRow("Espesor", self.thick)
         g.addRow("Distancia al borde", self.inset)
-        hint = QtWidgets.QLabel("Elegí la cara de la punta de un miembro.")
+        hint = QtWidgets.QLabel("Hacé clic en el miembro cerca de la punta que querés tapar.")
         hint.setWordWrap(True)
         g.addRow(hint)
         return f
 
     def _selection_changed(self):
         for s in FreeCADGui.Selection.getSelectionEx("", 0):
-            for sub in s.SubElementNames:
+            picked = list(getattr(s, "PickedPoints", []) or [])
+            for k, sub in enumerate(s.SubElementNames):
                 leaf = s.Object.getSubObject(sub, retType=1)
                 member = _owner_member(leaf) if leaf is not None else None
                 if member is None:
@@ -491,9 +528,11 @@ class EndCapPanel(_Base):
                             member = o
                 if member is None or not sub.split(".")[-1].startswith("Face"):
                     continue
+                # cualquier cara del miembro: la tapa va a la punta más cercana al clic (la cara de la
+                # punta de un caño es un anillo finito, difícil de acertar)
                 face = s.Object.getSubObject(sub)
                 a0, a1, d = w.axis(member)
-                c = face.CenterOfMass
+                c = picked[k] if k < len(picked) else face.CenterOfMass
                 end = 0 if (c - a0).Length < (c - a1).Length else 1
                 self.pick = (member, end)
                 self.face.setText("%s (punta %d)" % (member.Label, end + 1))
@@ -530,7 +569,7 @@ class GussetPanel(_Base):
         self.thick.setSuffix(" mm")
         g.addRow("Largo de los lados", self.size)
         g.addRow("Espesor", self.thick)
-        hint = QtWidgets.QLabel("Elegí una cara de cada uno de los dos miembros que forman la esquina.")
+        hint = QtWidgets.QLabel("Hacé clic en cada uno de los dos miembros que forman la esquina.")
         hint.setWordWrap(True)
         g.addRow(hint)
         return f
@@ -548,7 +587,12 @@ class GussetPanel(_Base):
                             member = o
                 if member is not None and member not in found:
                     found.append(member)
-        self.members = found[:2]
+        # cada clic suma un miembro (FreeCAD reemplaza la selección); quedan los dos últimos
+        for m in found:
+            if m in self.members:
+                continue
+            self.members.append(m)
+        self.members = self.members[-2:]
         self.which.setText(" / ".join(m.Label for m in self.members))
 
     def _apply_final(self):
@@ -573,7 +617,7 @@ def show_cut_list(doc=None):
     table.setHorizontalHeaderLabels(heads)
     table.verticalHeader().setVisible(False)
     for i, r in enumerate(rows):
-        vals = [str(r["n"]), str(r["qty"]), r["profile"], w._fmt(r["length"]), w._angle_text(r["angle1"]),
+        vals = [str(r["n"]), str(r["qty"]), r["profile"], w._length_text(r["length"]), w._angle_text(r["angle1"]),
                 w._angle_text(r["angle2"]), w._fmt(round(r["unit_kg"], 2)), w._fmt(round(r["total_kg"], 2))]
         for j, v in enumerate(vals):
             it = QtWidgets.QTableWidgetItem(v)
