@@ -5,6 +5,11 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Piezas soldadas, como SW 2018** (`swui/fork/weldments.py`, `weld_panels.py`, `weld_tab.py`):
+  pestaña nueva con Miembro estructural (caños, ángulos, planchuelas y UPN sobre un croquis
+  esqueleto, con vista previa), Esquinas (a tope eligiendo cuál pasa, o inglete), Recortar/Alargar
+  (contra otro miembro o una cara plana), Tapa de extremo, Cartela y Lista de cortes (largos,
+  ángulos y peso; CSV para Excel o planilla para los planos). Todo con operaciones nativas de FreeCAD.
 - **Arreglado: Vista de sección no se sacaba con el botón después de reconstruir la pieza.**
 - **Barrita sobre la vista con Vista de sección y Estilo de visualización, como SW 2018**
   (`swui/fork/view_bar.py`, `section_view.py`). Vista de sección con panel SW (plano, invertir,

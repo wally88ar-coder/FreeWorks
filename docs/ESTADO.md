@@ -1,5 +1,33 @@
 # Estado del fork
 
+**07/11, PIEZAS SOLDADAS (etapas 1 a 5 del plan): HECHAS, terminadas a las 01:53** (pedido del usuario:
+"implementá las 5 etapas, decidí vos las 4 cuestiones... las pruebas hacelas vos con mouse").
+Pestaña "Piezas soldadas" (después de Chapa) y menú Insertar > Piezas soldadas: Miembro estructural,
+Esquinas, Recortar/Alargar, Tapa de extremo, Cartela, Lista de cortes. `swui/fork/weldments.py`
+(lógica, funciones públicas), `weld_panels.py` (paneles), `weld_tab.py` (pestaña), 6 íconos nuevos.
+Todo nativo: cada miembro = Cuerpo (Ruta SubShapeBinder de la línea, Perfil NormalToEdge, Pad a dos
+lados con fórmula del largo); a tope / T / ajuste exacto = Pocket con la envolvente del otro (sigue
+al esqueleto); inglete y recorte contra cara = SubtractiveBox (inglete calculado al crearlo).
+**Decisiones tomadas por Claude (el usuario lo delegó):** tabla de perfiles = la del plan (caño
+cuadrado 15 a 100, rectangular 20x10 a 100x50, redondo 1/2" a 3", ángulo 3/4" a 3", planchuela,
+UPN 80 a 200; espesores 0,9 a 3,2); lista de cortes con Nº, cantidad, perfil, largo, ángulo 1 y 2,
+peso unitario y total (sin material = acero 7850 kg/m³, con aviso), exportar CSV para Excel en
+castellano e insertar como planilla; tapas y cartelas entran como chapas; esquina por defecto a
+tope con el más largo pasante; sin pieza del usuario: bastidores de prueba propios.
+Probado: guiones sin pantalla (a tope 640/360, inglete 640/440 a 45°, mesa 3D con patas y T sin
+interferencias, recorte contra cara exacto, boca de pescado "a medida" 283,2, cambio del esqueleto
+600 -> 700 = 740) y con el MOUSE en FreeCAD de prueba: Miembro estructural sumando/sacando líneas,
+vista previa a tope e inglete, Esquinas (cambiar cuál pasa y a inglete), Lista de cortes (CSV y
+planilla), Recortar/Alargar contra miembro y contra cara de una placa, Tapa de extremo, Cartela,
+Ctrl+Z. SW: inglete del mismo marco igual (2 x 640 + 2 x 440 a 45°) y panel de Miembro estructural
+mirado con el mouse (nombres alineados). **Falta / límites:** separación entre miembros (gap) de SW,
+"Grupos" de SW (acá un Miembro estructural por perfil), esquinas de 3 o más miembros en un paso,
+el inglete no sigue si cambia el ángulo del esqueleto (sí la posición), desarrollo de la boca de
+pescado. Falta que lo pruebe el usuario.
+Incidente en las pruebas: dos veces las ventanas se confundieron y toqué el FreeCAD del usuario
+(menú FreeWorks abierto y cerrado; ojo del Cuerpo apagado y vuelto a prender, vista girada); quedó
+como estaba y después lo minimicé.
+
 **07/11, arreglado: el botón de Vista de sección no sacaba el corte después de reconstruir**
 (reporte del usuario). La vista se reconocía por getNodeId() del nodo raíz, que Coin cambia con cada
 cambio de la escena: al reconstruir quedaba un corte guardado con otra clave que el botón no sacaba.
@@ -2180,7 +2208,7 @@ Etapas:
   PEM, varilla, seguir a la placa, BOM): rehacerlo, la copia del scratchpad es temporal.
 - **Piezas soldadas / estructuras** (investigado 01/11; **DECIDIDO por el usuario: Cuerpos nativos,
   usando código de FrameForge cuando sea útil y esté probado**; sin plan ni código; próximo paso:
-  plan en criollo para que lo apruebe). **07/11: plan escrito, esperando el OK del usuario:
+  plan en criollo para que lo apruebe). **07/11: plan aprobado e IMPLEMENTADO (ver arriba):
   https://claude.ai/artifact/LdrD8EznBHjW3zYbYvr7ja** (5 etapas: perfiles y miembro, esquinas, lista
   de cortes, recortar/alargar, extras; pide medidas de caño del proveedor, qué columnas de la lista,
   una pieza soldada suya y la esquina por defecto). Falta mirar con el mouse el panel de Miembro

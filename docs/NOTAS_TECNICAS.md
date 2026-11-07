@@ -915,3 +915,29 @@ que usan está en `tools/test_load.py` (`check_ia`): si una cambia de firma, el 
   punto del plano del croquis = `view.getPointOnFocalPlane(x, y)` (coordenadas Coin) proyectado
   por `getViewDirection()`. La herramienta de mouse de Claude NO genera movimientos sueltos
   (solo el de cada clic): lo que sigue al mouse se prueba con eventos simulados.
+
+
+## Piezas soldadas (07/11): hallazgos en FreeCAD 1.1.4
+
+- Pad y Pocket de 1.1: "TwoLengths" ya no existe en Type; ahora `SideType = "Two sides"` con
+  `Type`/`Type2` = "Length" y `Length`/`Length2`.
+- Croquis acoplado "NormalToEdge" a la arista de un SubShapeBinder: el Pad sale para atrás; con
+  `Reversed = True` va a lo largo de la línea (Length) y Length2 alarga hacia atrás. El Pocket de la
+  envolvente, en cambio, va bien sin invertir.
+- Fórmula del largo: `<NombreDeLaRuta>.Shape.Length` funciona en una expresión. Usar el NOMBRE
+  interno (cada Cuerpo tiene "Ruta", "Ruta001"...): con el rótulo apunta a otra ruta.
+- PartDesign SubtractiveBox con MapMode "Translate": FreeCAD descarta el giro de AttachmentOffset;
+  para el inglete la caja se ubica con Placement directo (calculado al crearla).
+- La numeración "EdgeN" de un croquis es la de su forma (FreeCAD reordena las líneas unidas), no
+  la del orden de dibujo: en los guiones buscar la línea por su geometría.
+- Dentro de FreeCAD, FreeWorks les cambia el rótulo a los croquis y operaciones nuevos (estilo SW):
+  las partes de un miembro se buscan por cómo están armadas (primer SubShapeBinder, primer Pad y
+  su Profile), nunca por el rótulo.
+- Un archivo armado con FreeCADCmd (sin pantalla) abre con las operaciones de PartDesign ocultas
+  (no tiene datos de vista): para pruebas con el mouse, armar los miembros dentro del FreeCAD de
+  prueba.
+- La caja envolvente (BoundBox) de caños redondos sale hasta 6 mm más grande: medir con vértices o
+  `optimalBoundingBox()`. El largo de una boca de pescado se mide con puntos de la superficie
+  (`tessellate`), no con vértices.
+- Comparado con SW (herramienta del puente y con el mouse): marco 600 x 400 en 40x40x2 a inglete =
+  2 x 640 + 2 x 440 a 45° (igual); a tope con los largueros pasantes = largo a ejes + 40 / - 40.

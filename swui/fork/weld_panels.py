@@ -199,13 +199,13 @@ class MemberPanel(_Base):
         g.addRow("Tipo", self.kind)
         g.addRow("Tamaño", self.size)
         lay.addWidget(box)
-        seg = QtWidgets.QGroupBox("Segmentos de trayecto")
+        seg = QtWidgets.QGroupBox("Segmentos del recorrido")
         v = QtWidgets.QVBoxLayout(seg)
         self.list = QtWidgets.QListWidget()
         self.list.setMaximumHeight(110)
         v.addWidget(self.list)
-        hint = QtWidgets.QLabel("Hacé clic en las líneas del croquis esqueleto: cada clic suma una línea, "
-                                "otro clic en la misma la saca.")
+        hint = QtWidgets.QLabel("Hacé clic en las líneas del croquis esqueleto: cada clic suma una línea; "
+                                "un clic en un caño ya puesto lo saca.")
         hint.setWordWrap(True)
         v.addWidget(hint)
         rm = QtWidgets.QPushButton("Quitar la línea marcada de la lista")
@@ -221,7 +221,7 @@ class MemberPanel(_Base):
         self.anchor = QtWidgets.QComboBox()
         self.anchor.addItems(list(w.ANCHORS))
         self.anchor.currentIndexChanged.connect(self._changed)
-        self.mirror = QtWidgets.QCheckBox("Simetría del perfil")
+        self.mirror = QtWidgets.QCheckBox("Simetría de perfil")
         self.mirror.toggled.connect(self._changed)
         c.addRow("Girar ángulo", self.rot)
         c.addRow("Ubicar perfil", self.anchor)
@@ -230,7 +230,7 @@ class MemberPanel(_Base):
         for text, _v in CORNER_TEXTS:
             self.corner.addItem(text)
         self.corner.currentIndexChanged.connect(self._changed)
-        c.addRow("Esquinas", self.corner)
+        c.addRow("Tratamiento de esquinas", self.corner)
         lay.addWidget(conf)
         lay.addStretch(1)
         self._fill_sizes()
@@ -252,6 +252,20 @@ class MemberPanel(_Base):
         # otro clic en una línea que ya está la saca. Las caras de los miembros de la vista previa
         # no cuentan.
         picked = _selected_edges()
+        # clic sobre un caño de la vista previa = clic en su línea (la tapa): la saca de la lista
+        hit = None
+        names = [b.Name for b in self.bodies]
+        for sel in FreeCADGui.Selection.getSelectionEx("", 0):
+            for sub in (sel.SubElementNames or [""]):
+                for part in [sel.Object.Name] + sub.split("."):
+                    if part in names:
+                        hit = names.index(part)
+        if hit is not None and hit < len(self.edges) and not picked:
+            self.edges.pop(hit)
+            QtCore.QTimer.singleShot(0, FreeCADGui.Selection.clearSelection)
+            self._refresh_list()
+            self._changed()
+            return
         if not picked:
             return
         for o, sub in picked:
@@ -270,7 +284,7 @@ class MemberPanel(_Base):
     def _refresh_list(self):
         self.list.clear()
         for o, sub in self.edges:
-            self.list.addItem("%s - %s" % (o.Label, sub.replace("Edge", "Línea ")))
+            self.list.addItem("%s@%s" % (sub.replace("Edge", "Línea"), o.Label))
 
     def _remove_current(self):
         i = self.list.currentRow()
