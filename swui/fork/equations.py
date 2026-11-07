@@ -238,6 +238,8 @@ class Model:
         """[(varset, propiedad)] de todas las variables globales."""
         out = []
         for vs in self.varsets():
+            if _sketch3d_of(vs) is not None:
+                continue  # cotas de un croquis 3D: van como cotas (D1@Croquis3D1), no como variables
             for prop in vs.PropertiesList:
                 if prop in VARSET_BASE or prop.startswith("SWUI_") or vs.getGroupOfProperty(prop) == "Base":
                     continue
@@ -245,6 +247,9 @@ class Model:
         return out
 
     def var_display(self, vs, prop):
+        sk = _sketch3d_of(vs)
+        if sk is not None:
+            return "%s@%s" % (prop, sk.Label)
         main = self.main_varset()
         return prop if vs is main else "%s@%s" % (prop, vs.Label)
 
@@ -311,6 +316,9 @@ class Model:
         if not found:
             return None
         obj = found[0]
+        if obj.TypeId == "App::DocumentObjectGroup" and _sketch3d_of(obj) is not None:  # croquis 3D: sus cotas viven en su VarSet
+            vs = getattr(obj, "SWUI_Sketch3D", None)
+            return (vs, short) if vs is not None and short in vs.PropertiesList else None
         if obj.TypeId == "App::VarSet":
             return (obj, short) if short in obj.PropertiesList else None
         if obj.TypeId == "Sketcher::SketchObject":
@@ -361,8 +369,10 @@ class Model:
         """[(objeto, ruta, expresión)] de todo el documento, salvo las de las variables globales."""
         out = []
         for obj in self.doc.Objects:
-            if obj.TypeId == "App::VarSet" or hasattr(obj, "SWUI_ScopeOf"):
+            if (obj.TypeId == "App::VarSet" and _sketch3d_of(obj) is None) or hasattr(obj, "SWUI_ScopeOf"):
                 continue  # las copias de un corte en otro sólido (multibody.py) siguen al original solas
+            if "SWUI_Sketch3DDef" in obj.PropertiesList:
+                continue  # fórmulas internas de las líneas de un croquis 3D (no son ecuaciones del usuario)
             for path, expr in getattr(obj, "ExpressionEngine", []):
                 out.append((obj, path, expr))
         return out
@@ -383,6 +393,13 @@ class Model:
         """[(nombre SW, objeto, ruta, valor, unidad)] de las cotas del modelo (para insertar)."""
         out = []
         for obj in self.doc.Objects:
+            if obj.TypeId == "App::DocumentObjectGroup" and _sketch3d_of(obj) is not None:
+                vs = getattr(obj, "SWUI_Sketch3D", None)
+                from swui.fork import sketch3d
+
+                for n, value, _line in sketch3d.dims(obj):
+                    out.append(("%s@%s" % (n, obj.Label), vs, n, value, "mm"))
+                continue
             if obj.TypeId == "Sketcher::SketchObject":
                 names = sketch_dim_names([(c.Type, c.Name) for c in obj.Constraints])
                 for index, n in names.items():
@@ -494,6 +511,19 @@ class Model:
         if users:
             raise ValueError("La usan: %s. Sacala primero de esas ecuaciones." % ", ".join(sorted(set(users))))
         vs.removeProperty(prop)
+
+
+def _sketch3d_of(obj):
+    """Croquis 3D (sketch3d.py) del objeto si es el croquis o su VarSet de cotas; si no, None."""
+    if obj is None:
+        return None
+    if obj.TypeId == "App::DocumentObjectGroup" and "SWUI_Sketch3D" in obj.PropertiesList:
+        return obj
+    if obj.TypeId == "App::VarSet":
+        for parent in obj.InList:
+            if "SWUI_Sketch3D" in parent.PropertiesList and getattr(getattr(parent, "SWUI_Sketch3D", None), "Name", None) == obj.Name:
+                return parent
+    return None
 
 
 def note_key(obj, path):
