@@ -1,5 +1,11 @@
 # Estado del fork
 
+**07/11, arreglado: el botón de Vista de sección no sacaba el corte después de reconstruir**
+(reporte del usuario). La vista se reconocía por getNodeId() del nodo raíz, que Coin cambia con cada
+cambio de la escena: al reconstruir quedaba un corte guardado con otra clave que el botón no sacaba.
+Ahora la clave es la dirección del nodo (int(root.this)). Reproducido y verificado con guion, y con
+el mouse: cortar, Aceptar, Ctrl+Q, botón -> la pieza entera.
+
 **07/11, barrita sobre la vista (Vista de sección y Estilo de visualización), como SW: HECHO** (el
 usuario pidió solo esos dos botones de la barra Ver transparente de SW). Relevado en SW con el mouse:
 panel Vista de sección (Alzado / Planta / Vista lateral o cara, invertir, distancia, girar X / Y,

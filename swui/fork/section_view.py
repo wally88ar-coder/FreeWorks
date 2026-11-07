@@ -48,9 +48,11 @@ def is_on(view):
 
 
 def _view_key(view):
-    """Clave estable de la vista (pivy da un objeto nuevo por cada pedido: no sirve id())."""
+    """Clave estable de la vista: la dirección del nodo raíz. No sirve id() (pivy da un objeto nuevo
+    por cada pedido) ni getNodeId() (Coin lo cambia con cada cambio de la escena: al reconstruir
+    quedaba un corte "huérfano" que el botón ya no sacaba; reporte del usuario, 07/11)."""
     try:
-        return view.getSceneGraph().getNodeId()
+        return int(view.getSceneGraph().this)
     except Exception:
         return id(view)
 
