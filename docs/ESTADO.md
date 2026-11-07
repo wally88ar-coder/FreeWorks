@@ -16,6 +16,13 @@ automático no genera movimiento). **Falta que lo pruebe el usuario**, sobre tod
 sigue al mouse y escribir el largo. Límites: solo líneas, sin resolvedor libre (cada línea depende
 de las anteriores), borrar una línea deja sueltas las que dependían, el ícono del árbol es la
 carpeta de grupo. SW comparado con el mouse: ver "Falta / ideas" > Croquis 3D.
+**Primera prueba del usuario (07/11, mediodía), 3 observaciones, las 3 resueltas:** (1) costaba
+enganchar el punto de una esquina: radio de 10 a 16 px y marca más grande; (2) pidió la misma
+cajita de cota que el croquis 2D (On-View Parameters): ahora Gui::QuantitySpinBox sobre una cota
+gris con flechas, número elegido para escribir encima, Enter fija; (3) error "QListWidget already
+deleted" al elegir una línea: panel cerrado por FreeCAD sin Cancelar dejaba el escucha huérfano;
+ahora usa panel_guard (track/orphaned) y se apaga solo, y reabrir con otro abierto lo cierra
+guardando. Probado por guion con cursor y teclas de verdad; falta que el usuario lo vuelva a probar.
 
 **07/11, PIEZAS SOLDADAS (etapas 1 a 5 del plan): HECHAS, terminadas a las 01:53** (pedido del usuario:
 "implementá las 5 etapas, decidí vos las 4 cuestiones... las pruebas hacelas vos con mouse").

@@ -12,6 +12,9 @@ Neueste Version oben. / Newest version first.
   dibuja y queda como cota (D1@Croquis3D1, visible en Ecuaciones). Relaciones A lo largo de X/Y/Z,
   Paralela, Igual y Fijar; líneas negras (definidas) y azules. Hecho con líneas nativas de FreeCAD
   atadas con fórmulas: abre sin FreeWorks. Solo líneas (sin arcos) y sin resolvedor libre.
+  Después de la primera prueba del usuario: el largo se escribe en la misma cajita con cota gris
+  que usa el croquis 2D; enganche a puntos más grande; arreglado el error "QListWidget already
+  deleted" cuando FreeCAD cerraba el panel por su cuenta.
 - **Piezas soldadas, como SW 2018** (`swui/fork/weldments.py`, `weld_panels.py`, `weld_tab.py`):
   pestaña nueva con Miembro estructural (caños, ángulos, planchuelas y UPN sobre un croquis
   esqueleto, con vista previa), Esquinas (a tope eligiendo cuál pasa, o inglete), Recortar/Alargar

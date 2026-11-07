@@ -36,7 +36,7 @@ from swui.fork import sketch3d as s3
 
 V = FreeCAD.Vector
 TITLE = "Croquis 3D"
-SNAP_PX = 10.0
+SNAP_PX = 16.0  # pedido del usuario (07/11): con 10 tomaba antes la línea que el punto
 AXIS_DEG = 7.0
 MOVE_PX = 5
 PLANES = (("Alzado", V(0, 1, 0)), ("Vista lateral", V(1, 0, 0)), ("Planta", V(0, 0, 1)))
@@ -177,7 +177,7 @@ class _Overlay:
         co = coin.SoCoordinate3()
         co.point.setValue(p.x, p.y, p.z)
         mk = coin.SoMarkerSet()
-        mk.markerIndex = coin.SoMarkerSet.CIRCLE_FILLED_7_7
+        mk.markerIndex = coin.SoMarkerSet.CIRCLE_FILLED_9_9
         for n in (col, co, mk):
             g.addChild(n)
         self.sep.addChild(g)
@@ -198,6 +198,21 @@ class _Overlay:
         if text and text_at is not None:
             self._text(text_at, text)
 
+    def draw_dim(self, a, b, off, arrow):
+        """Cota gris paralela a la línea a-b, corrida `off`, con líneas de referencia y flechas."""
+        gray = (0.45, 0.45, 0.45)
+        if self.root is None or (b - a).Length < 1e-9:
+            return
+        u = (b - a).normalize()
+        n = V(off).normalize() if off.Length > 1e-12 else V()
+        self._line(a, a + off * 1.15, gray, 1.0)
+        self._line(b, b + off * 1.15, gray, 1.0)
+        pa, pb = a + off, b + off
+        self._line(pa, pb, gray, 1.0)
+        for tip, d in ((pa, u), (pb, -u)):
+            self._line(tip, tip + d * arrow + n * arrow * 0.35, gray, 1.0)
+            self._line(tip, tip + d * arrow - n * arrow * 0.35, gray, 1.0)
+
     def draw_dims(self, sk):
         if self.root is None:
             return
@@ -207,6 +222,118 @@ class _Overlay:
                 continue
             mid = (s3.point(line, 1) + s3.point(line, 2)) * 0.5
             self._text(mid, _fmt(value), (0.0, 0.0, 0.0), parent=self.dims_sep)
+
+
+# --- Caja del largo (como las del croquis 2D) ----------------------------------------------------------
+
+
+class _LengthBox:
+    """Caja editable con el largo, sobre la cota, como en el croquis 2D de FreeWorks (On-View
+    Parameters de FreeCAD): la misma clase de caja (Gui::QuantitySpinBox), con el número elegido
+    para escribir encima; Enter fija el largo. Pedido del usuario (07/11): misma interfaz en todo."""
+
+    OFFSET_PX = 30.0
+
+    def __init__(self, panel):
+        self.panel = panel
+        self.box = None
+        self.edit = None
+        self.viewer = None
+        self.fresh = True  # primera vez que aparece en este tramo: tomar el foco y elegir el número
+
+    def _make(self):
+        if self.box is not None:
+            return self.box
+        viewer = None
+        for w in FreeCADGui.getMainWindow().findChildren(QtWidgets.QWidget):
+            if _is_viewport(w) and w.isVisible():
+                viewer = w.parentWidget()
+                break
+        if viewer is None:
+            return None
+        try:
+            box = FreeCADGui.UiLoader().createWidget("Gui::QuantitySpinBox", viewer)
+        except Exception:
+            box = None
+        if box is None:
+            box = QtWidgets.QLineEdit(viewer)
+        box.setObjectName("SWUI_Sketch3DLength")
+        box.setFixedWidth(86)
+        if hasattr(box, "setButtonSymbols"):
+            box.setButtonSymbols(QtWidgets.QAbstractSpinBox.NoButtons)
+        edit = box.lineEdit() if hasattr(box, "lineEdit") else box
+        edit.textEdited.connect(self._edited)
+        self.box, self.edit, self.viewer = box, edit, viewer
+        return box
+
+    def _edited(self, text):
+        import re
+
+        m = re.match(r"\s*([0-9]+(?:[.,][0-9]*)?)", text)
+        self.panel.draw.typed = m.group(1).replace(".", ",") if m else ""
+        QtCore.QTimer.singleShot(0, self.panel.mouse_moved)
+
+    def has_focus(self):
+        try:
+            fw = QtWidgets.QApplication.focusWidget()
+            return self.box is not None and fw is not None and (fw == self.box or fw == self.edit
+                                                                 or self.box.isAncestorOf(fw))
+        except Exception:
+            return False
+
+    def show(self, view, a, b, scale, typed):
+        box = self._make()
+        if box is None:
+            return
+        sa, sb = _screen(view, a), _screen(view, b)
+        dx, dy = sb[0] - sa[0], sb[1] - sa[1]
+        dl = math.hypot(dx, dy) or 1.0
+        nx, ny = -dy / dl, dx / dl
+        if ny < 0:
+            nx, ny = -nx, -ny  # la cota del lado de arriba de la línea en la pantalla
+        mid = ((sa[0] + sb[0]) / 2.0, (sa[1] + sb[1]) / 2.0)
+        try:
+            p0 = _focal(view, (int(mid[0]), int(mid[1])))
+            p1 = _focal(view, (int(mid[0] + nx * self.OFFSET_PX), int(mid[1] + ny * self.OFFSET_PX)))
+            off = p1 - p0
+        except Exception:
+            off = V()
+        self.panel.overlay.draw_dim(a, b, off, scale * 9.0)
+        if not typed:
+            text = "%s mm" % _fmt((b - a).Length)
+            if self.edit.text() != text:
+                self.edit.setText(text)
+                if not self.fresh and self.has_focus():
+                    self.edit.setSelection(0, len(text.split(" ")[0]))  # sigue lista para escribir encima
+        elif not self.has_focus() and not self.edit.text().startswith(typed):
+            self.edit.setText("%s mm" % typed)  # escrito con el foco en la vista
+        h = self.viewer.height()
+        cx, cy = mid[0] + nx * self.OFFSET_PX, mid[1] + ny * self.OFFSET_PX
+        box.move(int(cx - box.width() / 2), int(h - cy - box.height() / 2))
+        if not box.isVisible():
+            box.show()
+            box.raise_()
+        if self.fresh:
+            self.fresh = False
+            box.setFocus()
+            number = self.edit.text().split(" ")[0]
+            self.edit.setSelection(0, len(number))
+
+    def hide(self):
+        self.fresh = True
+        if self.box is not None:
+            try:
+                self.box.hide()
+            except Exception:
+                self.box = None
+
+    def remove(self):
+        if self.box is not None:
+            try:
+                self.box.deleteLater()
+            except Exception:
+                pass
+        self.box = None
 
 
 # --- Herramienta Línea --------------------------------------------------------------------------------
@@ -331,21 +458,35 @@ class _Draw:
             return 1.0
 
     # eventos
+    def typed_length(self):
+        try:
+            value = float(self.typed.replace(",", "."))
+            return value if value > 0 else None
+        except ValueError:
+            return None
+
     def move(self, view, pos):
         p, spec, axis, sign, text = self.point_at(view, pos)
         self.preview = None
         info = []
+        scale = self._scale(view, pos)
         if self.anchor is not None and p is not None:
+            length = self.typed_length()
+            if length is not None and (p - self.anchor[0]).Length > 1e-9:
+                # con el largo escrito, la vista previa lo respeta (como la caja del croquis 2D)
+                p = self.anchor[0] + (p - self.anchor[0]).normalize() * length
+                spec = None
             self.preview = (p, spec, axis, sign)
-            info.append(_fmt((p - self.anchor[0]).Length))
         if text:
             info.insert(0, text)
-        if self.typed:
-            info.append("Largo: %s (Enter)" % self.typed)
         info.append("Plano: %s (Tab)" % self.plane_name())
         self.panel.overlay.draw(self.anchor[0] if self.anchor else None, p if self.anchor else None,
                                 p if spec is not None else None, "  " + " · ".join(info), p,
-                                self._scale(view, pos), axis)
+                                scale, axis)
+        if self.preview is not None and (p - self.anchor[0]).Length > 1e-6:
+            self.panel.length_box.show(view, self.anchor[0], p, scale, self.typed)
+        else:
+            self.panel.length_box.hide()
 
     def click(self, view, pos, ctrl=False):
         if ctrl:
@@ -395,13 +536,10 @@ class _Draw:
     def enter(self, view):
         if not self.typed or self.anchor is None or self.preview is None:
             return
-        try:
-            length = float(self.typed.replace(",", "."))
-        except ValueError:
-            self.typed = ""
-            return
+        length = self.typed_length()
         self.typed = ""
-        if length <= 0:
+        self.panel.length_box.hide()
+        if length is None:
             return
         p, _spec, axis, sign = self.preview
         if not axis and (p - self.anchor[0]).Length < 1e-6:
@@ -415,6 +553,7 @@ class _Draw:
         self.preview = None
         self.typed = ""
         self.panel.overlay.clear()
+        self.panel.length_box.hide()
 
     def pick_plane(self, view, pos):
         """Ctrl + clic en una cara plana o un plano: dibujar en ese plano."""
@@ -473,7 +612,25 @@ class _Filter(QtCore.QObject):
     def _handle(self, obj, event):
         t = event.type()
         p = self.panel
+        if p.done:
+            return False
+        if t in (QtCore.QEvent.MouseButtonPress, QtCore.QEvent.KeyPress):
+            from swui.fork import panel_guard
+
+            if not panel_guard.alive(p):  # FreeCAD lo cerró sin avisar: apagarse
+                QtCore.QTimer.singleShot(0, p._orphaned)
+                return False
         if t in (QtCore.QEvent.ShortcutOverride, QtCore.QEvent.KeyPress):
+            if p.length_box.has_focus():
+                key = event.key()
+                if key not in (QtCore.Qt.Key_Tab, QtCore.Qt.Key_Escape, QtCore.Qt.Key_Return,
+                               QtCore.Qt.Key_Enter):
+                    return False  # números, coma, borrar: los escribe la caja
+                if t == QtCore.QEvent.ShortcutOverride:
+                    event.accept()
+                    return True
+                p.key(key, "")
+                return True
             if _typing_widget():
                 return False
             key = event.key()
@@ -550,10 +707,12 @@ class Sketch3DPanel:
         view = _view()
         self.overlay = _Overlay(view)
         self.draw = _Draw(self)
+        self.length_box = _LengthBox(self)
         self._build()
         self.filter = _Filter(self)
         QtWidgets.QApplication.instance().installEventFilter(self.filter)
-        self._sel = _SelObserver(self._selection_changed)
+        self.done = False
+        self._sel = _SelObserver(self._selection_changed, self)
         FreeCADGui.Selection.addObserver(self._sel)
         self.tool.setChecked(bool(draw))
         self._tool_toggled(bool(draw))
@@ -757,7 +916,8 @@ class Sketch3DPanel:
         return False
 
     def _selection_changed(self):
-        self.refresh(False)
+        if not self.done:
+            self.refresh(False)
 
     def refresh(self, recompute=True):
         try:
@@ -805,6 +965,9 @@ class Sketch3DPanel:
 
     # cierre
     def _finish(self):
+        if self.done:
+            return
+        self.done = True
         try:
             QtWidgets.QApplication.instance().removeEventFilter(self.filter)
         except Exception:
@@ -814,7 +977,20 @@ class Sketch3DPanel:
         except Exception:
             pass
         self.overlay.remove()
+        self.length_box.remove()
         _state["panel"] = None
+
+    def _orphaned(self):
+        """FreeCAD cerró el panel por su cuenta (otro comando con "Sí" a "Un diálogo ya está
+        abierto"): se apaga todo lo nuestro y lo dibujado queda (como Aceptar)."""
+        was_done = self.done
+        self._finish()
+        if not was_done:
+            try:
+                self.doc.commitTransaction()
+                s3.update_colors(self.sk)
+            except Exception:
+                pass
 
     def accept(self):
         self._finish()
@@ -846,10 +1022,15 @@ class Sketch3DPanel:
 
 
 class _SelObserver:
-    def __init__(self, fn):
+    def __init__(self, fn, panel):
         self.fn = fn
+        self.panel = panel  # panel_guard.orphaned lo mira
 
     def _later(self, *_a):
+        from swui.fork import panel_guard
+
+        if self.panel.done or panel_guard.orphaned(self):
+            return
         QtCore.QTimer.singleShot(0, self.fn)
 
     addSelection = removeSelection = clearSelection = setSelection = _later
@@ -896,13 +1077,22 @@ def open_sketch(sk=None, draw=None):
     doc = FreeCAD.ActiveDocument
     if doc is None:
         return None
+    old = _state["panel"]
+    if old is not None and not old.done:
+        old.accept()  # otro croquis 3D abierto: se cierra guardando (como salir del croquis en SW)
     if FreeCADGui.Control.activeDialog():
-        FreeCADGui.Control.closeDialog()
+        from swui.fork import panel_guard
+
+        if not panel_guard.cancel_open():
+            FreeCADGui.Control.closeDialog()
     if sk is None:
         _empty_view(doc)
     try:
         panel = Sketch3DPanel(sk, draw=(sk is None) if draw is None else draw)
         FreeCADGui.Control.showDialog(panel)
+        from swui.fork import panel_guard
+
+        panel_guard.track(panel)
         return panel
     except Exception as e:
         FreeCAD.Console.PrintError("[SWUI fork] %s:\n%s\n" % (TITLE, traceback.format_exc()))

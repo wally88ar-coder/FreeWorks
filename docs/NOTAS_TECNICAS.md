@@ -970,3 +970,11 @@ que usan está en `tools/test_load.py` (`check_ia`): si una cambia de firma, el 
   que sigue al mouse y el largo tecleado se probaron moviendo el cursor de verdad desde un guion
   (`QCursor.setPos` + `mouse_moved`). En SW 2018, el Croquis 3D con el mouse automático dibuja
   arrastrando pero no con clic y clic; y Ctrl+Z justo después de abrirlo deshace el croquis entero.
+- Cajita del largo como el croquis 2D: las On-View Parameters del Sketcher son
+  `Gui::EditableDatumLabel` (C++, no se puede usar desde Python), pero su caja es un
+  `Gui::QuantitySpinBox`: `FreeCADGui.UiLoader().createWidget("Gui::QuantitySpinBox", visor)`,
+  hija del View3DInventorViewer (como la barrita de la vista), y la cota gris se dibuja en Coin.
+  Para verlas en una prueba hay que mandar MouseMove de verdad (QCursor.setPos + QMouseEvent).
+- Un panel de Tareas que FreeCAD cierra solo (otro comando, "Sí" a "Un diálogo ya está
+  abierto") no llama a accept/reject: sin panel_guard el escucha de selección y el filtro de
+  eventos quedan vivos y tocan widgets borrados ("QListWidget already deleted").
