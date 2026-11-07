@@ -2180,7 +2180,11 @@ Etapas:
   PEM, varilla, seguir a la placa, BOM): rehacerlo, la copia del scratchpad es temporal.
 - **Piezas soldadas / estructuras** (investigado 01/11; **DECIDIDO por el usuario: Cuerpos nativos,
   usando código de FrameForge cuando sea útil y esté probado**; sin plan ni código; próximo paso:
-  plan en criollo para que lo apruebe). SW: Weldments sigue
+  plan en criollo para que lo apruebe). **07/11: plan escrito, esperando el OK del usuario:
+  https://claude.ai/artifact/LdrD8EznBHjW3zYbYvr7ja** (5 etapas: perfiles y miembro, esquinas, lista
+  de cortes, recortar/alargar, extras; pide medidas de caño del proveedor, qué columnas de la lista,
+  una pieza soldada suya y la esquina por defecto). Falta mirar con el mouse el panel de Miembro
+  estructural de SW antes de la etapa 1. SW: Weldments sigue
   vivo en 2026; el **Structure System** (2019) es un modo avanzado DENTRO de Weldments, no lo
   reemplaza. Miembros primarios (sobre segmento de croquis o arista, intersección de planos,
   punto + largo/hasta punto/hasta plano, intersección cara-plano) y secundarios (entre dos
