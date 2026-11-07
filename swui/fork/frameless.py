@@ -71,6 +71,15 @@ def _update_title(*_a):
     if lab is None:
         return
     lab.setText(current_title())
+    _relayout_title()
+    # al arrancar la barra todavía se está armando: volver a acomodar el ancho un momento después
+    QtCore.QTimer.singleShot(300, _relayout_title)
+
+
+def _relayout_title():
+    lab = _state["title"]
+    if lab is None:
+        return
     try:
         area = lab.parentWidget().parentWidget()
         _relayout(_mw().menuBar(), area)
@@ -284,6 +293,11 @@ def apply():
     try:
         _reshow(mw, True)
         _add_buttons()
+        try:
+            # maximizar / restaurar con Win + flechas o el pegado: cambiar el ícono del botón
+            mw.windowHandle().windowStateChanged.connect(lambda *_a: QtCore.QTimer.singleShot(0, _update_max))
+        except Exception:
+            pass
         bar = mw.menuBar()
         if _state["bar_filter"] is None:
             _state["bar_filter"] = _BarFilter()
@@ -296,6 +310,8 @@ def apply():
 
 def restore():
     """Volver a la ventana normal de Windows."""
+    if not _state["on"] and _SAVED["flags"] is None and _state["box"] is None:
+        return  # nunca se puso (p. ej. se salió del banco antes de que corriera apply)
     mw = _mw()
     try:
         if _state["bar_filter"] is not None:
@@ -305,16 +321,6 @@ def restore():
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] Ventana sin marco:\n%s\n" % traceback.format_exc())
     _state["on"] = False
-
-
-class _ChangeFilter(QtCore.QObject):
-    """Ventana principal: al maximizar / restaurar (Win + flechas, pegado) cambia el ícono del botón."""
-
-    def eventFilter(self, obj, event):
-        if event.type() in (QtCore.QEvent.WindowStateChange, QtCore.QEvent.ModifiedChange):
-            QtCore.QTimer.singleShot(0, _update_max)
-            QtCore.QTimer.singleShot(0, _update_title)
-        return False
 
 
 def install():
@@ -336,8 +342,3 @@ def install():
 
     enter._swui_frameless = leave._swui_frameless = True
     layout.enter, layout.leave = enter, leave
-    try:
-        _state["change_filter"] = _ChangeFilter()
-        _mw().installEventFilter(_state["change_filter"])
-    except Exception:
-        pass
