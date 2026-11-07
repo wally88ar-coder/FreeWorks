@@ -27,6 +27,13 @@ Neueste Version oben. / Newest version first.
   cajitas y listas de los paneles ya no cambian con la ruedita si no se hizo clic en ellas; en una
   esquina de tres caños, cambiar una esquina ya no acorta la punta que usa la otra. Arreglado: al
   pasar de inglete a tope desaparecían de la vista los caños que pasan ("bug estructura2").
+  Perfiles según las tablas CIRSOC 301/302 (IRAM-IAS; `swui/fork/weld_profiles.py`, datos en
+  `weld_cirsoc.py`, generados con `tools/fork/cirsoc_tablas.py`): caños cuadrados, rectangulares y
+  redondos, ángulo, T, UPN, IPN, IPE, IPB, IPBI e IPBv (sin las series americanas), dibujados con sus
+  radios (caños: 2 espesores afuera, 1 adentro) y alas inclinadas (IPN 14 %, UPN 8 % / 5 %, T 2 %).
+  Cada miembro guarda las propiedades de sección de la tabla (área, peso, inercias, módulos, radios de
+  giro, torsión, alabeo), visibles en Datos > Sección CIRSOC y listas para un futuro cálculo por
+  elementos finitos. Los archivos viejos abren igual; al editar el miembro pasan al dibujo con radios.
 - **Arreglado: Vista de sección no se sacaba con el botón después de reconstruir la pieza.**
 - **Barrita sobre la vista con Vista de sección y Estilo de visualización, como SW 2018**
   (`swui/fork/view_bar.py`, `section_view.py`). Vista de sección con panel SW (plano, invertir,

@@ -19,10 +19,11 @@ y los recortes son operaciones nativas dentro del Cuerpo:
 
 Nombres guardados en los archivos (estables, no cambiar): propiedades SWUI_WeldMember,
 SWUI_WeldKind, SWUI_WeldSize, SWUI_WeldDims, SWUI_WeldRotation, SWUI_WeldAnchor, SWUI_WeldMirror,
-SWUI_WeldCorner, SWUI_WeldPart ("tapa", "cartela").
+SWUI_WeldCorner, SWUI_WeldPart ("tapa", "cartela"), SWUI_WeldSection (propiedades CIRSOC, mapa de
+textos "Nombre clave (unidad)": "valor"), SWUI_WeldSectionText (las mismas, como textos visibles).
 
 Funciones públicas:
-    profile_names(), sizes(kind), profile_loops(kind, dims), area(kind, dims)
+    profile_names(), sizes(kind), profile_loops(kind, dims), area(kind, dims), section_props(kind, size)
     create_members(doc, edges, kind, size, rotation=0, anchor="Centro", mirror=False) -> [Cuerpo]
     find_corners(members), apply_corner(corner, treatment, passing=None), remove_corner(...)
     corner_state(corner), set_profile(bodies, rotation=None, anchor=None)
@@ -40,25 +41,22 @@ V = FreeCAD.Vector
 TOL = 1e-4
 STEEL = 7.85e-6  # kg/mm³: si la pieza no tiene material, se pesa como acero (decisión 07/11)
 
-# --- Tabla de perfiles (mercado argentino; decisión de Claude 07/11, ajustable) -------------------
+# --- Tabla de perfiles ---------------------------------------------------------------------------
+# Tablas CIRSOC 301/302 (IRAM-IAS) en weld_profiles / weld_cirsoc (decisión del usuario 07/11: todas
+# las familias de la tabla salvo las series americanas, dibujadas con sus radios). La planchuela no
+# está en la tabla: sigue con sus medidas comerciales en pulgadas.
 
 INCH = 25.4
-SQUARE = (15, 20, 25, 30, 40, 50, 60, 70, 80, 100)
-RECT = ((20, 10), (30, 20), (40, 20), (50, 30), (60, 40), (80, 40), (100, 50))
-WALLS = (0.9, 1.25, 1.6, 2.0, 2.5, 3.2)
-ROUND = (("1/2\"", 12.7), ("5/8\"", 15.875), ("3/4\"", 19.05), ("7/8\"", 22.225), ("1\"", 25.4),
-         ("1 1/4\"", 31.75), ("1 1/2\"", 38.1), ("2\"", 50.8), ("2 1/2\"", 63.5), ("3\"", 76.2))
-ROUND_WALLS = (1.25, 1.6, 2.0, 2.5, 3.2)
-ANGLES = (("3/4\"", 0.75), ("7/8\"", 0.875), ("1\"", 1.0), ("1 1/4\"", 1.25), ("1 1/2\"", 1.5),
-          ("2\"", 2.0), ("2 1/2\"", 2.5), ("3\"", 3.0))
 THICK = (("1/8\"", 0.125), ("3/16\"", 0.1875), ("1/4\"", 0.25))
 FLATS = (("3/4\"", 0.75), ("1\"", 1.0), ("1 1/4\"", 1.25), ("1 1/2\"", 1.5), ("2\"", 2.0),
          ("2 1/2\"", 2.5), ("3\"", 3.0), ("4\"", 4.0))
 FLAT_THICK = THICK + (("5/16\"", 0.3125),)
-UPN = ((80, 45, 6.0, 8.0), (100, 50, 6.0, 8.5), (120, 55, 7.0, 9.0), (140, 60, 7.0, 10.0),
-       (160, 65, 7.5, 10.5), (200, 75, 8.5, 11.5))  # h, b, alma, ala (DIN 1026, sin radios)
 
-KINDS = ("Caño cuadrado", "Caño rectangular", "Caño redondo", "Ángulo", "Planchuela", "UPN")
+
+def _wp():
+    from swui.fork import weld_profiles
+
+    return weld_profiles
 
 
 def _fmt(x):
@@ -67,41 +65,19 @@ def _fmt(x):
 
 
 def profile_names():
-    return KINDS
+    return _wp().KINDS
 
 
 def sizes(kind):
     """[(nombre, dims)] de un tipo de perfil. dims en mm."""
-    out = []
-    if kind == "Caño cuadrado":
-        for a in SQUARE:
-            for t in WALLS:
-                if t < a / 4:
-                    out.append(("%dx%dx%s" % (a, a, _fmt(t)), [a, a, t]))
-    elif kind == "Caño rectangular":
-        for b, h in RECT:
-            for t in WALLS:
-                if t < h / 4:
-                    out.append(("%dx%dx%s" % (b, h, _fmt(t)), [b, h, t]))
-    elif kind == "Caño redondo":
-        for name, d in ROUND:
-            for t in ROUND_WALLS:
-                if t < d / 4:
-                    out.append(("%s (%s mm) x %s" % (name, _fmt(d), _fmt(t)), [d, t]))
-    elif kind == "Ángulo":
-        for name, a in ANGLES:
-            for tn, t in THICK:
-                if t < a / 3:
-                    out.append(("%s x %s" % (name, tn), [a * INCH, t * INCH]))
-    elif kind == "Planchuela":
+    if kind == "Planchuela":
+        out = []
         for name, b in FLATS:
             for tn, t in FLAT_THICK:
                 if t < b / 2:
                     out.append(("%s x %s" % (name, tn), [b * INCH, t * INCH]))
-    elif kind == "UPN":
-        for h, b, tw, tf in UPN:
-            out.append(("UPN %d" % h, [h, b, tw, tf]))
-    return out
+        return out
+    return _wp().sizes(kind)
 
 
 def dims_of(kind, size):
@@ -116,69 +92,31 @@ def _rect(x0, y0, x1, y1):
 
 
 def profile_loops(kind, dims, outer_only=False):
-    """Contornos de la sección centrados en su rectángulo envolvente: [("poly", [puntos]) |
-    ("circle", radio)]. outer_only: solo el contorno de afuera (la envolvente llena)."""
-    if kind in ("Caño cuadrado", "Caño rectangular"):
-        b, h, t = dims
-        loops = [("poly", _rect(-b / 2, -h / 2, b / 2, h / 2))]
-        if not outer_only:
-            loops.append(("poly", _rect(-b / 2 + t, -h / 2 + t, b / 2 - t, h / 2 - t)))
-        return loops
-    if kind == "Caño redondo":
-        d, t = dims
-        loops = [("circle", d / 2)]
-        if not outer_only:
-            loops.append(("circle", d / 2 - t))
-        return loops
-    if kind == "Ángulo":
-        a, t = dims
-        h = a / 2
-        if outer_only:
-            return [("poly", _rect(-h, -h, h, h))]
-        return [("poly", [V(-h, -h, 0), V(h, -h, 0), V(h, -h + t, 0), V(-h + t, -h + t, 0),
-                          V(-h + t, h, 0), V(-h, h, 0)])]
-    if kind == "Planchuela":
-        b, t = dims
-        return [("poly", _rect(-b / 2, -t / 2, b / 2, t / 2))]
-    if kind == "UPN":
-        h, b, tw, tf = dims
-        x0, x1, y0, y1 = -b / 2, b / 2, -h / 2, h / 2
-        if outer_only:
-            return [("poly", _rect(x0, y0, x1, y1))]
-        return [("poly", [V(x0, y0, 0), V(x1, y0, 0), V(x1, y0 + tf, 0), V(x0 + tw, y0 + tf, 0),
-                          V(x0 + tw, y1 - tf, 0), V(x1, y1 - tf, 0), V(x1, y1, 0), V(x0, y1, 0)])]
-    raise ValueError(kind)
+    """Contornos de la sección centrados en su rectángulo envolvente (formato en weld_profiles):
+    ("poly", [puntos]) | ("circle", radio) | ("wire", [tramos con arcos]).
+    outer_only: solo el contorno de afuera (la envolvente llena)."""
+    return _wp().loops(kind, dims, outer_only)
 
 
 def extent(kind, dims):
     """(ancho en X, alto en Y) del perfil."""
-    if kind in ("Caño cuadrado", "Caño rectangular"):
-        return dims[0], dims[1]
-    if kind == "Caño redondo":
-        return dims[0], dims[0]
-    if kind == "Ángulo":
-        return dims[0], dims[0]
-    if kind == "Planchuela":
-        return dims[0], dims[1]
-    if kind == "UPN":
-        return dims[1], dims[0]
-    return 0, 0
+    return _wp().extent(kind, dims)
 
 
 def area(kind, dims):
     """Área de la sección (mm²), para el peso por metro."""
-    import Part
+    return _wp().face(kind, dims).Area
 
-    faces = []
-    for typ, data in profile_loops(kind, dims):
-        if typ == "circle":
-            faces.append(Part.Face(Part.Wire(Part.makeCircle(data))))
-        else:
-            faces.append(Part.Face(Part.makePolygon(data + [data[0]])))
-    a = faces[0].Area
-    for f in faces[1:]:
-        a -= f.Area
-    return a
+
+def profile_text(kind, size):
+    """Nombre del perfil para mostrar: "Caño cuadrado 40x40x2", "UPN 100" (sin repetir el tipo)."""
+    return size if size.startswith(kind + " ") else "%s %s" % (kind, size)
+
+
+def section_props(kind, size):
+    """Propiedades de sección de la tabla CIRSOC ({texto: valor}) o None (planchuela, medidas
+    viejas que no están en la tabla)."""
+    return _wp().section(kind, size)
 
 
 ANCHORS = ("Centro", "Arriba", "Abajo", "Izquierda", "Derecha",
@@ -207,19 +145,79 @@ def _add_prop(obj, name, typ, value, group="Pieza soldada", doc=""):
 def _fill_sketch(sk, loops, mirror=False):
     import Part
 
+    import Sketcher
+
     for typ, data in loops:
         if typ == "circle":
             sk.addGeometry(Part.Circle(V(0, 0, 0), V(0, 0, 1), data))
+            continue
+        if typ == "wire":
+            _fill_wire(sk, data, mirror)
             continue
         pts = [V(-p.x, p.y, 0) if mirror else p for p in data]
         n = len(pts)
         first = sk.GeometryCount
         for i in range(n):
             sk.addGeometry(Part.LineSegment(pts[i], pts[(i + 1) % n]))
-        import Sketcher
-
         for i in range(n):
             sk.addConstraint(Sketcher.Constraint("Coincident", first + i, 2, first + (i + 1) % n, 1))
+
+
+def _fill_wire(sk, segs, mirror=False):
+    """Contorno con rectas y arcos (radios de la tabla), con sus coincidencias."""
+    import Part
+    import Sketcher
+
+    def m(p):
+        return V(-p.x, p.y, 0) if mirror else V(p)
+
+    ends = []  # por tramo: (índice, vértice del principio, vértice del final) en el sentido del contorno
+    for seg in segs:
+        if seg[0] == "line":
+            i = sk.addGeometry(Part.LineSegment(m(seg[1]), m(seg[2])))
+            ends.append((i, 1, 2))
+            continue
+        _t, c, r, p, q = seg
+        c, p, q = m(c), m(p), m(q)
+        a0 = math.atan2(p.y - c.y, p.x - c.x)
+        a1 = math.atan2(q.y - c.y, q.x - c.x)
+        sweep = (a1 - a0) % (2 * math.pi)
+        if sweep <= math.pi:  # de p a q en sentido antihorario
+            i = sk.addGeometry(Part.ArcOfCircle(Part.Circle(c, V(0, 0, 1), r), a0, a0 + sweep))
+            ends.append((i, 1, 2))
+        else:
+            i = sk.addGeometry(Part.ArcOfCircle(Part.Circle(c, V(0, 0, 1), r), a1, a1 + (2 * math.pi - sweep)))
+            ends.append((i, 2, 1))
+    n = len(ends)
+    for k in range(n):
+        g1, _s1, e1 = ends[k]
+        g2, s2, _e2 = ends[(k + 1) % n]
+        sk.addConstraint(Sketcher.Constraint("Coincident", g1, e1, g2, s2))
+
+
+def _geom_count(loops):
+    """Cuántas geometrías deja _fill_sketch con esos contornos."""
+    return sum(1 if typ == "circle" else len(data) for typ, data in loops)
+
+
+def _set_section(body, kind, size):
+    """Guardar en el miembro las propiedades de sección de la tabla CIRSOC: SWUI_WeldSection (mapa,
+    para el cálculo por elementos finitos o la IA; FreeCAD no muestra los mapas en Datos) y
+    SWUI_WeldSectionText (las mismas, como lista de textos visible y de solo lectura)."""
+    props = section_props(kind, size) or {}
+    if not hasattr(body, "SWUI_WeldSection"):
+        body.addProperty("App::PropertyMap", "SWUI_WeldSection", "Sección CIRSOC",
+                         "Propiedades de sección de la tabla CIRSOC 301/302 (unidades de la tabla)")
+    body.SWUI_WeldSection = props
+    if not hasattr(body, "SWUI_WeldSectionText"):
+        body.addProperty("App::PropertyStringList", "SWUI_WeldSectionText", "Sección CIRSOC",
+                         "Propiedades de sección de la tabla CIRSOC 301/302")
+    body.SWUI_WeldSectionText = ["%s: %s" % (k, v) for k, v in props.items()]
+    for name, mode in (("SWUI_WeldSection", 2), ("SWUI_WeldSectionText", 1)):
+        try:
+            body.setEditorMode(name, mode)
+        except Exception:
+            pass
 
 
 def _edge_of(obj, sub):
@@ -312,7 +310,7 @@ def create_member(doc, edge, kind, size, rotation=0.0, anchor="Centro", mirror=F
     obj, sub = edge
     dims = dims_of(kind, size)
     body = doc.addObject("PartDesign::Body", "Miembro")
-    body.Label = label or "%s %s" % (kind, size)
+    body.Label = label or profile_text(kind, size)
     route = body.newObject("PartDesign::SubShapeBinder", "Ruta")
     route.Label = "Ruta"
     route.Support = [(obj, (sub,))]
@@ -355,6 +353,7 @@ def create_member(doc, edge, kind, size, rotation=0.0, anchor="Centro", mirror=F
     _add_prop(body, "SWUI_WeldRotation", "App::PropertyFloat", float(rotation))
     _add_prop(body, "SWUI_WeldAnchor", "App::PropertyString", anchor)
     _add_prop(body, "SWUI_WeldMirror", "App::PropertyBool", bool(mirror))
+    _set_section(body, kind, size)
     doc.recompute()
     return body
 
@@ -369,7 +368,7 @@ def create_members(doc, edges, kind, size, rotation=0.0, anchor="Centro", mirror
     bodies = []
     for i, edge in enumerate(edges):
         b = create_member(doc, edge, kind, size, rotation, anchor, mirror,
-                          label="%s %s (%d)" % (kind, size, i + 1))
+                          label="%s (%d)" % (profile_text(kind, size), i + 1))
         group.addObject(b)
         bodies.append(b)
     doc.recompute()
@@ -715,15 +714,25 @@ def _reshape(body, kind=None, size=None, rotation=None, anchor=None, mirror=None
     new_rot = old_rot if rotation is None else float(rotation)
     new_anchor = anchor or getattr(body, "SWUI_WeldAnchor", "Centro")
     new_mirror = old_mirror if mirror is None else bool(mirror)
-    dims = list(body.SWUI_WeldDims) if (kind, size) == (old_kind, old_size) else [float(x) for x in dims_of(kind, size)]
+    old_dims = [float(x) for x in body.SWUI_WeldDims]
+    try:
+        dims = [float(x) for x in dims_of(kind, size)]
+    except ValueError:  # medida vieja que no está en la tabla CIRSOC: queda como estaba
+        if (kind, size) != (old_kind, old_size):
+            raise
+        dims = old_dims
     envelopes = _envelopes_of(body)
-    if (kind, size, new_mirror) != (old_kind, old_size, old_mirror):
-        _refill(sk, profile_loops(kind, dims), new_mirror)
+    loops = profile_loops(kind, dims)
+    redraw = sk.GeometryCount != _geom_count(loops)  # dibujado antes de las tablas CIRSOC (sin radios)
+    if (kind, size, new_mirror) != (old_kind, old_size, old_mirror) or dims != old_dims or redraw:
+        _refill(sk, loops, new_mirror)
         for env in envelopes:
             _refill(env, profile_loops(kind, dims, outer_only=True), new_mirror)
-        old_name = "%s %s" % (old_kind, old_size)
+        old_name = profile_text(old_kind, old_size)
+        if not body.Label.startswith(old_name):
+            old_name = "%s %s" % (old_kind, old_size)  # archivos viejos: "UPN UPN 80 (1)"
         if body.Label.startswith(old_name):
-            body.Label = "%s %s%s" % (kind, size, body.Label[len(old_name):])
+            body.Label = profile_text(kind, size) + body.Label[len(old_name):]
         for env in envelopes:  # "Envolvente de <miembro>" y su recorte siguen el nombre nuevo
             env.Label = "Envolvente de " + body.Label
     yaw = sk.AttachmentOffset.Rotation.toEuler()[0]
@@ -739,6 +748,8 @@ def _reshape(body, kind=None, size=None, rotation=None, anchor=None, mirror=None
     _add_prop(body, "SWUI_WeldRotation", "App::PropertyFloat", new_rot)
     _add_prop(body, "SWUI_WeldAnchor", "App::PropertyString", new_anchor)
     _add_prop(body, "SWUI_WeldMirror", "App::PropertyBool", new_mirror)
+    _set_section(body, kind, size)
+    _show_tip(body)  # archivos guardados con el caño oculto (error corregido el 07/11): vuelve a verse
 
 
 def _redo_corners(doc, bodies, treatment=None, new=()):
@@ -844,7 +855,7 @@ def edit_members(group, edges, kind, size, rotation=0.0, anchor="Centro", mirror
             continue
         n += 1
         b = create_member(doc, (o, sub), kind, size, rotation, anchor, mirror,
-                          label="%s %s (%d)" % (kind, size, n))
+                          label="%s (%d)" % (profile_text(kind, size), n))
         group.addObject(b)
         new.add(b.Name)
     bodies = [m for m in group.Group if is_member(m)]
@@ -1019,7 +1030,7 @@ def cut_list(doc):
         kg = b.Shape.Volume * rho
         angs = tuple(sorted([x if x is not None else -1 for x in (a1, a2)]))
         key = (b.SWUI_WeldKind, b.SWUI_WeldSize, round(length, 1), angs)
-        g = groups.setdefault(key, {"qty": 0, "profile": "%s %s" % (b.SWUI_WeldKind, b.SWUI_WeldSize),
+        g = groups.setdefault(key, {"qty": 0, "profile": profile_text(b.SWUI_WeldKind, b.SWUI_WeldSize),
                                     "length": round(length, 1), "angle1": a1, "angle2": a2,
                                     "unit_kg": kg, "assumed_steel": assumed, "members": []})
         g["qty"] += 1
@@ -1123,7 +1134,12 @@ def end_cap(member, end, thickness=3.0, inset=0.0):
         for typ, data in loops:
             if typ == "circle":
                 shrunk.append((typ, data - inset))
+            elif typ == "wire" and kind in ("Caño cuadrado", "Caño rectangular"):
+                shrunk.append(("wire", _wp()._rrect(dims[0] - 2 * inset, dims[1] - 2 * inset,
+                                                    max(0.0, 2 * dims[2] - inset))))
             else:
+                if typ == "wire":
+                    data = [q for seg in data for q in seg[1:] if hasattr(q, "x")]
                 xs = [q.x for q in data]
                 ys = [q.y for q in data]
                 shrunk.append(("poly", _rect(min(xs) + inset, min(ys) + inset, max(xs) - inset, max(ys) - inset)))

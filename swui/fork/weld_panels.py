@@ -214,8 +214,10 @@ class MemberPanel(_Base):
         self._fill_sizes()
         self.size.blockSignals(True)
         sizes = [self.size.itemText(i) for i in range(self.size.count())]
-        if first.SWUI_WeldSize in sizes:
-            self.size.setCurrentIndex(sizes.index(first.SWUI_WeldSize))
+        if first.SWUI_WeldSize not in sizes:  # medida vieja, de antes de las tablas CIRSOC: se ofrece igual
+            self.size.insertItem(0, first.SWUI_WeldSize)
+            sizes.insert(0, first.SWUI_WeldSize)
+        self.size.setCurrentIndex(sizes.index(first.SWUI_WeldSize))
         self.rot.setValue(float(getattr(first, "SWUI_WeldRotation", 0.0)))
         anchors = list(w.ANCHORS)
         if getattr(first, "SWUI_WeldAnchor", "Centro") in anchors:
@@ -284,7 +286,7 @@ class MemberPanel(_Base):
         self.size.clear()
         names = [n for n, _d in w.sizes(self.kind.currentText())]
         self.size.addItems(names)
-        default = {"Caño cuadrado": "40x40x2", "Caño rectangular": "40x20x1,6"}.get(self.kind.currentText())
+        default = {"Caño cuadrado": "40x40x2", "Caño rectangular": "20x40x1,6"}.get(self.kind.currentText())
         if default in names:
             self.size.setCurrentIndex(names.index(default))
         self.size.blockSignals(False)

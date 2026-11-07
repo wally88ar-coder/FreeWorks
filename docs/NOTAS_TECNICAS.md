@@ -922,6 +922,18 @@ que usan está en `tools/test_load.py` (`check_ia`): si una cambia de firma, el 
 
 ## Piezas soldadas (07/11): hallazgos en FreeCAD 1.1.4
 
+- La vista de propiedades (Datos) de 1.1.4 NO muestra las App::PropertyMap (ni en un FeaturePython):
+  para que el usuario vea datos, usar App::PropertyStringList (se ve, y con modo 1 es de solo lectura).
+  Los nombres se muestran partidos ("SWUI_ Weld Section Text") y el grupo con paréntesis también
+  ("Sección ( CIRSOC)"): evitar paréntesis en el nombre del grupo.
+- Tablas CIRSOC (PDF): `pdftotext -layout` desordena las columnas de los tubos; `pdftotext -table`
+  (xpdf 4.06, viene con Git) las deja limpias. A los tubos la medida les aparece en una sola fila del
+  grupo: se asigna con el área (cuadrado y rectangular con radio exterior 2t e interior t: Ag = 2(B+H)t
+  - 4t² - 3(4-π)t², lo que además confirma los radios).
+- Radio de tabla más grande que el tramo donde va (ángulo 1 3/4 x 1/8: r1 = 3,5 con ala de 3,2) da una
+  cara inválida: `weld_profiles.contour` lo achica al 95 % del tramo.
+- `Face.MatrixOfInertia` de una cara en XY: A11 = Ix (alrededor del eje X), A22 = Iy.
+
 - Borrar desde un guion la última operación de un Cuerpo de PartDesign (body.removeObject + 
   doc.removeObject) deja la Tip en la anterior pero OCULTA: el Cuerpo se ve a través de su Tip, así
   que desaparece de la vista (sin interfaz no se nota). Después de borrar, mostrar la Tip y ocultar

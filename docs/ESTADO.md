@@ -24,6 +24,26 @@ deleted" al elegir una línea: panel cerrado por FreeCAD sin Cancelar dejaba el 
 ahora usa panel_guard (track/orphaned) y se apaga solo, y reabrir con otro abierto lo cierra
 guardando. Probado por guion con cursor y teclas de verdad; falta que el usuario lo vuelva a probar.
 
+**07/11 noche, PERFILES CIRSOC (pedido del usuario: "hacelo acorde a CIRSOC... los caños siempre
+tienen radio... guardá las propiedades de sección para elementos finitos"; "todo salvo las series
+americanas"): HECHO.** Tabla del PDF "Tablas de perfiles laminados y tubos estructurales" (CIRSOC
+301/302) pasada a `swui/fork/weld_cirsoc.py` con `tools/fork/cirsoc_tablas.py` (pdftotext -table; el
+PDF no está en el repositorio): 550 perfiles en 11 familias (caño cuadrado 89, rectangular 95, redondo
+168, ángulo 47, T 13, UPN 24, IPN 23, IPE 18, IPB 24, IPBI 24, IPBv 25) + la planchuela de antes.
+`weld_profiles.py` los dibuja con radios y alas inclinadas; control: área e inercias del dibujo contra
+la tabla, todas dentro del 1 % (ángulos y T chicos hasta 3-5 %, redondeo de la tabla). Erratas que
+parecen del PDF (se guardan como están): UPN 50 Iy = 3,12 (el dibujo da 9,1); L 1 1/8 x 1/8 Ag = 1,65
+(da 1,75); L 102 x 12,7 Iz = 269,07 (da ~369). Cada miembro guarda SWUI_WeldSection (mapa, para FEM o
+la IA; FreeCAD no muestra los mapas) y SWUI_WeldSectionText (lo mismo visible en Datos > Sección
+CIRSOC). Nombres: caños como antes ("40x40x2"; rectangular ahora ancho x alto como la norma, "20x40x1,6"
+= el "40x20" del taller, parado), ángulo y T en pulgadas como antes, "UPN 100", "IPE 120". Archivos
+viejos: abren igual; al editar el miembro se redibujan con radios (si la medida está en la tabla) y
+vuelven a verse los caños que quedaron ocultos por el error de la tarde. Probado: sin interfaz, las 12
+familias con esquinas tope/inglete/ninguno, cambio de tipo, tapa y lista de cortes (sin interferencias);
+copias de "bug estructura" y "bug estructura2" editadas; con interfaz, el panel con las 12 familias,
+IPE 120 sobre su marco, Datos > Sección CIRSOC y capturas de frente de cada perfil. Falta que lo
+pruebe el usuario.
+
 **07/11 tarde, "bug estructura2" del usuario (marco de 4 caños, de inglete a tope desaparecían los
 dos largueros): ARREGLADO.** Los caños seguían bien (sin interfaz todo daba bien); era la vista: al
 borrar la última operación del Cuerpo (el inglete), PartDesign deja oculta la anterior (la extrusión)
