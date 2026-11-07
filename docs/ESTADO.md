@@ -51,6 +51,11 @@ sigue con la boca de pescado (decisión de Claude, anotada para consultar). Reco
 un miembro: sigue contra el sólido. Archivos viejos: se corrigen al editar el miembro. Probado sin
 interfaz (marco y T en 4 familias, ajuste, giro, las 12 familias, copias de "bug estructura") y con
 interfaz (captura de la esquina como la del usuario). Falta que lo pruebe el usuario.
+Además (pedido del usuario después de ver cómo lo hace SW): en las esquinas a tope en ángulo, la punta
+del que pasa se corta en ángulo al ras de la cara de afuera del otro (caja "PuntaTope"). Comparado
+con SW 2018 (L a 60° y 120°, 40 x 40 x 2): 534,64 mm con corte de 30° y 488,45 mm con 30°, igual a
+FreeWorks; misma caja envolvente. Probado sin interfaz a 30/60/90/120/135° en cuadrado, rectangular,
+IPE y redondo (nada sobresale, sin interferencias, ida y vuelta inglete-tope) y con captura.
 
 **07/11 tarde, "bug estructura2" del usuario (marco de 4 caños, de inglete a tope desaparecían los
 dos largueros): ARREGLADO.** Los caños seguían bien (sin interfaz todo daba bien); era la vista: al

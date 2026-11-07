@@ -19,6 +19,8 @@ y los recortes son operaciones nativas dentro del Cuerpo:
              miembro: corte contra el sólido (con radios). Caño redondo: siempre la forma del caño;
     inglete y recorte contra una cara: SubtractiveBox del lado a sacar (inglete: acoplado al vértice
              de la esquina; cara: a la cara). El ángulo del inglete se calcula al crearlo.
+    punta del que pasa en una esquina a tope en ángulo: SubtractiveBox "PuntaTope" al ras de la cara
+             de afuera del otro (como SW); corner_state la distingue del inglete por ese nombre.
 
 Nombres guardados en los archivos (estables, no cambiar): propiedades SWUI_WeldMember,
 SWUI_WeldKind, SWUI_WeldSize, SWUI_WeldDims, SWUI_WeldRotation, SWUI_WeldAnchor, SWUI_WeldMirror,
@@ -597,13 +599,13 @@ def _envelope_cut(target, tool, cid, planar=True):
     return pk
 
 
-def _box_cut(target, vertex_end, normal_out, size, cid, label):
+def _box_cut(target, vertex_end, normal_out, size, cid, label, offset=0.0, name="Inglete"):
     """En `target`, una caja que saca todo lo que está del lado `normal_out` del plano que pasa por
-    la punta `vertex_end` de su Ruta (inglete)."""
+    la punta `vertex_end` de su Ruta (inglete), corrido `offset` mm hacia `normal_out` (punta a tope)."""
     # ubicada al crearla (en modo "Translate" FreeCAD descarta el giro de la caja, medido 07/11)
     a0, a1, _d = axis(target)
-    corner = a0 if vertex_end == 0 else a1
-    box = target.newObject("PartDesign::SubtractiveBox", "Inglete")
+    corner = (a0 if vertex_end == 0 else a1) + normal_out * offset
+    box = target.newObject("PartDesign::SubtractiveBox", name)
     box.Label = label
     box.Length = box.Width = box.Height = size
     rot = FreeCAD.Rotation(V(0, 0, 1), normal_out)
@@ -630,6 +632,24 @@ def butt_extension(passing, end_p, other, end_o=None):
     half_o = half_extent(other, d_o)
     half_p = half_extent(passing, d_p)
     return half_o / s + half_p * abs(cos) / s
+
+
+def _butt_tip_cut(passing, end_p, other, end_o, cid):
+    """Esquina a tope en ángulo (no a 90°): la punta del que pasa se corta en ángulo al ras de la
+    cara de afuera del otro, como SW 2018 (comparado 07/11: L a 60° con 40 x 40 x 2, corte de 30°).
+    Sin esto la punta quedaba recta y una esquina sobresalía. A 90° no hace falta (ya queda al ras)."""
+    u = _away(passing, end_p)
+    v = _away(other, end_o)
+    cos = u.dot(v)
+    if abs(cos) < 1e-6 or abs(abs(cos) - 1) < 1e-6:
+        return None
+    n = (u - v * cos) * -1  # perpendicular al otro, hacia afuera de la esquina
+    n.normalize()
+    half_o = half_extent(other, n)
+    w1, h1 = extent(passing.SWUI_WeldKind, list(passing.SWUI_WeldDims))
+    w2, h2 = extent(other.SWUI_WeldKind, list(other.SWUI_WeldDims))
+    size = 4 * (max(w1, h1, w2, h2) + 100)
+    return _box_cut(passing, end_p, n, size, cid, "Punta a tope con " + other.Label, half_o, "PuntaTope")
 
 
 def apply_corner(corner, treatment="tope", passing=None):
@@ -671,6 +691,7 @@ def apply_corner(corner, treatment="tope", passing=None):
     end_o = corner["end_b"] if passing == a else corner["end_a"]
     _extend_for(passing, end_p, butt_extension(passing, end_p, other, end_o), cid)
     doc.recompute()
+    _butt_tip_cut(passing, end_p, other, end_o, cid)
     _envelope_cut(other, passing, cid)
     doc.recompute()
 
@@ -683,7 +704,7 @@ def corner_state(corner):
     feats = [(body, o) for body in (a, b) for o in body.Group if getattr(o, "SWUI_WeldCorner", "") == cid]
     if not feats:
         return None
-    if any(o.TypeId == "PartDesign::SubtractiveBox" for _b, o in feats):
+    if any(o.TypeId == "PartDesign::SubtractiveBox" and not o.Name.startswith("PuntaTope") for _b, o in feats):
         return "inglete", None
     if corner["kind"] == "T":
         return "tope", a

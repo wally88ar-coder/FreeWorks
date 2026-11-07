@@ -938,6 +938,9 @@ que usan está en `tools/test_load.py` (`check_ia`): si una cambia de firma, el 
   otro queda recta a ras de la cara, como el "corte plano" de SW. Las envolventes de "Recortar/Alargar"
   contra un miembro (marca SWUI_WeldCorner "trim|...") siguen con el contorno real; `_reshape` las
   distingue por esa marca al redibujarlas. Archivos viejos: las esquinas se rehacen al editar.
+- Punta del que pasa en una esquina a tope en ángulo: SubtractiveBox llamada "PuntaTope" (como el
+  inglete, ubicada al crearla) al ras de la cara de afuera del otro. `corner_state` la distingue del
+  inglete por el Name (empieza con "PuntaTope"): no renombrar.
 
 - Borrar desde un guion la última operación de un Cuerpo de PartDesign (body.removeObject + 
   doc.removeObject) deja la Tip en la anterior pero OCULTA: el Cuerpo se ve a través de su Tip, así

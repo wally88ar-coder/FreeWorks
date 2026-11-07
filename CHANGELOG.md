@@ -37,7 +37,10 @@ Neueste Version oben. / Newest version first.
   Esquinas a tope y T con corte plano, como SW: en los caños cuadrados y rectangulares el caño que
   llega se corta recto a ras de la cara del que pasa (antes copiaba el radio de la esquina y lo
   rellenaba); el caño redondo sigue con la boca de pescado y "Recortar/Alargar" contra un miembro
-  sigue ajustando contra el sólido.
+  sigue ajustando contra el sólido. En las esquinas a tope en ángulo (no a 90°), la punta del que
+  pasa también se corta en ángulo al ras de la cara de afuera del otro (antes quedaba recta y una
+  esquina sobresalía); comparado con SW 2018 a 60° y 120°: mismos largos y cortes (534,64 mm a 30° y
+  488,45 mm a 30° con 40 x 40 x 2).
 - **Arreglado: Vista de sección no se sacaba con el botón después de reconstruir la pieza.**
 - **Barrita sobre la vista con Vista de sección y Estilo de visualización, como SW 2018**
   (`swui/fork/view_bar.py`, `section_view.py`). Vista de sección con panel SW (plano, invertir,
