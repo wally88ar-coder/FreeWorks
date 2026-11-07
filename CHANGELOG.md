@@ -5,6 +5,13 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Croquis 3D, como SW 2018** (`swui/fork/sketch3d.py`, `sketch3d_panel.py`, `sketch3d_tab.py`):
+  botón al lado de Croquis y en Insertar. Líneas en el espacio en cadena (clic o arrastrar), que
+  enganchan a X, Y o Z, a puntos, al origen y a vértices de la pieza; Tab cambia el plano (Alzado,
+  Vista lateral, Planta) y Ctrl + clic toma una cara o un plano; el largo se escribe mientras se
+  dibuja y queda como cota (D1@Croquis3D1, visible en Ecuaciones). Relaciones A lo largo de X/Y/Z,
+  Paralela, Igual y Fijar; líneas negras (definidas) y azules. Hecho con líneas nativas de FreeCAD
+  atadas con fórmulas: abre sin FreeWorks. Solo líneas (sin arcos) y sin resolvedor libre.
 - **Piezas soldadas, como SW 2018** (`swui/fork/weldments.py`, `weld_panels.py`, `weld_tab.py`):
   pestaña nueva con Miembro estructural (caños, ángulos, planchuelas y UPN sobre un croquis
   esqueleto, con vista previa), Esquinas (a tope eligiendo cuál pasa, o inglete), Recortar/Alargar

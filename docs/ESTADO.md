@@ -1,5 +1,22 @@
 # Estado del fork
 
+**07/11, CROQUIS 3D: HECHO** (plan aprobado con las 4 decisiones del usuario; "Programalo").
+Botón Croquis 3D al lado de Croquis (pestaña Croquis) y en Insertar. `swui/fork/sketch3d.py` (lógica,
+funciones públicas: new_sketch, add_line con origin/free/on_point/on_vertex/along/direction,
+set_length, set_dim, set_axis, set_parallel, set_equal, fix, delete_lines), `sketch3d_panel.py`
+(panel, dibujo sobre la vista, doble clic para reabrir), `sketch3d_tab.py`, ícono `fork/sketch3d`;
+`equations.py` muestra las cotas como D1@Croquis3D1 (y oculta las fórmulas internas de las líneas).
+Nativo: Part::Line con extremos por fórmulas + VarSet de cotas, en un grupo "Croquis3D1".
+**Probado por Claude:** guiones sin pantalla (mesa de 4 patas + diagonal, relaciones, borrar,
+reabrir sin FreeWorks, Ecuaciones, caños encima) y con el mouse en FreeCAD de prueba (cadena desde el
+origen enganchando X/Z/Y, Tab, cotas por doble clic y por la tabla, Igual, Supr, Aceptar, árbol).
+Por guion con el cursor de verdad: vista previa, largo tecleado + Enter, Ctrl+clic en una cara,
+enganche a vértices, clic derecho sin menú, reabrir con doble clic (la pantalla se bloqueó y el mouse
+automático no genera movimiento). **Falta que lo pruebe el usuario**, sobre todo la vista previa que
+sigue al mouse y escribir el largo. Límites: solo líneas, sin resolvedor libre (cada línea depende
+de las anteriores), borrar una línea deja sueltas las que dependían, el ícono del árbol es la
+carpeta de grupo. SW comparado con el mouse: ver "Falta / ideas" > Croquis 3D.
+
 **07/11, PIEZAS SOLDADAS (etapas 1 a 5 del plan): HECHAS, terminadas a las 01:53** (pedido del usuario:
 "implementá las 5 etapas, decidí vos las 4 cuestiones... las pruebas hacelas vos con mouse").
 Pestaña "Piezas soldadas" (después de Chapa) y menú Insertar > Piezas soldadas: Miembro estructural,
@@ -2206,7 +2223,7 @@ Etapas:
   https://github.com/shaise/FreeCAD_FastenersWB`, leído en el commit fddd07a). Guion de la primera
   prueba ya escrito (placa con agujero, tornillo ISO 4762 Auto, largo y rosca, tuerca, arandela,
   PEM, varilla, seguir a la placa, BOM): rehacerlo, la copia del scratchpad es temporal.
-- **Croquis 3D** (pedido 07/11; plan escrito, **esperando OK del usuario**, sin código):
+- **Croquis 3D** (pedido 07/11; **HECHO el 07/11**, ver arriba; plan:
   https://claude.ai/artifact/FsYyj1QREtkuoAqzyAqcBB. Idea: líneas nativas Part::Line con extremos
   atados por fórmulas (punto compartido = expresión al extremo de otra línea; A lo largo de X/Y/Z =
   dos coordenadas iguales) y cotas en un VarSet; sin resolvedor propio (cada línea depende de las

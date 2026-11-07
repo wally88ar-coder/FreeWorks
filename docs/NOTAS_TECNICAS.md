@@ -666,6 +666,9 @@ los .pyc de `swui/__pycache__`, `swui/fork/__pycache__`, `swui/commands/__pycach
 `swui/lang/__pycache__` y `tools/__pycache__` (Python los rehace; están en .gitignore). Prevención:
 no correr pruebas con interfaz y FreeCADCmd al mismo tiempo; si aparece "unknown opcode" en
 run.log, borrar los .pyc antes de seguir.
+07/11: volvió a pasar con dos FreeCAD de prueba abiertos a la vez (Croquis 3D); con los .pyc
+borrados y un solo FreeCAD, cero errores. Un FreeCAD que inunda el informe así no se deja matar
+(Stop-Process dice que terminó pero sigue en la lista hasta que se cierra la consola que lo lanzó).
 
 ## Configuraciones (implementación, etapas 1 a 5, 2026-11-01)
 - Módulos: `configurations.py` (núcleo sin interfaz: tabla, lista, Esta/Todas, suprimir con
@@ -941,3 +944,29 @@ que usan está en `tools/test_load.py` (`check_ia`): si una cambia de firma, el 
   (`tessellate`), no con vértices.
 - Comparado con SW (herramienta del puente y con el mouse): marco 600 x 400 en 40x40x2 a inglete =
   2 x 640 + 2 x 440 a 45° (igual); a tope con los largueros pasantes = largo a ejes + 40 / - 40.
+
+## Croquis 3D (07/11): hallazgos en FreeCAD 1.1.4
+- No hay croquis 3D nativo (el Sketcher resuelve en un plano). Se arma con `Part::Line` (X1..Z2 son
+  propiedades de longitud que aceptan fórmulas) dentro de un `App::DocumentObjectGroup` marcado
+  `SWUI_Sketch3D`, y un `App::VarSet` con las cotas D1, D2... Probado: archivo reabierto en FreeCAD
+  sin tocar nada de FreeWorks, cambiar D1 en el VarSet mueve todo.
+- Una línea NO puede tener un link a su grupo (el grupo ya la tiene en Group): ciclo, "The graph
+  must be a DAG" y nada se recalcula. Se busca el croquis por `InList`.
+- Fórmulas: una propiedad puede usar otra del mismo objeto sin prefijo (`X2 = X1 + Cotas.D1`).
+  `Obj.Shape.Length` y `Obj.Shape.Vertexes[i].Point.x` andan en fórmulas pero salen SIN unidad
+  (multiplicar por `1 mm`). Al poner la fórmula con la forma todavía vacía FreeCAD imprime
+  IndexError, pero después recalcula bien.
+- Vista: `getCursorPos`, `getPointOnFocalPlane`, `getPointOnViewport` y `getObjectInfo` usan los
+  mismos píxeles (Coin, y hacia arriba). `getObjectInfo` a veces no toma una línea fina en el
+  primer píxel: para el doble clic, respaldo con lo que dejó elegido el primer clic. Los vértices se
+  enganchan por cercanía en la pantalla (getObjectInfo solo da Vertex si el clic cae justo encima).
+- Documento vacío: FreeCAD arranca con un zoom de pocos milímetros (100 mm = 13.000 píxeles): el
+  croquis 3D pone una isométrica de ~1,4 m al abrirse si no hay nada a la vista.
+- Tab y los números llegan como atajos (ShortcutOverride) antes que como teclas: aceptar el
+  ShortcutOverride para quedárselas; los números solo con una línea empezada (si no, siguen las
+  vistas 0..6). El clic derecho que corta la cadena debe tragarse también el ContextMenu, si no sale
+  el menú de FreeCAD.
+- El mouse automático de las pruebas no genera movimiento (ni en FreeCAD ni en SW): la vista previa
+  que sigue al mouse y el largo tecleado se probaron moviendo el cursor de verdad desde un guion
+  (`QCursor.setPos` + `mouse_moved`). En SW 2018, el Croquis 3D con el mouse automático dibuja
+  arrastrando pero no con clic y clic; y Ctrl+Z justo después de abrirlo deshace el croquis entero.
