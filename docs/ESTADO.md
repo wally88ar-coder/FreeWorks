@@ -24,6 +24,12 @@ deleted" al elegir una línea: panel cerrado por FreeCAD sin Cancelar dejaba el 
 ahora usa panel_guard (track/orphaned) y se apaga solo, y reabrir con otro abierto lo cierra
 guardando. Probado por guion con cursor y teclas de verdad; falta que el usuario lo vuelva a probar.
 
+**07/11 tarde, "bug estructura2" del usuario (marco de 4 caños, de inglete a tope desaparecían los
+dos largueros): ARREGLADO.** Los caños seguían bien (sin interfaz todo daba bien); era la vista: al
+borrar la última operación del Cuerpo (el inglete), PartDesign deja oculta la anterior (la extrusión)
+y el Cuerpo se ve a través de ella. `weldments._drop` borra y vuelve a mostrar la punta. Probado con
+interfaz sobre una copia de su archivo: inglete > tope > inglete > ninguno > tope, los 4 visibles.
+
 **07/11 tarde, Editar operación del Miembro estructural completo y Editar croquis del Croquis 3D**
 (pregunta del usuario: "¿cómo edito la operación desde el panel?"; "si"): clic derecho > Editar
 operación sobre la carpeta "Miembro estructuralN" o un caño reabre el panel de Miembro estructural

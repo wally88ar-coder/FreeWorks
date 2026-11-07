@@ -453,6 +453,30 @@ def _tag(obj, cid):
     _add_prop(obj, "SWUI_WeldCorner", "App::PropertyString", cid)
 
 
+def _drop(body, o):
+    """Sacar una operación del Cuerpo y dejar a la vista la que queda como punta. Con la interfaz,
+    PartDesign muestra el Cuerpo a través de su última operación y oculta las anteriores: al borrar
+    la última (un inglete), la anterior quedaba oculta y el caño desaparecía de la vista (visto por
+    el usuario 07/11, "bug estructura2": de inglete a tope se iban los largueros)."""
+    body.removeObject(o)
+    body.Document.removeObject(o.Name)
+    _show_tip(body)
+
+
+def _show_tip(body):
+    tip = body.Tip
+    if tip is None:
+        return
+    try:
+        if not tip.ViewObject.Visibility:
+            for o in body.Group:
+                if o is not tip and o.isDerivedFrom("PartDesign::Feature"):
+                    o.ViewObject.Visibility = False
+            tip.ViewObject.Visibility = True
+    except Exception:
+        pass  # sin interfaz (FreeCADCmd) no hay ViewObject
+
+
 def remove_corner(a, b):
     """Sacar el tratamiento de esquina entre dos miembros (operaciones y alargues)."""
     cid = _corner_id(a, b)
@@ -460,8 +484,7 @@ def remove_corner(a, b):
     for body in (a, b):
         for o in list(body.Group):
             if getattr(o, "SWUI_WeldCorner", "") == cid:
-                body.removeObject(o)
-                doc.removeObject(o.Name)
+                _drop(body, o)
         tags = _ext_tags(body)
         if cid in tags:
             end = tags.pop(cid)[0]
@@ -774,8 +797,7 @@ def _forget(body):
         for o in list(other.Group):
             cid = getattr(o, "SWUI_WeldCorner", "")
             if cid.startswith("trim|") and body.Name in cid.split("|"):
-                other.removeObject(o)
-                doc.removeObject(o.Name)
+                _drop(other, o)
         tags = _ext_tags(other)
         gone = [k for k in tags if k.startswith("trim|") and body.Name in k.split("|")]
         for k in gone:

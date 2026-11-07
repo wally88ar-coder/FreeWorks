@@ -25,7 +25,8 @@ Neueste Version oben. / Newest version first.
   del Miembro estructural o un caño) reabre el mismo panel con todo editable, como SW: tipo, tamaño,
   líneas, giro, ubicación, simetría y esquinas; los caños se cambian en su lugar, sin borrarlos; las
   cajitas y listas de los paneles ya no cambian con la ruedita si no se hizo clic en ellas; en una
-  esquina de tres caños, cambiar una esquina ya no acorta la punta que usa la otra.
+  esquina de tres caños, cambiar una esquina ya no acorta la punta que usa la otra. Arreglado: al
+  pasar de inglete a tope desaparecían de la vista los caños que pasan ("bug estructura2").
 - **Arreglado: Vista de sección no se sacaba con el botón después de reconstruir la pieza.**
 - **Barrita sobre la vista con Vista de sección y Estilo de visualización, como SW 2018**
   (`swui/fork/view_bar.py`, `section_view.py`). Vista de sección con panel SW (plano, invertir,

@@ -922,6 +922,10 @@ que usan está en `tools/test_load.py` (`check_ia`): si una cambia de firma, el 
 
 ## Piezas soldadas (07/11): hallazgos en FreeCAD 1.1.4
 
+- Borrar desde un guion la última operación de un Cuerpo de PartDesign (body.removeObject + 
+  doc.removeObject) deja la Tip en la anterior pero OCULTA: el Cuerpo se ve a través de su Tip, así
+  que desaparece de la vista (sin interfaz no se nota). Después de borrar, mostrar la Tip y ocultar
+  las demás operaciones (`weldments._show_tip`).
 - QDoubleSpinBox y QComboBox de Qt cambian de valor con la ruedita aunque no tengan foco: al bajar un
   panel largo con la ruedita se lleva puesto el valor de lo que pasa por debajo del mouse (así quedó
   Girar ángulo en -2° en la prueba del usuario). `weld_panels.guard_wheel(form)`: StrongFocus y un
