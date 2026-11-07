@@ -1,0 +1,913 @@
+# -*- coding: utf-8 -*-
+# SPDX-License-Identifier: LGPL-2.1-or-later
+# SPDX-FileCopyrightText: 2026 wally88ar-coder
+"""
+Piezas soldadas como SW 2018: la lógica, sin interfaz (regla "panel = cara de una función").
+Plan aprobado por el usuario el 07/11 (documento "Plan: piezas soldadas en FreeWorks").
+
+Todo se arma con objetos NATIVOS de FreeCAD (decisión del usuario 01/11; FreeWorks es asistente, no
+motor): cada miembro es un PartDesign::Body con
+    Ruta     SubShapeBinder de la línea del croquis esqueleto (sigue al esqueleto)
+    Perfil   croquis de la sección, acoplado "NormalToEdge" al principio de la Ruta
+    Miembro  Pad a dos lados: largo = fórmula "<Ruta>.Shape.Length + alargue final", el otro lado =
+             alargue inicial (las esquinas alargan el miembro que pasa)
+y los recortes son operaciones nativas dentro del Cuerpo:
+    a tope / T / ajuste a otro miembro: Pocket con la ENVOLVENTE (contorno exterior lleno) del otro
+             miembro, barrida por su misma Ruta y con sus mismos largos (fórmulas): sigue sola;
+    inglete y recorte contra una cara: SubtractiveBox del lado a sacar (inglete: acoplado al vértice
+             de la esquina; cara: a la cara). El ángulo del inglete se calcula al crearlo.
+
+Nombres guardados en los archivos (estables, no cambiar): propiedades SWUI_WeldMember,
+SWUI_WeldKind, SWUI_WeldSize, SWUI_WeldDims, SWUI_WeldRotation, SWUI_WeldAnchor, SWUI_WeldMirror,
+SWUI_WeldCorner, SWUI_WeldPart ("tapa", "cartela").
+
+Funciones públicas:
+    profile_names(), sizes(kind), profile_loops(kind, dims), area(kind, dims)
+    create_members(doc, edges, kind, size, rotation=0, anchor="Centro", mirror=False) -> [Cuerpo]
+    find_corners(members), apply_corner(corner, treatment, passing=None), remove_corner(...)
+    trim_to_member(member, tool), trim_to_face(member, (obj, "FaceN")), extend_to_face(...)
+    cut_list(doc) -> filas, cut_list_csv(rows), cut_list_sheet(doc, rows)
+    end_cap(member, end, thickness, inset), gusset(a, b, size, thickness)
+"""
+
+import math
+
+import FreeCAD
+
+V = FreeCAD.Vector
+TOL = 1e-4
+STEEL = 7.85e-6  # kg/mm³: si la pieza no tiene material, se pesa como acero (decisión 07/11)
+
+# --- Tabla de perfiles (mercado argentino; decisión de Claude 07/11, ajustable) -------------------
+
+INCH = 25.4
+SQUARE = (15, 20, 25, 30, 40, 50, 60, 70, 80, 100)
+RECT = ((20, 10), (30, 20), (40, 20), (50, 30), (60, 40), (80, 40), (100, 50))
+WALLS = (0.9, 1.25, 1.6, 2.0, 2.5, 3.2)
+ROUND = (("1/2\"", 12.7), ("5/8\"", 15.875), ("3/4\"", 19.05), ("7/8\"", 22.225), ("1\"", 25.4),
+         ("1 1/4\"", 31.75), ("1 1/2\"", 38.1), ("2\"", 50.8), ("2 1/2\"", 63.5), ("3\"", 76.2))
+ROUND_WALLS = (1.25, 1.6, 2.0, 2.5, 3.2)
+ANGLES = (("3/4\"", 0.75), ("7/8\"", 0.875), ("1\"", 1.0), ("1 1/4\"", 1.25), ("1 1/2\"", 1.5),
+          ("2\"", 2.0), ("2 1/2\"", 2.5), ("3\"", 3.0))
+THICK = (("1/8\"", 0.125), ("3/16\"", 0.1875), ("1/4\"", 0.25))
+FLATS = (("3/4\"", 0.75), ("1\"", 1.0), ("1 1/4\"", 1.25), ("1 1/2\"", 1.5), ("2\"", 2.0),
+         ("2 1/2\"", 2.5), ("3\"", 3.0), ("4\"", 4.0))
+FLAT_THICK = THICK + (("5/16\"", 0.3125),)
+UPN = ((80, 45, 6.0, 8.0), (100, 50, 6.0, 8.5), (120, 55, 7.0, 9.0), (140, 60, 7.0, 10.0),
+       (160, 65, 7.5, 10.5), (200, 75, 8.5, 11.5))  # h, b, alma, ala (DIN 1026, sin radios)
+
+KINDS = ("Caño cuadrado", "Caño rectangular", "Caño redondo", "Ángulo", "Planchuela", "UPN")
+
+
+def _fmt(x):
+    s = ("%.2f" % x).rstrip("0").rstrip(".")
+    return s.replace(".", ",")
+
+
+def profile_names():
+    return KINDS
+
+
+def sizes(kind):
+    """[(nombre, dims)] de un tipo de perfil. dims en mm."""
+    out = []
+    if kind == "Caño cuadrado":
+        for a in SQUARE:
+            for t in WALLS:
+                if t < a / 4:
+                    out.append(("%dx%dx%s" % (a, a, _fmt(t)), [a, a, t]))
+    elif kind == "Caño rectangular":
+        for b, h in RECT:
+            for t in WALLS:
+                if t < h / 4:
+                    out.append(("%dx%dx%s" % (b, h, _fmt(t)), [b, h, t]))
+    elif kind == "Caño redondo":
+        for name, d in ROUND:
+            for t in ROUND_WALLS:
+                if t < d / 4:
+                    out.append(("%s (%s mm) x %s" % (name, _fmt(d), _fmt(t)), [d, t]))
+    elif kind == "Ángulo":
+        for name, a in ANGLES:
+            for tn, t in THICK:
+                if t < a / 3:
+                    out.append(("%s x %s" % (name, tn), [a * INCH, t * INCH]))
+    elif kind == "Planchuela":
+        for name, b in FLATS:
+            for tn, t in FLAT_THICK:
+                if t < b / 2:
+                    out.append(("%s x %s" % (name, tn), [b * INCH, t * INCH]))
+    elif kind == "UPN":
+        for h, b, tw, tf in UPN:
+            out.append(("UPN %d" % h, [h, b, tw, tf]))
+    return out
+
+
+def dims_of(kind, size):
+    for name, d in sizes(kind):
+        if name == size:
+            return list(d)
+    raise ValueError("Perfil desconocido: %s %s" % (kind, size))
+
+
+def _rect(x0, y0, x1, y1):
+    return [V(x0, y0, 0), V(x1, y0, 0), V(x1, y1, 0), V(x0, y1, 0)]
+
+
+def profile_loops(kind, dims, outer_only=False):
+    """Contornos de la sección centrados en su rectángulo envolvente: [("poly", [puntos]) |
+    ("circle", radio)]. outer_only: solo el contorno de afuera (la envolvente llena)."""
+    if kind in ("Caño cuadrado", "Caño rectangular"):
+        b, h, t = dims
+        loops = [("poly", _rect(-b / 2, -h / 2, b / 2, h / 2))]
+        if not outer_only:
+            loops.append(("poly", _rect(-b / 2 + t, -h / 2 + t, b / 2 - t, h / 2 - t)))
+        return loops
+    if kind == "Caño redondo":
+        d, t = dims
+        loops = [("circle", d / 2)]
+        if not outer_only:
+            loops.append(("circle", d / 2 - t))
+        return loops
+    if kind == "Ángulo":
+        a, t = dims
+        h = a / 2
+        if outer_only:
+            return [("poly", _rect(-h, -h, h, h))]
+        return [("poly", [V(-h, -h, 0), V(h, -h, 0), V(h, -h + t, 0), V(-h + t, -h + t, 0),
+                          V(-h + t, h, 0), V(-h, h, 0)])]
+    if kind == "Planchuela":
+        b, t = dims
+        return [("poly", _rect(-b / 2, -t / 2, b / 2, t / 2))]
+    if kind == "UPN":
+        h, b, tw, tf = dims
+        x0, x1, y0, y1 = -b / 2, b / 2, -h / 2, h / 2
+        if outer_only:
+            return [("poly", _rect(x0, y0, x1, y1))]
+        return [("poly", [V(x0, y0, 0), V(x1, y0, 0), V(x1, y0 + tf, 0), V(x0 + tw, y0 + tf, 0),
+                          V(x0 + tw, y1 - tf, 0), V(x1, y1 - tf, 0), V(x1, y1, 0), V(x0, y1, 0)])]
+    raise ValueError(kind)
+
+
+def extent(kind, dims):
+    """(ancho en X, alto en Y) del perfil."""
+    if kind in ("Caño cuadrado", "Caño rectangular"):
+        return dims[0], dims[1]
+    if kind == "Caño redondo":
+        return dims[0], dims[0]
+    if kind == "Ángulo":
+        return dims[0], dims[0]
+    if kind == "Planchuela":
+        return dims[0], dims[1]
+    if kind == "UPN":
+        return dims[1], dims[0]
+    return 0, 0
+
+
+def area(kind, dims):
+    """Área de la sección (mm²), para el peso por metro."""
+    import Part
+
+    faces = []
+    for typ, data in profile_loops(kind, dims):
+        if typ == "circle":
+            faces.append(Part.Face(Part.Wire(Part.makeCircle(data))))
+        else:
+            faces.append(Part.Face(Part.makePolygon(data + [data[0]])))
+    a = faces[0].Area
+    for f in faces[1:]:
+        a -= f.Area
+    return a
+
+
+ANCHORS = ("Centro", "Arriba", "Abajo", "Izquierda", "Derecha",
+           "Arriba izquierda", "Arriba derecha", "Abajo izquierda", "Abajo derecha")
+
+
+def _anchor_point(anchor, w, h):
+    x = -w / 2 if "izquierda" in anchor.lower() else (w / 2 if "derecha" in anchor.lower() else 0)
+    y = h / 2 if anchor.startswith("Arriba") else (-h / 2 if anchor.startswith("Abajo") else 0)
+    return V(x, y, 0)
+
+
+# --- Miembros -------------------------------------------------------------------------------------
+
+
+def _add_prop(obj, name, typ, value, group="Pieza soldada", doc=""):
+    if not hasattr(obj, name):
+        obj.addProperty(typ, name, group, doc)
+        try:
+            obj.setEditorMode(name, 2)
+        except Exception:
+            pass
+    setattr(obj, name, value)
+
+
+def _fill_sketch(sk, loops, mirror=False):
+    import Part
+
+    for typ, data in loops:
+        if typ == "circle":
+            sk.addGeometry(Part.Circle(V(0, 0, 0), V(0, 0, 1), data))
+            continue
+        pts = [V(-p.x, p.y, 0) if mirror else p for p in data]
+        n = len(pts)
+        first = sk.GeometryCount
+        for i in range(n):
+            sk.addGeometry(Part.LineSegment(pts[i], pts[(i + 1) % n]))
+        import Sketcher
+
+        for i in range(n):
+            sk.addConstraint(Sketcher.Constraint("Coincident", first + i, 2, first + (i + 1) % n, 1))
+
+
+def _edge_of(obj, sub):
+    return obj.getSubObject(sub)
+
+
+def frame_normal(obj, sub):
+    """Normal del plano del esqueleto (croquis) donde está la línea."""
+    try:
+        if obj.isDerivedFrom("Sketcher::SketchObject"):
+            return obj.getGlobalPlacement().Rotation.multVec(V(0, 0, 1))
+    except Exception:
+        pass
+    return V(0, 0, 1)
+
+
+def _profile_rotation(sketch_pl, normal, edge_dir):
+    """Ángulo (grados) alrededor del eje del miembro para que el "arriba" del perfil quede hacia la
+    normal del esqueleto (como SW: el perfil apoyado en el plano del croquis)."""
+    n = V(normal)
+    n = n - edge_dir * n.dot(edge_dir)
+    if n.Length < 1e-6:
+        n = V(0, 0, 1) - edge_dir * edge_dir.z
+        if n.Length < 1e-6:
+            n = V(0, 1, 0) - edge_dir * edge_dir.y
+    n.normalize()
+    xl = sketch_pl.Rotation.multVec(V(1, 0, 0))
+    yl = sketch_pl.Rotation.multVec(V(0, 1, 0))
+    return math.degrees(math.atan2(-n.dot(xl), n.dot(yl)))
+
+
+def _pad_of(body):
+    for o in body.Group:
+        if o.TypeId == "PartDesign::Pad" and o.Name.startswith("Miembro"):
+            return o
+    return None
+
+
+def _route_of(body):
+    for o in body.Group:
+        if o.TypeId == "PartDesign::SubShapeBinder" and o.Label.startswith("Ruta"):
+            return o
+    return None
+
+
+def _profile_of(body):
+    for o in body.Group:
+        if o.TypeId == "Sketcher::SketchObject" and o.Label.startswith("Perfil"):
+            return o
+    return None
+
+
+def is_member(obj):
+    return bool(getattr(obj, "SWUI_WeldMember", False))
+
+
+def members(doc):
+    return [o for o in doc.Objects if is_member(o)]
+
+
+def set_extension(body, start=None, end=None):
+    """Alargue (mm) del miembro en su punta inicial y/o final."""
+    pad, route = _pad_of(body), _route_of(body)
+    if start is not None:
+        pad.Length2 = max(0.0, float(start))
+    if end is not None:
+        pad.setExpression("Length", "%s.Shape.Length + %s" % (route.Name, repr(round(float(end), 6))))
+
+
+def extension(body):
+    """(alargue inicial, alargue final)."""
+    pad, route = _pad_of(body), _route_of(body)
+    e1 = 0.0
+    for prop, expr in pad.ExpressionEngine:
+        if prop == "Length" and "+" in expr:
+            try:
+                e1 = float(expr.split("+")[-1])
+            except ValueError:
+                pass
+    return float(pad.Length2), e1
+
+
+def create_member(doc, edge, kind, size, rotation=0.0, anchor="Centro", mirror=False, label=None):
+    """Un miembro estructural sobre una línea del esqueleto. edge = (objeto, "EdgeN")."""
+    obj, sub = edge
+    dims = dims_of(kind, size)
+    body = doc.addObject("PartDesign::Body", "Miembro")
+    body.Label = label or "%s %s" % (kind, size)
+    route = body.newObject("PartDesign::SubShapeBinder", "Ruta")
+    route.Label = "Ruta"
+    route.Support = [(obj, (sub,))]
+    try:
+        route.ViewObject.Visibility = False
+    except Exception:
+        pass
+    sk = body.newObject("Sketcher::SketchObject", "Perfil")
+    sk.Label = "Perfil"
+    sk.AttachmentSupport = [(route, "Edge1")]
+    sk.MapMode = "NormalToEdge"
+    sk.MapPathParameter = 0.0
+    _fill_sketch(sk, profile_loops(kind, dims), mirror)
+    doc.recompute()
+    e = route.Shape.Edges[0]
+    d = e.Vertexes[-1].Point - e.Vertexes[0].Point
+    d.normalize()
+    auto = _profile_rotation(sk.Placement, frame_normal(obj, sub), d)
+    w, h = extent(kind, dims)
+    rot = FreeCAD.Rotation(V(0, 0, 1), auto + float(rotation))
+    base = rot.multVec(_anchor_point(anchor, w, h)) * -1
+    sk.AttachmentOffset = FreeCAD.Placement(base, rot)
+    pad = body.newObject("PartDesign::Pad", "Miembro")
+    pad.Label = "Miembro"
+    pad.Profile = sk
+    pad.SideType = "Two sides"
+    pad.Type = "Length"
+    pad.Type2 = "Length"
+    pad.Reversed = True
+    pad.Length2 = 0.0
+    pad.setExpression("Length", "%s.Shape.Length + 0.0" % route.Name)
+    try:
+        sk.ViewObject.Visibility = False
+    except Exception:
+        pass
+    _add_prop(body, "SWUI_WeldMember", "App::PropertyBool", True)
+    _add_prop(body, "SWUI_WeldKind", "App::PropertyString", kind)
+    _add_prop(body, "SWUI_WeldSize", "App::PropertyString", size)
+    _add_prop(body, "SWUI_WeldDims", "App::PropertyFloatList", [float(x) for x in dims])
+    _add_prop(body, "SWUI_WeldRotation", "App::PropertyFloat", float(rotation))
+    _add_prop(body, "SWUI_WeldAnchor", "App::PropertyString", anchor)
+    _add_prop(body, "SWUI_WeldMirror", "App::PropertyBool", bool(mirror))
+    doc.recompute()
+    return body
+
+
+def create_members(doc, edges, kind, size, rotation=0.0, anchor="Centro", mirror=False, group_label=None):
+    """Miembro estructural (como SW): un Cuerpo por línea, todos en una carpeta "Miembro
+    estructuralN". Devuelve los Cuerpos."""
+    n = 1 + sum(1 for o in doc.Objects if o.TypeId == "App::DocumentObjectGroup"
+                and o.Label.startswith("Miembro estructural"))
+    group = doc.addObject("App::DocumentObjectGroup", "MiembroEstructural")
+    group.Label = group_label or "Miembro estructural%d" % n
+    bodies = []
+    for i, edge in enumerate(edges):
+        b = create_member(doc, edge, kind, size, rotation, anchor, mirror,
+                          label="%s %s (%d)" % (kind, size, i + 1))
+        group.addObject(b)
+        bodies.append(b)
+    doc.recompute()
+    return bodies
+
+
+# --- Geometría de un miembro ----------------------------------------------------------------------
+
+
+def axis(body):
+    """(inicio, fin, dirección unitaria) de la línea del miembro, en coordenadas del documento."""
+    e = _route_of(body).Shape.Edges[0]
+    pl = body.getGlobalPlacement() if hasattr(body, "getGlobalPlacement") else body.Placement
+    a, b = pl.multVec(e.Vertexes[0].Point), pl.multVec(e.Vertexes[-1].Point)
+    d = b - a
+    d.normalize()
+    return a, b, d
+
+
+def profile_axes(body):
+    """(X, Y) del perfil en coordenadas del documento."""
+    sk = _profile_of(body)
+    r = sk.getGlobalPlacement().Rotation
+    return r.multVec(V(1, 0, 0)), r.multVec(V(0, 1, 0))
+
+
+def half_extent(body, direction):
+    """Media medida del perfil del miembro a lo largo de una dirección perpendicular a él."""
+    w, h = extent(body.SWUI_WeldKind, list(body.SWUI_WeldDims))
+    xl, yl = profile_axes(body)
+    d = V(direction)
+    if d.Length < 1e-9:
+        return 0.0
+    d.normalize()
+    return abs(d.dot(xl)) * w / 2 + abs(d.dot(yl)) * h / 2
+
+
+# --- Esquinas ---------------------------------------------------------------------------------------
+
+
+def find_corners(bodies, tol=0.01):
+    """Esquinas entre miembros: [{"a", "b", "kind": "L"|"T", "point", "end_a", "end_b"}].
+    L: dos puntas que se tocan; T: la punta de b sobre el medio de a (end_a None)."""
+    out = []
+    data = [(b,) + axis(b) for b in bodies]
+    for i in range(len(data)):
+        for j in range(i + 1, len(data)):
+            A, a0, a1, da = data[i]
+            B, b0, b1, db = data[j]
+            if abs(abs(da.dot(db)) - 1) < 1e-6:
+                continue  # paralelos (en línea): no es esquina
+            done = False
+            for ea, pa in ((0, a0), (1, a1)):
+                for eb, pb in ((0, b0), (1, b1)):
+                    if (pa - pb).Length < tol:
+                        out.append({"a": A, "b": B, "kind": "L", "point": V(pa), "end_a": ea, "end_b": eb})
+                        done = True
+            if done:
+                continue
+            for (P, p0, p1, dp), (Q, q0, q1, dq) in (((A, a0, a1, da), (B, b0, b1, db)),
+                                                     ((B, b0, b1, db), (A, a0, a1, da))):
+                for eq, pq in ((0, q0), (1, q1)):
+                    t = (pq - p0).dot(dp)
+                    off = (pq - (p0 + dp * t)).Length
+                    if off < tol and tol < t < (p1 - p0).Length - tol:
+                        out.append({"a": P, "b": Q, "kind": "T", "point": V(pq), "end_a": None, "end_b": eq})
+    return out
+
+
+def _away(body, end):
+    """Dirección desde la punta `end` hacia el resto del miembro."""
+    a, b, d = axis(body)
+    return d if end == 0 else d * -1
+
+
+def _corner_id(a, b):
+    return "%s|%s" % tuple(sorted((a.Name, b.Name)))
+
+
+def _tag(obj, cid):
+    _add_prop(obj, "SWUI_WeldCorner", "App::PropertyString", cid)
+
+
+def remove_corner(a, b):
+    """Sacar el tratamiento de esquina entre dos miembros (operaciones y alargues)."""
+    cid = _corner_id(a, b)
+    doc = a.Document
+    for body in (a, b):
+        for o in list(body.Group):
+            if getattr(o, "SWUI_WeldCorner", "") == cid:
+                body.removeObject(o)
+                doc.removeObject(o.Name)
+        tags = dict(_ext_tags(body))
+        if cid in tags:
+            end = tags.pop(cid)
+            _set_ext_tags(body, tags)
+            if end == 0:
+                set_extension(body, start=0.0)
+            else:
+                set_extension(body, end=0.0)
+    doc.recompute()
+
+
+def _ext_tags(body):
+    raw = getattr(body, "SWUI_WeldExtTags", "") or ""
+    out = []
+    for item in raw.split(";"):
+        if "=" in item:
+            k, v = item.split("=")
+            out.append((k, int(v)))
+    return out
+
+
+def _set_ext_tags(body, tags):
+    _add_prop(body, "SWUI_WeldExtTags", "App::PropertyString", ";".join("%s=%d" % kv for kv in tags.items()))
+
+
+def _extend_for(body, end, value, cid):
+    if end == 0:
+        set_extension(body, start=value)
+    else:
+        set_extension(body, end=value)
+    tags = dict(_ext_tags(body))
+    tags[cid] = end
+    _set_ext_tags(body, tags)
+
+
+def _envelope_cut(target, tool, cid):
+    """En `target`, sacar la envolvente llena del miembro `tool` (barrida por su Ruta, con sus largos)."""
+    doc = target.Document
+    troute, tpad, tsk = _route_of(tool), _pad_of(tool), _profile_of(tool)
+    b = target.newObject("PartDesign::SubShapeBinder", "RutaRecorte")
+    b.Label = "Ruta de " + tool.Label
+    b.Support = [(troute, ("Edge1",))]
+    try:
+        b.ViewObject.Visibility = False
+    except Exception:
+        pass
+    sk = target.newObject("Sketcher::SketchObject", "Envolvente")
+    sk.Label = "Envolvente de " + tool.Label
+    sk.AttachmentSupport = [(b, "Edge1")]
+    sk.MapMode = "NormalToEdge"
+    sk.MapPathParameter = 0.0
+    sk.AttachmentOffset = tsk.AttachmentOffset
+    _fill_sketch(sk, profile_loops(tool.SWUI_WeldKind, list(tool.SWUI_WeldDims), outer_only=True),
+                 bool(getattr(tool, "SWUI_WeldMirror", False)))
+    pk = target.newObject("PartDesign::Pocket", "Recorte")
+    pk.Label = "Recorte contra " + tool.Label
+    pk.Profile = sk
+    pk.SideType = "Two sides"
+    pk.Type = "Length"
+    pk.Type2 = "Length"
+    pk.setExpression("Length", "%s.Length" % tpad.Name)
+    pk.setExpression("Length2", "%s.Length2" % tpad.Name)
+    for o in (b, sk, pk):
+        _tag(o, cid)
+    try:
+        sk.ViewObject.Visibility = False
+    except Exception:
+        pass
+    return pk
+
+
+def _box_cut(target, vertex_end, normal_out, size, cid, label):
+    """En `target`, una caja que saca todo lo que está del lado `normal_out` del plano que pasa por
+    la punta `vertex_end` de su Ruta (inglete)."""
+    # ubicada al crearla (en modo "Translate" FreeCAD descarta el giro de la caja, medido 07/11)
+    a0, a1, _d = axis(target)
+    corner = a0 if vertex_end == 0 else a1
+    box = target.newObject("PartDesign::SubtractiveBox", "Inglete")
+    box.Label = label
+    box.Length = box.Width = box.Height = size
+    rot = FreeCAD.Rotation(V(0, 0, 1), normal_out)
+    inv = target.getGlobalPlacement().inverse() if hasattr(target, "getGlobalPlacement") else FreeCAD.Placement()
+    box.Placement = inv.multiply(FreeCAD.Placement(corner + rot.multVec(V(-size / 2, -size / 2, 0)), rot))
+    _tag(box, cid)
+    return box
+
+
+def butt_extension(passing, end_p, other, end_o=None):
+    """Alargue del miembro que pasa para llegar a la cara de afuera del otro (a tope)."""
+    u = _away(passing, end_p)
+    if end_o is None:
+        a, b, v = axis(other)
+    else:
+        v = _away(other, end_o)
+    cos = max(-1.0, min(1.0, u.dot(v)))
+    theta = math.acos(cos)
+    s = math.sin(theta)
+    if s < 1e-6:
+        return 0.0
+    d_o = u - v * u.dot(v)  # perpendicular al otro, del lado del que pasa
+    d_p = v - u * u.dot(v)
+    half_o = half_extent(other, d_o)
+    half_p = half_extent(passing, d_p)
+    return half_o / s + half_p * abs(cos) / s
+
+
+def apply_corner(corner, treatment="tope", passing=None):
+    """Tratamiento de una esquina (como SW): "tope" (el que pasa se alarga hasta la cara de afuera
+    y el otro se corta contra él), "inglete" (los dos a 45° o a la bisectriz) o "ninguno".
+    En una T siempre es a tope con el que pasa por el medio."""
+    a, b = corner["a"], corner["b"]
+    remove_corner(a, b)
+    cid = _corner_id(a, b)
+    doc = a.Document
+    if treatment == "ninguno":
+        return
+    if corner["kind"] == "T":
+        _envelope_cut(b, a, cid)
+        doc.recompute()
+        return
+    if treatment == "inglete":
+        ua, ub = _away(a, corner["end_a"]), _away(b, corner["end_b"])
+        big = 2 * max(extent(a.SWUI_WeldKind, list(a.SWUI_WeldDims)) + extent(b.SWUI_WeldKind,
+                                                                              list(b.SWUI_WeldDims)))
+        theta = math.acos(max(-1.0, min(1.0, ua.dot(ub))))
+        ext = big / max(0.2, math.sin(theta / 2))
+        m = ua - ub
+        m.normalize()
+        _extend_for(a, corner["end_a"], ext, cid)
+        _extend_for(b, corner["end_b"], ext, cid)
+        size = 4 * ext + 200
+        _box_cut(a, corner["end_a"], m * -1, size, cid, "Inglete con " + b.Label)
+        _box_cut(b, corner["end_b"], m, size, cid, "Inglete con " + a.Label)
+        doc.recompute()
+        return
+    # a tope: pasa el más largo salvo que se diga otro
+    if passing is None:
+        la = (axis(a)[1] - axis(a)[0]).Length
+        lb = (axis(b)[1] - axis(b)[0]).Length
+        passing = a if la >= lb else b
+    other = b if passing == a else a
+    end_p = corner["end_a"] if passing == a else corner["end_b"]
+    end_o = corner["end_b"] if passing == a else corner["end_a"]
+    _extend_for(passing, end_p, butt_extension(passing, end_p, other, end_o), cid)
+    doc.recompute()
+    _envelope_cut(other, passing, cid)
+    doc.recompute()
+
+
+def apply_corners(bodies, treatment="tope"):
+    """Todas las esquinas entre esos miembros con el mismo tratamiento."""
+    corners = find_corners(bodies)
+    for c in corners:
+        apply_corner(c, treatment)
+    return corners
+
+
+# --- Recortar / Alargar ---------------------------------------------------------------------------
+
+
+def _near_end(body, point):
+    a, b, d = axis(body)
+    return 0 if (point - a).Length <= (point - b).Length else 1
+
+
+def trim_to_member(member, tool, extend=True):
+    """Recortar (y alargar si no llega) `member` contra el miembro `tool`: ajuste exacto (cuerpo)."""
+    a0, a1, da = axis(member)
+    b0, b1, db = axis(tool)
+    # punto de la línea de `member` más cercano a la línea de `tool`
+    w0 = a0 - b0
+    aa, bb, cc = da.dot(da), da.dot(db), db.dot(db)
+    dd, ee = da.dot(w0), db.dot(w0)
+    den = aa * cc - bb * bb
+    cid = "trim|%s|%s" % (member.Name, tool.Name)
+    if abs(den) > 1e-9:
+        s = (bb * ee - cc * dd) / den
+        hit = a0 + da * s
+        length = (a1 - a0).Length
+        end = 0 if s < length / 2 else 1
+        need = -s if end == 0 else s - length
+        # solo si no llega: hasta el eje del otro (la envolvente saca lo que sobra). Más allá dejaba un
+        # pedacito suelto del otro lado del caño (visto con guion, 07/11)
+        if extend and need > 1e-6:
+            _extend_for(member, end, need, cid)
+    _envelope_cut(member, tool, cid)
+    member.Document.recompute()
+
+
+def _face_plane(obj, sub):
+    f = obj.getSubObject(sub)
+    if f is None or f.ShapeType != "Face" or f.Surface.__class__.__name__ != "Plane":
+        raise ValueError("Elegí una cara plana")
+    u0, u1, v0, v1 = f.ParameterRange
+    return f.CenterOfMass, f.normalAt((u0 + u1) / 2, (v0 + v1) / 2)
+
+
+def trim_to_face(member, face, extend=True):
+    """Recortar (y alargar si no llega) `member` contra una cara plana: corte recto en el plano."""
+    obj, sub = face
+    p, n = _face_plane(obj, sub)
+    a0, a1, d = axis(member)
+    cid = "trim|%s|%s.%s" % (member.Name, obj.Name, sub)
+    den = d.dot(n)
+    end = None
+    if abs(den) > 1e-9:
+        t = (p - a0).dot(n) / den
+        length = (a1 - a0).Length
+        end = 0 if t < length / 2 else 1
+        need = -t if end == 0 else t - length
+        if extend and need > 0:
+            # más el pedazo del perfil inclinado que todavía no llega al plano
+            w, h = extent(member.SWUI_WeldKind, list(member.SWUI_WeldDims))
+            _extend_for(member, end, need + max(w, h) * 2, cid)
+    # lado a sacar: el que no tiene el medio del miembro
+    mid = (a0 + a1) * 0.5
+    out = n if (mid - p).dot(n) < 0 else n * -1
+    b = member.newObject("PartDesign::SubShapeBinder", "CaraRecorte")
+    b.Label = "Cara de recorte"
+    b.Support = [(obj, (sub,))]
+    try:
+        b.ViewObject.Visibility = False
+    except Exception:
+        pass
+    w, h = extent(member.SWUI_WeldKind, list(member.SWUI_WeldDims))
+    size = 4 * (max(w, h) + 100)
+    box = member.newObject("PartDesign::SubtractiveBox", "Recorte")
+    box.Label = "Recorte contra cara"
+    box.Length = box.Width = box.Height = size
+    box.AttachmentSupport = [(b, "Face1")]
+    box.MapMode = "FlatFace"
+    member.Document.recompute()
+    # FlatFace pone Z según la normal de la cara: girar si el lado a sacar es el otro
+    z = box.Placement.Rotation.multVec(V(0, 0, 1))
+    flip = FreeCAD.Rotation(V(1, 0, 0), 180) if z.dot(out) < 0 else FreeCAD.Rotation()
+    box.AttachmentOffset = FreeCAD.Placement(flip.multVec(V(-size / 2, -size / 2, 0)), flip)
+    for o in (b, box):
+        _tag(o, cid)
+    member.Document.recompute()
+
+
+# --- Lista de cortes ------------------------------------------------------------------------------
+
+
+def _density(body):
+    try:
+        from swui.fork import material as mt
+
+        rho, source = mt.density(body)
+        if rho and source:
+            return rho, False
+    except Exception:
+        pass
+    return STEEL, True
+
+
+def _end_angles(body):
+    """(largo, ángulo punta 1, ángulo punta 2) como la lista de cortes de SW: 0 = corte recto,
+    45 = inglete; None si la punta no es plana (ajuste a medida)."""
+    a0, a1, d = axis(body)
+    sh = body.Shape
+    # puntos de la superficie (no solo los vértices: la boca de pescado no tiene vértice en su punta)
+    pts = [v.Point for v in sh.Vertexes]
+    try:
+        pts += list(sh.tessellate(0.05)[0])
+    except Exception:
+        pass
+    ts = [(p - a0).dot(d) for p in pts]
+    lo, hi = min(ts), max(ts)
+    length = hi - lo
+    angles = []
+    for target in (lo, hi):
+        best = None
+        curved = False
+        for f in sh.Faces:
+            fpts = [v.Point for v in f.Vertexes]
+            try:
+                fpts += list(f.tessellate(0.05)[0])
+            except Exception:
+                pass
+            vs = [(q - a0).dot(d) for q in fpts]
+            if not vs or abs(min(vs, key=lambda x: abs(x - target)) - target) > 0.5:
+                continue
+            surf = f.Surface.__class__.__name__
+            if surf != "Plane":
+                along = False
+                if surf == "Cylinder":  # la pared del caño (eje a lo largo) no es la punta
+                    along = abs(abs(f.Surface.Axis.dot(d)) - 1) < 1e-3
+                if not along and any(abs(x - target) < 0.5 for x in vs):
+                    curved = True
+                continue
+            u0, u1, v0, v1 = f.ParameterRange
+            n = f.normalAt((u0 + u1) / 2, (v0 + v1) / 2)
+            c = abs(n.dot(d))
+            if c < 0.05:
+                continue  # cara a lo largo
+            ang = math.degrees(math.acos(min(1.0, c)))
+            if best is None or ang > best:
+                best = ang
+        angles.append(None if curved else round(best or 0.0, 2))
+    return length, angles[0], angles[1]
+
+
+def cut_list(doc):
+    """Lista de cortes agrupada (como SW): [{"n", "qty", "profile", "length", "angle1", "angle2",
+    "unit_kg", "total_kg", "assumed_steel", "members"}]."""
+    groups = {}
+    for b in members(doc):
+        try:
+            length, a1, a2 = _end_angles(b)
+        except Exception:
+            continue
+        rho, assumed = _density(b)
+        kg = b.Shape.Volume * rho
+        angs = tuple(sorted([x if x is not None else -1 for x in (a1, a2)]))
+        key = (b.SWUI_WeldKind, b.SWUI_WeldSize, round(length, 1), angs)
+        g = groups.setdefault(key, {"qty": 0, "profile": "%s %s" % (b.SWUI_WeldKind, b.SWUI_WeldSize),
+                                    "length": round(length, 1), "angle1": a1, "angle2": a2,
+                                    "unit_kg": kg, "assumed_steel": assumed, "members": []})
+        g["qty"] += 1
+        g["members"].append(b.Label)
+    rows = sorted(groups.values(), key=lambda g: (g["profile"], -g["length"]))
+    for i, r in enumerate(rows):
+        r["n"] = i + 1
+        r["total_kg"] = r["unit_kg"] * r["qty"]
+    return rows
+
+
+def _angle_text(a):
+    return "a medida" if a is None else _fmt(a)
+
+
+def cut_list_csv(rows):
+    """Texto CSV para Excel en castellano (punto y coma, coma decimal)."""
+    lines = ["Nº;Cant.;Perfil;Largo (mm);Ángulo 1;Ángulo 2;Peso unit. (kg);Peso total (kg)"]
+    for r in rows:
+        lines.append(";".join([str(r["n"]), str(r["qty"]), r["profile"], _fmt(r["length"]),
+                               _angle_text(r["angle1"]), _angle_text(r["angle2"]),
+                               _fmt(round(r["unit_kg"], 2)), _fmt(round(r["total_kg"], 2))]))
+    total = sum(r["total_kg"] for r in rows)
+    lines.append(";;;;;;Total;%s" % _fmt(round(total, 2)))
+    return "\r\n".join(lines) + "\r\n"
+
+
+def cut_list_sheet(doc, rows, name="ListaDeCortes"):
+    """La lista como Planilla en el documento (para ponerla en un plano con TechDraw)."""
+    sheet = doc.getObject(name)
+    if sheet is None:
+        sheet = doc.addObject("Spreadsheet::Sheet", name)
+        sheet.Label = "Lista de cortes"
+    else:
+        sheet.clearAll()
+    heads = ["Nº", "Cant.", "Perfil", "Largo (mm)", "Ángulo 1", "Ángulo 2", "Peso unit. (kg)", "Peso total (kg)"]
+    cols = "ABCDEFGH"
+    for c, h in zip(cols, heads):
+        sheet.set("%s1" % c, h)
+    for i, r in enumerate(rows):
+        vals = [r["n"], r["qty"], r["profile"], round(r["length"], 1), _angle_text(r["angle1"]),
+                _angle_text(r["angle2"]), round(r["unit_kg"], 2), round(r["total_kg"], 2)]
+        for c, v in zip(cols, vals):
+            sheet.set("%s%d" % (c, i + 2), ("'" + v) if isinstance(v, str) else str(v))
+    last = len(rows) + 2
+    sheet.set("G%d" % last, "'Total")
+    sheet.set("H%d" % last, str(round(sum(r["total_kg"] for r in rows), 2)))
+    doc.recompute()
+    return sheet
+
+
+# --- Extras: tapa de extremo y cartela ---------------------------------------------------------------
+
+
+def end_cap(member, end, thickness=3.0, inset=0.0):
+    """Tapa de extremo (como SW): chapa con el contorno de afuera del perfil (menos `inset` por lado),
+    apoyada en la punta del miembro, hacia afuera. Un Cuerpo aparte, ubicado al crearla."""
+    doc = member.Document
+    a0, a1, d = axis(member)
+    sh = member.Shape
+    ts = [(v.Point - a0).dot(d) for v in sh.Vertexes]
+    t_end = min(ts) if end == 0 else max(ts)
+    out = d * (-1 if end == 0 else 1)
+    p = a0 + d * t_end
+    sk_pl = _profile_of(member).getGlobalPlacement()
+    rot = sk_pl.Rotation
+    if rot.multVec(V(0, 0, 1)).dot(out) < 0:
+        rot = rot.multiply(FreeCAD.Rotation(V(1, 0, 0), 180))
+    center = sk_pl.Base + d * (t_end - (sk_pl.Base - a0).dot(d))
+    body = doc.addObject("PartDesign::Body", "Tapa")
+    body.Label = "Tapa de extremo"
+    sk = body.newObject("Sketcher::SketchObject", "PerfilTapa")
+    sk.Label = "Perfil de la tapa"
+    sk.Placement = FreeCAD.Placement(center, rot)
+    kind, dims = member.SWUI_WeldKind, list(member.SWUI_WeldDims)
+    loops = profile_loops(kind, dims, outer_only=True)
+    if inset:
+        shrunk = []
+        for typ, data in loops:
+            if typ == "circle":
+                shrunk.append((typ, data - inset))
+            else:
+                xs = [q.x for q in data]
+                ys = [q.y for q in data]
+                shrunk.append(("poly", _rect(min(xs) + inset, min(ys) + inset, max(xs) - inset, max(ys) - inset)))
+        loops = shrunk
+    _fill_sketch(sk, loops, bool(getattr(member, "SWUI_WeldMirror", False)))
+    pad = body.newObject("PartDesign::Pad", "Tapa")
+    pad.Profile = sk
+    pad.Length = float(thickness)
+    _add_prop(body, "SWUI_WeldPart", "App::PropertyString", "tapa")
+    doc.recompute()
+    return body
+
+
+def gusset(a, b, size=80.0, thickness=6.0):
+    """Cartela triangular (como SW) en la esquina entre dos miembros, en el plano de los dos, centrada
+    en su espesor. Un Cuerpo aparte, ubicado al crearla."""
+    doc = a.Document
+    corners = [c for c in find_corners([a, b])]
+    if not corners:
+        raise ValueError("Los miembros no forman una esquina")
+    c = corners[0]
+    p = c["point"]
+    ua = _away(a, c["end_a"]) if c["end_a"] is not None else None
+    ub = _away(b, c["end_b"])
+    if ua is None:  # T: la cartela va del lado del miembro b
+        a0, a1, da = axis(a)
+        ua = da
+    n = ua.cross(ub)
+    if n.Length < 1e-9:
+        raise ValueError("Los miembros están en línea")
+    n.normalize()
+    # el triángulo arranca en las caras de los miembros (no en sus ejes)
+    off_a = half_extent(b, ua) + 0.0
+    off_b = half_extent(a, ub) + 0.0
+    q0 = p + ua * off_a + ub * off_b
+    q1 = q0 + ua * size
+    q2 = q0 + ub * size
+    x = ua
+    y = n.cross(x)
+    rot = FreeCAD.Rotation(x, y, n, "ZXY")
+    pl = FreeCAD.Placement(q0, rot)
+    inv = pl.inverse()
+    body = doc.addObject("PartDesign::Body", "Cartela")
+    body.Label = "Cartela"
+    sk = body.newObject("Sketcher::SketchObject", "PerfilCartela")
+    sk.Label = "Perfil de la cartela"
+    sk.Placement = pl
+    pts = [inv.multVec(q) for q in (q0, q1, q2)]
+    pts = [V(q.x, q.y, 0) for q in pts]
+    _fill_sketch(sk, [("poly", pts)])
+    pad = body.newObject("PartDesign::Pad", "Cartela")
+    pad.Profile = sk
+    pad.SideType = "Symmetric"
+    pad.Length = float(thickness)
+    _add_prop(body, "SWUI_WeldPart", "App::PropertyString", "cartela")
+    doc.recompute()
+    return body

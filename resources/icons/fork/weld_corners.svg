@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Tratamiento de esquinas</title>
+  <path d="M6 44 H58 V56 H6 Z" fill="#f4f4f4" stroke="#1b1b1b" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M6 8 H18 V44 H6 Z" fill="#f4f4f4" stroke="#1b1b1b" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M6 44 H18" stroke="#3d8bff" stroke-width="4.0" fill="none" stroke-linecap="round"/>
+</svg>

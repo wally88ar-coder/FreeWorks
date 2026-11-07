@@ -211,6 +211,62 @@ def _():
             mk.label(32, 54, "DXF", mk.NEW, 13)]
 
 
+@icon("weld_member", "Miembro estructural")
+def _():
+    # croquis esqueleto rojo en L y un caño cuadrado blanco barrido sobre la línea de abajo
+    top = "M8 40 L40 40 L52 32 L20 32 Z"
+    front = "M8 40 L40 40 V48 L8 48 Z"
+    side = "M40 40 L52 32 V40 L40 48 Z"
+    return [mk.thin("M14 26 V8", mk.RED, 2.6), mk.thin("M14 26 H56", mk.RED, 2.6),
+            _face(front, mk.GEO), _face(top, mk.GEO), _face(side, mk.OLD),
+            '<path d="M13 43 H35 V45 H13 Z" fill="%s"/>' % mk.NEW]
+
+
+@icon("weld_corners", "Tratamiento de esquinas")
+def _():
+    # dos caños en L: el de abajo pasa, el vertical apoya a tope; la junta en azul
+    horiz = "M6 44 H58 V56 H6 Z"
+    vert = "M6 8 H18 V44 H6 Z"
+    return [_face(horiz, mk.GEO), _face(vert, mk.GEO), mk.thin("M6 44 H18", mk.NEW, 4.0)]
+
+
+@icon("weld_trim", "Recortar/Alargar")
+def _():
+    # caño horizontal que llega a una placa vertical gris; flecha azul de alargar hasta la placa
+    plate = "M46 6 H54 V58 H46 Z"
+    tube = "M6 26 H32 V38 H6 Z"
+    return [_face(plate, mk.PLANE), _face(tube, mk.GEO), mk.arrow(32, 32, 45, 32, mk.NEW, 6.0, 3.0)]
+
+
+@icon("weld_cutlist", "Lista de cortes")
+def _():
+    # hoja con renglones y un caño chico arriba
+    sheet = "M10 4 H46 L54 12 V60 H10 Z"
+    parts = [_face(sheet, mk.GEO), _face("M16 10 H40 V18 H16 Z", mk.OLD)]
+    for k in range(4):
+        y = 28 + 8 * k
+        parts.append(mk.thin("M16 %d H48" % y, mk.NEW, 2.4))
+    return parts
+
+
+@icon("weld_endcap", "Tapa de extremo")
+def _():
+    # caño en perspectiva con la tapa azul en la punta
+    body = "M6 24 H40 V44 H6 Z"
+    top = "M6 24 L14 16 H48 L40 24 Z"
+    cap = "M40 24 L48 16 V36 L40 44 Z"
+    return [_face(body, mk.GEO), _face(top, mk.GEO), _face(cap, mk.NEW)]
+
+
+@icon("weld_gusset", "Cartela")
+def _():
+    # dos caños en L con la cartela triangular azul en la esquina
+    horiz = "M6 46 H58 V56 H6 Z"
+    vert = "M6 8 H16 V46 H6 Z"
+    gus = "M16 22 L16 46 L40 46 Z"
+    return [_face(horiz, mk.GEO), _face(vert, mk.GEO), _face(gus, mk.NEW)]
+
+
 def build(target=TARGET):
     os.makedirs(target, exist_ok=True)
     written = []

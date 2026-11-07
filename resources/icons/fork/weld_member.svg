@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Miembro estructural</title>
+  <path d="M14 26 V8" stroke="#e0261b" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+  <path d="M14 26 H56" stroke="#e0261b" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+  <path d="M8 40 L40 40 V48 L8 48 Z" fill="#f4f4f4" stroke="#1b1b1b" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M8 40 L40 40 L52 32 L20 32 Z" fill="#f4f4f4" stroke="#1b1b1b" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M40 40 L52 32 V40 L40 48 Z" fill="#9a9a9a" stroke="#1b1b1b" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M13 43 H35 V45 H13 Z" fill="#3d8bff"/>
+</svg>

@@ -279,6 +279,16 @@ def menus():
                 SEP,
                 E("Corte normal (extruir corte)...", "SWUI_SMCut"),
             ], env="P"),
+            S("Piezas soldadas", [  # como el menú de SW 2018 (07/11)
+                E("Miembro estructural...", "SWUI_WeldMember"),
+                E("Recortar/Alargar...", "SWUI_WeldTrim"),
+                E("Tratamiento de esquinas...", "SWUI_WeldCorners"),
+                SEP,
+                E("Tapa de extremo...", "SWUI_WeldEndCap"),
+                E("Cartela...", "SWUI_WeldGusset"),
+                SEP,
+                E("Lista de cortes...", "SWUI_WeldCutList"),
+            ], env="P"),
             SEP,
             # Ensamblaje
             S("Componente", [
