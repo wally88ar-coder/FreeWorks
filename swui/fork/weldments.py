@@ -25,6 +25,7 @@ Funciones públicas:
     profile_names(), sizes(kind), profile_loops(kind, dims), area(kind, dims)
     create_members(doc, edges, kind, size, rotation=0, anchor="Centro", mirror=False) -> [Cuerpo]
     find_corners(members), apply_corner(corner, treatment, passing=None), remove_corner(...)
+    corner_state(corner), set_profile(bodies, rotation=None, anchor=None)
     trim_to_member(member, tool), trim_to_face(member, (obj, "FaceN")), extend_to_face(...)
     cut_list(doc) -> filas, cut_list_csv(rows), cut_list_sheet(doc, rows)
     end_cap(member, end, thickness, inset), gusset(a, b, size, thickness)
@@ -460,39 +461,67 @@ def remove_corner(a, b):
             if getattr(o, "SWUI_WeldCorner", "") == cid:
                 body.removeObject(o)
                 doc.removeObject(o.Name)
-        tags = dict(_ext_tags(body))
+        tags = _ext_tags(body)
         if cid in tags:
-            end = tags.pop(cid)
+            end = tags.pop(cid)[0]
             _set_ext_tags(body, tags)
-            if end == 0:
-                set_extension(body, start=0.0)
-            else:
-                set_extension(body, end=0.0)
+            _apply_ext(body, end, tags)
     doc.recompute()
 
 
 def _ext_tags(body):
+    """{esquina: (punta, alargue)} de SWUI_WeldExtTags ("esquina=punta@alargue;..."). Los archivos
+    anteriores al 07/11 guardaban solo "esquina=punta": alargue None (desconocido)."""
     raw = getattr(body, "SWUI_WeldExtTags", "") or ""
-    out = []
+    out = {}
     for item in raw.split(";"):
-        if "=" in item:
-            k, v = item.split("=")
-            out.append((k, int(v)))
+        if "=" not in item:
+            continue
+        k, v = item.split("=", 1)
+        end, _sep, val = v.partition("@")
+        try:
+            out[k] = (int(end), float(val) if val else None)
+        except ValueError:
+            continue
     return out
 
 
 def _set_ext_tags(body, tags):
-    _add_prop(body, "SWUI_WeldExtTags", "App::PropertyString", ";".join("%s=%d" % kv for kv in tags.items()))
+    items = []
+    for k, (end, val) in tags.items():
+        items.append("%s=%d" % (k, end) if val is None else "%s=%d@%s" % (k, end, repr(round(val, 6))))
+    _add_prop(body, "SWUI_WeldExtTags", "App::PropertyString", ";".join(items))
 
 
-def _extend_for(body, end, value, cid):
+def _apply_ext(body, end, tags):
+    """Alargue de una punta = el MAYOR de los que piden sus esquinas: en una esquina de tres caños
+    (dos largueros y la pata) la misma punta la usan dos esquinas, y cambiar una no debe acortar la
+    otra (arreglado 07/11). Con alargues viejos sin valor guardado, la punta queda como está."""
+    vals = [v for e, v in tags.values() if e == end]
+    if any(v is None for v in vals):
+        return
+    value = max(vals) if vals else 0.0
     if end == 0:
         set_extension(body, start=value)
     else:
         set_extension(body, end=value)
-    tags = dict(_ext_tags(body))
-    tags[cid] = end
+
+
+def _extend_for(body, end, value, cid):
+    tags = _ext_tags(body)
+    tags[cid] = (end, float(value))
     _set_ext_tags(body, tags)
+    vals = [v for e, v in tags.values() if e == end]
+    if any(v is None for v in vals):
+        # archivo viejo: no se sabe cuánto pedía la otra esquina; nunca acortar
+        current = extension(body)[0 if end == 0 else 1]
+        value = max(float(value), current)
+        if end == 0:
+            set_extension(body, start=value)
+        else:
+            set_extension(body, end=value)
+        return
+    _apply_ext(body, end, tags)
 
 
 def _envelope_cut(target, tool, cid):
@@ -606,6 +635,69 @@ def apply_corner(corner, treatment="tope", passing=None):
     _extend_for(passing, end_p, butt_extension(passing, end_p, other, end_o), cid)
     doc.recompute()
     _envelope_cut(other, passing, cid)
+    doc.recompute()
+
+
+def corner_state(corner):
+    """(tratamiento, el que pasa) que tiene hoy una esquina, leído de sus operaciones; None si no
+    tiene ninguno."""
+    a, b = corner["a"], corner["b"]
+    cid = _corner_id(a, b)
+    feats = [(body, o) for body in (a, b) for o in body.Group if getattr(o, "SWUI_WeldCorner", "") == cid]
+    if not feats:
+        return None
+    if any(o.TypeId == "PartDesign::SubtractiveBox" for _b, o in feats):
+        return "inglete", None
+    if corner["kind"] == "T":
+        return "tope", a
+    cut_in = [body for body, o in feats if o.TypeId == "PartDesign::Pocket"]
+    if not cut_in:
+        return None
+    return "tope", (b if cut_in[0] == a else a)
+
+
+def set_profile(bodies, rotation=None, anchor=None):
+    """Cambiar "Girar ángulo" (grados) y/o "Ubicar perfil" de miembros ya hechos, como Editar
+    operación del Miembro estructural de SW. Gira el perfil en su lugar (y las envolventes que otros
+    miembros usan para recortarse contra él) y rehace las esquinas de esos miembros con el mismo
+    tratamiento que tenían."""
+    if not bodies:
+        return
+    doc = bodies[0].Document
+    for body in bodies:
+        sk = _profile_of(body)
+        old_rot = float(getattr(body, "SWUI_WeldRotation", 0.0))
+        new_rot = old_rot if rotation is None else float(rotation)
+        new_anchor = anchor or getattr(body, "SWUI_WeldAnchor", "Centro")
+        yaw = sk.AttachmentOffset.Rotation.toEuler()[0]
+        auto = yaw - old_rot  # el giro que el perfil necesita para apoyarse en el esqueleto
+        w, h = extent(body.SWUI_WeldKind, list(body.SWUI_WeldDims))
+        rot = FreeCAD.Rotation(V(0, 0, 1), auto + new_rot)
+        sk.AttachmentOffset = FreeCAD.Placement(rot.multVec(_anchor_point(new_anchor, w, h)) * -1, rot)
+        _add_prop(body, "SWUI_WeldRotation", "App::PropertyFloat", new_rot)
+        _add_prop(body, "SWUI_WeldAnchor", "App::PropertyString", new_anchor)
+        route = _route_of(body)
+        for o in doc.Objects:
+            if o is sk or o.TypeId != "Sketcher::SketchObject" or not o.AttachmentSupport:
+                continue
+            binder = o.AttachmentSupport[0][0]
+            if binder.TypeId == "PartDesign::SubShapeBinder" and binder.Support and binder.Support[0][0] == route:
+                o.AttachmentOffset = sk.AttachmentOffset
+    doc.recompute()
+    names = set(b.Name for b in bodies)
+    todo = []
+    for c in find_corners(members(doc)):
+        if c["a"].Name not in names and c["b"].Name not in names:
+            continue
+        state = corner_state(c)
+        if state is not None:
+            todo.append((c, state))
+    # primero sacar todas y después rehacerlas: así una punta compartida por dos esquinas vuelve a
+    # cero antes de medirla de nuevo (también en archivos viejos sin el alargue guardado)
+    for c, _state in todo:
+        remove_corner(c["a"], c["b"])
+    for c, (treatment, passing) in todo:
+        apply_corner(c, treatment, passing)
     doc.recompute()
 
 

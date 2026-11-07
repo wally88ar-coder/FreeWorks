@@ -24,6 +24,18 @@ deleted" al elegir una línea: panel cerrado por FreeCAD sin Cancelar dejaba el 
 ahora usa panel_guard (track/orphaned) y se apaga solo, y reabrir con otro abierto lo cierra
 guardando. Probado por guion con cursor y teclas de verdad; falta que el usuario lo vuelva a probar.
 
+**07/11 tarde, "bug estructura" del usuario (mesa con esquinas tope > inglete > tope):** no era de
+las esquinas: los 8 caños tenían Girar ángulo = -2° (casi seguro la ruedita del mouse sobre la cajita
+al bajar el panel), y las uniones quedaban torcidas. Arreglado: (1) las cajitas y listas de los
+paneles de piezas soldadas solo toman la ruedita con clic adentro (`weld_panels.guard_wheel`);
+(2) clic derecho > Editar operación sobre la carpeta "Miembro estructuralN" (o la extrusión de un
+caño) abre un panel con Girar ángulo y Ubicar perfil: `weldments.set_profile` gira los perfiles en su
+lugar, también las envolventes que otros usan para recortarse, y rehace las esquinas con el mismo
+tratamiento (`corner_state`); (3) alargue de una punta = el mayor que piden sus esquinas
+(SWUI_WeldExtTags ahora guarda "esquina=punta@alargue"; los viejos sin valor nunca se acortan).
+Probado con una copia de su archivo: giro 0 deja los caños exactos, sin interferencias; la ruedita sin
+foco no cambia nada; Aceptar y Deshacer andan. Falta que el usuario lo pruebe en su archivo.
+
 **07/11, PIEZAS SOLDADAS (etapas 1 a 5 del plan): HECHAS, terminadas a las 01:53** (pedido del usuario:
 "implementá las 5 etapas, decidí vos las 4 cuestiones... las pruebas hacelas vos con mouse").
 Pestaña "Piezas soldadas" (después de Chapa) y menú Insertar > Piezas soldadas: Miembro estructural,

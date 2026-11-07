@@ -12,6 +12,12 @@ funciones de weldments.py (regla "panel = cara de una función").
   Lista de cortes      tabla agrupada; exportar CSV (Excel) o insertarla como planilla
   Tapa de extremo      cara de la punta de un miembro, espesor y separación del borde
   Cartela              dos miembros en esquina, tamaño y espesor
+  Editar miembro       (clic derecho > Editar operación sobre la carpeta "Miembro estructuralN")
+                       girar ángulo y ubicar perfil de miembros ya hechos; las esquinas se rehacen
+
+Las cajitas numéricas y las listas desplegables de estos paneles no toman la ruedita del mouse si no
+se hizo clic en ellas: la ruedita baja el panel (un -2° puesto sin querer torcía todos los caños,
+visto por el usuario 07/11).
 """
 
 import traceback
@@ -380,6 +386,78 @@ class CornersPanel(_Base):
             FreeCAD.Console.PrintError("[SWUI fork] Esquinas:\n%s\n" % traceback.format_exc())
 
 
+# --- Editar miembro estructural --------------------------------------------------------------------
+
+
+class EditMemberPanel(_Base):
+    """Editar operación de un Miembro estructural ya hecho (como SW): girar ángulo y ubicar perfil.
+    Llama a weldments.set_profile, que gira los perfiles en su lugar y rehace las esquinas."""
+
+    title = "Miembro estructural"
+
+    def __init__(self, bodies, label=""):
+        super().__init__()
+        self.bodies = bodies
+        self.label = label
+        self.form = self._build()
+
+    def _build(self):
+        f = QtWidgets.QWidget()
+        f.setWindowTitle(self.title)
+        lay = QtWidgets.QVBoxLayout(f)
+        first = self.bodies[0]
+        info = QtWidgets.QLabel("%s: %d miembros de %s %s" % (self.label or "Miembro estructural", len(self.bodies),
+                                                            first.SWUI_WeldKind, first.SWUI_WeldSize))
+        info.setWordWrap(True)
+        lay.addWidget(info)
+        conf = QtWidgets.QGroupBox("Configuración")
+        c = QtWidgets.QFormLayout(conf)
+        self.rot = QtWidgets.QDoubleSpinBox()
+        self.rot.setRange(-360, 360)
+        self.rot.setSuffix(" °")
+        self.rot.setValue(float(getattr(first, "SWUI_WeldRotation", 0.0)))
+        self.rot.valueChanged.connect(self._changed)
+        self.anchor = QtWidgets.QComboBox()
+        self.anchor.addItems(list(w.ANCHORS))
+        current = getattr(first, "SWUI_WeldAnchor", "Centro")
+        if current in w.ANCHORS:
+            self.anchor.setCurrentIndex(list(w.ANCHORS).index(current))
+        self.anchor.currentIndexChanged.connect(self._changed)
+        c.addRow("Girar ángulo", self.rot)
+        c.addRow("Ubicar perfil", self.anchor)
+        lay.addWidget(conf)
+        hint = QtWidgets.QLabel("Las esquinas de estos miembros se rehacen con el mismo tratamiento que tenían.")
+        hint.setWordWrap(True)
+        lay.addWidget(hint)
+        lay.addStretch(1)
+        return f
+
+    def _preview(self):
+        try:
+            w.set_profile(self.bodies, self.rot.value(), self.anchor.currentText())
+            self.doc.recompute()
+        except Exception:
+            FreeCAD.Console.PrintError("[SWUI fork] Editar miembro estructural:\n%s\n" % traceback.format_exc())
+
+
+def _member_group(obj):
+    """Carpeta "Miembro estructuralN" de lo elegido (la carpeta, un caño o su extrusión), o None."""
+    if obj is None:
+        return None
+    if obj.TypeId == "App::DocumentObjectGroup":
+        return obj if any(w.is_member(m) for m in obj.Group) else None
+    body = obj if w.is_member(obj) else None
+    if body is None and obj.TypeId == "PartDesign::Pad":
+        body = next((p for p in obj.InList if w.is_member(p) and w._pad_of(p) == obj), None)
+    return _group_of(body) if body is not None else None
+
+
+def open_edit_member(group):
+    bodies = [m for m in group.Group if w.is_member(m)]
+    if bodies:
+        _open(EditMemberPanel, bodies, group.Label)
+
+
 # --- Recortar / Alargar ------------------------------------------------------------------------------
 
 
@@ -688,13 +766,40 @@ def show_cut_list(doc=None):
 # --- Comandos ----------------------------------------------------------------------------------------
 
 
+class _NoWheel(QtCore.QObject):
+    """La ruedita sobre una cajita o lista sin foco no cambia su valor: pasa al panel (que baja)."""
+
+    def eventFilter(self, obj, event):
+        try:
+            if event.type() == QtCore.QEvent.Wheel and not obj.hasFocus():
+                parent = obj.parentWidget()
+                if parent is not None:
+                    QtWidgets.QApplication.sendEvent(parent, event)
+                return True
+        except Exception:
+            pass
+        return False
+
+
+def guard_wheel(form):
+    """Cajitas numéricas y listas desplegables del panel: solo con clic adentro toman la ruedita."""
+    flt = _NoWheel(form)
+    for cls in (QtWidgets.QAbstractSpinBox, QtWidgets.QComboBox):
+        for wdg in form.findChildren(cls):
+            wdg.setFocusPolicy(QtCore.Qt.StrongFocus)
+            wdg.installEventFilter(flt)
+    return flt
+
+
 def _open(panel_cls, *args):
     if _doc() is None:
         return
     if FreeCADGui.Control.activeDialog():
         FreeCADGui.Control.closeDialog()
     try:
-        FreeCADGui.Control.showDialog(panel_cls(*args))
+        panel = panel_cls(*args)
+        panel._wheel = guard_wheel(panel.form)
+        FreeCADGui.Control.showDialog(panel)
     except Exception as e:
         FreeCAD.Console.PrintError("[SWUI fork] %s:\n%s\n" % (TITLE, traceback.format_exc()))
         _info("No se pudo abrir: %s" % e)
@@ -774,7 +879,11 @@ COMMANDS = {
 
 
 def install():
+    from swui.fork import dress_up_panel as dp
     from swui.fork import weld_tab
+
+    if (_member_group, open_edit_member) not in dp.OPENERS:
+        dp.OPENERS.append((_member_group, open_edit_member))
 
     for name, (text, tip, icon, run) in COMMANDS.items():
         try:

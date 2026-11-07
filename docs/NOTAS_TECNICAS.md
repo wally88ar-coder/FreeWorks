@@ -922,6 +922,14 @@ que usan está en `tools/test_load.py` (`check_ia`): si una cambia de firma, el 
 
 ## Piezas soldadas (07/11): hallazgos en FreeCAD 1.1.4
 
+- QDoubleSpinBox y QComboBox de Qt cambian de valor con la ruedita aunque no tengan foco: al bajar un
+  panel largo con la ruedita se lleva puesto el valor de lo que pasa por debajo del mouse (así quedó
+  Girar ángulo en -2° en la prueba del usuario). `weld_panels.guard_wheel(form)`: StrongFocus y un
+  filtro que, sin foco, manda la ruedita al padre. Sirve para cualquier panel nuevo.
+- El giro del perfil se puede cambiar en un miembro ya hecho: el AttachmentOffset del Perfil es un
+  giro puro en Z (automático + Girar ángulo); el automático = yaw actual - SWUI_WeldRotation. Las
+  envolventes de otros miembros copian ese AttachmentOffset (no es fórmula): hay que copiarlo de nuevo.
+
 - Pad y Pocket de 1.1: "TwoLengths" ya no existe en Type; ahora `SideType = "Two sides"` con
   `Type`/`Type2` = "Length" y `Length`/`Length2`.
 - Croquis acoplado "NormalToEdge" a la arista de un SubShapeBinder: el Pad sale para atrás; con
