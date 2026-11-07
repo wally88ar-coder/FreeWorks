@@ -1,5 +1,10 @@
 # Estado del fork
 
+**07/11, sin la franja gris entre la cinta y la vista: HECHO** (pedido del usuario). Era el separador
+de QMainWindow: el tema de FreeCAD le suma relleno y medía 6 px. Qt usa una sola medida para todos
+los separadores, así que quedan en 1 px (`look_sw.py`); el borde árbol / vista se sigue arrastrando
+(probado con el mouse). Medido con guion: la vista empieza 1 px debajo de la cinta (antes 6).
+
 **07/11, cinta de alto fijo, sin la línea azul para estirarla: HECHO** (pedido del usuario: "esa
 línea azul que permite engrosar la ribbon no tiene sentido"; en SW el CommandManager no se estira).
 `swui/fork/ribbon_fixed.py`: el dock "SWUI_Ribbon" queda con alto fijo = página más alta + fila de

@@ -122,9 +122,16 @@ QTabWidget#SWUI_RibbonTabs QTabBar::tab:hover:!selected {
 QMainWindow > QTabBar::tab:hover:!selected {
     background: %(panel)s;
 }
-/* sin la línea azul para estirar la cinta (alto fijo como SW, ribbon_fixed.py, 07/11) */
-QMainWindow::separator:horizontal {
-    height: 0px;
+/* sin la línea azul ni la franja gris entre la cinta y la vista (alto fijo como SW,
+   ribbon_fixed.py, 07/11). Qt usa un solo ancho para todos los separadores: 1 px (el tema de
+   FreeCAD le sumaba relleno y quedaban 6 px). El del árbol se sigue pudiendo arrastrar. */
+QMainWindow::separator {
+    width: 1px;
+    height: 1px;
+    padding: 0px;
+    margin: 0px;
+    border: none;
+    image: none;
 }
 QStatusBar {
     background: %(window)s;
