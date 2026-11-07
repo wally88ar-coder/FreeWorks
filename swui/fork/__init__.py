@@ -54,6 +54,9 @@ def install(workbench=None):
         from swui.fork import frameless  # ventana sin barra de título de Windows, como SW
 
         frameless.install()
+        from swui.fork import ribbon_fixed  # cinta de alto fijo, sin la línea para estirarla
+
+        ribbon_fixed.install()
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] Ventana sin marco:\n%s\n" % traceback.format_exc())
     try:

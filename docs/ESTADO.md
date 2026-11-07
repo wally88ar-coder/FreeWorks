@@ -1,5 +1,14 @@
 # Estado del fork
 
+**07/11, cinta de alto fijo, sin la línea azul para estirarla: HECHO** (pedido del usuario: "esa
+línea azul que permite engrosar la ribbon no tiene sentido"; en SW el CommandManager no se estira).
+`swui/fork/ribbon_fixed.py`: el dock "SWUI_Ribbon" queda con alto fijo = página más alta + fila de
+pestañas (se vuelve a medir al cambiar de pestaña); `look_sw.py`: `QMainWindow::separator:horizontal`
+con alto 0 (los separadores verticales, ancho del árbol, quedan). Probado con el mouse en FreeCAD de
+prueba: no se puede estirar, mismo alto en Operaciones / Croquis / Chapa / Ensamblaje. Visto en la
+prueba: una copia vieja del archivo abrió sin los nombres de los planos y marcada como modificada;
+con una copia limpia, bien (no se repitió; anotar si aparece). Falta que lo pruebe el usuario.
+
 **06/11, pestañas que se iluminan al pasar el mouse, como SW: HECHO** (pedido del usuario). Relevado
 en SW con el mouse: la pestaña de la cinta bajo el mouse toma el fondo claro de la activa, sin
 negrita. `swui/fork/look_sw.py` (EXTRA_QSS): `:hover:!selected` con el fondo de la activa en la cinta

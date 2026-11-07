@@ -122,6 +122,10 @@ QTabWidget#SWUI_RibbonTabs QTabBar::tab:hover:!selected {
 QMainWindow > QTabBar::tab:hover:!selected {
     background: %(panel)s;
 }
+/* sin la línea azul para estirar la cinta (alto fijo como SW, ribbon_fixed.py, 07/11) */
+QMainWindow::separator:horizontal {
+    height: 0px;
+}
 QStatusBar {
     background: %(window)s;
 }
