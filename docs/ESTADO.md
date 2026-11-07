@@ -2217,6 +2217,9 @@ Etapas:
   largo de X/Y/Z y Fijar. El mouse automático no dibuja bien con clic-clic en el Croquis 3D de SW
   (arrastrar sí); Tab (cambia plano) y Ctrl+clic (plano o cara) quedan sin probar: pregunta 4 del
   plan. Ojo: Ctrl+Z en SW justo después de abrir el croquis 3D deshace el croquis entero.
+  **Decidido por el usuario (07/11):** primera versión solo líneas (arcos/caño curvado después);
+  cotas D1@Croquis3D1 visibles en Ecuaciones; largo tecleado al dibujar; Tab y Ctrl+clic según la
+  ayuda de SW (el usuario corrige al probar). Falta su OK para empezar a programar.
 - **Piezas soldadas / estructuras** (investigado 01/11; **DECIDIDO por el usuario: Cuerpos nativos,
   usando código de FrameForge cuando sea útil y esté probado**; sin plan ni código; próximo paso:
   plan en criollo para que lo apruebe). **07/11: plan aprobado e IMPLEMENTADO (ver arriba):
