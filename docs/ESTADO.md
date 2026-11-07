@@ -1,5 +1,18 @@
 # Estado del fork
 
+**06/11, ventana sin la barra de título de Windows, como SW: HECHO** (pedido del usuario "para
+ganar unos mm de pantalla"; sin interruptor en el menú, decisión del usuario). `swui/fork/frameless.py`:
+una sola franja con menús, acceso rápido, nombre del documento activo (" *" con cambios) y
+minimizar / restaurar-maximizar / cerrar. Se usa Qt.CustomizeWindowHint sin pistas de título:
+Qt.FramelessWindowHint se descartó porque Windows volvía a maximizar la ventana apenas se la
+restauraba (medido con guion). Arrastrar la parte vacía de la franja mueve la ventana
+(startSystemMove, recién al mover con el botón apretado: si arranca al apretar se come el doble
+clic); doble clic maximiza / restaura (relevado en SW); al restaurar una ventana que arrancó
+maximizada queda al 80 % centrada. Probado con el mouse en FreeCAD de prueba: doble clic, arrastrar,
+cambiar el tamaño desde la esquina, maximizar, minimizar y volver desde la barra de tareas, cerrar.
+Límites: se pierde Alt + Espacio; al arrancar se ve un instante la barra de Windows. Para la fase 6:
+depende de cómo FreeCAD arma la ventana. Falta que lo pruebe el usuario.
+
 **06/11, clic sobre lo ya elegido lo suelta, como SW: HECHO** (reporte del usuario: clics seguidos
 sobre Vista lateral iban plano -> Origen -> Cuerpo -> plano). Es de FreeCAD 1.1.4: un clic sobre lo
 elegido elige lo que lo contiene. Relevado en SW con el mouse: Vista lateral elegida + clic en su

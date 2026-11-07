@@ -51,6 +51,12 @@ def install(workbench=None):
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] Acceso rápido:\n%s\n" % traceback.format_exc())
     try:
+        from swui.fork import frameless  # ventana sin barra de título de Windows, como SW
+
+        frameless.install()
+    except Exception:
+        FreeCAD.Console.PrintError("[SWUI fork] Ventana sin marco:\n%s\n" % traceback.format_exc())
+    try:
         from swui.fork import panel_sw
 
         panel_sw.install()
