@@ -2206,6 +2206,17 @@ Etapas:
   https://github.com/shaise/FreeCAD_FastenersWB`, leído en el commit fddd07a). Guion de la primera
   prueba ya escrito (placa con agujero, tornillo ISO 4762 Auto, largo y rosca, tuerca, arandela,
   PEM, varilla, seguir a la placa, BOM): rehacerlo, la copia del scratchpad es temporal.
+- **Croquis 3D** (pedido 07/11; plan escrito, **esperando OK del usuario**, sin código):
+  https://claude.ai/artifact/FsYyj1QREtkuoAqzyAqcBB. Idea: líneas nativas Part::Line con extremos
+  atados por fórmulas (punto compartido = expresión al extremo de otra línea; A lo largo de X/Y/Z =
+  dos coordenadas iguales) y cotas en un VarSet; sin resolvedor propio (cada línea depende de las
+  anteriores). Probado por guion (scratchpad c3d.py): mesa de 4 patas + diagonal en el espacio,
+  miembros estructurales encima, esquinas a tope válidas; cambiar Alto 700→900 y Largo 800→1000
+  arrastra líneas, caños y lista de cortes. SW 2018 con el mouse: Croquis 3D en el desplegable de
+  Croquis, terna en el punto inicial, cursor "A lo largo de X" y relación automática, panel con A lo
+  largo de X/Y/Z y Fijar. El mouse automático no dibuja bien con clic-clic en el Croquis 3D de SW
+  (arrastrar sí); Tab (cambia plano) y Ctrl+clic (plano o cara) quedan sin probar: pregunta 4 del
+  plan. Ojo: Ctrl+Z en SW justo después de abrir el croquis 3D deshace el croquis entero.
 - **Piezas soldadas / estructuras** (investigado 01/11; **DECIDIDO por el usuario: Cuerpos nativos,
   usando código de FrameForge cuando sea útil y esté probado**; sin plan ni código; próximo paso:
   plan en criollo para que lo apruebe). **07/11: plan aprobado e IMPLEMENTADO (ver arriba):
