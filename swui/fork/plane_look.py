@@ -230,9 +230,33 @@ def _native_scale(nodes, value):
     sel = nodes["sel"]
     if sel.getNumChildren() < 1 or _type(sel.getChild(0)) != "SoShapeScale":
         return
-    scale = coin.cast(coin.cast(sel.getChild(0), "SoBaseKit").getField("scaleFactor"), "SoSFFloat")
+    kit = coin.cast(sel.getChild(0), "SoBaseKit")
+    scale = coin.cast(kit.getField("scaleFactor"), "SoSFFloat")
     if abs(scale.getValue() - value) > 1e-9:
         scale.setValue(value)
+    # Con scaleFactor 0 no se ve, pero SE SEGUÍA ELIGIENDO: con la cámara guardada en el archivo del
+    # usuario ("test planos", 05/11) 192 de 300 clics en el fondo elegían Planta, y clics seguidos
+    # alternaban plano / Cuerpo. Se lo hace no elegible desde adentro (SoPickStyle UNPICKABLE con
+    # override al principio de su parte "shape": adentro hay PickStyle de FreeCAD que si no la pisan);
+    # el nodo sigue siendo el primer hijo del SoFCSelection, que es lo que FreeCAD busca.
+    try:
+        shape = kit.getPart("shape", False)
+        if shape is None:
+            return
+        group = coin.cast(shape, "SoGroup")
+        pick = nodes.get("pick")
+        has = pick is not None and group.findChild(pick) == 0
+        if value == 0 and not has:
+            pick = coin.SoPickStyle()
+            pick.style = coin.SoPickStyle.UNPICKABLE
+            pick.setOverride(True)
+            group.insertChild(pick, 0)
+            nodes["pick"] = pick
+        elif value != 0 and has:
+            group.removeChild(0)
+            nodes["pick"] = None
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Cuadradito del plano: %s\n" % traceback.format_exc())
 
 
 def show_rect(plane, rect):

@@ -1,5 +1,15 @@
 # Estado del fork
 
+**06/11, arreglado: clic en el fondo elegía un plano (y clics seguidos alternaban plano / Cuerpo)**
+(reportado por el usuario con su archivo "test planos"). Causa: el cuadradito nativo del plano, que
+escondemos con scaleFactor 0, seguía siendo elegible. Con la cámara guardada en el archivo, 192 de
+300 clics simulados en el fondo elegían un plano. Arreglo en `plane_look._native_scale`:
+SoPickStyle UNPICKABLE con override al principio de su parte "shape" (sin moverlo de lugar). Después:
+los únicos clics que eligen un plano caen sobre su borde azul (marcados sobre la captura), como SW.
+Probado con el mouse en FreeCAD de prueba sobre una copia del archivo: varios clics seguidos en el
+fondo dentro de Alzado, Planta y Vista lateral y fuera de ellos -> nada elegido; clic en el borde
+del Alzado -> Alzado con sus agarraderas; clic en la pieza -> la arista. Falta que lo pruebe el usuario.
+
 **05/11 ~00:05, agarraderas de los planos y nombres encima, como SW: HECHOS** (pedido del usuario
 "Hacé agarraderas como SW y los nombres por encima como SW, no hace falta que vuelvan al tamaño
 automático, de hecho SW no lo hace"). `swui/fork/plane_handles.py`: plano elegido entero -> 8 puntos

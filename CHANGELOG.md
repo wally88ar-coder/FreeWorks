@@ -5,6 +5,9 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Arreglado: un clic en el fondo de la vista elegía un plano** (y clics seguidos alternaban plano
+  y Cuerpo). El cuadrado de FreeCAD que queda escondido debajo del dibujo SW ya no se puede elegir;
+  un plano se elige solo con un clic en su borde, como en SW (`swui/fork/plane_look.py`).
 - **Agarraderas de los planos y nombres encima, como SW 2018** (`swui/fork/plane_handles.py`,
   `plane_look.py`). Un plano elegido muestra 8 agarraderas celestes; arrastrando una, el plano
   cambia de tamaño y desde ahí lo conserva (no vuelve al automático, como SW). Se guarda en la
