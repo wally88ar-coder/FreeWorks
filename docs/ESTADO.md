@@ -1,5 +1,11 @@
 # Estado del fork
 
+**06/11, pestañas que se iluminan al pasar el mouse, como SW: HECHO** (pedido del usuario). Relevado
+en SW con el mouse: la pestaña de la cinta bajo el mouse toma el fondo claro de la activa, sin
+negrita. `swui/fork/look_sw.py` (EXTRA_QSS): `:hover:!selected` con el fondo de la activa en la cinta
+y en Modelo / Tareas / Configuraciones. Probado con el mouse en FreeCAD de prueba. Falta que lo pruebe
+el usuario.
+
 **06/11, ventana sin la barra de título de Windows, como SW: HECHO** (pedido del usuario "para
 ganar unos mm de pantalla"; sin interruptor en el menú, decisión del usuario). `swui/fork/frameless.py`:
 una sola franja con menús, acceso rápido, nombre del documento activo (" *" con cambios) y

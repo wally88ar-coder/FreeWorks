@@ -115,6 +115,13 @@ QTabWidget#SWUI_RibbonTabs QTabBar::tab {
 QTabWidget#SWUI_RibbonTabs QTabBar::tab:selected {
     font-weight: bold;
 }
+/* pestaña bajo el mouse: se ilumina con el fondo de la activa, sin negrita (relevado en SW, 06/11) */
+QTabWidget#SWUI_RibbonTabs QTabBar::tab:hover:!selected {
+    background: %(ribbon)s;
+}
+QMainWindow > QTabBar::tab:hover:!selected {
+    background: %(panel)s;
+}
 QStatusBar {
     background: %(window)s;
 }

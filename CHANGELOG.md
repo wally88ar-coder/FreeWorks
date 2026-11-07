@@ -5,6 +5,8 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Pestañas que se iluminan al pasar el mouse, como SW 2018** (`swui/fork/look_sw.py`): las de la
+  cinta (Operaciones, Croquis...) y Modelo / Tareas / Configuraciones.
 - **Ventana sin la barra de título de Windows, como SW 2018** (`swui/fork/frameless.py`): menús,
   acceso rápido, nombre del documento y minimizar / maximizar / cerrar en una sola franja. Arrastrar
   la franja mueve la ventana y el doble clic maximiza / restaura.
