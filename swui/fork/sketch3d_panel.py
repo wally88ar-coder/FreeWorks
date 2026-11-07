@@ -186,10 +186,11 @@ class _Overlay:
         self.clear()
         if self.root is None:
             return
-        if anchor is not None:
-            size = scale * 60.0
-            for ax, vec in s3.AXES.items():
-                self._line(anchor - vec * size * 0.15, anchor + vec * size, AXIS_COLOR[ax], 1.5)
+        # terna en el punto de partida (sin cadena empezada: en el origen, para engancharlo como en SW)
+        base = anchor if anchor is not None else V()
+        size = scale * 60.0
+        for ax, vec in s3.AXES.items():
+            self._line(base - vec * size * 0.15, base + vec * size, AXIS_COLOR[ax], 1.5)
         if anchor is not None and end is not None:
             self._line(anchor, end, AXIS_COLOR.get(axis, (1.0, 0.45, 0.0)) if axis else (1.0, 0.45, 0.0), 2.5)
         if snap_point is not None:
@@ -227,6 +228,7 @@ class _Draw:
         self.typed = ""
         self.preview = None  # (end Vector, end spec, axis, sign)
         self.press = None
+        self.right_used = False
 
     # plano
     def plane_name(self):
@@ -270,15 +272,18 @@ class _Draw:
             info = view.getObjectInfo((int(pos[0]), int(pos[1])))
         except Exception:
             info = None
-        if info and str(info.get("Component", "")).startswith("Vertex"):
-            obj = FreeCAD.ActiveDocument.getObject(info.get("Object"))
-            if obj is not None and not s3.is_line(obj):
-                try:
-                    return _Snap(V(info["x"], info["y"], info["z"]), s3.on_vertex(obj, info["Component"]),
-                                 "%s de %s" % (info["Component"], obj.Label))
-                except Exception:
-                    pass
-        return None
+        obj = FreeCAD.ActiveDocument.getObject(info.get("Object")) if info else None
+        if obj is not None and not s3.is_line(obj):
+            # vértices de la pieza bajo el mouse, por cercanía en la pantalla (como los demás puntos)
+            try:
+                for i, vx in enumerate(obj.Shape.Vertexes):
+                    d = _dist2(_screen(view, vx.Point), pos)
+                    if d < best_d:
+                        best, best_d = _Snap(vx.Point, s3.on_vertex(obj, "Vertex%d" % (i + 1)),
+                                             "Vértice de %s" % obj.Label), d
+            except Exception:
+                pass
+        return best
 
     def _axis(self, view, pos):
         """(eje, signo, punto 3D) si el mouse va según un eje desde el ancla, en la pantalla."""
@@ -501,9 +506,13 @@ class _Filter(QtCore.QObject):
             if not (event.buttons() & (QtCore.Qt.MiddleButton | QtCore.Qt.RightButton)):
                 QtCore.QTimer.singleShot(0, p.mouse_moved)
             return False
+        if t == QtCore.QEvent.ContextMenu and p.draw.right_used:
+            p.draw.right_used = False
+            return True
         if t == QtCore.QEvent.MouseButtonPress:
             if event.button() == QtCore.Qt.RightButton and p.draw.anchor is not None:
                 p.draw.end_chain()
+                p.draw.right_used = True  # que al soltar no salga el menú de FreeCAD
                 return True
             if event.button() != QtCore.Qt.LeftButton:
                 return False
@@ -511,10 +520,13 @@ class _Filter(QtCore.QObject):
             p.draw.press = (view.getCursorPos(), bool(event.modifiers() & QtCore.Qt.ControlModifier))
             return True
         if t == QtCore.QEvent.MouseButtonRelease:
-            if event.button() == QtCore.Qt.RightButton and p.draw.anchor is None:
+            if event.button() == QtCore.Qt.RightButton and p.draw.anchor is None and not p.draw.right_used:
                 return False
             if event.button() != QtCore.Qt.LeftButton:
-                return event.button() == QtCore.Qt.RightButton
+                if event.button() == QtCore.Qt.RightButton:
+                    QtCore.QTimer.singleShot(400, lambda: setattr(p.draw, "right_used", False))
+                    return True
+                return False
             press, p.draw.press = p.draw.press, None
             if press is None:
                 return True
@@ -565,6 +577,7 @@ class Sketch3DPanel:
         bl = QtWidgets.QVBoxLayout(box)
         self.tool = QtWidgets.QPushButton("Línea")
         self.tool.setCheckable(True)
+        self.tool.setStyleSheet("QPushButton:checked { background:#cfe3f7; border:1px solid #5b9bd5; font-weight:bold; }")
         self.tool.toggled.connect(self._tool_toggled)
         bl.addWidget(self.tool)
         self.plane_lbl = QtWidgets.QLabel()
@@ -737,12 +750,7 @@ class Sketch3DPanel:
         self.run(go)
 
     def double_click(self):
-        view = _view()
-        try:
-            info = view.getObjectInfo(view.getCursorPos())
-        except Exception:
-            info = None
-        obj = self.doc.getObject(info.get("Object")) if info else None
+        obj = _line_under_mouse()
         if s3.is_line(obj) and s3.sketch_of(obj) is not None and s3.sketch_of(obj).Name == self.sk.Name:
             QtCore.QTimer.singleShot(0, lambda: self.edit_length(obj))
             return True
@@ -834,7 +842,7 @@ class Sketch3DPanel:
         return True
 
     def getStandardButtons(self):
-        return int(QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel)
+        return QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel
 
 
 class _SelObserver:
@@ -859,6 +867,30 @@ def _selected_sketch():
     return None
 
 
+def _empty_view(doc):
+    """Documento sin nada a la vista: isométrica de ~1 m alrededor del origen (FreeCAD arranca con
+    un zoom de pocos milímetros y lo que se dibuja no se ve)."""
+    for o in doc.Objects:
+        try:
+            if o.ViewObject.Visibility and hasattr(o, "Shape") and not o.Shape.isNull() \
+                    and o.Shape.BoundBox.DiagonalLength > 1e-6:
+                return
+        except Exception:
+            pass
+    view = _view()
+    try:
+        view.viewIsometric()
+        cam = view.getCameraNode()
+        d = view.getViewDirection()
+        dist = 3000.0
+        cam.position.setValue(-d.x * dist + 250, -d.y * dist + 150, -d.z * dist + 250)
+        cam.focalDistance.setValue(dist)
+        if cam.getTypeId().getName() == "OrthographicCamera":
+            cam.height.setValue(1400.0)
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Croquis 3D (vista):\n%s\n" % traceback.format_exc())
+
+
 def open_sketch(sk=None, draw=None):
     """Abre el panel: croquis nuevo (sk None, dibujando) o editar uno existente."""
     doc = FreeCAD.ActiveDocument
@@ -866,6 +898,8 @@ def open_sketch(sk=None, draw=None):
         return None
     if FreeCADGui.Control.activeDialog():
         FreeCADGui.Control.closeDialog()
+    if sk is None:
+        _empty_view(doc)
     try:
         panel = Sketch3DPanel(sk, draw=(sk is None) if draw is None else draw)
         FreeCADGui.Control.showDialog(panel)
@@ -910,10 +944,8 @@ class _Watch(QtCore.QObject):
             if not isinstance(obj, QtWidgets.QWidget):
                 return False
             if _is_viewport(obj):
-                view = _view()
-                info = view.getObjectInfo(view.getCursorPos()) if view else None
-                o = FreeCAD.ActiveDocument.getObject(info.get("Object")) if info else None
-                if s3.is_line(o) and s3.sketch_of(o) is not None:
+                o = _line_under_mouse()
+                if o is not None:
                     sk = s3.sketch_of(o)
                     QtCore.QTimer.singleShot(0, lambda: open_sketch(sk, draw=False))
                     return True
@@ -924,6 +956,30 @@ class _Watch(QtCore.QObject):
         except Exception:
             FreeCAD.Console.PrintLog("[SWUI fork] Croquis 3D (doble clic):\n%s\n" % traceback.format_exc())
         return False
+
+
+def _line_under_mouse():
+    """Línea de croquis 3D bajo el mouse; si getObjectInfo no la toma (a veces por un píxel), la
+    que dejó elegida el primer clic del doble clic."""
+    doc = FreeCAD.ActiveDocument
+    view = _view()
+    names = []
+    try:
+        info = view.getObjectInfo(view.getCursorPos()) if view else None
+        if info:
+            names.append(info.get("Object"))
+            names += [x for x in str(info.get("SubName", "")).split(".") if x]
+    except Exception:
+        pass
+    for s in FreeCADGui.Selection.getSelectionEx("", 0):
+        names.append(s.ObjectName)
+        for sub in s.SubElementNames or []:
+            names += [x for x in sub.split(".") if x]
+    for name in names:
+        o = doc.getObject(name) if name else None
+        if s3.is_line(o) and s3.sketch_of(o) is not None:
+            return o
+    return None
 
 
 def _tree_double():
