@@ -5,6 +5,10 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Barrita sobre la vista con Vista de sección y Estilo de visualización, como SW 2018**
+  (`swui/fork/view_bar.py`, `section_view.py`). Vista de sección con panel SW (plano, invertir,
+  distancia, giros, tapa pintada), solo en la vista; estilos sombreado con aristas, sombreado, sin
+  líneas ocultas y estructura alámbrica.
 - **Cinta de alto fijo, como SW 2018** (`swui/fork/ribbon_fixed.py`, `look_sw.py`): sin la línea azul
   para estirarla ni la franja gris debajo; queda con el alto mínimo.
 - **Pestañas que se iluminan al pasar el mouse, como SW 2018** (`swui/fork/look_sw.py`): las de la

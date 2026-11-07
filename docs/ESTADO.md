@@ -1,5 +1,19 @@
 # Estado del fork
 
+**07/11, barrita sobre la vista (Vista de sección y Estilo de visualización), como SW: HECHO** (el
+usuario pidió solo esos dos botones de la barra Ver transparente de SW). Relevado en SW con el mouse:
+panel Vista de sección (Alzado / Planta / Vista lateral o cara, invertir, distancia, girar X / Y,
+tapa y su color), vista previa en vivo, con Alzado queda la mitad de atrás, Aceptar deja el corte y
+el botón hundido, otro clic lo saca. `swui/fork/view_bar.py` (barrita arriba al centro de cada vista,
+transparente) y `swui/fork/section_view.py` (SoClipPlane en la vista, no toca el documento; tapa con
+Shape.slice de cada sólido visible, se recalcula al reconstruir; funciones públicas section_on /
+section_off / plane_frame). Estilos: Sombreado con aristas (Como es), Sombreado, Sin líneas ocultas
+(Línea oculta), Estructura alámbrica. Probado con guion (tapa 48,24 x 10 mm) y con el mouse en
+FreeCAD de prueba: Alzado a -34 mm, Planta a 5 mm, invertir, Aceptar, sacar el corte, los 4 estilos.
+Límites: "Líneas ocultas visibles" (punteadas) no existe en FreeCAD 1.1.4; en "Sin líneas ocultas"
+FreeCAD dibuja una diagonal en cada cara plana (su triangulación), SW no; la tapa no lleva el borde
+negro de SW; no hay Sección 2 / 3 ni la flecha para arrastrar el plano. Falta que lo pruebe el usuario.
+
 **07/11, sin la franja gris entre la cinta y la vista: HECHO** (pedido del usuario). Era el separador
 de QMainWindow: el tema de FreeCAD le suma relleno y medía 6 px. Qt usa una sola medida para todos
 los separadores, así que quedan en 1 px (`look_sw.py`); el borde árbol / vista se sigue arrastrando

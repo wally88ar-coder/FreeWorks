@@ -57,6 +57,9 @@ def install(workbench=None):
         from swui.fork import ribbon_fixed  # cinta de alto fijo, sin la línea para estirarla
 
         ribbon_fixed.install()
+        from swui.fork import view_bar  # barrita sobre la vista: Vista de sección y Estilo
+
+        view_bar.install()
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] Ventana sin marco:\n%s\n" % traceback.format_exc())
     try:
