@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Croquis 3D</title>
+  <path d="M12 22 L32 12 L54 22 L34 32 Z" stroke="#e0261b" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+  <path d="M12 22 V46 M34 32 V56 M54 22 V46" stroke="#e0261b" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+  <path d="M34 32 L46 38" stroke="#3d8bff" stroke-width="2.0" fill="none" stroke-linecap="round"/>
+  <text x="14.0" y="60.0" font-family="DejaVu Sans, Arial, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#3d8bff" stroke="#1b1b1b" stroke-width="0.6" paint-order="stroke">3D</text>
+</svg>

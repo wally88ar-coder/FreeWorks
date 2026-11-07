@@ -211,6 +211,15 @@ def _():
             mk.label(32, 54, "DXF", mk.NEW, 13)]
 
 
+@icon("sketch3d", "Croquis 3D")
+def _():
+    # bastidor en el espacio (isométrico): marco de arriba y patas en rojo de croquis, terna azul
+    return [mk.thin("M12 22 L32 12 L54 22 L34 32 Z", mk.RED, 2.6),
+            mk.thin("M12 22 V46 M34 32 V56 M54 22 V46", mk.RED, 2.6),
+            mk.thin("M34 32 L46 38", mk.NEW, 2.0),
+            mk.label(14, 60, "3D", mk.NEW, 12)]
+
+
 @icon("weld_member", "Miembro estructural")
 def _():
     # croquis esqueleto rojo en L y un caño cuadrado blanco barrido sobre la línea de abajo

@@ -277,6 +277,15 @@ def install(workbench=None):
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] Piezas soldadas:\n%s\n" % traceback.format_exc())
     try:
+        # croquis 3D (07/11): botón al lado de Croquis, en la pestaña Croquis
+        from swui.fork import sketch3d_panel
+
+        sketch3d_panel.install()
+        if workbench is not None:
+            workbench.appendMenu(MENU, [sketch3d_panel.COMMAND])
+    except Exception:
+        FreeCAD.Console.PrintError("[SWUI fork] Croquis 3D:\n%s\n" % traceback.format_exc())
+    try:
         # después de panel_sw, instant_dims, feature_tree y equations: los envuelve
         from swui.fork import config_asm, config_feature, config_sheet, config_tab
 

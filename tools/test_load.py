@@ -108,6 +108,7 @@ def _fork_layout_commands():
     return (_all_layout_commands(os.path.join("fork", "evaluate_tab.py"))
             + _all_layout_commands(os.path.join("fork", "sheet_tab.py"))
             + _all_layout_commands(os.path.join("fork", "weld_tab.py"))
+            + _all_layout_commands(os.path.join("fork", "sketch3d_tab.py"))
             + _all_layout_commands(os.path.join("fork", "mates_sw.py"))
             + _all_layout_commands(os.path.join("fork", "component_patterns.py"))
             + _all_layout_commands(os.path.join("fork", "assembly_features.py"))

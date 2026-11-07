@@ -357,6 +357,7 @@ def menus():
             # Croquis
             E("Croquis", {"P": "PartDesign_NewSketch", "C": "Sketcher_LeaveSketch"}, env="PC",
               label_c="Salir del croquis"),  # como SW: dentro del croquis cambia el nombre
+            E("Croquis 3D", "SWUI_Sketch3D", env="P"),
         ]),
         ("Herramientas", [
             E("Selección de cuadro", "Std_BoxSelection"),
