@@ -9,6 +9,10 @@ Pedida por el usuario ("¿serviría una auditoría de búsqueda de bugs?"). Dos 
    marcado **[verificado]** volviendo a correr las pruebas o con una propia; lo demás sale de leer
    el código (**[probable]**).
 
+**Pasada a las Issues de GitHub el 08/11** (https://github.com/wally88ar-coder/FreeWorks/issues):
+graves 1-3 = #1-#3, medianos 4-15 = #4-#15, chicos = #16-#27 (sin "Deshacer con un panel
+abierto", aceptable), punto 0 = #28 (cerrada). El seguimiento sigue allá, no en este archivo.
+
 Nada de esta lista está arreglado salvo el punto 0 (error propio de la tarde anterior). El usuario
 elige qué arreglar.
 

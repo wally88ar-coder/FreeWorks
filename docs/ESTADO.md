@@ -1,5 +1,12 @@
 # Estado del fork
 
+**08/11, ERRORES EN GITHUB Y PLAN DE CALIDAD.** Los errores se registran desde ahora en las Issues
+de GitHub (https://github.com/wally88ar-coder/FreeWorks/issues, activadas el 08/11 con permiso del
+usuario; etiquetas de gravedad, causa y área). Los de la auditoría ya están: #1-#27 abiertas, #28
+cerrada. Plan para cometer menos errores (reglas, piezas comunes, batería de pruebas que corre
+sola antes de cada commit, mapa de cobertura, las 7 preguntas a lo existente): `docs/PLAN_CALIDAD.md`,
+falta que el usuario lo apruebe para arrancar.
+
 **08/11, AUDITORÍA DE ERRORES: HECHA, falta que el usuario elija qué arreglar.** Lista completa,
 ordenada por gravedad y explicada en simple: `docs/AUDITORIA_2026-11-08.md`. Graves: (1) multicuerpo,
 borrar una copia de Alcance vacía otro sólido; (2) soldadas, el inglete no sigue al esqueleto (lo que
