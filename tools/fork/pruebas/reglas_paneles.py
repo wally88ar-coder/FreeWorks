@@ -260,7 +260,9 @@ def correr_caso(caso, inf, semillas=(1,)):
     doc = FreeCAD.newDocument("Reglas_" + caso.nombre.replace(" ", "_"))
     doc.UndoMode = 1
     FreeCADGui.ActiveDocument.ActiveView.viewIsometric()
-    caso.preparar(doc)
+    armado = caso.preparar(doc)
+    if hasattr(armado, "send"):  # un caso puede armar su pieza con otro panel (chapa)
+        yield from armado
     doc.recompute()
     FreeCADGui.SendMsgToActiveView("ViewFit")
     yield ESPERA_CORTA
