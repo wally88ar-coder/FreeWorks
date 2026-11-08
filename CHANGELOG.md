@@ -13,6 +13,9 @@ Neueste Version oben. / Newest version first.
   ventana) que corre sola antes de cada commit (`tools/fork/hooks/pre-commit`); mapa de qué
   código no prueba nadie (`docs/MAPA_PRUEBAS.md`); los errores se registran en las Issues de
   GitHub. Todavía no cambia nada de lo que se ve: los errores de la auditoría siguen abiertos.
+- **Reglas comunes de los paneles** (`tools/fork/pruebas/reglas_paneles.py`): 39 paneles probados
+  con valores al azar en Cancelar, algo inválido, otro comando, Aceptar con Deshacer/Rehacer,
+  editar y guardar. Encontró 5 errores nuevos (#31 a #35) y confirmó 3 de la auditoría.
 - **Sin el aviso "Referencia" de FreeCAD, como SW** (`swui/fork/cross_body.py`): elegir una cara o
   arista de otro sólido (piezas soldadas, multicuerpo) ya no pregunta "Hacer copia independiente /
   dependiente / referencia cruzada". La operación va al sólido de lo elegido (se activa solo, también

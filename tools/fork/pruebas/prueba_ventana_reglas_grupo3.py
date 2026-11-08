@@ -13,7 +13,7 @@ from casos_grupo3 import CASOS  # noqa: E402
 from reglas_paneles import correr  # noqa: E402
 
 DEUDA = {
-    ("Brida base", "editar"): "#31",
+    ("Brida base", "editar"): ("#31", "Croquis cambió"),
 }
 
 

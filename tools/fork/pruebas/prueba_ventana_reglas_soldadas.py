@@ -12,16 +12,19 @@ TIPO = "completa"
 from casos_soldadas import CASOS  # noqa: E402
 from reglas_paneles import correr  # noqa: E402
 
+_NO_CANCELA = ("no se canceló", "siguió abierto", "cambió", "pasos de deshacer", "diálogo", "sobra")
+_ESCUCHA = ("already deleted", "deleted object")
+_ERROR = ("ValueError", "No se pudo", "QPushButton")
 DEUDA = {
-    ("Miembro estructural", "invalido"): "#19",
-    ("Miembro estructural", "otro_comando"): "#6",
-    ("Miembro estructural", "aceptar"): "#6",
-    ("Esquinas", "otro_comando"): "#6",
-    ("Cartela", "cancelar"): "#6",
-    ("Cartela", "invalido"): "#6 #19",
-    ("Cartela", "otro_comando"): "#6",
-    ("Cartela", "aceptar"): "#6",
-    ("Tapa de extremo", "invalido"): "#19",
+    ("Miembro estructural", "invalido"): ("#19",) + _ERROR,
+    ("Miembro estructural", "otro_comando"): ("#6",) + _NO_CANCELA + _ESCUCHA,
+    ("Miembro estructural", "aceptar"): ("#6",) + _ESCUCHA,
+    ("Esquinas", "otro_comando"): ("#6",) + _NO_CANCELA + _ESCUCHA,
+    ("Cartela", "cancelar"): ("#6",) + _ESCUCHA,
+    ("Cartela", "invalido"): ("#6 #19",) + _ESCUCHA + _ERROR,
+    ("Cartela", "otro_comando"): ("#6",) + _NO_CANCELA + _ESCUCHA,
+    ("Cartela", "aceptar"): ("#6",) + _ESCUCHA,
+    ("Tapa de extremo", "invalido"): ("#19",) + _ERROR,
 }
 
 

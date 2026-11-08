@@ -1,8 +1,11 @@
 # Plan para cometer menos errores — aprobado el 08/11/2026
 
 Estado: pasos 1 a 6 implementados el 08/11 (reglas en CLAUDE.md, `swui/fork/safe_ops.py`,
-`tools/fork/pruebas/`, `tools/fork/hooks/pre-commit`, Issues, `docs/MAPA_PRUEBAS.md`). Pasos 8
-(pruebas adversariales) y 9 (todo `swui`, capturas de referencia, tiempos) sumados el 08/11, sin
+`tools/fork/pruebas/`, `tools/fork/hooks/pre-commit`, Issues, `docs/MAPA_PRUEBAS.md`). Paso 8.1
+(reglas comunes de paneles) hecho el 08/11 para 39 paneles (`tools/fork/pruebas/reglas_paneles.py`
+y `casos_*.py`; faltan los de planos y unos pocos más, lista en el LEEME de las pruebas): encontró
+#31 a #35 y verificó #6, #19 y #29; descartó #16. Resto del paso 8 (8.2 geometría al azar, 8.3 y
+8.4 fuzzing, 8.5 agente atacante) y paso 9 (todo `swui`, capturas de referencia, tiempos): sin
 empezar. Pasos 7 a 9 y corrección de errores: cuando el usuario diga.
 
 Objetivo: trabajar al nivel de un proyecto abierto serio ("profesional bueno"), no al de aviones

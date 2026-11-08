@@ -40,43 +40,110 @@ ESPERA_CORTA = 700
 # --- Lo que se compara ----------------------------------------------------------------------
 
 
+def _r(v):
+    return round(float(v), 2)
+
+
 def _vol(o):
     try:
         s = o.Shape
         if s.isNull() or not s.Solids:
             return None
-        return round(s.Volume, 2)
+        return _r(s.Volume)
     except Exception:
         return None
 
 
+def _caja(o):
+    """Dónde está (también vínculos, planos y ejes). Con sólido, su centro de masa (exacto y
+    estable); sin sólido, la caja envolvente redondeada a 0,1 mm. La caja de un sólido no sirve:
+    varía unas centésimas (y en superficies curvas hasta 0,1 mm) entre recálculos y al reabrir."""
+    try:
+        import Part
+        s = Part.getShape(o)
+        if s.isNull():
+            return None
+        if s.Solids:
+            c = s.CenterOfMass
+            return ("cdm",) + tuple(_r(x) for x in (c.x, c.y, c.z))
+        b = s.BoundBox
+        return tuple(round(float(x), 1) for x in (b.XMin, b.YMin, b.ZMin, b.XMax, b.YMax, b.ZMax))
+    except Exception:
+        return None
+
+
+def _ubicacion(o):
+    try:
+        p = o.Placement
+        return tuple(_r(x) for x in (p.Base.x, p.Base.y, p.Base.z)) + tuple(_r(x) for x in p.Rotation.Q)
+    except Exception:
+        return None
+
+
+def _valor(v):
+    """Un valor de propiedad comparable: los vínculos por el nombre del objeto apuntado."""
+    if hasattr(v, "Name") and hasattr(v, "TypeId"):
+        return "->" + v.Name
+    if isinstance(v, (list, tuple)):
+        return tuple(_valor(x) for x in v)
+    return str(v)
+
+
 def _firma(sk):
-    """Resumen de dónde está cada cosa del croquis (puntas redondeadas a 0,01 mm)."""
+    """Resumen de qué hay en el croquis y dónde (puntas, centros, puntos; constructivas aparte)."""
     out = []
-    for g in sk.Geometry:
+    for i, g in enumerate(sk.Geometry):
+        pts = []
+        for nombre in ("StartPoint", "EndPoint", "Center"):
+            p = getattr(g, nombre, None)
+            if p is not None:
+                pts.append(p)
+        if not pts and hasattr(g, "X"):  # Part.Point
+            pts.append(FreeCAD.Vector(g.X, g.Y, g.Z))
         try:
-            pts = [g.StartPoint, g.EndPoint]
+            constr = bool(sk.getConstruction(i))
         except Exception:
-            pts = [getattr(g, "Center", FreeCAD.Vector())]
-        out.append(tuple(round(c, 2) for p in pts for c in (p.x, p.y)) + (round(getattr(g, "Radius", 0), 2),))
+            constr = None
+        out.append((type(g).__name__, constr, tuple(_r(c) for p in pts for c in (p.x, p.y)),
+                    _r(getattr(g, "Radius", 0))))
     return hash(tuple(out))
 
 
 def foto(doc):
-    """Estado comparable del documento: objetos (tipo, volumen, visible) y pasos de deshacer."""
+    """Estado comparable del documento: por objeto, tipo, medida (volumen y caja; en un croquis,
+    lo dibujado), ubicación, visibilidad y marcas SWUI_; y los pasos de deshacer."""
     objs = {}
+    en_edicion = None
+    try:
+        import FreeCADGui
+        vp = FreeCADGui.getDocument(doc.Name).getInEdit()
+        en_edicion = vp.Object.Name if vp is not None else None
+    except Exception:
+        pass
     for o in doc.Objects:
         vis = None
         try:
             vis = bool(o.Visibility)
         except Exception:
             pass
-        medida = _vol(o)
-        if o.TypeId == "Sketcher::SketchObject":  # en un croquis cuenta lo dibujado y dónde
+        medida = (_vol(o), _caja(o))
+        if o.TypeId == "Sketcher::SketchObject":
             medida = (o.GeometryCount, o.ConstraintCount, _firma(o))
-            vis = None  # entrar y salir de la edición le cambia la visibilidad (FreeCAD)
-        objs[o.Name] = (o.TypeId, medida, vis)
-    return {"objs": objs, "undo": doc.UndoCount}
+            if o.Name == en_edicion:
+                vis = None  # mientras se edita, FreeCAD le cambia la visibilidad
+        try:  # las marcas propias de FreeWorks (SWUI_...): chapa, alcance, configuraciones...
+            marcas = hash(tuple(sorted((p, _valor(getattr(o, p))) for p in o.PropertiesList
+                                       if p.startswith("SWUI_"))))
+        except Exception:
+            marcas = None
+        extra = None
+        if o.TypeId == "Spreadsheet::Sheet":  # la tabla de configuraciones: su contenido
+            try:
+                extra = hash(tuple((c, str(o.get(c))) for c in sorted(o.getNonEmptyCells())))
+            except Exception:
+                pass
+        objs[o.Name] = (o.TypeId, medida, _ubicacion(o), vis, marcas, extra)
+    return {"objs": objs, "undo": doc.UndoCount, "abierta": bool(doc.HasPendingTransaction)}
 
 
 def diferencias(a, b, con_undo=True):
@@ -86,10 +153,32 @@ def diferencias(a, b, con_undo=True):
             out.append("falta %s" % n)
         elif n not in a["objs"]:
             out.append("sobra %s (%s)" % (n, b["objs"][n][0]))
-        elif a["objs"][n] != b["objs"][n]:
-            out.append("%s cambió: %s -> %s" % (n, a["objs"][n], b["objs"][n]))
+        else:
+            # visible None = no se sabe (croquis en edición): no se compara
+            que = [k for k, x, y in zip(("tipo", "medida", "ubicación", "visible", "marcas", "contenido"),
+                                        a["objs"][n], b["objs"][n])
+                   if x != y and not (k == "visible" and (x is None or y is None))]
+            if que:
+                out.append("%s cambió (%s): %s -> %s" % (n, ", ".join(que), a["objs"][n], b["objs"][n]))
     if con_undo and a["undo"] != b["undo"]:
         out.append("pasos de deshacer: %d -> %d" % (a["undo"], b["undo"]))
+    if b.get("abierta") and not a.get("abierta"):
+        out.append("quedó una transacción abierta (lo próximo que haga el usuario se suma a ese paso)")
+    return out
+
+
+def invalidos(doc):
+    """Objetos con error (y croquis con relaciones en conflicto o redundantes)."""
+    out = set()
+    for o in doc.Objects:
+        try:
+            if "Invalid" in str(o.State) or (hasattr(o, "isValid") and not o.isValid()):
+                out.add(o.Name)
+            if o.TypeId == "Sketcher::SketchObject" and (list(o.ConflictingConstraints)
+                                                         or list(o.RedundantConstraints)):
+                out.add(o.Name + " (relaciones en conflicto/redundantes)")
+        except Exception:
+            pass
     return out
 
 
@@ -100,7 +189,9 @@ class Informe:
     def __init__(self, deuda=None):
         self.fallas = []          # (caso, regla, detalle)
         self.notas = []
-        self.deuda = deuda or {}  # (caso, regla) -> "#N": incumplimientos ya registrados
+        # (caso, regla) -> "#N" o ("#N", "pedazo del texto que da ese error"): con texto, la
+        # deuda tapa solo las fallas que lo contienen (otra falla en la misma regla sí se ve)
+        self.deuda = deuda or {}
 
     def falla(self, caso, regla, detalle):
         traza("FALLA %s/%s: %s" % (caso, regla, detalle))
@@ -110,10 +201,24 @@ class Informe:
         traza(texto)
         self.notas.append(texto)
 
+    def _cubre(self, f):
+        d = self.deuda.get((f[0], f[1]))
+        if d is None:
+            return False
+        if isinstance(d, tuple):
+            return any(t in f[2] for t in d[1:])
+        return True
+
+    def _a_veces(self, k):
+        """Deuda que no aparece en todas las corridas ("~#N"): que no esté no es "ya no falla"."""
+        d = self.deuda.get(k)
+        return str(d[0] if isinstance(d, tuple) else d).startswith("~")
+
     def resumen(self):
-        nuevas = [f for f in self.fallas if (f[0], f[1]) not in self.deuda]
-        viejas = [f for f in self.fallas if (f[0], f[1]) in self.deuda]
-        arregladas = sorted(set(self.deuda) - {(f[0], f[1]) for f in self.fallas})
+        nuevas = [f for f in self.fallas if not self._cubre(f)]
+        viejas = [f for f in self.fallas if self._cubre(f)]
+        arregladas = sorted(k for k in self.deuda if not self._a_veces(k)
+                            and not any(self._cubre(f) for f in self.fallas if (f[0], f[1]) == k))
         return nuevas, viejas, arregladas
 
 
@@ -161,6 +266,13 @@ def limpiar_ventana(edicion_ok=""):
         restos.append("diálogo abierto: %s %r" % (d.objectName(), d.windowTitle()))
         d.reject()
     vp0 = FreeCADGui.ActiveDocument.getInEdit() if FreeCADGui.ActiveDocument is not None else None
+    try:  # un panel de herramienta del croquis que quedó abierto
+        from swui.fork import sketch_entities
+        if sketch_entities.active_panel() is not None:
+            restos.append("panel de herramienta del croquis abierto")
+            sketch_entities.active_panel().reject()
+    except Exception:
+        pass
     if edicion_ok and vp0 is not None and getattr(vp0.Object, "TypeId", "") == edicion_ok:
         FreeCADGui.Selection.clearSelection()
         return restos
@@ -260,9 +372,14 @@ class Caso:
 
     def aceptar(self):
         """Toca Aceptar del panel, como el usuario. Generador; deja self.ok."""
-        self.ok = tocar(rechazar=False)
-        yield ESPERA_CORTA
         import FreeCADGui
+        self.ok = tocar(rechazar=False)
+        espera = 0
+        while True:  # hasta 3 s para que el panel se cierre (algunos tardan en recalcular)
+            yield 300
+            espera += 300
+            if not FreeCADGui.Control.activeDialog() or espera >= 3000:
+                break
         self.ok = self.ok and not FreeCADGui.Control.activeDialog()
         self.aviso = self.mensaje()  # una vez: un aviso en ventanita se lee y se cierra
 
@@ -318,7 +435,15 @@ def correr_caso(caso, inf, semillas=(1,)):
     FreeCADGui.SendMsgToActiveView("ViewFit")
     yield ESPERA_CORTA
     base = foto(doc)
-    hecho = None
+    malos0 = invalidos(doc)
+
+    def medir(regla, base):
+        """Compara con `base`, anota las diferencias y devuelve el estado nuevo: lo que quedó
+        mal ya se anotó y las reglas siguientes miden desde acá."""
+        ahora = foto(doc)
+        for d in diferencias(base, ahora, con_undo=caso.contar_deshacer):
+            inf.falla(caso.nombre, regla, d)
+        return ahora
 
     def chequear_ventana(regla, desde):
         for r in limpiar_ventana(caso.edicion_ok if regla == "aceptar" else ""):
@@ -342,13 +467,9 @@ def correr_caso(caso, inf, semillas=(1,)):
             yield ESPERA_PANEL
             yield from caso.cancelar()
             chequear_ventana("cancelar", desde)
-            ahora = foto(doc)
-            for d in diferencias(base, ahora, con_undo=caso.contar_deshacer):
-                inf.falla(caso.nombre, "cancelar", d)
-            base = ahora  # lo que quedó mal ya se anotó: las reglas siguientes miden desde acá
+            base = medir("cancelar", base)
 
     if "invalido" in caso.reglas:
-        gen = None
         desde = informe_largo()
         yield from caso.abrir(random.Random(0))
         gen = caso.invalido()
@@ -362,37 +483,73 @@ def correr_caso(caso, inf, semillas=(1,)):
                 inf.falla(caso.nombre, "invalido", "aceptó algo inválido")
             elif not caso.aviso:
                 inf.falla(caso.nombre, "invalido", "no aceptó pero no dijo por qué")
-            yield from caso.cancelar()
-            chequear_ventana("invalido", desde)
-            ahora = foto(doc)
-            for d in diferencias(base, ahora, con_undo=caso.contar_deshacer):
-                inf.falla(caso.nombre, "invalido", d)
-            base = ahora  # lo que quedó mal ya se anotó: las reglas siguientes miden desde acá
-        else:
-            yield from caso.cancelar()
-            limpiar_ventana()
+            elif caso.aviso.startswith("No se pudo"):
+                inf.falla(caso.nombre, "invalido", "el aviso es un error de Python: %r" % caso.aviso)
+        yield from caso.cancelar()
+        chequear_ventana("invalido", desde)
+        base = medir("invalido", base)
 
     if "otro_comando" in caso.reglas:
         desde = informe_largo()
         yield from caso.abrir(random.Random(1))
         yield from caso.elegir(random.Random(1))
         yield ESPERA_PANEL
+        primero = caso.panel()
+        abierto = foto(doc)
         FreeCADGui.Selection.clearSelection()
         from swui import ribbon
-        ribbon._run(caso.otro)
+        # fuera del generador: si FreeCAD pregunta "Un diálogo ya está abierto" (ventanita modal),
+        # la prueba sigue y la anota en vez de quedar trabada adentro
+        from PySide import QtCore
+        QtCore.QTimer.singleShot(0, lambda: ribbon._run(caso.otro))
         yield ESPERA_PANEL
-        # el panel nuevo (vacío) se cancela también; lo del primero no tiene que quedar
-        from swui.fork import panel_guard
+        yield ESPERA_CORTA
+        # ANTES de cancelar el panel nuevo (su Cancelar podría borrar lo que dejó el primero):
+        # lo que agregó el primer panel ya no tiene que estar, y lo de antes, igual que antes
+        ahora = foto(doc)
+        for n in abierto["objs"]:
+            if n not in base["objs"] and n in ahora["objs"]:
+                inf.falla(caso.nombre, "otro_comando", "el primer panel no se canceló: sigue %s (%s)"
+                          % (n, ahora["objs"][n][0]))
+        solo_base = {"objs": {n: v for n, v in ahora["objs"].items() if n in base["objs"]},
+                     "undo": base["undo"], "abierta": False}
+        for d in diferencias(base, solo_base, con_undo=False):
+            inf.falla(caso.nombre, "otro_comando", d)
+        if primero is not None and caso.panel() is primero:
+            inf.falla(caso.nombre, "otro_comando", "el primer panel siguió abierto")
         tocar(rechazar=True)
         yield ESPERA_CORTA
         chequear_ventana("otro_comando", desde)
         ahora = foto(doc)
-        for d in diferencias(base, ahora, con_undo=caso.contar_deshacer):
+        problemas = diferencias(base, ahora, con_undo=caso.contar_deshacer)
+        for d in problemas:
             inf.falla(caso.nombre, "otro_comando", d)
-        base = ahora  # lo que quedó mal ya se anotó: las reglas siguientes miden desde acá
+        if problemas:
+            # volver a como estaba, para que lo que dejó mal no arrastre a las reglas siguientes
+            # (ya quedó anotado): anular lo abierto, deshacer lo de más y borrar lo que sobre
+            try:
+                if doc.HasPendingTransaction:
+                    doc.abortTransaction()
+                while doc.UndoCount > base["undo"]:
+                    doc.undo()
+                for n in [n for n in foto(doc)["objs"] if n not in base["objs"]]:
+                    if doc.getObject(n) is not None:
+                        doc.removeObject(n)
+                doc.recompute()
+            except Exception:
+                pass
+            yield ESPERA_CORTA
+            limpiar_ventana()
+            restos = diferencias(base, foto(doc), con_undo=False)
+            if restos:
+                inf.nota("%s: después de otro_comando no se pudo volver atrás: %s" % (caso.nombre, restos[:3]))
+                base = foto(doc)
 
+    hecho = None
     if "aceptar" in caso.reglas:
+        alguna = False
         for semilla in semillas:
+            ultima = semilla == semillas[-1]
             rng = random.Random(semilla)
             desde = informe_largo()
             yield from caso.abrir(rng)
@@ -403,11 +560,17 @@ def correr_caso(caso, inf, semillas=(1,)):
             if not caso.ok:
                 if not caso.aviso:
                     inf.falla(caso.nombre, "aceptar", "semilla %d: no aceptó y no dijo por qué" % semilla)
+                elif caso.aviso.startswith("No se pudo"):
+                    inf.falla(caso.nombre, "aceptar", "semilla %d: error al aceptar: %r" % (semilla, caso.aviso))
                 else:
                     inf.nota("%s: semilla %d no aceptó: %s" % (caso.nombre, semilla, caso.aviso))
                 yield from caso.cancelar()
-                limpiar_ventana()
+                chequear_ventana("aceptar", desde)
+                base = medir("aceptar", base)
+                if ultima and alguna:
+                    inf.falla(caso.nombre, "aceptar", "la última vuelta no aceptó: editar y guardar quedaron sin probar")
                 continue
+            alguna = True
             chequear_ventana("aceptar", desde)
             despues = foto(doc)
             nuevos = _nuevos(base, despues)
@@ -415,12 +578,13 @@ def correr_caso(caso, inf, semillas=(1,)):
             traza("  %s semilla %d: aceptó, nuevos %s" % (caso.nombre, semilla, tipos))
             validos = caso.tipo if isinstance(caso.tipo, tuple) else (caso.tipo,)
             cuantas = sum(1 for t in tipos if t in validos)
+            hecho_aca = None
             if caso.tipo is None:  # herramienta que cambia algo que ya existe (p. ej. un croquis)
                 validos = ()
                 if not diferencias(base, despues, con_undo=False):
                     inf.falla(caso.nombre, "aceptar", "semilla %d: aceptó pero no cambió nada" % semilla)
                 else:
-                    hecho = True
+                    hecho_aca = True
             elif (caso.cuantos is not None and cuantas != caso.cuantos) or cuantas == 0:
                 inf.falla(caso.nombre, "aceptar", "semilla %d: esperaba una %s nueva, hay %s" % (semilla, caso.tipo, tipos))
             raros = [t for t in tipos if t not in validos and t not in caso.ayudantes]
@@ -429,12 +593,13 @@ def correr_caso(caso, inf, semillas=(1,)):
             if caso.contar_deshacer and despues["undo"] != base["undo"] + 1:
                 inf.falla(caso.nombre, "aceptar", "semilla %d: pasos de deshacer %d -> %d (se espera uno)"
                           % (semilla, base["undo"], despues["undo"]))
+            if despues["abierta"]:
+                inf.falla(caso.nombre, "aceptar", "semilla %d: quedó una transacción abierta" % semilla)
             for n in nuevos:
-                o = doc.getObject(n)
-                if o.TypeId in validos:
-                    hecho = n
-                    if not o.isValid() or "Invalid" in str(o.State):
-                        inf.falla(caso.nombre, "aceptar", "semilla %d: %s quedó con error: %s" % (semilla, n, o.State))
+                if despues["objs"][n][0] in validos:
+                    hecho_aca = n
+            for n in sorted(invalidos(doc) - malos0):
+                inf.falla(caso.nombre, "aceptar", "semilla %d: quedó con error: %s" % (semilla, n))
             doc.undo()
             doc.recompute()
             yield ESPERA_CORTA
@@ -445,18 +610,24 @@ def correr_caso(caso, inf, semillas=(1,)):
             yield ESPERA_CORTA
             for d in diferencias(despues, foto(doc), con_undo=False):
                 inf.falla(caso.nombre, "aceptar", "semilla %d, después de Rehacer: %s" % (semilla, d))
-            if semilla != semillas[-1]:
+            for n in sorted(invalidos(doc) - malos0):
+                inf.falla(caso.nombre, "aceptar", "semilla %d, después de Rehacer quedó con error: %s" % (semilla, n))
+            if not ultima:
                 doc.undo()
                 doc.recompute()
                 yield ESPERA_CORTA
+            else:
+                hecho = hecho_aca
             yield from caso.despues_de_aceptar()
-        if hecho is None:
+            chequear_ventana("aceptar", desde)  # errores de Deshacer / Rehacer / al salir
+        if not alguna:
             inf.falla(caso.nombre, "aceptar", "ninguna semilla dio una operación aceptada")
 
-    if hecho is not None and "editar" in caso.reglas:
+    obj = doc.getObject(hecho) if isinstance(hecho, str) else None
+    if obj is not None and "editar" in caso.reglas:
         desde = informe_largo()
         antes = foto(doc)
-        yield from caso.editar(doc.getObject(hecho))
+        yield from caso.editar(obj)
         if caso.panel() is None and not FreeCADGui.Control.activeDialog():
             inf.falla(caso.nombre, "editar", "no se abrió el panel al editar")
         yield from caso.aceptar()
@@ -467,26 +638,32 @@ def correr_caso(caso, inf, semillas=(1,)):
         chequear_ventana("editar", desde)
         for d in diferencias(antes, foto(doc), con_undo=False):
             inf.falla(caso.nombre, "editar", d)
+        for n in sorted(invalidos(doc) - malos0):
+            inf.falla(caso.nombre, "editar", "quedó con error: %s" % n)
 
     if hecho is not None and "guardar" in caso.reglas:
         antes = foto(doc)
         # si ya tiene archivo (un ensamblaje, junto a sus piezas), se guarda ahí mismo
         ruta = doc.FileName or os.path.join(carpeta_temporal(), "reglas.FCStd")
         doc.saveAs(ruta)
-        nombre = doc.Name
-        FreeCAD.closeDocument(nombre)
+        abiertos = set(FreeCAD.listDocuments())
+        FreeCAD.closeDocument(doc.Name)
         yield ESPERA_CORTA
         desde = informe_largo()
         doc = FreeCAD.openDocument(ruta)
         yield ESPERA_PANEL
         for d in diferencias(antes, foto(doc), con_undo=False):
             inf.falla(caso.nombre, "guardar", d)
-        try:
-            if FreeCADGui.getDocument(doc.Name).Modified:
-                inf.falla(caso.nombre, "guardar", "al abrir quedó modificado")
-        except AttributeError:
-            pass
+        gdoc = FreeCADGui.getDocument(doc.Name)
+        if getattr(gdoc, "Modified", False):
+            inf.falla(caso.nombre, "guardar", "al abrir quedó modificado")
         chequear_ventana("guardar", desde)
+        for extra in set(FreeCAD.listDocuments()) - abiertos:  # piezas de un ensamblaje (memoria)
+            if extra != doc.Name:
+                try:
+                    FreeCAD.closeDocument(extra)
+                except Exception:
+                    pass
 
     try:
         FreeCAD.closeDocument(doc.Name)

@@ -18,6 +18,17 @@
   - `body.removeObject(op)` reengancha la operación siguiente a la anterior y, si `op` era la
     punta, pasa la punta a la anterior; `doc.removeObject` solo, no (Issue #1). Usar
     `safe_ops.remove_feature`.
+  - Reglas comunes de paneles (`reglas_paneles.py`), hallazgos al armarlas (08/11):
+    - La caja envolvente (`BoundBox`, y también `optimalBoundingBox`) de un sólido varía unas
+      centésimas entre recálculos y al reabrir (superficies curvas: hasta 0,1 mm). Para "¿se
+      movió?" usar el centro de masa (`Part.getShape(o).CenterOfMass`), exacto y estable.
+    - Entrar y salir de la edición de un croquis deja pasos de deshacer y le cambia la
+      visibilidad (FreeCAD): las herramientas del croquis se prueban con Ctrl+Z adentro.
+    - Un clic en Aceptar que abre un aviso modal (`QMessageBox.exec`) traba a quien hizo el clic:
+      en pruebas, clic y comandos con `QTimer.singleShot(0, ...)`.
+    - Los paneles que no se anotan en `panel_guard` (soldadas, Vista de sección, Agregar
+      configuración) no se pueden alcanzar desde afuera: la prueba envuelve el `__init__` de su
+      clase para guardar la instancia.
 - Test sin GUI (antes de cada entrega): `D:\Freecad\bin\python.exe tools/test_load.py .`
   Debe terminar en `ERGEBNIS: OK`. Simula FreeCAD con objetos falsos (Qt = MagicMock).
 - Prueba en FreeCAD REAL, sin tocar la configuración del usuario:

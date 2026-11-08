@@ -20,9 +20,39 @@ no frena: se muestra la última línea para ver que falla por ese error y no por
 **ARREGLADO?** (tenía CONOCIDO y ahora pasa: sacarle el CONOCIDO y cerrar la Issue; frena).
 
 Cada prueba corre en su propio FreeCAD, una a la vez (memoria de la PC). Las de ventana usan una
-copia de `user.cfg`, nunca la del usuario; si una se pasa de tiempo (150 s) se corta, y FreeCAD
-puede dejar un archivo de recuperación de esa prueba (avisa la próxima vez que se abre FreeCAD:
-descartarlo).
+copia de `user.cfg`, nunca la del usuario; si una se pasa de tiempo (FW_TIEMPO_VENTANA, 600 s por
+omisión) se corta, y FreeCAD puede dejar un archivo de recuperación de esa prueba (avisa la
+próxima vez que se abre FreeCAD: descartarlo). `--detalle` muestra el registro paso a paso.
+
+## Reglas comunes de los paneles (paso 8.1 del plan)
+
+`reglas_paneles.py` tiene las reglas que TODO panel cumple (cancelar, invalido, otro_comando,
+aceptar con deshacer/rehacer, editar, guardar; sin errores en el informe de FreeCAD) y las corre
+con elecciones y valores al azar. Cada panel es un "caso" en `casos_*.py`; cada
+`prueba_ventana_reglas_*.py` corre un grupo y tiene su DEUDA: (panel, regla) -> Issue de lo que ya
+se sabe que falla (si deja de fallar, la prueba avisa para sacarlo).
+
+- Un panel solo: `FW_CASO=Redondeo ... correr.py solo_ventana reglas_pieza --detalle`.
+- Más vueltas al azar: `FW_SEMILLAS=10 FW_SEMILLA=37` (por omisión 2 vueltas desde la 1). Cada
+  vuelta suma ~13 s por panel: con muchas vueltas, de a un panel (`FW_CASO`) o con más tiempo
+  (`FW_TIEMPO_VENTANA=3600`).
+- DEUDA: `(panel, regla): ("#N", "texto", ...)` tapa solo las fallas de esa regla que contienen
+  alguno de esos textos; cualquier otra falla en la misma regla sale igual.
+- Qué compara (`foto`): por objeto, tipo, volumen y caja envolvente (también de vínculos, planos y
+  ejes), ubicación, visibilidad, marcas `SWUI_` (con el nombre del objeto apuntado), contenido de
+  planillas y, en croquis, qué hay dibujado y dónde; pasos de deshacer y transacciones abiertas;
+  objetos con error y croquis con relaciones en conflicto.
+- Panel nuevo: agregar su clase `Caso` al `casos_*.py` del área (preparar, abrir, elegir, inválido).
+
+Paneles en el banco (08/11, 39): Redondeo, Chaflán, Ángulo de salida, Matriz lineal, Matriz
+circular, Simetría, Plano, Eje, Punto, Combinar, Mover cara, Extruir, Extruir corte, Revolución,
+Taladro, Mover/Copiar sólidos, Eliminar/Conservar sólidos, Brida base, Brida de arista,
+Dobladillo, Miembro estructural, Esquinas, Cartela, Tapa de extremo, Relación de posición, Matriz
+de componentes, Plano de ensamblaje, las 7 herramientas del croquis, Convertir a chapa, Vista de
+sección, Agregar configuración, Croquis (elegir plano), Croquis 3D. Faltan: los de planos
+(Insertar imagen, Propiedades de hoja, Acabado, Símbolo de soldadura), Taladro y Corte de
+ensamblaje, Corte desdoblado, Recortar miembro, Eje y Punto de ensamblaje, Barrido/Hélice/
+Recubrir nativos.
 
 ## Enganche de git
 

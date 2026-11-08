@@ -1,5 +1,15 @@
 # Estado del fork
 
+**08/11 tarde, REGLAS COMUNES DE PANELES (plan de calidad, paso 8.1): HECHO para 39 paneles.**
+Banco `tools/fork/pruebas/reglas_paneles.py` + `casos_*.py` + 7 pruebas `prueba_ventana_reglas_*`
+(cancelar, inválido, otro comando, aceptar con deshacer/rehacer, editar, guardar; valores al
+azar; sin errores en el informe). Comprobado que atrapa errores (Cancelar del Redondeo roto a
+propósito: lo marcó). Encontró #31 (Brida base editada deja el croquis visible), #32 y #33
+(ensamblaje: errores de Python en el informe), #34 (croquis habla de usted, el resto de vos:
+**decide el usuario**), #35 (Agregar configuración vacío no avisa); verificó #6, #19 y #29;
+descartó #16 (sí avisa). Faltan: paneles de planos, taladro/corte de ensamblaje y unos pocos
+(lista en `tools/fork/pruebas/LEEME.md`).
+
 **08/11, ERRORES EN GITHUB Y PLAN DE CALIDAD.** Los errores se registran desde ahora en las Issues
 de GitHub (https://github.com/wally88ar-coder/FreeWorks/issues, activadas el 08/11 con permiso del
 usuario; etiquetas de gravedad, causa y área). Los de la auditoría ya están: #1-#27 abiertas, #28

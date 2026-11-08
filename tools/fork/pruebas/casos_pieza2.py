@@ -133,6 +133,7 @@ class MoverCara(_ConPieza):
         p.radios["offset"].setChecked(True)
         yield 300
         p.distance.setValue(round(rng.uniform(1.0, 5.0), 1))
+        p.flip.setChecked(rng.random() < 0.5)  # hacia afuera (Extruir) o hacia adentro (Cortar)
         p.preview()
         yield 600
 

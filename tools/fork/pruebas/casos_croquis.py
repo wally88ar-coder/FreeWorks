@@ -176,7 +176,7 @@ class Escalar(_Croquis):
     def elegir(self, rng):
         yield from self.entidades(rng)
         self.panel().set_active("center")
-        self.punto("center", V(0, 0, 0))
+        self.punto("center", V(rng.uniform(-10, 40), rng.uniform(-10, 30), 0))
         self.panel().factor.setValue(round(rng.uniform(0.5, 2.0), 2))
         self.panel().update()
         yield 300
