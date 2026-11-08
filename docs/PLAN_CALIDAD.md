@@ -136,9 +136,12 @@ abierta y vacía). Hacen falta pruebas hechas para **romper**, no para confirmar
       catálogo, tope o inglete: sin superposición, sin huecos en las esquinas, lista de cortes =
       caños reales, sigue al cambiar el esqueleto (debería aparecer #2), guardar y abrir igual.
    3. **Chapa**: espesor, radio, K, bridas al azar: desarrollo con la misma superficie, DXF con
-      contorno cerrado y una línea por pliegue, largo desarrollado según la fórmula del taller
-      (**falta que el usuario confirme la fórmula y el K por omisión**), nombre de archivo con
-      espesor y material.
+      contorno cerrado y una línea por pliegue, nombre de archivo con espesor y material, y **el
+      largo desarrollado igual al que da SW para la misma pieza** (el usuario siempre sacó los
+      desarrollos de SW: SW es la referencia; radio interior = espesor, regla del taller). Se
+      verifica de dos formas: contra la fórmula de SW con su factor K (el K que use SW en sus
+      piezas, comprobado en SW) para muchos casos al azar, y contra SW mismo (la misma chapa armada
+      en SW 2018 y medido su desarrollo) para unos pocos casos al azar.
    4. **Ensamblajes** (piezas de medida, posición y giro al azar): Coincidente (caras en el mismo
       plano, enfrentadas), Distancia / Ángulo (exactos), Paralela / Perpendicular, Concéntrica
       (ejes juntos), Tangente (toca sin atravesar); cambiar una pieza y que las relaciones se sigan
