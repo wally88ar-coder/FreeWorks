@@ -26,6 +26,7 @@ En todas: sin errores de Python ni avisos de error en el informe de FreeCAD.
 """
 
 import os
+import re
 import random
 
 import FreeCAD
@@ -182,7 +183,10 @@ def tocar(rechazar=False):
                 continue
             for b in box.buttons():
                 if box.buttonRole(b) == rol and b.isEnabled():
-                    b.click()
+                    # fuera del generador: si Aceptar abre un aviso modal (exec), el generador
+                    # no puede quedar trabado adentro del clic
+                    from PySide import QtCore
+                    QtCore.QTimer.singleShot(0, b.click)
                     return True
     return False
 
@@ -197,6 +201,7 @@ class Caso:
     tipo = ""            # TypeId de la operación que crea
     ayudantes = ()       # TypeId de objetos auxiliares que también puede crear al aceptar
     otro = "PartDesign_Chamfer"  # comando de la cinta para la regla otro_comando
+    cuantos = 1          # cuántas del tipo crea al aceptar (None: una o más, p. ej. miembros)
     reglas = ("cancelar", "invalido", "otro_comando", "aceptar", "editar", "guardar")
 
     def preparar(self, doc):
@@ -225,6 +230,7 @@ class Caso:
         yield ESPERA_CORTA
         import FreeCADGui
         self.ok = self.ok and not FreeCADGui.Control.activeDialog()
+        self.aviso = self.mensaje()  # una vez: un aviso en ventanita se lee y se cierra
 
     def cancelar(self):
         """Toca Cancelar del panel. Generador."""
@@ -232,7 +238,14 @@ class Caso:
         yield ESPERA_CORTA
 
     def mensaje(self):
-        """Texto del aviso del panel (para ver que avisa en castellano), o ''."""
+        """Texto del aviso del panel (para ver que avisa en castellano), o ''. Un aviso en una
+        ventanita aparte (QMessageBox) también cuenta: se lee y se cierra."""
+        from PySide import QtWidgets
+        d = QtWidgets.QApplication.activeModalWidget()
+        if isinstance(d, QtWidgets.QMessageBox):
+            texto = d.text()
+            d.accept()
+            return texto
         p = self.panel()
         try:
             m = p.message
@@ -272,8 +285,13 @@ def correr_caso(caso, inf, semillas=(1,)):
     def chequear_ventana(regla, desde):
         for r in limpiar_ventana():
             inf.falla(caso.nombre, regla, "quedó " + r)
+        vistos = []
         for l in mensajes_nuevos(desde):
-            inf.falla(caso.nombre, regla, "informe de FreeCAD: " + l.strip()[:200])
+            l = re.sub(r"^\d\d:\d\d:\d\d\s+", "", l.strip())[:200]  # sin la hora: una vez cada uno
+            if l not in vistos and not l.startswith("Traceback"):
+                vistos.append(l)
+        for l in vistos[:6]:
+            inf.falla(caso.nombre, regla, "informe de FreeCAD: " + l)
 
     for semilla in semillas:
         rng = random.Random(semilla)
@@ -286,8 +304,10 @@ def correr_caso(caso, inf, semillas=(1,)):
             yield ESPERA_PANEL
             yield from caso.cancelar()
             chequear_ventana("cancelar", desde)
-            for d in diferencias(base, foto(doc)):
+            ahora = foto(doc)
+            for d in diferencias(base, ahora):
                 inf.falla(caso.nombre, "cancelar", d)
+            base = ahora  # lo que quedó mal ya se anotó: las reglas siguientes miden desde acá
 
     if "invalido" in caso.reglas:
         gen = None
@@ -299,15 +319,17 @@ def correr_caso(caso, inf, semillas=(1,)):
             yield ESPERA_PANEL
             yield from caso.aceptar()
             traza("  %s inválido: %s, aviso %r" % (caso.nombre, "aceptó" if caso.ok else "no aceptó",
-                                                   caso.mensaje()))
+                                                   caso.aviso))
             if caso.ok:
                 inf.falla(caso.nombre, "invalido", "aceptó algo inválido")
-            elif not caso.mensaje():
+            elif not caso.aviso:
                 inf.falla(caso.nombre, "invalido", "no aceptó pero no dijo por qué")
             yield from caso.cancelar()
             chequear_ventana("invalido", desde)
-            for d in diferencias(base, foto(doc)):
+            ahora = foto(doc)
+            for d in diferencias(base, ahora):
                 inf.falla(caso.nombre, "invalido", d)
+            base = ahora  # lo que quedó mal ya se anotó: las reglas siguientes miden desde acá
         else:
             yield from caso.cancelar()
             limpiar_ventana()
@@ -326,8 +348,10 @@ def correr_caso(caso, inf, semillas=(1,)):
         tocar(rechazar=True)
         yield ESPERA_CORTA
         chequear_ventana("otro_comando", desde)
-        for d in diferencias(base, foto(doc)):
+        ahora = foto(doc)
+        for d in diferencias(base, ahora):
             inf.falla(caso.nombre, "otro_comando", d)
+        base = ahora  # lo que quedó mal ya se anotó: las reglas siguientes miden desde acá
 
     if "aceptar" in caso.reglas:
         for semilla in semillas:
@@ -339,10 +363,10 @@ def correr_caso(caso, inf, semillas=(1,)):
             yield from caso.aceptar()
             yield ESPERA_PANEL
             if not caso.ok:
-                if not caso.mensaje():
+                if not caso.aviso:
                     inf.falla(caso.nombre, "aceptar", "semilla %d: no aceptó y no dijo por qué" % semilla)
                 else:
-                    inf.nota("%s: semilla %d no aceptó: %s" % (caso.nombre, semilla, caso.mensaje()))
+                    inf.nota("%s: semilla %d no aceptó: %s" % (caso.nombre, semilla, caso.aviso))
                 yield from caso.cancelar()
                 limpiar_ventana()
                 continue
@@ -352,7 +376,8 @@ def correr_caso(caso, inf, semillas=(1,)):
             tipos = [despues["objs"][n][0] for n in nuevos]
             traza("  %s semilla %d: aceptó, nuevos %s" % (caso.nombre, semilla, tipos))
             validos = caso.tipo if isinstance(caso.tipo, tuple) else (caso.tipo,)
-            if sum(1 for t in tipos if t in validos) != 1:
+            cuantas = sum(1 for t in tipos if t in validos)
+            if (caso.cuantos is not None and cuantas != caso.cuantos) or cuantas == 0:
                 inf.falla(caso.nombre, "aceptar", "semilla %d: esperaba una %s nueva, hay %s" % (semilla, caso.tipo, tipos))
             raros = [t for t in tipos if t not in validos and t not in caso.ayudantes]
             if raros:
@@ -392,7 +417,7 @@ def correr_caso(caso, inf, semillas=(1,)):
         yield from caso.aceptar()
         yield ESPERA_PANEL
         if not caso.ok:
-            inf.falla(caso.nombre, "editar", "no aceptó sin cambios: %s" % caso.mensaje())
+            inf.falla(caso.nombre, "editar", "no aceptó sin cambios: %s" % caso.aviso)
             yield from caso.cancelar()
         chequear_ventana("editar", desde)
         for d in diferencias(antes, foto(doc), con_undo=False):
