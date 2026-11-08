@@ -210,3 +210,35 @@ class Revolucion(_Nativa):
 
 
 CASOS = [Plano, Eje, Punto, Combinar, MoverCara, Extruir, ExtruirCorte, Revolucion]
+
+
+# --- Editar cambiando un valor (reglas editar_cancelar y editar_cambiar) ---
+from reglas_paneles import cambia_numero  # noqa: E402
+
+MoverCara.cambiar = cambia_numero("distance", 1.0, 5.0)
+
+
+def _plano_cambiar(self, rng):
+    def gen():
+        p = self.panel()
+        g = p.groups[0]
+        g.value.setValue(round(g.value.value() + rng.uniform(2.0, 10.0), 1))
+        p.preview()
+        yield 900
+    return gen()
+
+
+Plano.cambiar = _plano_cambiar
+
+
+def _combinar_cambiar(self, rng):
+    def gen():
+        p = self.panel()
+        actual = [k for k, r in p.radios.items() if r.isChecked()]
+        p.radios[rng.choice([k for k in ("Fuse", "Cut", "Common") if k not in actual])].setChecked(True)
+        p.preview()
+        yield 900
+    return gen()
+
+
+Combinar.cambiar = _combinar_cambiar

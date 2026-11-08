@@ -49,7 +49,8 @@ def _vol(o):
         s = o.Shape
         if s.isNull() or not s.Solids:
             return None
-        return _r(s.Volume)
+        # al mm³: barridos y hélices dan centésimas distintas en cada recálculo
+        return round(float(s.Volume))
     except Exception:
         return None
 
@@ -63,9 +64,12 @@ def _caja(o):
         s = Part.getShape(o)
         if s.isNull():
             return None
-        if s.Solids:
-            c = s.CenterOfMass
-            return ("cdm",) + tuple(_r(x) for x in (c.x, c.y, c.z))
+        if s.Solids:  # promedio por volumen (un compuesto no tiene CenterOfMass propio)
+            vol = sum(x.Volume for x in s.Solids) or 1.0
+            c = FreeCAD.Vector()
+            for x in s.Solids:
+                c = c + x.CenterOfMass * (x.Volume / vol)
+            return ("cdm",) + tuple(_r(v) for v in (c.x, c.y, c.z))
         b = s.BoundBox
         return tuple(round(float(x), 1) for x in (b.XMin, b.YMin, b.ZMin, b.XMax, b.YMax, b.ZMax))
     except Exception:
@@ -107,6 +111,24 @@ def _firma(sk):
         out.append((type(g).__name__, constr, tuple(_r(c) for p in pts for c in (p.x, p.y)),
                     _r(getattr(g, "Radius", 0))))
     return hash(tuple(out))
+
+
+def foto_varios(doc, otros):
+    """foto(doc) más los objetos de otros documentos (las piezas de un ensamblaje), con el nombre
+    del documento adelante. Los pasos de deshacer son los del documento principal; "abierta" si
+    cualquiera tiene una transacción abierta."""
+    f = foto(doc)
+    for o in otros:
+        if o is None or o is doc:
+            continue
+        try:
+            g = foto(o)
+        except Exception:
+            continue
+        for n, v in g["objs"].items():  # por Label: al reabrir, el nombre interno puede cambiar
+            f["objs"]["%s:%s" % (o.Label, n)] = v
+        f["abierta"] = f["abierta"] or g["abierta"]
+    return f
 
 
 def foto(doc):
@@ -310,6 +332,21 @@ def esperar_panel(maximo_ms=15000):
             return
 
 
+def ctrl_z(doc):
+    """Deshacer como el usuario (Edición > Deshacer, Std_Undo, sobre el documento activo): puede
+    deshacer también en otros documentos de la misma transacción, cosa que doc.undo() no hace."""
+    import FreeCADGui
+    FreeCAD.setActiveDocument(doc.Name)
+    FreeCADGui.runCommand("Std_Undo")
+
+
+def ctrl_y(doc):
+    """Rehacer como el usuario (Std_Redo)."""
+    import FreeCADGui
+    FreeCAD.setActiveDocument(doc.Name)
+    FreeCADGui.runCommand("Std_Redo")
+
+
 def tocar(rechazar=False):
     """Clic en el botón Aceptar o Cancelar del panel de Tareas (como el usuario: FreeCAD llama a
     accept/reject y cierra el panel si corresponde). True si encontró el botón."""
@@ -348,6 +385,10 @@ class Caso:
     # Deshacer/Rehacer se prueban adentro del croquis, como Ctrl+Z del usuario
     contar_deshacer = True
     edicion_ok = ""      # tipo que puede seguir en edición después de Aceptar (el croquis)
+    cambio_visible = True  # False si lo que cambia `cambiar` no se ve en la pieza (p. ej. factor K)
+    # (nombre, tipo) que `abrir` crea ANTES del panel en su propio paso de deshacer (el croquis de un
+    # taladro de ensamblaje): un Ctrl+Z después de Aceptar no los saca, y está bien
+    antes_del_panel = ()
     reglas = ("cancelar", "invalido", "otro_comando", "aceptar", "editar", "guardar")
 
     def preparar(self, doc):
@@ -404,6 +445,27 @@ class Caso:
         except Exception:
             return ""
 
+    def documentos(self, doc):
+        """Otros documentos que el panel cambia (las piezas de un ensamblaje): entran en la foto."""
+        return []
+
+    def verificar_cambio(self, obj):
+        """Con cambio_visible=False: '' si el cambio de `cambiar` quedó aplicado en `obj`, o el
+        problema."""
+        return ""
+
+    def comprobar_aceptado(self, doc):
+        """Comprobaciones propias del caso después de Aceptar (lista de problemas)."""
+        return []
+
+    def cerrar(self):
+        """Al terminar el caso: cerrar lo que el caso abrió (p. ej. las piezas de un ensamblaje)."""
+
+    def cambiar(self, rng):
+        """Con el panel de EDICIÓN abierto: cambiar un valor (otro radio, otra cantidad...).
+        Generador. Sin esto (None), las reglas editar_cancelar y editar_cambiar se saltean."""
+        return None
+
     def despues_de_aceptar(self):
         """Generador: lo que hace falta al terminar cada vuelta de aceptar (p. ej. salir del croquis)."""
         return iter(())
@@ -427,20 +489,33 @@ def correr_caso(caso, inf, semillas=(1,)):
     import FreeCADGui
     doc = FreeCAD.newDocument("Reglas_" + caso.nombre.replace(" ", "_"))
     doc.UndoMode = 1
+
+    def fotodoc():
+        return foto_varios(doc, caso.documentos(doc))
     FreeCADGui.ActiveDocument.ActiveView.viewIsometric()
+    desde_preparar = informe_largo()
     armado = caso.preparar(doc)
     if hasattr(armado, "send"):  # un caso puede armar su pieza con otro panel (chapa)
         yield from armado
     doc.recompute()
     FreeCADGui.SendMsgToActiveView("ViewFit")
     yield ESPERA_CORTA
-    base = foto(doc)
-    malos0 = invalidos(doc)
+    base = fotodoc()
+
+    def invalidos_todos():
+        out = set(invalidos(doc))
+        for o in caso.documentos(doc):
+            try:
+                out |= {"%s:%s" % (o.Label, n) for n in invalidos(o)}
+            except Exception:
+                pass
+        return out
+
 
     def medir(regla, base):
         """Compara con `base`, anota las diferencias y devuelve el estado nuevo: lo que quedó
         mal ya se anotó y las reglas siguientes miden desde acá."""
-        ahora = foto(doc)
+        ahora = fotodoc()
         for d in diferencias(base, ahora, con_undo=caso.contar_deshacer):
             inf.falla(caso.nombre, regla, d)
         return ahora
@@ -455,6 +530,11 @@ def correr_caso(caso, inf, semillas=(1,)):
                 vistos.append(l)
         for l in vistos[:6]:
             inf.falla(caso.nombre, regla, "informe de FreeCAD: " + l)
+
+    malos0 = invalidos_todos()
+    for n in sorted(malos0):  # la pieza de prueba tiene que arrancar sana
+        inf.falla(caso.nombre, "preparar", "la pieza de prueba quedó con error: %s" % n)
+    chequear_ventana("preparar", desde_preparar)
 
     for semilla in semillas:
         rng = random.Random(semilla)
@@ -495,7 +575,7 @@ def correr_caso(caso, inf, semillas=(1,)):
         yield from caso.elegir(random.Random(1))
         yield ESPERA_PANEL
         primero = caso.panel()
-        abierto = foto(doc)
+        abierto = fotodoc()
         FreeCADGui.Selection.clearSelection()
         from swui import ribbon
         # fuera del generador: si FreeCAD pregunta "Un diálogo ya está abierto" (ventanita modal),
@@ -506,7 +586,7 @@ def correr_caso(caso, inf, semillas=(1,)):
         yield ESPERA_CORTA
         # ANTES de cancelar el panel nuevo (su Cancelar podría borrar lo que dejó el primero):
         # lo que agregó el primer panel ya no tiene que estar, y lo de antes, igual que antes
-        ahora = foto(doc)
+        ahora = fotodoc()
         for n in abierto["objs"]:
             if n not in base["objs"] and n in ahora["objs"]:
                 inf.falla(caso.nombre, "otro_comando", "el primer panel no se canceló: sigue %s (%s)"
@@ -520,7 +600,7 @@ def correr_caso(caso, inf, semillas=(1,)):
         tocar(rechazar=True)
         yield ESPERA_CORTA
         chequear_ventana("otro_comando", desde)
-        ahora = foto(doc)
+        ahora = fotodoc()
         problemas = diferencias(base, ahora, con_undo=caso.contar_deshacer)
         for d in problemas:
             inf.falla(caso.nombre, "otro_comando", d)
@@ -532,7 +612,7 @@ def correr_caso(caso, inf, semillas=(1,)):
                     doc.abortTransaction()
                 while doc.UndoCount > base["undo"]:
                     doc.undo()
-                for n in [n for n in foto(doc)["objs"] if n not in base["objs"]]:
+                for n in [n for n in fotodoc()["objs"] if n not in base["objs"]]:
                     if doc.getObject(n) is not None:
                         doc.removeObject(n)
                 doc.recompute()
@@ -540,10 +620,10 @@ def correr_caso(caso, inf, semillas=(1,)):
                 pass
             yield ESPERA_CORTA
             limpiar_ventana()
-            restos = diferencias(base, foto(doc), con_undo=False)
+            restos = diferencias(base, fotodoc(), con_undo=False)
             if restos:
                 inf.nota("%s: después de otro_comando no se pudo volver atrás: %s" % (caso.nombre, restos[:3]))
-                base = foto(doc)
+                base = fotodoc()
 
     hecho = None
     if "aceptar" in caso.reglas:
@@ -572,7 +652,7 @@ def correr_caso(caso, inf, semillas=(1,)):
                 continue
             alguna = True
             chequear_ventana("aceptar", desde)
-            despues = foto(doc)
+            despues = fotodoc()
             nuevos = _nuevos(base, despues)
             tipos = [despues["objs"][n][0] for n in nuevos]
             traza("  %s semilla %d: aceptó, nuevos %s" % (caso.nombre, semilla, tipos))
@@ -598,22 +678,25 @@ def correr_caso(caso, inf, semillas=(1,)):
             for n in nuevos:
                 if despues["objs"][n][0] in validos:
                     hecho_aca = n
-            for n in sorted(invalidos(doc) - malos0):
+            for problema in caso.comprobar_aceptado(doc):
+                inf.falla(caso.nombre, "aceptar", "semilla %d: %s" % (semilla, problema))
+            for n in sorted(invalidos_todos() - malos0):
                 inf.falla(caso.nombre, "aceptar", "semilla %d: quedó con error: %s" % (semilla, n))
-            doc.undo()
+            ctrl_z(doc)
             doc.recompute()
             yield ESPERA_CORTA
-            for d in diferencias(base, foto(doc), con_undo=False):
-                inf.falla(caso.nombre, "aceptar", "semilla %d, después de Deshacer: %s" % (semilla, d))
-            doc.redo()
+            for d in diferencias(base, fotodoc(), con_undo=False):
+                if not any(d == "sobra %s (%s)" % (n, t) for n, t in caso.antes_del_panel):
+                    inf.falla(caso.nombre, "aceptar", "semilla %d, después de Deshacer: %s" % (semilla, d))
+            ctrl_y(doc)
             doc.recompute()
             yield ESPERA_CORTA
-            for d in diferencias(despues, foto(doc), con_undo=False):
+            for d in diferencias(despues, fotodoc(), con_undo=False):
                 inf.falla(caso.nombre, "aceptar", "semilla %d, después de Rehacer: %s" % (semilla, d))
-            for n in sorted(invalidos(doc) - malos0):
+            for n in sorted(invalidos_todos() - malos0):
                 inf.falla(caso.nombre, "aceptar", "semilla %d, después de Rehacer quedó con error: %s" % (semilla, n))
             if not ultima:
-                doc.undo()
+                ctrl_z(doc)
                 doc.recompute()
                 yield ESPERA_CORTA
             else:
@@ -623,10 +706,66 @@ def correr_caso(caso, inf, semillas=(1,)):
         if not alguna:
             inf.falla(caso.nombre, "aceptar", "ninguna semilla dio una operación aceptada")
 
+    if hecho is None and getattr(caso, "hecho_inicial", None):
+        hecho = caso.hecho_inicial  # paneles que solo existen al editar (p. ej. Corte desdoblado)
     obj = doc.getObject(hecho) if isinstance(hecho, str) else None
+    if obj is not None and "editar" in caso.reglas and caso.cambiar(random.Random(5)) is not None:
+        # editar, cambiar un valor y Cancelar: queda como antes de editar
+        desde = informe_largo()
+        antes = fotodoc()
+        yield from caso.editar(obj)
+        yield from caso.cambiar(random.Random(5))
+        yield ESPERA_PANEL
+        yield from caso.cancelar()
+        chequear_ventana("editar_cancelar", desde)
+        for d in diferencias(antes, fotodoc(), con_undo=caso.contar_deshacer):
+            inf.falla(caso.nombre, "editar_cancelar", d)
+        # editar, cambiar un valor y Aceptar: cambia, un paso de deshacer, Deshacer y Rehacer exactos
+        obj = doc.getObject(hecho)
+        if obj is not None:
+            desde = informe_largo()
+            antes = fotodoc()
+            yield from caso.editar(obj)
+            yield from caso.cambiar(random.Random(6))
+            yield ESPERA_PANEL
+            yield from caso.aceptar()
+            yield ESPERA_PANEL
+            if not caso.ok:
+                inf.falla(caso.nombre, "editar_cambiar", "no aceptó el cambio: %r" % caso.aviso)
+                yield from caso.cancelar()
+            chequear_ventana("editar_cambiar", desde)
+            despues = fotodoc()
+            if caso.ok and caso.cambio_visible and not diferencias(antes, despues, con_undo=False):
+                inf.falla(caso.nombre, "editar_cambiar", "aceptó pero el cambio no se aplicó")
+            if caso.ok and not caso.cambio_visible:
+                problema = caso.verificar_cambio(doc.getObject(hecho))
+                if problema:
+                    inf.falla(caso.nombre, "editar_cambiar", problema)
+            if caso.ok and caso.contar_deshacer and despues["undo"] != antes["undo"] + 1:
+                inf.falla(caso.nombre, "editar_cambiar", "pasos de deshacer %d -> %d (se espera uno)"
+                          % (antes["undo"], despues["undo"]))
+            if despues["abierta"]:
+                inf.falla(caso.nombre, "editar_cambiar", "quedó una transacción abierta")
+            for n in sorted(invalidos_todos() - malos0):
+                inf.falla(caso.nombre, "editar_cambiar", "quedó con error: %s" % n)
+            if caso.ok:
+                ctrl_z(doc)
+                doc.recompute()
+                yield ESPERA_CORTA
+                for d in diferencias(antes, fotodoc(), con_undo=False):
+                    inf.falla(caso.nombre, "editar_cambiar", "después de Deshacer: %s" % d)
+                ctrl_y(doc)
+                doc.recompute()
+                yield ESPERA_CORTA
+                for d in diferencias(despues, fotodoc(), con_undo=False):
+                    inf.falla(caso.nombre, "editar_cambiar", "después de Rehacer: %s" % d)
+                chequear_ventana("editar_cambiar", desde)
+        obj = doc.getObject(hecho)
+    if obj is None and isinstance(hecho, str) and "editar" in caso.reglas:
+        inf.falla(caso.nombre, "editar", "la operación %s ya no existe (¿cambió de nombre al editar?)" % hecho)
     if obj is not None and "editar" in caso.reglas:
         desde = informe_largo()
-        antes = foto(doc)
+        antes = fotodoc()
         yield from caso.editar(obj)
         if caso.panel() is None and not FreeCADGui.Control.activeDialog():
             inf.falla(caso.nombre, "editar", "no se abrió el panel al editar")
@@ -636,14 +775,20 @@ def correr_caso(caso, inf, semillas=(1,)):
             inf.falla(caso.nombre, "editar", "no aceptó sin cambios: %s" % caso.aviso)
             yield from caso.cancelar()
         chequear_ventana("editar", desde)
-        for d in diferencias(antes, foto(doc), con_undo=False):
+        for d in diferencias(antes, fotodoc(), con_undo=False):
             inf.falla(caso.nombre, "editar", d)
-        for n in sorted(invalidos(doc) - malos0):
+        for n in sorted(invalidos_todos() - malos0):
             inf.falla(caso.nombre, "editar", "quedó con error: %s" % n)
 
     if hecho is not None and "guardar" in caso.reglas:
-        antes = foto(doc)
-        # si ya tiene archivo (un ensamblaje, junto a sus piezas), se guarda ahí mismo
+        antes = fotodoc()
+        # si ya tiene archivo (un ensamblaje, junto a sus piezas), se guarda ahí mismo; las piezas
+        # que cambió el panel también se guardan, y después se abren para compararlas
+        rutas_otros = []
+        for o in caso.documentos(doc):
+            if getattr(o, "FileName", ""):
+                o.save()
+                rutas_otros.append(o.FileName)
         ruta = doc.FileName or os.path.join(carpeta_temporal(), "reglas.FCStd")
         doc.saveAs(ruta)
         abiertos = set(FreeCAD.listDocuments())
@@ -652,8 +797,28 @@ def correr_caso(caso, inf, semillas=(1,)):
         desde = informe_largo()
         doc = FreeCAD.openDocument(ruta)
         yield ESPERA_PANEL
-        for d in diferencias(antes, foto(doc), con_undo=False):
+        otros = []
+        for r in rutas_otros:
+            try:
+                otros.append(FreeCAD.openDocument(r))
+            except Exception:
+                inf.falla(caso.nombre, "guardar", "no abre la pieza %s" % r)
+        try:
+            reabierto = foto_varios(doc, otros)
+        except ReferenceError:
+            # visto una vez (Esquinas, 08/11) y no se repitió: el documento recién abierto dejó de
+            # existir durante la espera. Se anota y se sigue (Issue #40, a investigar)
+            inf.falla(caso.nombre, "guardar", "el documento reabierto se cerró solo")
+            doc = FreeCAD.openDocument(ruta)
+            yield ESPERA_PANEL
+            reabierto = foto_varios(doc, otros)
+        for d in diferencias(antes, reabierto, con_undo=False):
             inf.falla(caso.nombre, "guardar", d)
+        for o in otros:
+            try:
+                FreeCAD.closeDocument(o.Name)
+            except Exception:
+                pass
         gdoc = FreeCADGui.getDocument(doc.Name)
         if getattr(gdoc, "Modified", False):
             inf.falla(caso.nombre, "guardar", "al abrir quedó modificado")
@@ -669,6 +834,12 @@ def correr_caso(caso, inf, semillas=(1,)):
         FreeCAD.closeDocument(doc.Name)
     except Exception:
         pass
+    for o in caso.documentos(doc):  # piezas de un ensamblaje: no acumularlas (memoria)
+        try:
+            FreeCAD.closeDocument(o.Name)
+        except Exception:
+            pass
+    caso.cerrar()
     yield ESPERA_CORTA
 
 
@@ -705,3 +876,43 @@ def correr(casos, deuda=None, semillas=None):
     if viejas:
         traza("conocidos: %s" % ["%s/%s" % (c, r) for c, r, _d in viejas])
     assert not lineas, "\n".join(lineas)
+
+
+def cambia_numero(atributo, menor, mayor, entero=False):
+    """Para `Caso.cambiar`: pone al azar otro valor en el campo `atributo` del panel (spinbox) y
+    hace la vista previa. Uso: `cambiar = cambia_numero("radius", 0.5, 4.0)`."""
+    def cambiar(self, rng):
+        def gen():
+            p = self.panel()
+            campo = getattr(p, atributo)
+            if entero:
+                v = rng.randint(int(menor), int(mayor))
+            else:
+                v = round(rng.uniform(menor, mayor), 2)
+            if abs(campo.value() - v) < 1e-6:  # que sea otro valor de verdad
+                v = v + 1 if entero else round(v + (mayor - menor) / 3.0, 2)
+            campo.setValue(v)
+            vista = getattr(p, "preview", None) or getattr(p, "_changed", None)
+            if vista is not None:
+                vista()
+            yield 900
+        return gen()
+    return cambiar
+
+
+def cambia_lista(atributo):
+    """Para `Caso.cambiar`: elige otra opción al azar en la lista desplegable `atributo`."""
+    def cambiar(self, rng):
+        def gen():
+            p = self.panel()
+            combo = getattr(p, atributo)
+            n = combo.count()
+            if n > 1:
+                actual = combo.currentIndex()
+                combo.setCurrentIndex(rng.choice([i for i in range(min(n, 6)) if i != actual] or [0]))
+            vista = getattr(p, "preview", None) or getattr(p, "_changed", None)
+            if vista is not None:
+                vista()
+            yield 1200
+        return gen()
+    return cambiar

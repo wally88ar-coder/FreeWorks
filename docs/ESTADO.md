@@ -1,5 +1,16 @@
 # Estado del fork
 
+**08/11 noche, REGLAS DE PANELES, SEGUNDA TANDA: HECHO (48 paneles + 4 variantes).** Sumados Eje y
+Punto de ensamblaje, Recortar miembro, Hélice, Barrido, Recubrir, Taladro y Corte de ensamblaje,
+Corte desdoblado; variantes (Mover sin copiar, Mover cara trasladar/girar, Tapa por clic); reglas
+nuevas de edición (cambiar un valor y Cancelar / Aceptar con Ctrl+Z y Ctrl+Y); Deshacer real del
+usuario (Std_Undo). Revisado por un segundo agente aparte (falsos "bien" corregidos). Encontró
+#36 (Ctrl+Z después de editar deja oculta la operación: todos los paneles SW de pieza), #37
+(Ctrl+Z después del Taladro de ensamblaje deja el agujero en la pieza), #38 (ensamblaje con
+taladro/corte de ensamblaje: dependencia circular y queda "modificado" al abrir), #39 (chapa:
+editar deja pasos de deshacer de más), #40 (a investigar: documento de soldadura que se cerró solo
+al reabrirlo, visto una vez). Planos: fuera, decisión del usuario.
+
 **08/11 tarde, REGLAS COMUNES DE PANELES (plan de calidad, paso 8.1): HECHO para 39 paneles.**
 Banco `tools/fork/pruebas/reglas_paneles.py` + `casos_*.py` + 7 pruebas `prueba_ventana_reglas_*`
 (cancelar, inválido, otro comando, aceptar con deshacer/rehacer, editar, guardar; valores al
@@ -7,8 +18,8 @@ azar; sin errores en el informe). Comprobado que atrapa errores (Cancelar del Re
 propósito: lo marcó). Encontró #31 (Brida base editada deja el croquis visible), #32 y #33
 (ensamblaje: errores de Python en el informe), #34 (croquis habla de usted, el resto de vos:
 **decide el usuario**), #35 (Agregar configuración vacío no avisa); verificó #6, #19 y #29;
-descartó #16 (sí avisa). Faltan: paneles de planos, taladro/corte de ensamblaje y unos pocos
-(lista en `tools/fork/pruebas/LEEME.md`).
+descartó #16 (sí avisa). **Paneles de planos: fuera hasta encarar los planos de forma integral
+(decisión del usuario, 08/11).** El resto (taladro/corte de ensamblaje y unos pocos), en curso.
 
 **08/11, ERRORES EN GITHUB Y PLAN DE CALIDAD.** Los errores se registran desde ahora en las Issues
 de GitHub (https://github.com/wally88ar-coder/FreeWorks/issues, activadas el 08/11 con permiso del

@@ -226,3 +226,13 @@ class Simetria(_ConPieza):
 
 
 CASOS = [Redondeo, Chaflan, AnguloSalida, MatrizLineal, MatrizCircular, Simetria]
+
+
+# --- Editar cambiando un valor (reglas editar_cancelar y editar_cambiar) ---
+from reglas_paneles import cambia_numero  # noqa: E402
+
+Redondeo.cambiar = cambia_numero("radius", 0.5, 4.0)
+Chaflan.cambiar = cambia_numero("size", 0.5, 4.0)
+AnguloSalida.cambiar = cambia_numero("angle", 1.0, 10.0)
+MatrizLineal.cambiar = cambia_numero("dist1", 3.0, 4.5)  # que las copias queden dentro del cubo
+MatrizCircular.cambiar = cambia_numero("count", 2, 5, entero=True)

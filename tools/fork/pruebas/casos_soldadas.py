@@ -188,3 +188,9 @@ class Tapa(_Soldada):
 
 
 CASOS = [Miembro, Esquinas, Cartela, Tapa]
+
+
+# --- Editar cambiando un valor (reglas editar_cancelar y editar_cambiar) ---
+from reglas_paneles import cambia_lista  # noqa: E402
+
+Miembro.cambiar = cambia_lista("size")

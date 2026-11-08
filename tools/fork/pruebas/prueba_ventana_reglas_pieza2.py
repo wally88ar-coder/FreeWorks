@@ -12,7 +12,9 @@ TIPO = "completa"
 from casos_pieza2 import CASOS  # noqa: E402
 from reglas_paneles import correr  # noqa: E402
 
-DEUDA = {}
+DEUDA = {
+    ("Combinar", "editar_cambiar"): ("#36", "(visible)"),
+}
 
 
 def prueba():

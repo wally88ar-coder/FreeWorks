@@ -44,15 +44,21 @@ se sabe que falla (si deja de fallar, la prueba avisa para sacarlo).
   objetos con error y croquis con relaciones en conflicto.
 - Panel nuevo: agregar su clase `Caso` al `casos_*.py` del área (preparar, abrir, elegir, inválido).
 
-Paneles en el banco (08/11, 39): Redondeo, Chaflán, Ángulo de salida, Matriz lineal, Matriz
+Paneles en el banco (08/11, 48 + 4 variantes): Redondeo, Chaflán, Ángulo de salida, Matriz lineal, Matriz
 circular, Simetría, Plano, Eje, Punto, Combinar, Mover cara, Extruir, Extruir corte, Revolución,
 Taladro, Mover/Copiar sólidos, Eliminar/Conservar sólidos, Brida base, Brida de arista,
 Dobladillo, Miembro estructural, Esquinas, Cartela, Tapa de extremo, Relación de posición, Matriz
 de componentes, Plano de ensamblaje, las 7 herramientas del croquis, Convertir a chapa, Vista de
-sección, Agregar configuración, Croquis (elegir plano), Croquis 3D. Faltan: los de planos
-(Insertar imagen, Propiedades de hoja, Acabado, Símbolo de soldadura), Taladro y Corte de
-ensamblaje, Corte desdoblado, Recortar miembro, Eje y Punto de ensamblaje, Barrido/Hélice/
-Recubrir nativos.
+sección, Agregar configuración, Croquis (elegir plano), Croquis 3D, Eje y Punto de ensamblaje,
+Recortar miembro, Hélice, Barrido, Recubrir, Taladro y Extruir corte de ensamblaje, Corte
+desdoblado. Variantes: Mover sin copiar, Mover cara trasladando y girando, Tapa de extremo elegida
+con un clic. Reglas extra al editar: cambiar un valor y Cancelar (queda como antes) o Aceptar (se
+aplica, un paso de deshacer, Ctrl+Z / Ctrl+Y exactos). Deshacer y Rehacer son los del usuario
+(Std_Undo / Std_Redo), no `doc.undo()`: el del usuario alcanza a otros documentos de la misma
+operación (ensamblaje + piezas). **Fuera, a propósito
+(decidido por el usuario el 08/11): los paneles de planos** (Insertar imagen, Propiedades de
+hoja, Acabado superficial, Símbolo de soldadura): se prueban cuando se encaren los planos de
+forma integral.
 
 ## Enganche de git
 

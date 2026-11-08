@@ -83,6 +83,10 @@ class MoverCopiarSolidos(_ConPieza):
         p.preview()
         yield 800
 
+    def comprobar_aceptado(self, doc):
+        # copiar: el original sigue a la vista junto a la copia
+        return [] if self.body.Visibility else ["copiando, el original quedó oculto"]
+
     def editar(self, obj):
         from swui.fork import move_bodies
         # el Cuerpo copiado arranca de un FeatureBase que apunta a la copia vinculada (binder)
@@ -237,3 +241,36 @@ class Dobladillo(_SobreBrida):
 
 
 CASOS = [Taladro, MoverCopiarSolidos, EliminarConservar, BridaBase, BridaArista, Dobladillo]
+
+
+# --- Editar cambiando un valor (reglas editar_cancelar y editar_cambiar) ---
+from reglas_paneles import cambia_lista, cambia_numero  # noqa: E402
+
+Taladro.cambiar = cambia_lista("size")
+BridaBase.cambiar = cambia_numero("thick", 1.0, 3.0)
+BridaArista.cambiar = cambia_numero("length", 10.0, 25.0)
+Dobladillo.cambiar = cambia_numero("length", 5.0, 12.0)
+
+
+def _mover_cambiar(self, rng):
+    def gen():
+        p = self.panel()
+        p.deltas[0].setValue(round(p.deltas[0].value() + rng.uniform(10.0, 40.0), 1))
+        p.preview()
+        yield 1200
+    return gen()
+
+
+MoverCopiarSolidos.cambiar = _mover_cambiar
+
+
+def _eliminar_cambiar(self, rng):
+    def gen():
+        p = self.panel()
+        actual = [k for k, r in p.radios.items() if r.isChecked()]
+        p.radios["keep" if "delete" in actual else "delete"].setChecked(True)
+        yield 900
+    return gen()
+
+
+EliminarConservar.cambiar = _eliminar_cambiar

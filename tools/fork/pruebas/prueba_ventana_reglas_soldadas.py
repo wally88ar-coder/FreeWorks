@@ -25,6 +25,7 @@ DEUDA = {
     ("Cartela", "otro_comando"): ("#6",) + _NO_CANCELA + _ESCUCHA,
     ("Cartela", "aceptar"): ("#6",) + _ESCUCHA,
     ("Tapa de extremo", "invalido"): ("#19",) + _ERROR,
+    ("Esquinas", "guardar"): ("~#40", "se cerró solo"),
 }
 
 
