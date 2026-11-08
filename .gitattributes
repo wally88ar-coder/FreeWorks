@@ -1,0 +1,2 @@
+# El enganche de git es un guion de bash: siempre con fin de línea LF (con CRLF no corre)
+tools/fork/hooks/* text eol=lf

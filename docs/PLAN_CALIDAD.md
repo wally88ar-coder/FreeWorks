@@ -1,4 +1,8 @@
-# Plan para cometer menos errores — propuesta del 08/11/2026 (falta aprobar)
+# Plan para cometer menos errores — aprobado el 08/11/2026
+
+Estado: pasos 1 a 6 implementados el 08/11 (reglas en CLAUDE.md, `swui/fork/safe_ops.py`,
+`tools/fork/pruebas/`, `tools/fork/hooks/pre-commit`, Issues, `docs/MAPA_PRUEBAS.md`). Paso 7 y
+corrección de errores: cuando el usuario diga.
 
 Objetivo: trabajar al nivel de un proyecto abierto serio ("profesional bueno"), no al de aviones
 o equipos médicos. Base: las 4 causas que mostró la auditoría (`docs/AUDITORIA_2026-11-08.md`):

@@ -5,7 +5,14 @@ de GitHub (https://github.com/wally88ar-coder/FreeWorks/issues, activadas el 08/
 usuario; etiquetas de gravedad, causa y área). Los de la auditoría ya están: #1-#27 abiertas, #28
 cerrada. Plan para cometer menos errores (reglas, piezas comunes, batería de pruebas que corre
 sola antes de cada commit, mapa de cobertura, las 7 preguntas a lo existente): `docs/PLAN_CALIDAD.md`,
-falta que el usuario lo apruebe para arrancar.
+aprobado por el usuario el 08/11. **Implementado el 08/11** (pasos 1 a 6): reglas en CLAUDE.md
+("Calidad"); piezas comunes `swui/fork/safe_ops.py` (todavía ningún módulo viejo las usa: se
+pasan al arreglar cada error); batería `tools/fork/pruebas/` (9 pruebas: 7 BIEN, 2 CONOCIDO
+#1 y #2; la rápida tarda ~15 s, la de ventana ~30 s); enganche `tools/fork/hooks/pre-commit`
+instalado en esta copia (`core.hooksPath`; herramientas en `%LOCALAPPDATA%/FreeWorks-dev/pkgs`);
+primer mapa `docs/MAPA_PRUEBAS.md` (12 % de las líneas, 31 de 99 módulos sin nada probado). Revisión por un agente aparte: 10 puntos, arreglados (el más serio: `undo_step` cerraba igual una transacción abierta pero todavía vacía; ahora mira `FreeCAD.getActiveTransaction()`).
+La prueba de paneles encontró 2 errores nuevos: Issues #29 y #30. **Próximo: el usuario decide
+cuándo seguir con la corrección de errores** (pidió pausa al terminar la implementación).
 
 **08/11, AUDITORÍA DE ERRORES: HECHA, falta que el usuario elija qué arreglar.** Lista completa,
 ordenada por gravedad y explicada en simple: `docs/AUDITORIA_2026-11-08.md`. Graves: (1) multicuerpo,

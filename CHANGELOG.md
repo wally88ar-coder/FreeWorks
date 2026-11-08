@@ -5,6 +5,14 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Forma de trabajar para cometer menos errores** (plan de calidad, `docs/PLAN_CALIDAD.md`):
+  piezas comunes para las tareas delicadas (`swui/fork/safe_ops.py`: borrar una operación,
+  paso de deshacer que no rompe el Cancelar de un panel, escuchas que no actúan al abrir o
+  deshacer, abrir paneles anotados en el guardia, referencias a otro documento por su archivo);
+  batería de pruebas automáticas (`tools/fork/pruebas/`, rápida sin ventana y completa con
+  ventana) que corre sola antes de cada commit (`tools/fork/hooks/pre-commit`); mapa de qué
+  código no prueba nadie (`docs/MAPA_PRUEBAS.md`); los errores se registran en las Issues de
+  GitHub. Todavía no cambia nada de lo que se ve: los errores de la auditoría siguen abiertos.
 - **Sin el aviso "Referencia" de FreeCAD, como SW** (`swui/fork/cross_body.py`): elegir una cara o
   arista de otro sólido (piezas soldadas, multicuerpo) ya no pregunta "Hacer copia independiente /
   dependiente / referencia cruzada". La operación va al sólido de lo elegido (se activa solo, también

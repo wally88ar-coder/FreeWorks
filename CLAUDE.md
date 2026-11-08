@@ -173,6 +173,28 @@ castellano, coma decimal; ver "Falta" en `docs/ESTADO.md`.
   (copia de la configuración, nunca la del usuario) y mirar las capturas; después la valida él.
 - Ser honesto sobre límites que el addon no puede resolver.
 
+## Calidad: cometer menos errores (aprobado por el usuario 2026-11-08; detalle en `docs/PLAN_CALIDAD.md`)
+- **Antes de programar**, escribir en 2-3 renglones qué tiene que pasar; la prueba se arma con eso.
+- **Las 7 preguntas**, para toda herramienta nueva o cambiada, cada una con su prueba: ¿y si
+  cancelo? ¿deshago y rehago? ¿cambio una medida de algo anterior y recalculo? ¿guardo, cierro y
+  abro (sin quedar "modificado", y sin FreeWorks)? ¿abro otra herramienta (Ecuaciones, Material,
+  Suprimir...) con el panel abierto? ¿dos archivos abiertos? ¿elijo algo raro (arco, cara curva,
+  otro sólido, nada)?
+- **Piezas comunes** (`swui/fork/safe_ops.py`): borrar una operación, empezar algo deshacible,
+  registrar un panel, escuchas que no actúan al abrir o deshacer, guardar referencias a otro
+  documento. No reescribirlas a mano en cada módulo; al tocar un módulo viejo, pasarlo a ellas.
+- **Batería de pruebas** (`tools/fork/pruebas/`, ver su LEEME): todo error arreglado y toda
+  herramienta nueva dejan su prueba. La rápida corre sola antes de cada commit (enganche de git,
+  `tools/fork/hooks/`); la completa (con ventana) antes de cada entrega. Nunca saltear el enganche.
+- **Errores en las Issues de GitHub** (wally88ar-coder/FreeWorks, propio: se pueden abrir y
+  comentar fichas sin preguntar), con gravedad, causa y área; el commit que arregla dice
+  "Arregla #N". Prueba de un error todavía abierto: `CONOCIDO = "#N"`.
+- **No afirmar sin probar**: nada se anota como que anda (ESTADO, checklist, al usuario) sin una
+  prueba que lo muestre; si no se probó, decir "sin probar".
+- **Antes de cada entrega**: revisión del cambio por un agente que no lo escribió (recibe el
+  código, no las conclusiones) y el analizador (`ruff`, lo corre el enganche).
+- **Lo nativo antes que el enganche** al funcionamiento interno de FreeCAD; cada enganche, con prueba.
+
 ## Límites conocidos (comunicar, no prometer)
 Motor OpenCASCADE menos robusto que Parasolid en redondeos complejos; rendimiento con ensamblajes
 grandes; los .SLDPRT/.SLDASM solo se pueden traer como sólidos sin historial (STEP o el addon de

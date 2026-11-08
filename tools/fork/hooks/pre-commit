@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: LGPL-2.1-or-later
+# SPDX-FileCopyrightText: 2026 wally88ar-coder
+#
+# Enganche de git: antes de cada commit corre la prueba de carga (tools/test_load.py), el
+# analizador (ruff, solo errores seguros) y la batería rápida (tools/fork/pruebas). Si algo falla,
+# el commit no se hace. Plan de calidad, paso 4 (docs/PLAN_CALIDAD.md).
+#
+# Se instala una vez por copia del repositorio:
+#     git config core.hooksPath tools/fork/hooks
+# Si el commit solo cambia documentos (ningún .py), no corre nada.
+#
+# Variables: FW_FREECAD (carpeta bin de FreeCAD, por omisión D:/Freecad/bin), FW_HERRAMIENTAS
+# (carpeta con ruff y coverage, por omisión %LOCALAPPDATA%/FreeWorks-dev/pkgs; se arma con
+#  D:/Freecad/bin/python.exe -m pip install --target <carpeta> ruff coverage).
+
+set -u
+cd "$(git rev-parse --show-toplevel)" || exit 1
+
+if ! git diff --cached --name-only --diff-filter=ACMRD | grep -q -e '\.py$' -e '^tools/fork/hooks/'; then
+    exit 0
+fi
+
+# Las pruebas corren sobre la carpeta de trabajo: para que lo probado sea lo mismo que se guarda,
+# no puede haber código (.py) cambiado sin preparar ni archivos .py nuevos sin agregar.
+sueltos=$( { git diff --name-only -- '*.py'; git ls-files --others --exclude-standard -- '*.py'; } \
+           | grep -e '^swui/' -e '^tools/' -e '^init' | sort -u)
+if [ -n "$sueltos" ]; then
+    echo "Hay código sin preparar para este commit (git add, o guardarlo aparte):"
+    echo "$sueltos" | sed 's/^/    /'
+    echo "Commit frenado: lo que se prueba tiene que ser lo mismo que se guarda."
+    exit 1
+fi
+
+PY="${FW_FREECAD:-D:/Freecad/bin}/python.exe"
+HERR="${FW_HERRAMIENTAS:-${LOCALAPPDATA:-}/FreeWorks-dev/pkgs}"
+RUFF="$HERR/bin/ruff.exe"
+mal=0
+
+echo "== Prueba de carga (tools/test_load.py)"
+if ! "$PY" tools/test_load.py . > /tmp/fw_test_load.txt 2>&1; then
+    tail -30 /tmp/fw_test_load.txt
+    echo "FALLA la prueba de carga"
+    mal=1
+fi
+
+echo "== Analizador (ruff, errores seguros)"
+if [ ! -x "$RUFF" ]; then
+    echo "Falta ruff en $HERR (ver tools/fork/pruebas/LEEME.md)"
+    mal=1
+elif ! "$RUFF" check --isolated --target-version py311 --select E9,F63,F7,F82 swui tools; then
+    echo "FALLA el analizador"
+    mal=1
+fi
+
+echo "== Batería rápida (tools/fork/pruebas)"
+if ! "$PY" tools/fork/pruebas/correr.py rapida; then
+    mal=1
+fi
+
+if [ "$mal" != 0 ]; then
+    echo
+    echo "Commit frenado: arreglar lo de arriba (no saltear el enganche)."
+    exit 1
+fi
+exit 0

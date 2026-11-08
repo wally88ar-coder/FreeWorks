@@ -1,6 +1,23 @@
 # Notas técnicas (para quien siga el trabajo)
 
 ## Probar
+- **Batería de pruebas** (08/11, plan de calidad): `tools/fork/pruebas/` (ver su LEEME.md).
+  `D:/Freecad/bin/python.exe tools/fork/pruebas/correr.py` (rápida) o `... completa` (con
+  ventana). La rápida corre sola antes de cada commit (`git config core.hooksPath
+  tools/fork/hooks`). Hallazgos al armarla (FreeCAD 1.1.4):
+  - FreeCAD con ventana NO hace caso de `PYTHONPATH` (sí de otras variables de entorno): las
+    pruebas se abren por `_lanzar.py`, que arma `sys.path`.
+  - Un error de Python al cargar el guion deja la ventana abierta (sin cerrar): `_lanzar.py` lo
+    atrapa, anota el resultado y cierra.
+  - `QTimer.singleShot(ms, objeto.metodo)` con un objeto Python común (no QObject) no llamó nunca
+    al método (PySide lo guarda con referencia débil): usar `lambda: objeto.metodo()`.
+  - `doc.HasPendingTransaction` recién se prende cuando la transacción abierta tiene un cambio
+    (justo después de `openTransaction` es False); `FreeCAD.getActiveTransaction()` sí da
+    (nombre, id) apenas se abre, también con `doc.openTransaction`. `doc.Closing` no existe y
+    `slotStartRestoreDocument` no llega a Python: para "abriendo" solo sirve `doc.Restoring`.
+  - `body.removeObject(op)` reengancha la operación siguiente a la anterior y, si `op` era la
+    punta, pasa la punta a la anterior; `doc.removeObject` solo, no (Issue #1). Usar
+    `safe_ops.remove_feature`.
 - Test sin GUI (antes de cada entrega): `D:\Freecad\bin\python.exe tools/test_load.py .`
   Debe terminar en `ERGEBNIS: OK`. Simula FreeCAD con objetos falsos (Qt = MagicMock).
 - Prueba en FreeCAD REAL, sin tocar la configuración del usuario:
