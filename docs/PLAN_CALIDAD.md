@@ -117,9 +117,46 @@ abierta y vacía). Hacen falta pruebas hechas para **romper**, no para confirmar
    herramientas con la lógica dentro del panel solo por ventana (motivo más para pasarlas a
    funciones cuando se toquen).
 2. **Propiedades de geometría** con medidas al azar (herramienta Hypothesis, en la carpeta de
-   herramientas): marcos cerrados sin hueco ni superposición con cualquier esqueleto y perfil;
-   chapa (el DXF cuadra en área y capas con la chapa); multicuerpo; Mover cara; croquis (sin
-   relaciones redundantes); Evaluar (un cubo L×A×H da ese volumen y esa masa).
+   herramientas; acordado con el usuario el 08/11). Hypothesis inventa medidas (también las
+   raras), y si una rompe la regla achica el caso al más simple que falla, que queda en la
+   batería para siempre y va a una Issue. ~25 casos por regla antes de cada entrega, cientos de
+   noche; sin ventana, por las funciones públicas (sin pasar por el panel), salvo "lo que ponés
+   en el panel es lo que sale", que va con ventana. Un fallo del motor geométrico (p. ej. un
+   redondeo imposible) se anota como límite de FreeCAD, no como error de FreeWorks; lo que sí se
+   exige es aviso en castellano y nada a medio hacer. En este orden:
+   1. **Operaciones de pieza** (lo más usado; FreeWorks traduce las opciones SW a las de
+      FreeCAD y ahí puede errar): Extruir (volumen = área × largo; plano medio, invertido,
+      dirección 2; altura pedida), Extruir corte (saca área × profundidad; Por todo atraviesa),
+      Revolución (Pappus: área × recorrido del centro × ángulo/360), Redondeo (arista recta: saca
+      (1 − π/4)·r²·largo), Chaflán (d²/2·largo), Taladro (cilindro de la medida, con punta si es
+      ciego), Matrices (cantidad y paso), Simetría (pieza simétrica), Ángulo de salida (la cara
+      queda inclinada el ángulo pedido). Y en los paneles: **lo que ponés en el panel es lo que
+      sale** (radio 3 → la operación tiene radio 3; "Por todo" → queda Por todo).
+   2. **Piezas soldadas**: esqueletos al azar (lados 100-2000 mm, ángulos 30-150°), perfiles del
+      catálogo, tope o inglete: sin superposición, sin huecos en las esquinas, lista de cortes =
+      caños reales, sigue al cambiar el esqueleto (debería aparecer #2), guardar y abrir igual.
+   3. **Chapa**: espesor, radio, K, bridas al azar: desarrollo con la misma superficie, DXF con
+      contorno cerrado y una línea por pliegue, largo desarrollado según la fórmula del taller
+      (**falta que el usuario confirme la fórmula y el K por omisión**), nombre de archivo con
+      espesor y material.
+   4. **Ensamblajes** (piezas de medida, posición y giro al azar): Coincidente (caras en el mismo
+      plano, enfrentadas), Distancia / Ángulo (exactos), Paralela / Perpendicular, Concéntrica
+      (ejes juntos), Tangente (toca sin atravesar); cambiar una pieza y que las relaciones se sigan
+      cumpliendo; componente fijo que no se mueve; matriz y simetría de componentes en su lugar;
+      taladro / corte de ensamblaje en el lugar correcto de cada pieza aunque esté movida o girada
+      (y sin tocar las que no atraviesa); guardar y abrir con todo en su lugar; configuraciones
+      que van y vuelven.
+   5. **Croquis**: simetría dos veces / mover +d y −d / escalar f y 1/f vuelven a lo original;
+      nunca relaciones redundantes ni en conflicto.
+   6. **Multicuerpo**: el corte con Alcance solo toca los sólidos elegidos; sacar uno del alcance
+      lo deja como antes (debería aparecer #1).
+   7. **Mover cara**: el volumen cambia área × distancia (donde aplica).
+   8. **Evaluar**: masa, centro de gravedad e inercia de cubos y cilindros = fórmulas de libro.
+   9. **Configuraciones de pieza**: de A a B y de vuelta a A, la pieza igual.
+   10. **Planos (consignado, sin empezar: decisión del usuario 08/11)**: hacen falta reglas
+       también para los planos (TechDraw); se escriben cuando se encaren los planos de forma
+       integral (p. ej. que las vistas y cotas correspondan a la pieza, que el rótulo y la escala
+       salgan bien, que PDF/DXF exportados tengan lo que se ve).
 3. **Fuzzing de secuencias** ("mono"), de noche: operaciones al azar en cualquier orden (abrir un
    panel, cancelar, deshacer, Ecuaciones con el panel abierto, suprimir, cambiar una medida,
    guardar y reabrir, configuraciones...) controlando después de cada paso: sin errores, pieza
