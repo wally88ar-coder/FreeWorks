@@ -140,6 +140,26 @@ el usuario).
 - **Tiempos máximos**: p. ej. un marco de 50 caños recalcula en menos de X s; abrir un ensamblaje
   de prueba en menos de Y s. Avisa si algo se vuelve lento (Issue #15).
 
+## Cómo se trabaja día a día (decidido por el usuario el 08/11)
+
+| Cuándo | Qué corre | Quién |
+|---|---|---|
+| Cada commit | Prueba de carga + ruff + TODA la batería rápida | El enganche, solo |
+| Cada entrega | TODA la batería (también con ventana) + reglas de paneles con más casos para lo tocado + capturas | Claude |
+| De noche (sí, aprobado) | Fuzzing de secuencias y de campos, geometría con muchos casos, tiempos; lo encontrado va a las Issues | Tarea programada |
+
+- Si la batería rápida pasa de ~3 min, en el commit corre solo lo tocado y lo que depende de eso;
+  el resto en la entrega.
+- **Push después de cada entrega que pase todo**, sin preguntar (aprobado). Lo que no pasa, no sube.
+- Funcionalidad nueva: plan simple + "qué tiene que pasar" que el usuario aprueba antes de
+  programar → código (función + panel) y pruebas → revisor y atacante → batería completa
+  (capturas nuevas: las aprueba el usuario) → mouse contra SW → entrega (qué está probado y qué
+  no) → push.
+- Error encontrado: Issue → prueba que lo reproduce (CONOCIDO + ESPERA) → arreglo → la prueba da
+  BIEN → commit "Arregla #N" (la Issue se cierra al subir).
+- Para la corrida de noche la PC no puede suspenderse: lo ajusta el usuario en Windows (Claude no
+  cambia configuraciones del sistema). Se arma junto con el paso 8.
+
 ## Orden propuesto
 
 1. Pasos 1, 4 y 5 (son cortos), el esqueleto de la batería y el primer mapa (paso 6). HECHO 08/11.

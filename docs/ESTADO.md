@@ -14,7 +14,8 @@ primer mapa `docs/MAPA_PRUEBAS.md` (12 % de las líneas, 31 de 99 módulos sin n
 La prueba de paneles encontró 2 errores nuevos: Issues #29 y #30. Sumados al plan (usuario, 08/11):
 paso 8, pruebas adversariales (reglas de todos los paneles, geometría al azar, fuzzing de
 secuencias y de campos, agente atacante) y paso 9 (medir todo `swui`, capturas de referencia,
-tiempos máximos); sin empezar. **Próximo: el usuario decide
+tiempos máximos); sin empezar. Decidido además (08/11): corrida de noche (sí) y push después de
+cada entrega que pase todo, sin preguntar. **Próximo: el usuario decide
 cuándo seguir con la corrección de errores** (pidió pausa al terminar la implementación).
 
 **08/11, AUDITORÍA DE ERRORES: HECHA, falta que el usuario elija qué arreglar.** Lista completa,

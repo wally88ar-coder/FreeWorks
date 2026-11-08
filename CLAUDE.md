@@ -162,6 +162,9 @@ castellano, coma decimal; ver "Falta" en `docs/ESTADO.md`.
 - Para Python fuera de FreeCAD, usar el intérprete incluido en FreeCAD si no hay otro instalado.
 - Piezas de prueba reales del usuario (exportadas de SW en STEP): pedir la carpeta y usarlas.
 - Commits pequeños y descriptivos. Nunca forzar push ni reescribir historia publicada.
+- **Subir a GitHub (push) después de cada entrega que pase todo** (enganche en cada commit +
+  batería completa), sin preguntar (decidido por el usuario 2026-11-08). Lo que no pasa todo,
+  no se sube.
 - Mantener actualizado `docs/ESTADO.md`: fase actual, qué está hecho, qué falta, problemas
   reportados por el usuario, decisiones nuevas y estado de los PR al original. Leerlo al inicio
   de cada sesión, junto con `docs/NOTAS_TECNICAS.md` (cómo probar en FreeCAD real con
@@ -196,7 +199,15 @@ castellano, coma decimal; ver "Falta" en `docs/ESTADO.md`.
 - **Lo nativo antes que el enganche** al funcionamiento interno de FreeCAD; cada enganche, con prueba.
 - **Pruebas para romper, no solo para confirmar** (pasos 8 y 9 del plan): reglas comunes de
   paneles y de geometría con valores al azar, fuzzing de secuencias y de campos, agente atacante
-  que escribe pruebas sin ver el código, capturas de referencia y tiempos máximos. Lo que no se
+  que escribe pruebas sin ver el código, capturas de referencia y tiempos máximos.
+- **Tres niveles**: cada commit, TODA la batería rápida (enganche); cada entrega, TODA la batería
+  con ventana + reglas de paneles con más casos para lo tocado + capturas; **de noche** (aprobado
+  por el usuario 08/11), fuzzing y casos al azar largos, con lo encontrado a las Issues. Si la
+  rápida pasa de ~3 min, en el commit solo lo tocado y lo que depende de eso.
+- **Flujo de una funcionalidad nueva**: plan simple + "qué tiene que pasar" (2-3 renglones) que el
+  usuario aprueba ANTES de programar (él sabe cómo lo hace SW); lógica en función + panel +
+  pruebas; revisor y atacante; batería completa (capturas nuevas las aprueba el usuario); mouse
+  contra SW; entrega con qué está probado y qué no; push. Lo que no se
   automatiza (parecido con SW, aspecto, sensación, piezas reales, taller) sigue siendo del usuario
   y de las pruebas con mouse contra SW.
 
