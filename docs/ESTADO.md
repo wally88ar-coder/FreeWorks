@@ -24,6 +24,36 @@ deleted" al elegir una línea: panel cerrado por FreeCAD sin Cancelar dejaba el 
 ahora usa panel_guard (track/orphaned) y se apaga solo, y reabrir con otro abierto lo cierra
 guardando. Probado por guion con cursor y teclas de verdad; falta que el usuario lo vuelva a probar.
 
+**07/11 noche, SIN EL AVISO "REFERENCIA" DE FREECAD (visto por el usuario con el Asistente para
+taladro en una cara de otro IPN: "Hacer copia independiente / dependiente / referencia cruzada";
+"tiene que ser lo más similar a SW"; plan de 4 puntos aprobado, "hacé todo... con mouse"): HECHO.**
+`swui/fork/cross_body.py` (funciones públicas: activate_for_selection, bind_ref, fix_scope,
+prune_unused). Causa del caso del usuario: con el panel "elegí una cara" abierto, auto_body no
+activaba el sólido de la cara. (A) la operación va en el sólido de lo elegido: antes de cada botón
+de la cinta o menú y antes de abrir el croquis desde ese panel se activa su Cuerpo; Redondeo /
+Chaflán / Ángulo de salida empezados vacíos que reciben primero una arista de otro sólido se vuelven
+a lanzar en ese sólido. (B) referencia de otro sólido (plano de simetría, dirección o eje de matriz,
+plano neutro, "Hasta la superficie", eje de revolución, etc.): copia dependiente oculta
+("Referencia de IPN 80 (2)", PartDesign::SubShapeBinder), como la "copia dependiente" de FreeCAD;
+las que quedan sin usar al aceptar se borran. Extruir "Hasta la superficie" nativo no preguntaba
+pero dejaba el vínculo afuera ("go out of the allowed scope" en inglés): un escucha lo pasa a copia
+dependiente en el momento. (Red) si el aviso sale igual: dentro de un panel contesta "copia
+dependiente"; sin panel (croquis) lo cancela, activa el Cuerpo y relanza el comando.
+**Decisión de Claude (anotada para consultar):** el plan decía "siempre copia dependiente", pero sin
+panel eso dejaba el croquis en el sólido equivocado (el taladro habría agujereado otro IPN): ahí se
+cancela y se relanza en el sólido correcto. Plano/eje/punto de referencia apoyado en otro sólido: va
+directo (FreeCAD lo acepta sin avisar). Límite: un mismo redondeo no puede tener aristas de dos
+sólidos (FreeCAD: una operación por Cuerpo); la segunda arista de otro sólido se ignora.
+**Probado por Claude:** por guion en FreeCAD de prueba (taladro con cara elegida y con el panel,
+croquis nativo, simetría, redondeo, plano neutro, plano de referencia, extruir hasta la superficie)
+y **con el mouse** sobre un marco de 3 IPN 80: taladro desde el panel en la cara de otro IPN (agujero
+en el IPN correcto, sin aviso), Extruir corte "Hasta la superficie" de otro miembro (sin aviso ni
+advertencia), Redondeo empezado en otro sólido (se pasa solo), Simetría con plano = cara de otro
+IPN; FreeCAD cierra limpio. **SW con el mouse: no se pudo** (el permiso para la ventana de SolidWorks,
+sldworks.exe, quedó rechazado mientras el usuario dormía); en SW el aviso no existe (multicuerpo = una
+pieza). Pendiente chico: el botón "Select Face" del panel nativo de Extruir sigue en inglés. Falta que
+lo pruebe el usuario.
+
 **07/11 noche, PERFILES CIRSOC (pedido del usuario: "hacelo acorde a CIRSOC... los caños siempre
 tienen radio... guardá las propiedades de sección para elementos finitos"; "todo salvo las series
 americanas"): HECHO.** Tabla del PDF "Tablas de perfiles laminados y tubos estructurales" (CIRSOC

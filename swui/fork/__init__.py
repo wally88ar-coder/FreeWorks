@@ -20,6 +20,14 @@ MENU = "LikeSolidWorks UI"
 def install(workbench=None):
     """Enganchar los agregados del fork. Cada uno protegido por separado."""
     try:
+        # sin el aviso "Referencia" de FreeCAD: antes que panel_guard (corre después de que
+        # este cancela el panel abierto) y antes de que se arme la cinta
+        from swui.fork import cross_body
+
+        cross_body.install()
+    except Exception:
+        FreeCAD.Console.PrintError("[SWUI fork] Cuerpo de lo elegido:\n%s\n" % traceback.format_exc())
+    try:
         # antes de que se arme la cinta: otro comando con un panel abierto lo cancela, como SW
         from swui.fork import panel_guard
 

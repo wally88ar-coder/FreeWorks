@@ -5,6 +5,13 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Sin el aviso "Referencia" de FreeCAD, como SW** (`swui/fork/cross_body.py`): elegir una cara o
+  arista de otro sólido (piezas soldadas, multicuerpo) ya no pregunta "Hacer copia independiente /
+  dependiente / referencia cruzada". La operación va al sólido de lo elegido (se activa solo, también
+  desde el panel "elegí una cara" del Asistente para taladro, Croquis y Extruir; Redondeo, Chaflán y
+  Ángulo de salida empezados en otro sólido se pasan solos); una referencia de otro sólido (plano de
+  simetría, dirección de matriz, plano neutro, "Hasta la superficie"...) entra como copia dependiente
+  oculta que sigue al original. Si el aviso aparece igual, se contesta solo.
 - **Croquis 3D, como SW 2018** (`swui/fork/sketch3d.py`, `sketch3d_panel.py`, `sketch3d_tab.py`):
   botón al lado de Croquis y en Insertar. Líneas en el espacio en cadena (clic o arrastrar), que
   enganchan a X, Y o Z, a puntos, al origen y a vértices de la pieza; Tab cambia el plano (Alzado,

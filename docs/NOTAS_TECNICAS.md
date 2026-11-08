@@ -27,6 +27,18 @@
 - Medir colores de capturas del usuario: `QImage(...).pixelColor(x, y)` con el Python de FreeCAD.
 
 ## FreeCAD 1.1.4 en Windows: hallazgos
+- Aviso "Referencia" (copia independiente / dependiente / referencia cruzada): QDialog modal
+  `PartDesignGui__DlgReference` con radios `radioIndependent`, `radioDependent`, `radioXRef`. El del
+  croquis sobre una cara NO nace hijo de la ventana principal: se lo reconoce con la señal
+  `QApplication.focusChanged` + `activeModalWidget()` (`swui/fork/cross_body.py`). No usar un filtro de
+  eventos en toda la aplicación (caro; con `os._exit` en las pruebas inundaba la salida con errores).
+  Extruir "Hasta la superficie" de otro Cuerpo NO pregunta: deja el vínculo afuera y avisa en inglés
+  "go out of the allowed scope" al recalcular; hay que cambiarlo a copia dependiente en el mismo
+  slotChangedObject (diferido con QTimer ya llega tarde). Plano de referencia (Attacher) apoyado en
+  otro Cuerpo: FreeCAD lo acepta sin avisar.
+- Pruebas con interfaz: terminar con `os._exit` deja procesos colgados ("No responde", ventana
+  fantasma que tapa las capturas de pantalla de computer-use). Cerrarlos con
+  `Invoke-CimMethod ... -MethodName Terminate` (taskkill dice "no hay instancia").
 - Los nombres de objeto de formularios usan `__` en vez de `::` (`PartDesignGui__TaskPadPocketParameters`).
 - Part Design cambia de banco al abrir cualquier diálogo de operación vía
   `Gui.activateWorkbench('PartDesignWorkbench')` ejecutado desde C++ (archivo `"<string>"`).
