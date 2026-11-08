@@ -42,8 +42,19 @@ dependiente"; sin panel (croquis) lo cancela, activa el Cuerpo y relanza el coma
 **Decisión de Claude (anotada para consultar):** el plan decía "siempre copia dependiente", pero sin
 panel eso dejaba el croquis en el sólido equivocado (el taladro habría agujereado otro IPN): ahí se
 cancela y se relanza en el sólido correcto. Plano/eje/punto de referencia apoyado en otro sólido: va
-directo (FreeCAD lo acepta sin avisar). Límite: un mismo redondeo no puede tener aristas de dos
-sólidos (FreeCAD: una operación por Cuerpo); la segunda arista de otro sólido se ignora.
+directo (FreeCAD lo acepta sin avisar). Límites (con aviso en castellano en el panel desde el 08/11):
+un mismo redondeo/chaflán/salida no puede tener aristas de dos sólidos (FreeCAD: una operación por
+Cuerpo) y una matriz/simetría no repite operaciones de otro sólido (para eso Mover/Copiar o "Sólidos
+para simetría").
+**08/11 (usuario: "¿hiciste todo A y B?" -> "Si"): probados los casos pendientes.** Por guion: matriz
+lineal (dirección en otro sólido, aceptada y válida), matriz circular (eje en otro sólido: arreglado,
+arranca con la lista activa y la arista se perdía), chaflán pasado de sólido, avisos de los dos
+límites, eje de revolución y de hélice y trayectoria de barrido (pasan a copia dependiente), deshacer.
+Con el mouse: taladro en el IPN 80 (3) + matriz lineal con dirección = cara de otro IPN (3 agujeros),
+y la copia que quedó sin usar se borró sola. Sin probar con el mouse: revolución, hélice, barrido y
+recubrimiento por sus paneles nativos (probado el cambio de la propiedad, que es lo que hacen).
+Visto de paso (de antes, no de esto): al abrir una matriz vacía sale el aviso en inglés
+"ViewProviderTransformed: One transformed shape does not intersect the support".
 **Probado por Claude:** por guion en FreeCAD de prueba (taladro con cara elegida y con el panel,
 croquis nativo, simetría, redondeo, plano neutro, plano de referencia, extruir hasta la superficie)
 y **con el mouse** sobre un marco de 3 IPN 80: taladro desde el panel en la cara de otro IPN (agujero

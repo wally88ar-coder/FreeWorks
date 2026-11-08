@@ -250,6 +250,22 @@ def _circle_edge(shape, sub):
     return None
 
 
+OTHER_SOLID = ("Eso es de otro sólido (%s). En FreeCAD cada operación trabaja sobre un solo sólido "
+               "(%s): aceptá esta y hacé otra para aquel.")
+OTHER_FEATURE = ("Esa operación es de otro sólido (%s): acá solo se repiten operaciones de este "
+                 "sólido. Para copiar otro sólido entero usá Insertar > Operaciones > Mover/Copiar "
+                 "(o, en Simetría, «Sólidos para simetría»).")
+
+
+def _say(panel, text):
+    """Aviso en el renglón de mensajes del panel (el rojo de abajo)."""
+    try:
+        panel.message.setText(text)
+        panel.message.show()
+    except Exception:
+        FreeCAD.Console.PrintMessage("[SWUI fork] %s\n" % text)
+
+
 def _hook_patterns():
     """Matriz lineal / circular / Simetría: dirección, eje o plano de otro sólido."""
     from swui.fork import dress_up_panel as dp
@@ -262,16 +278,25 @@ def _hook_patterns():
     def _pick(self, obj, sub):
         try:
             prop = self._active_ref()
+            # como el original: una arista va a la casilla activa o, si está la lista, a la primera
+            target = prop or next(iter(self.ref_boxes), None)
             body = _own_body(self)
-            if prop and sub and obj not in (self.obj, self.base) and needs_binder(body, obj):
+            other = obj not in (self.obj, self.base) and needs_binder(body, obj) \
+                and getattr(obj, "TypeId", "") not in ORIGIN_TYPES \
+                and self.active is not getattr(self, "blist", None)
+            if other and sub:
                 if sub.startswith("Face") and prop == "Axis":
                     edge = _circle_edge(obj.Shape, sub)
                     if edge is not None:
                         sub = edge
                 geo = dp._element(obj.Shape, sub)
-                if geo is not None and (sub.startswith("Edge") or
-                                        (sub.startswith("Face") and self._accepts_face(geo))):
+                if geo is not None and target and sub.startswith("Edge"):
+                    return self._set_ref(target, bind_ref(body, obj, sub))
+                if geo is not None and prop and sub.startswith("Face") and self._accepts_face(geo):
                     return self._set_ref(prop, bind_ref(body, obj, sub))
+            if other:
+                _say(self, OTHER_FEATURE % _owner_label(obj))
+                return False
         except Exception:
             FreeCAD.Console.PrintError("[SWUI fork] Referencia de otro sólido:\n%s\n" % traceback.format_exc())
         return original(self, obj, sub)
@@ -332,6 +357,15 @@ def _hook_dress_up():
                 body = auto_body.body_of(obj)
                 if body is not None and body is not _own_body(self):
                     QtCore.QTimer.singleShot(0, lambda: _restart(self, command, obj, sub))
+                    return False
+            if sub.startswith(("Edge", "Face")) and obj not in (self.obj, self.base) \
+                    and getattr(self, "active", self.list) is self.list:
+                from swui.fork import auto_body
+
+                body = auto_body.body_of(obj)
+                if body is not None and body is not _own_body(self):
+                    # FreeCAD: una operación trabaja sobre un solo sólido (SW sí mezcla)
+                    _say(self, OTHER_SOLID % (body.Label, _own_body(self).Label))
                     return False
         except Exception:
             FreeCAD.Console.PrintError("[SWUI fork] Operación en otro sólido:\n%s\n" % traceback.format_exc())
