@@ -540,7 +540,10 @@ class _ScopeObserver:
             return
         try:
             doc = obj.Document
-            if doc.Name in self.restoring or getattr(doc, "Transacting", False) or not _in_workbench():
+            # al abrir un archivo NO se toca nada: en 1.1.4 los avisos de restauración no llegan a
+            # Python, pero doc.Restoring sí está prendido (auditoría del 08/11: abrir modificaba)
+            if doc.Name in self.restoring or getattr(doc, "Restoring", False) \
+                    or getattr(doc, "Transacting", False) or not _in_workbench():
                 return
             names = (doc.Name, obj.Name, prop)
         except Exception:
