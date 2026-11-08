@@ -60,6 +60,20 @@ operación (ensamblaje + piezas). **Fuera, a propósito
 hoja, Acabado superficial, Símbolo de soldadura): se prueban cuando se encaren los planos de
 forma integral.
 
+## Medidas al azar (paso 8.2)
+
+`azar_comun.py` + `prueba_ventana_azar_*.py`, con Hypothesis (en la carpeta de herramientas;
+`pip install --target ... hypothesis`). Van por el panel, como el usuario; cada regla compara la
+pieza con la fórmula de libro y lo puesto en el panel con lo que quedó en el objeto. Si una falla,
+Hypothesis achica el caso al más simple y lo recuerda (`%LOCALAPPDATA%/FreeWorks-dev/hypothesis`).
+Casos por regla: `FW_CASOS_AZAR` (6 por omisión, de noche cientos). Una regla sola:
+`FW_CASO=redondeo`. Ojo al escribir en campos de FreeCAD: Enter = Aceptar del panel (usar Tab).
+
+- Operaciones de pieza (`prueba_ventana_azar_pieza.py`, 10 reglas): extruir (4 modos), corte (con
+  y sin Por todo), revolución, redondeo, chaflán, taladro (Ø según ISO 273), matriz lineal y
+  circular, simetría, ángulo de salida. Comprobado que atrapa errores: con el radio del Redondeo
+  roto a propósito (+10 %) falló y lo achicó a un cubo de 2 mm con radio 0,5.
+
 ## Enganche de git
 
 `tools/fork/hooks/pre-commit` corre antes de cada commit (si el commit toca algún `.py`):
