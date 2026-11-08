@@ -124,7 +124,14 @@ def mensajes_nuevos(desde):
     if rv is None:
         return []
     texto = rv.toPlainText()[desde:]
-    return [l for l in texto.splitlines() if any(m in l for m in MALAS)]
+    out, donde = [], ""
+    for l in texto.splitlines():
+        if "File \"" in l and "swui" in l:  # de qué parte de FreeWorks viene el error
+            donde = l.strip().split("swui", 1)[1][:90]
+        elif any(m in l for m in MALAS):
+            out.append(l + ("   [swui%s]" % donde if donde and not l.lstrip().startswith(("Traceback", "raise")) else ""))
+            donde = ""
+    return out
 
 
 def limpiar_ventana():
@@ -146,7 +153,9 @@ def limpiar_ventana():
             pass
     try:
         gdoc = FreeCADGui.ActiveDocument
-        if gdoc is not None and gdoc.getInEdit() is not None:
+        vp = gdoc.getInEdit() if gdoc is not None else None
+        # un ensamblaje activo está "en edición" a propósito (así se mueven sus piezas)
+        if vp is not None and getattr(vp.Object, "TypeId", "") != "Assembly::AssemblyObject":
             restos.append("algo en edición")
             gdoc.resetEdit()
     except Exception:
@@ -425,7 +434,8 @@ def correr_caso(caso, inf, semillas=(1,)):
 
     if hecho is not None and "guardar" in caso.reglas:
         antes = foto(doc)
-        ruta = os.path.join(carpeta_temporal(), "reglas.FCStd")
+        # si ya tiene archivo (un ensamblaje, junto a sus piezas), se guarda ahí mismo
+        ruta = doc.FileName or os.path.join(carpeta_temporal(), "reglas.FCStd")
         doc.saveAs(ruta)
         nombre = doc.Name
         FreeCAD.closeDocument(nombre)
