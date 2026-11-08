@@ -197,6 +197,9 @@ castellano, coma decimal; ver "Falta" en `docs/ESTADO.md`.
 - **Antes de cada entrega**: revisión del cambio por un agente que no lo escribió (recibe el
   código, no las conclusiones) y el analizador (`ruff`, lo corre el enganche).
 - **Lo nativo antes que el enganche** al funcionamiento interno de FreeCAD; cada enganche, con prueba.
+- **Área sin estándares de calidad = avisar antes** (pedido del usuario, 2026-11-08): si una tarea
+  toca una parte de FreeWorks que todavía no tiene sus reglas y pruebas (p. ej. Simulación, planos,
+  un banco o pestaña nueva), decírselo al usuario antes de programar y acordar cómo seguir.
 - **Pruebas para romper, no solo para confirmar** (pasos 8 y 9 del plan): reglas comunes de
   paneles y de geometría con valores al azar, fuzzing de secuencias y de campos, agente atacante
   que escribe pruebas sin ver el código, capturas de referencia y tiempos máximos.
