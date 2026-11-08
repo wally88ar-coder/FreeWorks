@@ -194,6 +194,11 @@ castellano, coma decimal; ver "Falta" en `docs/ESTADO.md`.
 - **Antes de cada entrega**: revisión del cambio por un agente que no lo escribió (recibe el
   código, no las conclusiones) y el analizador (`ruff`, lo corre el enganche).
 - **Lo nativo antes que el enganche** al funcionamiento interno de FreeCAD; cada enganche, con prueba.
+- **Pruebas para romper, no solo para confirmar** (pasos 8 y 9 del plan): reglas comunes de
+  paneles y de geometría con valores al azar, fuzzing de secuencias y de campos, agente atacante
+  que escribe pruebas sin ver el código, capturas de referencia y tiempos máximos. Lo que no se
+  automatiza (parecido con SW, aspecto, sensación, piezas reales, taller) sigue siendo del usuario
+  y de las pruebas con mouse contra SW.
 
 ## Límites conocidos (comunicar, no prometer)
 Motor OpenCASCADE menos robusto que Parasolid en redondeos complejos; rendimiento con ensamblajes

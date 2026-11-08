@@ -11,7 +11,10 @@ pasan al arreglar cada error); batería `tools/fork/pruebas/` (9 pruebas: 7 BIEN
 #1 y #2; la rápida tarda ~15 s, la de ventana ~30 s); enganche `tools/fork/hooks/pre-commit`
 instalado en esta copia (`core.hooksPath`; herramientas en `%LOCALAPPDATA%/FreeWorks-dev/pkgs`);
 primer mapa `docs/MAPA_PRUEBAS.md` (12 % de las líneas, 31 de 99 módulos sin nada probado). Revisión por un agente aparte: 10 puntos, arreglados (el más serio: `undo_step` cerraba igual una transacción abierta pero todavía vacía; ahora mira `FreeCAD.getActiveTransaction()`).
-La prueba de paneles encontró 2 errores nuevos: Issues #29 y #30. **Próximo: el usuario decide
+La prueba de paneles encontró 2 errores nuevos: Issues #29 y #30. Sumados al plan (usuario, 08/11):
+paso 8, pruebas adversariales (reglas de todos los paneles, geometría al azar, fuzzing de
+secuencias y de campos, agente atacante) y paso 9 (medir todo `swui`, capturas de referencia,
+tiempos máximos); sin empezar. **Próximo: el usuario decide
 cuándo seguir con la corrección de errores** (pidió pausa al terminar la implementación).
 
 **08/11, AUDITORÍA DE ERRORES: HECHA, falta que el usuario elija qué arreglar.** Lista completa,

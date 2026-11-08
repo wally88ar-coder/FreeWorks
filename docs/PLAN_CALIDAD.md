@@ -1,8 +1,9 @@
 # Plan para cometer menos errores — aprobado el 08/11/2026
 
 Estado: pasos 1 a 6 implementados el 08/11 (reglas en CLAUDE.md, `swui/fork/safe_ops.py`,
-`tools/fork/pruebas/`, `tools/fork/hooks/pre-commit`, Issues, `docs/MAPA_PRUEBAS.md`). Paso 7 y
-corrección de errores: cuando el usuario diga.
+`tools/fork/pruebas/`, `tools/fork/hooks/pre-commit`, Issues, `docs/MAPA_PRUEBAS.md`). Pasos 8
+(pruebas adversariales) y 9 (todo `swui`, capturas de referencia, tiempos) sumados el 08/11, sin
+empezar. Pasos 7 a 9 y corrección de errores: cuando el usuario diga.
 
 Objetivo: trabajar al nivel de un proyecto abierto serio ("profesional bueno"), no al de aviones
 o equipos médicos. Base: las 4 causas que mostró la auditoría (`docs/AUDITORIA_2026-11-08.md`):
@@ -91,16 +92,69 @@ quedan en la batería: encuentra lo que leer el código no ve y confirma (o desc
 que el mapa muestre sin pruebas. Auditoría de lectura otra vez, completa, antes de compartir
 FreeWorks con amigos.
 
+## Paso 8. Pruebas adversariales (decidido por el usuario el 08/11, después del video "Tus tests ya no bastan")
+
+Idea: si la misma IA escribe el código y sus pruebas, las pruebas tienen sus mismos puntos ciegos
+(pasó el 08/11: la prueba de `safe_ops` daba bien y el revisor encontró el caso de la transacción
+abierta y vacía). Hacen falta pruebas hechas para **romper**, no para confirmar. En este orden:
+
+1. **Propiedades de paneles** (lo primero: la mayoría de los errores de la auditoría están en
+   paneles). Reglas que TODO panel cumple, con elecciones y valores al azar, aplicadas a la lista
+   de paneles (uno nuevo entra agregándolo a la lista):
+   - Cancelar: documento idéntico, sin pasos de deshacer nuevos ni restos (marcas, vista previa).
+   - Aceptar: exactamente una operación y un paso de deshacer; deshacer vuelve, rehacer la trae.
+   - Editar y Aceptar sin tocar nada: la pieza no cambia.
+   - Guardar y abrir: igual y sin quedar "modificado".
+   - Entrada inválida (cero, arista que no sirve, otro sólido): aviso en castellano; nunca error
+     en inglés ni operación a medio hacer.
+   - Otro comando con el panel abierto: se cancela de verdad.
+   Lo que tiene su lógica en una función se prueba sin ventana (muchos casos); el panel en sí, con
+   ventana, en un solo FreeCAD (decenas de casos por panel en una corrida de noche). Las 6
+   herramientas con la lógica dentro del panel solo por ventana (motivo más para pasarlas a
+   funciones cuando se toquen).
+2. **Propiedades de geometría** con medidas al azar (herramienta Hypothesis, en la carpeta de
+   herramientas): marcos cerrados sin hueco ni superposición con cualquier esqueleto y perfil;
+   chapa (el DXF cuadra en área y capas con la chapa); multicuerpo; Mover cara; croquis (sin
+   relaciones redundantes); Evaluar (un cubo L×A×H da ese volumen y esa masa).
+3. **Fuzzing de secuencias** ("mono"), de noche: operaciones al azar en cualquier orden (abrir un
+   panel, cancelar, deshacer, Ecuaciones con el panel abierto, suprimir, cambiar una medida,
+   guardar y reabrir, configuraciones...) controlando después de cada paso: sin errores, pieza
+   válida, deshacer vuelve exactamente al estado anterior, abrir no modifica. Es el tipo de error
+   de #3, #11, #12, #13. Lo que encuentre, a las Issues.
+4. **Fuzzing de campos** donde se escribe: medidas negativas, cero, enormes, "1,5", texto en un
+   número, fórmulas rotas en Ecuaciones, celdas raras en la tabla de configuraciones.
+5. **Agente atacante**: escribe pruebas a partir del QUE de cada herramienta, sin ver el código, con
+   la tarea de hacerla fallar (además del revisor de cada entrega, que sí ve el código).
+
+Fuzzing "clásico" (millones de casos por segundo buscando caídas): no, porque cada caso en FreeCAD
+tarda de 0,1 a 2 s y las caídas serían de FreeCAD / OpenCASCADE (no arreglables acá; las reporta
+el usuario).
+
+## Paso 9. Lo que faltaba medir (08/11)
+
+- **Todo `swui`**, no solo `swui/fork`: el usuario usa también lo del original (cinta, extruir desde
+  croquis, planos, relaciones, textos). El mapa y las pruebas lo incluyen.
+- **Capturas de referencia** (pruebas visuales): una captura aprobada de cada pantalla (cinta,
+  paneles, árbol, croquis, a 1366 x 768) y la prueba avisa si cambió algo sin querer. No juzga si
+  está bien: detecta cambios. Sirven también para la fase 6 (referencia para cuando no haya SW).
+- **Tiempos máximos**: p. ej. un marco de 50 caños recalcula en menos de X s; abrir un ensamblaje
+  de prueba en menos de Y s. Avisa si algo se vuelve lento (Issue #15).
+
 ## Orden propuesto
 
-1. Pasos 1, 4 y 5 (son cortos), el esqueleto de la batería y el primer mapa (paso 6).
+1. Pasos 1, 4 y 5 (son cortos), el esqueleto de la batería y el primer mapa (paso 6). HECHO 08/11.
 2. Arreglar los 3 graves **usando** este método: cada arreglo con su pieza común y su prueba.
 3. Los medianos, igual.
-4. Paso 7, herramienta por herramienta; segundo mapa.
+4. Pasos 7, 8 y 9, herramienta por herramienta (paneles primero); segundo mapa.
 5. Auditoría completa antes de compartir con amigos.
 
 ## Límites (para no prometer de más)
 
+- Lo que ninguna prueba automática cubre: **el parecido con SW** (las pruebas comprueban nuestras
+  reglas, no que sean las de SW: siguen las pruebas con mouse contra SW y el ojo del usuario), **el
+  aspecto** (las capturas detectan cambios, no juzgan), **la sensación de uso** (giro, resaltado,
+  arrastrar, cantidad de clics), **errores de FreeCAD / SheetMetal / OpenCASCADE** (fase 6), **las
+  piezas reales del usuario** (sus STEP y chapas) y **lo de afuera** (CypCut, la plegadora).
 - La interfaz gráfica no se puede probar del todo sola (tampoco en la industria): siguen las
   pruebas con mouse, pero menos, porque la lógica ya viene probada.
 - La batería atrapa errores de FreeWorks, no de FreeCAD; para eso está la fase 6.
