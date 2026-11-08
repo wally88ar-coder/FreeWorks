@@ -102,8 +102,24 @@ class _Corrida:
         if not pasos:
             self.terminar("")
             return
+        if hasattr(pasos, "send"):  # un generador: cada `yield ms` espera eso con la ventana viva
+            self.gen = pasos
+            self.seguir_gen()
+            return
         self.pasos = list(pasos)
         self.siguiente()
+
+    def seguir_gen(self):
+        from PySide import QtCore
+        try:
+            demora = next(self.gen)
+        except StopIteration:
+            self.terminar("")
+            return
+        except Exception:
+            self.terminar(traceback.format_exc(limit=10))
+            return
+        QtCore.QTimer.singleShot(int(demora or 0), lambda: self.seguir_gen())
 
     def siguiente(self):
         from PySide import QtCore

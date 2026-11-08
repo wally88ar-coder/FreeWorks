@@ -36,7 +36,7 @@ ADDON = os.path.dirname(os.path.dirname(os.path.dirname(AQUI)))
 BIN = os.environ.get("FW_FREECAD", "D:/Freecad/bin")
 HERRAMIENTAS = os.environ.get("FW_HERRAMIENTAS",
                               os.path.join(os.environ.get("LOCALAPPDATA", ""), "FreeWorks-dev", "pkgs"))
-TIEMPO = {"rapida": 240, "completa": 150}
+TIEMPO = {"rapida": 240, "completa": int(os.environ.get("FW_TIEMPO_VENTANA", "600"))}
 
 
 def tipo(ruta):
@@ -97,6 +97,9 @@ def correr_una(ruta, clase, cobertura, tmp):
             with open(salida + ".log", encoding="utf-8") as fh:
                 res["error"] += "\nregistro de la prueba:\n" + fh.read()
     res["nombre"], res["segundos"] = nombre, round(seg, 1)
+    if os.path.exists(salida + ".log"):
+        with open(salida + ".log", encoding="utf-8") as fh:
+            res["registro"] = fh.read()
     return res
 
 
@@ -155,7 +158,8 @@ def main(args):
     except Exception:
         pass
     cobertura = "--cobertura" in args
-    args = [a for a in args if a != "--cobertura"]
+    detalle = "--detalle" in args  # muestra el registro de cada prueba (qué hizo, paso a paso)
+    args = [a for a in args if a not in ("--cobertura", "--detalle")]
     modo = "rapida"
     if args and args[0] in ("rapida", "completa", "solo_ventana"):
         modo = args.pop(0)
@@ -180,6 +184,8 @@ def main(args):
         resultados.append((v, res))
         extra = (" " + res["conocido"]) if res.get("conocido") else ""
         print("%-11s %-45s %5.1f s%s" % (v, res["nombre"], res["segundos"], extra), flush=True)
+        if detalle and res.get("registro"):
+            print("    " + res["registro"].strip().replace("\n", "\n    "))
         if v == "FALLA":
             print("    " + res["error"].strip().replace("\n", "\n    "))
         elif v == "CONOCIDO":  # la última línea: que falle por el error conocido y no por otra cosa
