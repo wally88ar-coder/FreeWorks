@@ -1,5 +1,12 @@
 # Estado del fork
 
+**08/11, AUDITORÍA DE ERRORES: HECHA, falta que el usuario elija qué arreglar.** Lista completa,
+ordenada por gravedad y explicada en simple: `docs/AUDITORIA_2026-11-08.md`. Graves: (1) multicuerpo,
+borrar una copia de Alcance vacía otro sólido; (2) soldadas, el inglete no sigue al esqueleto (lo que
+decía este documento, que "sí sigue la posición", era falso); (3) con un panel abierto, Ecuaciones /
+Material / Suprimir rompen su Cancelar. Arreglado ya (sin subir): abrir un archivo lo modificaba
+(error de cross_body.py del 07/11).
+
 **07/11, CROQUIS 3D: HECHO** (plan aprobado con las 4 decisiones del usuario; "Programalo").
 Botón Croquis 3D al lado de Croquis (pestaña Croquis) y en Insertar. `swui/fork/sketch3d.py` (lógica,
 funciones públicas: new_sketch, add_line con origin/free/on_point/on_vertex/along/direction,
