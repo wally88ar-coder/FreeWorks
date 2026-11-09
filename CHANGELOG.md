@@ -34,6 +34,11 @@ Neueste Version oben. / Newest version first.
   configuraciones); encontró #43, #44 y #47.
 - **Fuzzing de campos** (paso 8.4): Ecuaciones con textos raros (`prueba_azar_campos_ecuaciones.py`);
   encontró #45 y #46.
+- **Agente atacante** (paso 8.5): 7 pruebas escritas sin ver el código
+  (`prueba_azar_atacante_*.py`); encontró #48 a #54.
+- **Corrida de noche** (`tools/fork/pruebas/noche.py`), **tiempos máximos**
+  (`prueba_azar_tiempos.py`), mapa de cobertura de todo FreeWorks y cuadro de las 7 preguntas
+  (`docs/SIETE_PREGUNTAS.md`).
 - **Sin el aviso "Referencia" de FreeCAD, como SW** (`swui/fork/cross_body.py`): elegir una cara o
   arista de otro sólido (piezas soldadas, multicuerpo) ya no pregunta "Hacer copia independiente /
   dependiente / referencia cruzada". La operación va al sólido de lo elegido (se activa solo, también

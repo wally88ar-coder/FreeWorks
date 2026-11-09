@@ -8,6 +8,7 @@ Corre la batería de pruebas (ver LEEME.md). Con el Python de FreeCAD:
     D:/Freecad/bin/python.exe tools/fork/pruebas/correr.py completa   (rápida + con ventana)
     D:/Freecad/bin/python.exe tools/fork/pruebas/correr.py solo_ventana
     ... correr.py rapida --cobertura      (además, mapa de cobertura en docs/MAPA_PRUEBAS.md)
+    ... correr.py sin_ventana             (rápida + al azar: todo lo que no abre ventanas)
     ... correr.py prueba_inglete          (solo las pruebas cuyo nombre contiene eso)
 
 Cada prueba corre en su propio FreeCAD (una a la vez, para cuidar la memoria). Las de ventana
@@ -36,7 +37,9 @@ ADDON = os.path.dirname(os.path.dirname(os.path.dirname(AQUI)))
 BIN = os.environ.get("FW_FREECAD", "D:/Freecad/bin")
 HERRAMIENTAS = os.environ.get("FW_HERRAMIENTAS",
                               os.path.join(os.environ.get("LOCALAPPDATA", ""), "FreeWorks-dev", "pkgs"))
-TIEMPO = {"rapida": 240, "azar": int(os.environ.get("FW_TIEMPO_VENTANA", "600")), "completa": int(os.environ.get("FW_TIEMPO_VENTANA", "600"))}
+_VENT = os.environ.get("FW_TIEMPO_VENTANA", "600")
+_VENT = int(_VENT) if _VENT.isdigit() else 600
+TIEMPO = {"rapida": 240, "azar": _VENT, "completa": _VENT}
 
 
 def tipo(ruta):
@@ -57,8 +60,25 @@ def matar(proc):
         pass
 
 
+def tiempo_para(clase):
+    """Segundos que puede durar una prueba: el de su clase, recortado por la hora tope de la corrida
+    de noche (FW_HORA_TOPE, en segundos desde la época), si la hay. None: ya no hay tiempo."""
+    limite = TIEMPO[clase]
+    tope = os.environ.get("FW_HORA_TOPE")
+    if tope:
+        queda = float(tope) - time.time() - 60
+        if queda < 120:
+            return None
+        limite = min(limite, int(queda))
+    return limite
+
+
 def correr_una(ruta, clase, cobertura, tmp):
     nombre = os.path.splitext(os.path.basename(ruta))[0]
+    limite = tiempo_para(clase)
+    if limite is None:
+        return {"nombre": nombre, "segundos": 0.0, "que": "", "conocido": "", "ok": False, "saltada": True,
+                "error": "no corrió: llegó la hora tope de la corrida de noche"}
     salida = os.path.join(tmp, nombre + ".json")
     env = dict(os.environ, FW_RESULTADO=salida, FW_HERRAMIENTAS=HERRAMIENTAS, PYTHONIOENCODING="utf-8",
                FW_PRUEBA=ruta)
@@ -78,7 +98,7 @@ def correr_una(ruta, clase, cobertura, tmp):
     t0 = time.time()
     proc = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=AQUI)
     try:
-        out, _ = proc.communicate(timeout=TIEMPO[clase])
+        out, _ = proc.communicate(timeout=limite)
     except subprocess.TimeoutExpired:
         matar(proc)
         out = b"(se paso de tiempo y se corto)"
@@ -119,11 +139,12 @@ def mapa_cobertura(tmp):
     cov.combine(datos)
     cov.save()
     filas = []
-    fork = os.path.join(ADDON, "swui", "fork")
+    # todo FreeWorks (paso 9 del plan de calidad): lo del original (swui/) y lo del fork (swui/fork/)
+    raiz = os.path.join(ADDON, "swui")
     medidos = {os.path.normcase(m) for m in cov.get_data().measured_files()}
-    for ruta in sorted(glob.glob(os.path.join(fork, "**", "*.py"), recursive=True)):
-        rel = os.path.relpath(ruta, fork).replace("\\", "/")
-        if rel.startswith("ia/terceros"):
+    for ruta in sorted(glob.glob(os.path.join(raiz, "**", "*.py"), recursive=True)):
+        rel = os.path.relpath(ruta, raiz).replace("\\", "/")
+        if rel.startswith("fork/ia/terceros") or "/lang/" in "/" + rel:
             continue
         try:
             _f, ejecutables, _x, faltan, _t = cov.analysis2(ruta)
@@ -139,7 +160,7 @@ def mapa_cobertura(tmp):
     hechas = sum(f[2] for f in filas)
     lineas = ["# Mapa de pruebas (cobertura)", "",
               "Generado por `tools/fork/pruebas/correr.py --cobertura` el %s. Qué parte del código de "
-              "`swui/fork` ejecutó la batería. Es un **mapa** para elegir qué probar, no una meta: que una "
+              "FreeWorks (`swui/`: lo del original y `fork/`, lo propio) ejecutó la batería. Es un **mapa** para elegir qué probar, no una meta: que una "
               "línea se ejecute no quiere decir que esté bien probada (`docs/PLAN_CALIDAD.md`, paso 6)."
               % time.strftime("%d/%m/%Y %H:%M"), "",
               "Total: %d de %d líneas (%.0f %%). Módulos sin ninguna línea probada: %d de %d." % (
@@ -147,7 +168,7 @@ def mapa_cobertura(tmp):
               "", "| Módulo | Líneas | Probadas | % |", "|---|---:|---:|---:|"]
     for rel, n, h in filas:
         lineas.append("| `%s` | %d | %d | %.0f |" % (rel, n, h, 100.0 * h / n))
-    with open(os.path.join(ADDON, "docs", "MAPA_PRUEBAS.md"), "w", encoding="utf-8") as fh:
+    with open(os.environ.get("FW_MAPA") or os.path.join(ADDON, "docs", "MAPA_PRUEBAS.md"), "w", encoding="utf-8") as fh:
         fh.write("\n".join(lineas) + "\n")
     print("\nMapa de cobertura: docs/MAPA_PRUEBAS.md (%.0f %% de las líneas)" % (100.0 * hechas / max(total, 1)))
 
@@ -161,7 +182,7 @@ def main(args):
     detalle = "--detalle" in args  # muestra el registro de cada prueba (qué hizo, paso a paso)
     args = [a for a in args if a not in ("--cobertura", "--detalle")]
     modo = "rapida"
-    if args and args[0] in ("rapida", "completa", "solo_ventana", "solo_azar"):
+    if args and args[0] in ("rapida", "completa", "solo_ventana", "solo_azar", "sin_ventana"):
         modo = args.pop(0)
     filtro = args[0] if args else ""
     pruebas = sorted(glob.glob(os.path.join(AQUI, "prueba_*.py")))
@@ -171,7 +192,7 @@ def main(args):
             continue
         clase = tipo(ruta)
         # "azar": sin ventana pero lenta (medidas al azar): en la entrega y de noche, no en cada commit
-        if (modo == "rapida" and clase != "rapida") or (modo == "solo_ventana" and clase != "completa")                 or (modo == "solo_azar" and clase != "azar"):
+        if (modo == "rapida" and clase != "rapida") or (modo == "solo_ventana" and clase != "completa")                 or (modo == "sin_ventana" and clase == "completa")                 or (modo == "solo_azar" and clase != "azar"):
             continue
         elegidas.append((ruta, clase))
     if not elegidas:
@@ -180,7 +201,12 @@ def main(args):
     tmp = tempfile.mkdtemp(prefix="fw_bateria_")
     resultados = []
     for ruta, clase in elegidas:
+        if os.environ.get("FW_HORA_TOPE"):
+            print("EMPIEZA     %s" % os.path.basename(ruta), flush=True)
         res = correr_una(ruta, clase, cobertura, tmp)
+        if res.get("saltada"):
+            print("SALTADA     %-45s (hora tope)" % res["nombre"], flush=True)
+            continue
         v = veredicto(res)
         resultados.append((v, res))
         extra = (" " + res["conocido"]) if res.get("conocido") else ""

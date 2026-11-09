@@ -62,7 +62,7 @@ def _cobertura():
     if herramientas and herramientas not in sys.path:
         sys.path.insert(0, herramientas)
     import coverage
-    cov = coverage.Coverage(data_file=ruta, source=[os.path.join(ADDON, "swui", "fork")])
+    cov = coverage.Coverage(data_file=ruta, source=[os.path.join(ADDON, "swui")])  # todo FreeWorks (paso 9), no solo swui/fork
     cov.start()
     return cov
 

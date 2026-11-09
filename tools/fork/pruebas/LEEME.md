@@ -158,6 +158,59 @@ Material abiertos con un panel abierto (error conocido #3; en croquis no aplica)
   número finito y recalcula sin errores; borrar la ecuación deja la pieza como estaba. Encontró
   #45 (avisos de FreeCAD en inglés) y #46 (acepta infinito o NaN; con una ecuación infinita
   FreeCAD se cuelga: la prueba evalúa la fórmula antes de recalcular para no colgarse).
+- Paneles (`campos_comun.py`, `prueba_ventana_campos_pieza.py` y `_otros.py`, con ventana): en
+  cada panel, escribir lo que sea en un campo al azar y Aceptar o Cancelar. Al teclear se manda
+  cada carácter como una tecla con su texto, porque `QTest.keyClicks` cierra FreeCAD de golpe con
+  caracteres como "∞". Reglas: sin errores de Python ni ventanas colgadas; lo aceptado es válido y
+  se deshace exacto. Sin terminar de probar (09/11): dio bien en los primeros 4 paneles; la corrida
+  completa va de noche.
+
+## Tiempos máximos y capturas de referencia (paso 9)
+
+- `prueba_azar_tiempos.py` (sin ventana): piezas grandes (soldada de 22 miembros, 12
+  configuraciones, 60 sólidos, 100 variables encadenadas), con un tope de segundos para cada cosa
+  (~4 veces lo medido el 09/11). Los tiempos medidos quedan en la traza.
+- `prueba_ventana_capturas.py` (con ventana): una foto de cada pestaña de la cinta y de 6 paneles,
+  comparada con la aprobada (`capturas/aprobadas/`). Las fotos que no tienen aprobada quedan en
+  `capturas/nuevas/` (no se suben) para que el usuario las apruebe copiándolas a `aprobadas/`.
+- Mapa de cobertura de TODO FreeWorks (`swui/`, no solo `swui/fork/`): `correr.py completa
+  --cobertura` (lo corre la noche) o `correr.py sin_ventana --cobertura` (rápida + al azar).
+
+## Las 7 preguntas (paso 7)
+
+`docs/SIETE_PREGUNTAS.md`: qué prueba contesta cada pregunta en cada herramienta, y qué falta.
+Agregado a partir de ese cuadro:
+
+- La regla "guardar" controla que el archivo abra sin FreeWorks (no guarda objetos de Python
+  `swui...`).
+- El mono suma "otro_archivo": abre un segundo archivo, que no tiene que cambiar.
+- El mono suma "medida_base": cambia el largo del cubo de base y lo vuelve a poner.
+
+## La corrida de noche
+
+`noche.py` corre por tandas, una prueba a la vez, hasta la hora tope (07:30 por omisión):
+
+1. batería rápida;
+2. al azar sin ventana, con muchos casos;
+3. reglas de paneles, medidas al azar con ventana y capturas;
+4. el mono y el fuzzing de campos, con muchos casos y seguidillas largas;
+5. el mapa de cobertura de todo FreeWorks;
+6. si sobra tiempo, más vueltas del mono.
+
+No arregla nada, no sube nada y no abre Issues. Deja el informe en
+`%LOCALAPPDATA%/FreeWorks-dev/noche/<fecha>.md`; Claude lo lee a la mañana y registra lo
+encontrado.
+
+```
+D:/Freecad/bin/python.exe tools/fork/pruebas/noche.py --hasta 07:30
+D:/Freecad/bin/python.exe tools/fork/pruebas/noche.py --prueba --sin-ventana   (para ver que anda)
+```
+
+Tarea programada de Windows (la registra el usuario, o Claude con su permiso):
+
+```
+schtasks /Create /TN "FreeWorks noche" /SC DAILY /ST 01:00 /TR "D:\Freecad\bin\python.exe C:\Users\Windows\AppData\Roaming\FreeCAD\v1-1\Mod\LikeSolidWorks-UI\tools\fork\pruebas\noche.py --hasta 07:30"
+```
 
 ## Enganche de git
 

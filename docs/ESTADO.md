@@ -1,5 +1,23 @@
 # Estado del fork
 
+**09/11 mañana (sin ventanas, pedido del usuario), AGENTE ATACANTE, NOCHE, TIEMPOS, 7 PREGUNTAS.**
+- La sesión de la madrugada se cortó a las ~2:30 en el fuzzing de campos de los paneles: no hubo
+  corrida de noche. A las 8:29 no se relanzó nada (el usuario pidió la PC libre a las 8).
+- Agente atacante (paso 8.5): escribió 7 pruebas `prueba_azar_atacante_*.py` (sin ventana) solo
+  con las firmas y explicaciones de las funciones (sin ver el código). 9 errores probables,
+  confirmados a mano por Claude: Issues #48 a #54 (nombres de variable como h, atn rota, deshacer
+  agregar configuración, borrar la primera configuración, distancia máxima con punto en el eje,
+  lista de cortes partida, material). Las reglas quedan como conocidas.
+- Corrida de noche lista (`tools/fork/pruebas/noche.py`, informe en
+  %LOCALAPPDATA%/FreeWorks-dev/noche): probada solo la parte sin ventana. La tarea programada de
+  Windows NO está registrada: falta el OK del usuario (comando en el LEEME de pruebas).
+- Paso 9: tiempos máximos (`prueba_azar_tiempos.py`, todo < 2,5 s hoy); mapa de cobertura de todo
+  FreeWorks (`swui/`): sin ventana, 9 % (el completo, con ventana, de noche); capturas de
+  referencia escritas (`prueba_ventana_capturas.py`), sin correr: necesitan la ventana.
+- Paso 7: cuadro `docs/SIETE_PREGUNTAS.md`. Escritas, SIN PROBAR (necesitan ventana, no subidas):
+  abrir sin FreeWorks en la regla guardar, y en el mono "otro_archivo" y "medida_base"; también
+  el fuzzing de campos de los paneles (`campos_comun.py`, dio bien en 4 paneles antes del corte).
+
 **09/11 madrugada (el usuario durmiendo, trabajo autorizado), EL MONO EN 7 ENTORNOS: HECHO.**
 Motor común `tools/fork/pruebas/mono_comun.py` y entornos en `mono_entornos.py`: pieza, chapa,
 ensamblaje, soldadas, croquis, multicuerpo y configuraciones de pieza, cada uno comprobado
