@@ -1,5 +1,15 @@
 # Estado del fork
 
+**09/11 madrugada (el usuario durmiendo, trabajo autorizado), EL MONO EN 7 ENTORNOS: HECHO.**
+Motor común `tools/fork/pruebas/mono_comun.py` y entornos en `mono_entornos.py`: pieza, chapa,
+ensamblaje, soldadas, croquis, multicuerpo y configuraciones de pieza, cada uno comprobado
+rompiendo algo a propósito. Errores nuevos: #43 (chapa, desarrollo con error tras el DXF), #44
+(chapa, suprimir brida con otra encima), #47 (configuraciones, deshacer deja la columna en la
+tabla). Fuzzing de campos empezado: Ecuaciones (#45 avisos en inglés; #46 acepta infinito y con
+una ecuación infinita FreeCAD se cuelga: subido a mediano). Decidido sin consultar (anotado para
+el usuario): los errores ya registrados no frenan al mono ("deudas", anotadas en la traza); la
+acción de esqueleto de soldadas siempre tropieza con #2 hasta que se arregle.
+
 **08/11 noche, FUZZING DE SECUENCIAS ("el mono", paso 8.3): CÓDIGO HECHO.**
 `tools/fork/pruebas/prueba_ventana_mono.py`: seguidillas al azar de Aceptar / Cancelar en 10
 paneles, suprimir, deshacer, rehacer y guardar-abrir, controlando todo después de cada paso.

@@ -113,21 +113,51 @@ Casos por regla: `FW_CASOS_AZAR` (6 por omisión, de noche cientos). Una regla s
 
 ## Fuzzing de secuencias, "el mono" (paso 8.3)
 
-`prueba_ventana_mono.py` (con ventana): sobre una pieza, una seguidilla de acciones al azar en
-cualquier orden, como un usuario apurado: abrir un panel (Redondeo, Chaflán, Ángulo de salida,
-Matrices, Simetría, Plano, Eje, Punto, Mover cara), elegir y Aceptar (Ctrl+Z vuelve exacto,
-Ctrl+Y lo trae igual) o Cancelar (todo igual); suprimir desde el árbol y Ctrl+Z; Deshacer y
+Motor `mono_comun.py`, entornos `mono_entornos.py`, una prueba por entorno
+`prueba_ventana_mono*.py` (con ventana): sobre una pieza de arranque (sin historial de deshacer,
+como recién abierta), una seguidilla de acciones al azar en cualquier orden, como un usuario
+apurado. Acciones comunes: Aceptar (Ctrl+Z vuelve exacto, Ctrl+Y lo trae igual) o Cancelar (todo
+igual) en los paneles del entorno; editar algo hecho cambiándole un valor; suprimir; Deshacer y
 Rehacer sueltos; guardar, cerrar y abrir (igual y sin "modificado"). Después de cada paso: sin
-errores en el informe, nada colgado, sin objetos con error nuevos. Regla aparte con Ecuaciones /
-Material abiertos con el panel abierto (error conocido #3).
+errores en el informe, nada colgado, sin objetos con error nuevos. Regla aparte: Ecuaciones /
+Material abiertos con un panel abierto (error conocido #3; en croquis no aplica).
+
+| Entorno | Prueba | Acciones propias |
+|---|---|---|
+| Pieza | `prueba_ventana_mono.py` | 10 paneles (redondeo, chaflán, ángulo de salida, matrices, simetría, plano, eje, punto, mover cara) |
+| Chapa | `prueba_ventana_mono_chapa.py` | brida de arista, dobladillo, desplegar y plegar, exportar DXF |
+| Ensamblaje | `prueba_ventana_mono_ensamblaje.py` | relaciones, matriz, plano, taladro y corte de ensamblaje, suprimir componente, cambiar una medida de la pieza |
+| Soldadas | `prueba_ventana_mono_soldadas.py` | miembro, esquinas, cartela, tapa, cotas del esqueleto (cada caño igual que un marco armado de cero) |
+| Croquis | `prueba_ventana_mono_croquis.py` | las 7 herramientas de entidades |
+| Multicuerpo | `prueba_ventana_mono_multicuerpo.py` | combinar, mover/copiar y eliminar/conservar sólidos |
+| Configuraciones | `prueba_ventana_mono_configuraciones.py` | agregar configuraciones con otro largo, pasar de una a otra |
+
 - Cuántas seguidillas: `FW_CASOS_AZAR` (6); largo: 3 a `FW_LARGO_MONO` (8). De noche, muchas y
-  largas. Con `FW_ACHICAR=0` no achica el caso al fallar (para comprobar roturas a propósito).
-- No cuenta: la visibilidad después de Ctrl+Z / Ctrl+Y (es la #36, la miden las reglas de
-  paneles) ni el aviso propio de FreeCAD "... not possible ..." cuando lo elegido al azar no
-  sirve (si viene de código de FreeWorks, sí cuenta).
-- Cada seguidilla arranca de cero con un solo archivo abierto.
-- Comprobado (08/11): sacando el `abortTransaction` del Cancelar de los paneles SW, falla al
-  primer caso ("sobra DatumPoint").
+  largas. `FW_ACHICAR=0`: no achica el caso al fallar (más rápido; para comprobar roturas).
+- **Deudas**: errores ya registrados que el mono anota en la traza ("deuda #N en: ...") y no lo
+  frenan, para que siga buscando otros: `deuda` (texto en el informe) y `deuda_pasos` (aviso de
+  una comprobación) en cada entorno. Al arreglar la Issue, sacar su renglón.
+- No cuentan: la visibilidad después de Ctrl+Z / Ctrl+Y (#36), el aviso de FreeCAD "... not
+  possible ..." y los errores que vienen enteros de adentro de otro addon (SheetMetal): lo que
+  importa es que FreeWorks no deje una operación con error, y eso sí se mide.
+- Si una herramienta contesta con un aviso en ventanita al abrirse ("Hacen falta al menos dos
+  sólidos"), el mono lo lee, lo cierra y saltea el paso; igual si no queda dónde elegir.
+- Comprobado rompiendo algo a propósito en cada entorno (08-09/11): el Cancelar de los paneles SW,
+  plegar la chapa, suprimir componente, el Cancelar de soldadas, el paso de deshacer del croquis y
+  activar una configuración: todos atrapados.
+- Encontró: #43 (chapa: el desarrollo queda con error tras exportar el DXF y cambiar la pieza),
+  #44 (chapa: suprimir una brida con otra encima), #47 (configuraciones: deshacer deja la columna
+  "Suprimir ..." en la tabla); y vio en acción #2, #3, #6, #36, #37 y #38.
+
+## Fuzzing de campos (paso 8.4)
+
+- Ecuaciones (`prueba_azar_campos_ecuaciones.py`, sin ventana, TIPO "azar"): textos raros
+  (negativos, cero, enormes, "1,5", "inf", texto en un número, fórmulas rotas, referencias
+  circulares, nombres que no existen) en variables y en ecuaciones sobre cotas, por las funciones
+  que usa el diálogo. Reglas: solo se rechaza con un aviso claro en castellano; lo aceptado da un
+  número finito y recalcula sin errores; borrar la ecuación deja la pieza como estaba. Encontró
+  #45 (avisos de FreeCAD en inglés) y #46 (acepta infinito o NaN; con una ecuación infinita
+  FreeCAD se cuelga: la prueba evalúa la fórmula antes de recalcular para no colgarse).
 
 ## Enganche de git
 

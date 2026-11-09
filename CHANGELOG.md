@@ -30,6 +30,10 @@ Neueste Version oben. / Newest version first.
 - **Fuzzing de secuencias, "el mono"** (`tools/fork/pruebas/prueba_ventana_mono.py`):
   seguidillas al azar de Aceptar, Cancelar, suprimir, deshacer, rehacer y guardar-abrir sobre una
   pieza, controlando después de cada paso que todo quede como debe. Corridas largas, de noche.
+  Ahora en 7 entornos (pieza, chapa, ensamblaje, soldadas, croquis, multicuerpo,
+  configuraciones); encontró #43, #44 y #47.
+- **Fuzzing de campos** (paso 8.4): Ecuaciones con textos raros (`prueba_azar_campos_ecuaciones.py`);
+  encontró #45 y #46.
 - **Sin el aviso "Referencia" de FreeCAD, como SW** (`swui/fork/cross_body.py`): elegir una cara o
   arista de otro sólido (piezas soldadas, multicuerpo) ya no pregunta "Hacer copia independiente /
   dependiente / referencia cruzada". La operación va al sólido de lo elegido (se activa solo, también

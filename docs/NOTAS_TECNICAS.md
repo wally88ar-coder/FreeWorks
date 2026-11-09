@@ -1073,3 +1073,18 @@ que usan está en `tools/test_load.py` (`check_ia`): si una cambia de firma, el 
 - Con un radio que no entra (o una arista de costura de un cilindro), FreeCAD escribe en el
   informe "Fillet: Fillet not possible on selected shapes" durante la vista previa: es aviso
   nativo, no de FreeWorks.
+
+## Fuzzing (09/11): hallazgos en FreeCAD 1.1.4
+
+- `float()` de Python acepta "inf", "nan", "Infinity" y desborda "1e400" a infinito: todo lo que
+  lea números con `float` tiene que mirar `math.isfinite` (Issue #46).
+- Una cota de PartDesign con valor infinito (por una expresión) cuelga el recálculo para siempre
+  (cubo con un agujero, altura `=1e308*10`). `obj.evalExpression(expr)` da el valor sin recalcular.
+- `setExpression` rechaza con `Base.ParserError`, `OverflowError`, `Base.FreeCADError` o
+  `RuntimeError` (referencia circular), con textos en inglés (Issue #45).
+- Un comando que muestra un aviso en ventanita (QMessageBox) desde la cinta deja la llamada de
+  Python adentro de esa ventanita hasta que alguien la cierre: en las pruebas, un QTimer que la
+  lea y la cierre (`mono_comun.abrir`).
+- El croquis de prueba con cotas y relaciones no se deja mover cambiando `Geometry` (el croquis
+  vuelve a su lugar): para cambiar un esqueleto, cambiar sus cotas (`setDatum`).
+
