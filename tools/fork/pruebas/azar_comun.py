@@ -16,6 +16,7 @@ casos que fallaron: %LOCALAPPDATA%/FreeWorks-dev/hypothesis (se repiten primero 
 
 import math
 import os
+import sys
 import time
 import traceback
 
@@ -38,7 +39,7 @@ def hypothesis_listo():
     from hypothesis.database import DirectoryBasedExampleDatabase
     base = DirectoryBasedExampleDatabase(os.path.join(os.path.dirname(herr), "hypothesis"))
     cfg = settings(max_examples=int(os.environ.get("FW_CASOS_AZAR", "6")), deadline=None,
-                   database=base, derandomize=False, print_blob=False,
+                   database=base, derandomize=False, print_blob=False, report_multiple_bugs=False,
                    suppress_health_check=list(HealthCheck))
     return given, cfg, st
 
@@ -84,14 +85,16 @@ def aceptar():
 
 
 def limpiar():
-    from reglas_paneles import limpiar_ventana
-    limpiar_ventana()
+    if FreeCAD.GuiUp:
+        from reglas_paneles import limpiar_ventana
+        limpiar_ventana()
     for n in list(FreeCAD.listDocuments()):
         try:
             FreeCAD.closeDocument(n)
         except Exception:
             pass
-    bombear(200)
+    if FreeCAD.GuiUp:
+        bombear(200)
 
 
 def cinta(comando):
@@ -213,7 +216,10 @@ class Fallas:
     def __init__(self):
         self.lista = []
 
-    def correr(self, nombre, fn):
+    def correr(self, nombre, fn, conocido=""):
+        """`conocido` = "#N": la regla falla por un error ya registrado; si falla con una
+        comprobación (AssertionError), se anota y no frena; si deja de fallar, frena para avisar
+        ("ARREGLADO?": sacar el conocido y cerrar la Issue). Otro tipo de error frena siempre."""
         traza("regla " + nombre)
         CASOS[0] = 0
         try:
@@ -221,10 +227,16 @@ class Fallas:
             traza("  %s: bien (%d casos comprobados)" % (nombre, CASOS[0]))
             if CASOS[0] == 0:
                 self.lista.append("%s: ningún caso llegó a comprobarse (todos descartados)" % nombre)
+            elif conocido:
+                self.lista.append("%s: ARREGLADO? ya no falla: sacarle el conocido %s y cerrar la Issue"
+                                  % (nombre, conocido))
         except Exception:
             texto = traceback.format_exc(limit=4)
-            traza("  %s: FALLA\n%s" % (nombre, texto))
-            self.lista.append("%s:\n%s" % (nombre, texto))
+            if conocido and isinstance(sys.exc_info()[1], AssertionError):
+                traza("  %s: falla conocida %s (caso mínimo):\n%s" % (nombre, conocido, texto))
+            else:
+                traza("  %s: FALLA\n%s" % (nombre, texto))
+                self.lista.append("%s:\n%s" % (nombre, texto))
         finally:
             limpiar()
 

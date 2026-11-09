@@ -74,6 +74,12 @@ Casos por regla: `FW_CASOS_AZAR` (6 por omisión, de noche cientos). Una regla s
   circular, simetría, ángulo de salida. Comprobado que atrapa errores: con el radio del Redondeo
   roto a propósito (+10 %) falló y lo achicó a un cubo de 2 mm con radio 0,5.
 
+- Piezas soldadas (`prueba_azar_soldadas.py`, sin ventana, TIPO "azar": corre en la entrega y de
+  noche, no en cada commit; `correr.py solo_azar`): marcos paralelogramo y triángulo con cualquier
+  perfil que entre, tope o inglete: válidos, sin superposición (lo que comparte cada par; unir todo
+  no sirve con caños redondos), sin huecos en las esquinas, lista de cortes = largo real, guardar y
+  abrir igual, y mover un vértice del esqueleto = armar el marco de cero (#2, a tope y a inglete).
+
 ## Enganche de git
 
 `tools/fork/hooks/pre-commit` corre antes de cada commit (si el commit toca algún `.py`):

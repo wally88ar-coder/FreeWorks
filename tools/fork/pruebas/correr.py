@@ -36,7 +36,7 @@ ADDON = os.path.dirname(os.path.dirname(os.path.dirname(AQUI)))
 BIN = os.environ.get("FW_FREECAD", "D:/Freecad/bin")
 HERRAMIENTAS = os.environ.get("FW_HERRAMIENTAS",
                               os.path.join(os.environ.get("LOCALAPPDATA", ""), "FreeWorks-dev", "pkgs"))
-TIEMPO = {"rapida": 240, "completa": int(os.environ.get("FW_TIEMPO_VENTANA", "600"))}
+TIEMPO = {"rapida": 240, "azar": int(os.environ.get("FW_TIEMPO_VENTANA", "600")), "completa": int(os.environ.get("FW_TIEMPO_VENTANA", "600"))}
 
 
 def tipo(ruta):
@@ -161,7 +161,7 @@ def main(args):
     detalle = "--detalle" in args  # muestra el registro de cada prueba (qué hizo, paso a paso)
     args = [a for a in args if a not in ("--cobertura", "--detalle")]
     modo = "rapida"
-    if args and args[0] in ("rapida", "completa", "solo_ventana"):
+    if args and args[0] in ("rapida", "completa", "solo_ventana", "solo_azar"):
         modo = args.pop(0)
     filtro = args[0] if args else ""
     pruebas = sorted(glob.glob(os.path.join(AQUI, "prueba_*.py")))
@@ -170,7 +170,8 @@ def main(args):
         if filtro and filtro not in os.path.basename(ruta):
             continue
         clase = tipo(ruta)
-        if (modo == "rapida" and clase != "rapida") or (modo == "solo_ventana" and clase != "completa"):
+        # "azar": sin ventana pero lenta (medidas al azar): en la entrega y de noche, no en cada commit
+        if (modo == "rapida" and clase != "rapida") or (modo == "solo_ventana" and clase != "completa")                 or (modo == "solo_azar" and clase != "azar"):
             continue
         elegidas.append((ruta, clase))
     if not elegidas:

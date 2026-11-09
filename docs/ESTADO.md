@@ -5,6 +5,11 @@
 Siguen: soldadas, chapa (referencia SW), ensamblajes, croquis, multicuerpo, Mover cara, Evaluar,
 configuraciones.
 
+**08/11 noche, MEDIDAS AL AZAR, grupo 2 (soldadas): HECHO.** `prueba_azar_soldadas.py` (sin
+ventana). Encontró que #2 es más amplio: también a TOPE, al mover un vértice del esqueleto
+(cambia el ángulo de la esquina), quedan huecos (hasta 22 mm) y la lista de cortes da largos que
+no son los reales. Ficha #2 actualizada.
+
 **Checklist de control de calidad**: pestaña "Control de calidad" del documento de checklists (https://claude.ai/artifact/URHdbLtcw8n3aXAYoYt6U1#94f370dd-1e97), pedida por el usuario el 08/11; tildar ahí lo que se cierra.
 
 **08/11 noche, REGLAS DE PANELES, SEGUNDA TANDA: HECHO (48 paneles + 4 variantes).** Sumados Eje y
