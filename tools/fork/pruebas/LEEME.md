@@ -158,6 +158,11 @@ Material abiertos con un panel abierto (error conocido #3; en croquis no aplica)
   número finito y recalcula sin errores; borrar la ecuación deja la pieza como estaba. Encontró
   #45 (avisos de FreeCAD en inglés) y #46 (acepta infinito o NaN; con una ecuación infinita
   FreeCAD se cuelga: la prueba evalúa la fórmula antes de recalcular para no colgarse).
+- Configuraciones, material y chapa (`prueba_azar_campos_otros.py`, sin ventana): nombres raros al
+  agregar y renombrar configuraciones, valores raros para una medida (cero, negativo, enorme,
+  infinito, NaN), celdas de la tabla escritas a mano con cualquier cosa; la copia del material y el
+  dato de chapa guardados con texto roto; espesores raros para el nombre del DXF. Encontró #55 y
+  sumó casos a #46 (los tolera como deuda, anotada en la traza).
 - Paneles (`campos_comun.py`, `prueba_ventana_campos_pieza.py` y `_otros.py`, con ventana): en
   cada panel, escribir lo que sea en un campo al azar y Aceptar o Cancelar. Al teclear se manda
   cada carácter como una tecla con su texto, porque `QTest.keyClicks` cierra FreeCAD de golpe con
@@ -178,6 +183,11 @@ Material abiertos con un panel abierto (error conocido #3; en croquis no aplica)
 
 ## Las 7 preguntas (paso 7)
 
+- Sin ventana, pregunta 4 ("abre sin FreeWorks"): `prueba_azar_sin_freeworks.py` arma con las
+  funciones públicas un marco soldado con esquinas, cartela y tapa, configuraciones, ecuaciones, un
+  sólido espejado, material y dato de chapa; guarda, controla que el archivo no guarde objetos de
+  Python de FreeWorks y lo abre: todo sano y con el mismo volumen.
+
 `docs/SIETE_PREGUNTAS.md`: qué prueba contesta cada pregunta en cada herramienta, y qué falta.
 Agregado a partir de ese cuadro:
 
@@ -185,6 +195,13 @@ Agregado a partir de ese cuadro:
   `swui...`).
 - El mono suma "otro_archivo": abre un segundo archivo, que no tiene que cambiar.
 - El mono suma "medida_base": cambia el largo del cubo de base y lo vuelve a poner.
+
+## Los errores conocidos siguen abiertos
+
+`prueba_azar_conocidos.py` (sin ventana, necesita internet): junta los números de Issue que las
+pruebas toleran (CONOCIDO, conocido=, DEUDA, deuda, deuda_pasos) y consulta GitHub: si una está
+cerrada o no existe, falla con el archivo y el número. Así una prueba no queda tapando un error
+que ya se arregló. Comprobado con un #16 (cerrada) y un #9999 (no existe) puestos a propósito.
 
 ## La corrida de noche
 

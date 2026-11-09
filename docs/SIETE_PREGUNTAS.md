@@ -71,6 +71,9 @@ Abreviaturas de las pruebas:
 
 ## Estado
 
+- Pregunta 4 sin ventana: `prueba_azar_sin_freeworks.py` (09/11, bien): soldadas, configuraciones,
+  ecuaciones, espejo, material y chapa abren sin FreeWorks.
+
 - Cuadro armado: 09/11.
 - Las tres pruebas nuevas (medida_base, otro_archivo y abrir sin FreeWorks en la regla
   "guardar") están escritas pero **sin probar**. Necesitan la ventana: corren la noche del 09/11

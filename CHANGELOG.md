@@ -36,6 +36,9 @@ Neueste Version oben. / Newest version first.
   encontró #45 y #46.
 - **Agente atacante** (paso 8.5): 7 pruebas escritas sin ver el código
   (`prueba_azar_atacante_*.py`); encontró #48 a #54.
+- **Más pruebas sin ventana**: fuzzing de campos en configuraciones, material y chapa (encontró #55),
+  "abre sin FreeWorks" con todo lo que se arma por funciones, y el control de que los errores que
+  las pruebas toleran sigan abiertos en GitHub.
 - **Corrida de noche** (`tools/fork/pruebas/noche.py`), **tiempos máximos**
   (`prueba_azar_tiempos.py`), mapa de cobertura de todo FreeWorks y cuadro de las 7 preguntas
   (`docs/SIETE_PREGUNTAS.md`).

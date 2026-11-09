@@ -1,5 +1,13 @@
 # Estado del fork
 
+**09/11 mediodía (sin ventanas), TRES PRUEBAS MÁS:** fuzzing de campos en configuraciones, material
+y chapa (`prueba_azar_campos_otros.py`: encontró #55, renombrar una configuración con la pieza en
+error la deja rota, y más casos de #46); "abre sin FreeWorks" con todo lo que se arma por funciones
+(`prueba_azar_sin_freeworks.py`: bien, 10 sólidos); y el control de que los errores tolerados por las
+pruebas sigan abiertos en GitHub (`prueba_azar_conocidos.py`: 32, todos abiertos). La revisión por
+otro agente encontró que la regla de las celdas no escribía nada (arreglado) y destapó #56 (el
+material y el dato de chapa guardados con datos rotos revientan al leerlos).
+
 **09/11 mañana (sin ventanas, pedido del usuario), AGENTE ATACANTE, NOCHE, TIEMPOS, 7 PREGUNTAS.**
 - La sesión de la madrugada se cortó a las ~2:30 en el fuzzing de campos de los paneles: no hubo
   corrida de noche. A las 8:29 no se relanzó nada (el usuario pidió la PC libre a las 8).
