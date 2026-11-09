@@ -80,6 +80,13 @@ Casos por regla: `FW_CASOS_AZAR` (6 por omisión, de noche cientos). Una regla s
   no sirve con caños redondos), sin huecos en las esquinas, lista de cortes = largo real, guardar y
   abrir igual, y mover un vértice del esqueleto = armar el marco de cero (#2, a tope y a inglete).
 
+- Chapa (`prueba_ventana_azar_chapa.py`): Brida base de perfil abierto al azar (1 a 3 pliegues)
+  y Brida de arista al azar (largo, ángulo, cómo se mide, posición): lo puesto queda en la chapa,
+  y el desarrollo tiene la superficie que da SW con el factor K (volumen/espesor − Σ ángulo·ancho
+  ·(0,5 − K)·espesor), con una línea de plegado por pliegue y el contorno del DXF cerrado.
+  Comprobado: con el desarrollo forzado a K = 0,5 falla enseguida. Falta comparar contra SW mismo
+  (el puente con SW no mide desarrollos todavía).
+
 ## Enganche de git
 
 `tools/fork/hooks/pre-commit` corre antes de cada commit (si el commit toca algún `.py`):
