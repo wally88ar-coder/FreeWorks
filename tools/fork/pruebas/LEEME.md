@@ -92,8 +92,9 @@ Casos por regla: `FW_CASOS_AZAR` (6 por omisión, de noche cientos). Una regla s
   las caras globales), Concéntrica (ejes en la misma recta), la fija no se mueve, cambiar la medida
   de una pieza y que se siga cumpliendo, guardar y abrir, Matriz de componentes (paso exacto, sin
   corrimientos) y Taladro de ensamblaje en una pieza girada (eje en el punto marcado). Comprobado:
-  con la Distancia guardada un 10 % de más, falla. Faltan: Tangente, simetría de componentes,
-  Extruir corte de ensamblaje, configuraciones de ensamblaje.
+  con la Distancia guardada un 10 % de más, falla. También: Tangente, simetría de componentes
+  (copia en espejo), Extruir corte de ensamblaje en una pieza girada (saca rectángulo × alto) y
+  configuraciones (suprimir en una, volver a la otra). 10 reglas en total, todas bien.
 
 ## Enganche de git
 

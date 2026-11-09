@@ -14,7 +14,12 @@ resolver). Piezas de medida al azar; la que se mueve arranca en una posición y 
 - guardar y abrir: cada componente queda donde estaba;
 - Matriz de componentes: n instancias a paso p sobre la dirección elegida, sin corrimientos;
 - Taladro de ensamblaje sobre una pieza movida y girada al azar: el agujero (Ø ISO 273) queda en
-  la pieza con su eje en el punto marcado y perpendicular a la cara.
+  la pieza con su eje en el punto marcado y perpendicular a la cara;
+- Tangente: el eje del perno paralelo a la cara y a la distancia de su radio;
+- Simetría de componentes: la copia en espejo (centro de masa reflejado) y del mismo volumen;
+- Extruir corte de ensamblaje Por todo en una pieza girada: saca rectángulo × alto;
+- Configuraciones: un componente suprimido en la nueva vuelve a estar como antes en la primera, y
+  suprimido otra vez al volver a la nueva.
 Casos por regla: FW_CASOS_AZAR (6 por omisión)."""
 TIPO = "completa"
 
@@ -345,12 +350,151 @@ def taladro_girado(data, medida_m, fu, fv):
     assert lejos < 1e-2, "el agujero quedó a %.4f mm del punto marcado (pieza girada)" % lejos
 
 
+@cfg
+@given(data=st.data())
+def tangente(data):
+    """Tangente entre una cara plana de la placa y el perno: el eje del perno queda paralelo a la
+    cara y a una distancia igual a su radio."""
+    r = round(data.draw(st.floats(2, 10)), 2)
+    doc, asm, (placa, perno) = _armar(data, agujero=r + 0.5, perno=(r, round(data.draw(st.floats(10, 60)), 1)))
+    fijo0 = placa.Placement
+    cara = data.draw(st.sampled_from(_caras_planas(placa)))
+    cil = ["Face%d" % (i + 1) for i, f in enumerate(perno.LinkedObject.Shape.Faces) if f.Surface.__class__.__name__ == "Cylinder"]
+    res = _relacionar(doc, asm, "tangent", [(placa, cara), (perno, cil[0])])
+    assert res in (0, None), "tangente: el ensamblaje no se resolvió (%s)" % res
+    comprobado()
+    _fijo_quieto(placa, fijo0, "tangente")
+    p1, n1 = _plano(_cara_global(placa, cara))
+    s = _cara_global(perno, cil[0]).Surface
+    assert abs(s.Axis.dot(n1)) < 1e-3, "tangente: el eje del perno no quedó paralelo a la cara"
+    d = abs((s.Center - p1).dot(n1))
+    assert abs(d - r) < 1e-2, "tangente: el eje quedó a %.4f de la cara, el radio es %s" % (d, r)
+
+
+@cfg
+@given(data=st.data())
+def simetria_componentes(data):
+    """Simetría de componentes por una cara plana de la placa: la copia queda en espejo (su centro
+    de masa es el reflejo del original) y es la misma pieza (mismo volumen)."""
+    import Part
+    import FreeCADGui
+    from azar_comun import aceptar, cinta, esperar_panel
+    doc, asm, (placa, bloque) = _armar(data)
+    cara = data.draw(st.sampled_from(_caras_planas(placa)))
+    antes = {o.Name for o in doc.Objects}
+    cinta("SWUI_MirrorComponents")
+    assert esperar_panel(), "no se abrió la Simetría de componentes"
+    from swui.fork import panel_guard
+    p = panel_guard.open_panel()
+    p._activate("seeds")
+    bombear(200)
+    FreeCADGui.Selection.addSelection(doc.Name, asm.Name, "%s.%s.Face1" % (bloque.Name, bloque.LinkedObject.Name))
+    bombear(500)
+    p._activate("dir1")
+    bombear(200)
+    FreeCADGui.Selection.addSelection(doc.Name, asm.Name, "%s.%s.%s" % (placa.Name, placa.LinkedObject.Name, cara))
+    bombear(1200)
+    assert aceptar(), "la Simetría de componentes no aceptó"
+    doc.recompute()
+    comprobado()
+    copias = [o for o in doc.Objects if o.Name not in antes and o.TypeId == "App::Link"]
+    assert copias, "no quedó ninguna copia"
+    p1, n1 = _plano(_cara_global(placa, cara))
+    c0 = _cdm(Part.getShape(bloque))
+    reflejo = c0 - n1 * (2 * (c0 - p1).dot(n1))
+    formas = [Part.getShape(e) for c in copias for e in (c.ElementList or [c])]
+    assert formas, "la copia no tiene forma"
+    c1 = _cdm(formas[0])
+    assert (c1 - reflejo).Length < 1e-2, "la copia quedó %.4f mm corrida del espejo" % (c1 - reflejo).Length
+    assert abs(formas[0].Volume - Part.getShape(bloque).Volume) < 1e-3 * Part.getShape(bloque).Volume, \
+        "la copia no tiene el volumen de la pieza"
+
+
+@cfg
+@given(data=st.data(), fu=st.floats(0.25, 0.5), fv=st.floats(0.25, 0.5), fw=st.floats(0.1, 0.3), fh=st.floats(0.1, 0.3))
+def corte_girado(data, fu, fv, fw, fh):
+    """Extruir corte de ensamblaje (Por todo) con un rectángulo sobre la cara de arriba de una pieza
+    movida y GIRADA al azar: saca exactamente rectángulo × alto de la pieza."""
+    import Part
+    from azar_comun import aceptar, esperar_panel
+    doc, asm, (placa, bloque) = _armar(data)
+    caja = [o for o in bloque.LinkedObject.Document.Objects if o.TypeId == "PartDesign::AdditiveBox"][0]
+    L, A, H = caja.Length.Value, caja.Width.Value, caja.Height.Value
+    arriba = None
+    for i, f in enumerate(bloque.LinkedObject.Shape.Faces):
+        n = f.normalAt(*f.ParameterRange[0:3:2])
+        if f.Surface.__class__.__name__ == "Plane" and n.z > 0.99:
+            arriba = "Face%d" % (i + 1)
+    vol0 = bloque.LinkedObject.Shape.Volume
+    from swui.fork import assembly_features as af
+    doc.openTransaction("Croquis de ensamblaje")
+    sk = af.make_sketch(asm, bloque, "%s.%s" % (bloque.LinkedObject.Name, arriba))
+    # rectángulo en coordenadas de la PIEZA (cara de arriba, z = H), pasado al croquis
+    x0, y0, w, h = L * fu, A * fv, L * fw, A * fh
+    plc = bloque.Placement
+    pts = [sk.Placement.inverse().multVec(plc.multVec(V(x, y, H)))
+           for x, y in ((x0, y0), (x0 + w, y0), (x0 + w, y0 + h), (x0, y0 + h))]
+    for i in range(4):
+        a, b = pts[i], pts[(i + 1) % 4]
+        sk.addGeometry(Part.LineSegment(V(a.x, a.y, 0), V(b.x, b.y, 0)))
+    sk.recompute()
+    doc.commitTransaction()
+    af.open_panel_new(asm, "cut", sk)
+    assert esperar_panel(), "no se abrió el panel del corte de ensamblaje"
+    from swui.fork import panel_guard
+    p = panel_guard.open_panel()
+    p.end.setCurrentIndex(p.end.findData("ThroughAll"))
+    bombear(1200)
+    assert aceptar(), "el corte de ensamblaje no aceptó"
+    doc.recompute()
+    bloque.LinkedObject.Document.recompute()
+    doc.recompute()
+    comprobado()
+    sacado = vol0 - bloque.LinkedObject.Shape.Volume
+    assert abs(sacado - w * h * H) < 1e-3 * w * h * H + 0.01, \
+        "el corte sacó %.3f mm³, el rectángulo por el alto da %.3f (pieza girada)" % (sacado, w * h * H)
+
+
+@cfg
+@given(data=st.data())
+def configuraciones(data):
+    """Configuración nueva en el ensamblaje con un componente suprimido: en esa configuración está
+    suprimido; al volver a la primera está como antes (mismo lugar, sin suprimir); y otra vez en la
+    nueva vuelve a estar suprimido."""
+    from swui.fork import config_asm as ca
+    from swui.fork import configurations as cf
+    doc, asm, (placa, bloque) = _armar(data)
+    pos = {c.Name: c.Placement for c in (placa, bloque)}
+    primera = cf.active(doc) or (cf.names(doc) or [None])[0]
+    nombre = cf.add(doc, "Prueba%d" % data.draw(st.integers(1, 999)))
+    doc.recompute()
+    ca.suppress(bloque, True, scope="this")
+    doc.recompute()
+    bombear(300)
+    comprobado()
+    assert ca.is_suppressed(bloque), "en %s el componente no quedó suprimido" % nombre
+    if primera is None:
+        primera = [n for n in cf.names(doc) if n != nombre][0]
+    cf.activate(doc, primera)
+    doc.recompute()
+    bombear(300)
+    assert not ca.is_suppressed(bloque), "al volver a %s el componente sigue suprimido" % primera
+    for n, plc in pos.items():
+        assert doc.getObject(n).Placement.isSame(plc, 1e-6), "al volver a %s, %s se movió" % (primera, n)
+    cf.activate(doc, nombre)
+    doc.recompute()
+    bombear(300)
+    assert ca.is_suppressed(bloque), "al volver a %s el componente ya no está suprimido" % nombre
+
+
 def prueba():
     fallas = Fallas()
     solo = os.environ.get("FW_CASO", "")
     for nombre, fn in (("relaciones entre caras", caras), ("concéntrica", concentrica),
                        ("cambiar una pieza", cambiar_pieza), ("guardar y abrir", guardar),
-                       ("matriz de componentes", matriz_componentes), ("taladro en pieza girada", taladro_girado)):
+                       ("matriz de componentes", matriz_componentes), ("taladro en pieza girada", taladro_girado),
+                       ("tangente", tangente), ("simetría de componentes", simetria_componentes),
+                       ("corte en pieza girada", corte_girado), ("configuraciones", configuraciones)):
         if not solo or solo.lower() in nombre:
             fallas.correr(nombre, fn)
     fallas.terminar()
