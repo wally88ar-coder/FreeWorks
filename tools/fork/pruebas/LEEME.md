@@ -96,6 +96,17 @@ Casos por regla: `FW_CASOS_AZAR` (6 por omisión, de noche cientos). Una regla s
   (copia en espejo), Extruir corte de ensamblaje en una pieza girada (saca rectángulo × alto) y
   configuraciones (suprimir en una, volver a la otra). 10 reglas en total, todas bien.
 
+- Croquis (`prueba_azar_croquis.py`, sin ventana): mover/girar/escalar y volver, simetría dos
+  veces, copiar, matriz; sin relaciones malas. Encontró #41 (Girar con centro fuera del origen).
+- Multicuerpo (`prueba_azar_multicuerpo.py`, sin ventana): Alcance exacto por sólido, detectar
+  los sólidos que atraviesa un Por todo (#42), sacar del Alcance (#1).
+- Evaluar (`prueba_azar_evaluar.py`, sin ventana): masa, centro de masa e inercia de cubos y
+  cilindros girados al azar contra fórmulas de libro, varios sólidos con Steiner.
+- Configuraciones de pieza (`prueba_azar_configuraciones.py`, sin ventana): ir y venir entre
+  configuraciones en cualquier orden, guardar y abrir.
+- Mover cara (`prueba_ventana_azar_mover_cara.py`, con ventana): equidistanciar (volumen = área ×
+  d) y girar (inclinación exacta).
+
 ## Enganche de git
 
 `tools/fork/hooks/pre-commit` corre antes de cada commit (si el commit toca algún `.py`):
