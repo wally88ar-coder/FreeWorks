@@ -10,22 +10,8 @@ Regla aparte: Ecuaciones o Material abiertos con un panel abierto (error conocid
 Seguidillas por regla: FW_CASOS_AZAR (6); largo: 3 a FW_LARGO_MONO (8). De noche, muchas y largas."""
 TIPO = "completa"
 
-from mono_comun import Entorno, correr_reglas  # noqa: E402
-
-
-class Pieza(Entorno):
-    nombre = "pieza"
-    vinculos = ("body", "hueco")
-
-    def armar(self):
-        from casos_pieza import armar_pieza
-        self.body, self.hueco = armar_pieza(self.doc)
-
-    def crear_casos(self):
-        from casos_pieza import AnguloSalida, Chaflan, MatrizCircular, MatrizLineal, Redondeo, Simetria
-        from casos_pieza2 import Eje, MoverCara, Plano, Punto
-        return [c() for c in (Redondeo, Chaflan, AnguloSalida, MatrizLineal, MatrizCircular, Simetria,
-                              Plano, Eje, Punto, MoverCara)]
+from mono_comun import correr_reglas  # noqa: E402
+from mono_entornos import Pieza  # noqa: E402
 
 
 def prueba():

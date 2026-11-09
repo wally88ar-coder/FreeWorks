@@ -76,6 +76,9 @@ class Entorno:
     # aparece en el informe, parte del nombre del objeto que queda con error o None). Se anotan en
     # la traza.
     deuda = ()
+    # comprobaciones que fallan por un error ya registrado: ("#N", texto del aviso, parte del paso,
+    # p. ej. "aceptar Taladro de ensamblaje"). El paso se anota en la traza y el mono sigue.
+    deuda_pasos = ()
 
     def __init__(self):
         from azar_comun import limpiar
@@ -134,7 +137,13 @@ class Entorno:
     # --- guardar y abrir ---
     def guardar_y_abrir(self):
         import FreeCADGui
-        nombres = {v: getattr(self, v).Name for v in self.vinculos if getattr(self, v, None) is not None}
+        nombres = {}
+        for v in self.vinculos:
+            x = getattr(self, v, None)
+            if isinstance(x, (list, tuple)):
+                nombres[v] = [o.Name for o in x]
+            elif x is not None:
+                nombres[v] = x.Name
         hechos = [(n, c) for n, c in self.hechos]
         for o in self.otros_documentos():  # las piezas de un ensamblaje, junto a él
             if getattr(o, "FileName", ""):
@@ -146,7 +155,7 @@ class Entorno:
         self.doc = FreeCAD.openDocument(ruta)
         bombear(1200)
         for v, n in nombres.items():
-            setattr(self, v, self.doc.getObject(n))
+            setattr(self, v, [self.doc.getObject(x) for x in n] if isinstance(n, list) else self.doc.getObject(n))
         self.hechos = hechos
         self.reabierto()
         self.atar()
@@ -227,12 +236,21 @@ def chequear_ventana(m, que, desde, malos0):
     assert not nuevos, "%s: quedaron con error: %s" % (que, sorted(nuevos))
 
 
-def deshacer_y_rehacer(m, que, f0, f1):
+def sin_lo_previo(caso, f, f0):
+    """La foto sin lo que el caso arma ANTES del panel en su propio paso de deshacer (el croquis
+    de un taladro de ensamblaje): Cancelar o Ctrl+Z del panel no lo sacan, y está bien."""
+    previos = {n for n, _t in getattr(caso, "antes_del_panel", ())} - set(f0["objs"])
+    if not previos:
+        return f
+    return {"objs": {n: v for n, v in f["objs"].items() if n not in previos}, "undo": f["undo"], "abierta": f["abierta"]}
+
+
+def deshacer_y_rehacer(m, que, f0, f1, caso=None):
     from reglas_paneles import ctrl_y, ctrl_z
     ctrl_z(m.doc)
     m.doc.recompute()
     bombear(400)
-    d = diferencias(f0, m.foto(), visibilidad=False)
+    d = diferencias(f0, sin_lo_previo(caso, m.foto(), f0), visibilidad=False)
     assert not d, "%s: Ctrl+Z no volvió a como estaba: %s" % (que, d[:3])
     ctrl_y(m.doc)
     m.doc.recompute()
@@ -265,11 +283,11 @@ def paso(m, accion, semilla, historia):
                       and m.doc.getObject(n) is not None and m.doc.getObject(n).TypeId in _tipos(caso)]
             if nuevos and getattr(caso, "cambiar", None) is not None:
                 m.hechos.append((nuevos[-1], caso))
-            deshacer_y_rehacer(m, que, f0, f1)
+            deshacer_y_rehacer(m, que, f0, f1, caso)
         else:
             correr(caso.cancelar())
             bombear(800)
-            d = diferencias(f0, m.foto())
+            d = diferencias(f0, sin_lo_previo(caso, m.foto(), f0))
             assert not d, "%s: no aceptó y quedó algo: %s" % (que, d[:3])
     elif accion == "cancelar":
         abrir(caso, rng)
@@ -277,7 +295,7 @@ def paso(m, accion, semilla, historia):
         bombear(800)
         correr(caso.cancelar())
         bombear(800)
-        d = diferencias(f0, m.foto())
+        d = diferencias(f0, sin_lo_previo(caso, m.foto(), f0))
         assert not d, "%s: Cancelar dejó algo: %s" % (que, d[:3])
     elif accion == "editar":
         vivos = [(n, c) for n, c in m.hechos if m.doc.getObject(n) is not None
@@ -315,7 +333,7 @@ def paso(m, accion, semilla, historia):
         bombear(500)
         correr(caso.cancelar())
         bombear(800)
-        d = diferencias(f0, m.foto())
+        d = diferencias(f0, sin_lo_previo(caso, m.foto(), f0))
         assert not d, "%s: con %s abierto, el Cancelar del panel no deshizo: %s" % (que, accion, d[:3])
     elif accion == "suprimir":
         import FreeCADGui
@@ -371,6 +389,16 @@ def regla_mono(entorno, acciones):
                 paso(m, accion, semilla, historia)
             except NadaQueElegir:
                 traza("    (%s: no queda dónde; se saltea)" % accion)
+            except AssertionError as e:
+                texto = str(e)
+                ultimo = texto.split(": ", 1)[0].split(" → ")[-1]
+                cual = [i for i, aviso, parte in m.deuda_pasos if aviso in texto and parte in ultimo]
+                if not cual:
+                    raise
+                traza("    (deuda %s en: %s)" % (cual[0], texto.split(": ", 1)[0]))
+                from reglas_paneles import limpiar_ventana
+                limpiar_ventana()
+                historia.append(ultimo)
         comprobado()
     return regla
 
