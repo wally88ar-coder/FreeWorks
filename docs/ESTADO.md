@@ -15,6 +15,11 @@ no son los reales. Ficha #2 actualizada.
 Brida base y Brida de arista al azar, desarrollo igual a la cuenta de SW con el factor K, DXF.
 Sin errores nuevos.
 
+**08/11 noche, MEDIDAS AL AZAR, grupo 4 (ensamblajes): HECHO en lo principal**
+(`prueba_ventana_azar_ensamblaje.py`): relaciones entre caras, concéntrica, pieza fija, cambiar
+una pieza, guardar, matriz de componentes y taladro en pieza girada. Sin errores nuevos. Faltan
+Tangente, simetría de componentes, corte de ensamblaje y configuraciones de ensamblaje.
+
 **Checklist de control de calidad**: pestaña "Control de calidad" del documento de checklists (https://claude.ai/artifact/URHdbLtcw8n3aXAYoYt6U1#94f370dd-1e97), pedida por el usuario el 08/11; tildar ahí lo que se cierra.
 
 **08/11 noche, REGLAS DE PANELES, SEGUNDA TANDA: HECHO (48 paneles + 4 variantes).** Sumados Eje y

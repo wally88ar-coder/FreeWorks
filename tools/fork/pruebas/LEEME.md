@@ -87,6 +87,14 @@ Casos por regla: `FW_CASOS_AZAR` (6 por omisión, de noche cientos). Una regla s
   Comprobado: con el desarrollo forzado a K = 0,5 falla enseguida. Falta comparar contra SW mismo
   (el puente con SW no mide desarrollos todavía).
 
+- Ensamblajes (`prueba_ventana_azar_ensamblaje.py`): piezas de medida al azar, la que se mueve en
+  posición y giro al azar. Coincidente, Distancia, Ángulo, Paralela, Perpendicular (medidas sobre
+  las caras globales), Concéntrica (ejes en la misma recta), la fija no se mueve, cambiar la medida
+  de una pieza y que se siga cumpliendo, guardar y abrir, Matriz de componentes (paso exacto, sin
+  corrimientos) y Taladro de ensamblaje en una pieza girada (eje en el punto marcado). Comprobado:
+  con la Distancia guardada un 10 % de más, falla. Faltan: Tangente, simetría de componentes,
+  Extruir corte de ensamblaje, configuraciones de ensamblaje.
+
 ## Enganche de git
 
 `tools/fork/hooks/pre-commit` corre antes de cada commit (si el commit toca algún `.py`):
