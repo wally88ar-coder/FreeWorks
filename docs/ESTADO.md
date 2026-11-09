@@ -23,8 +23,9 @@ configuraciones. Sin errores nuevos.
 **08/11 noche, MEDIDAS AL AZAR, grupos 5 a 8 (croquis, multicuerpo, Evaluar, configuraciones de
 pieza): HECHOS** (sin ventana). Encontraron #41 (Girar entidades del croquis gira mal si el
 centro no es el origen) y #42 (corte Por todo con alcance automático no ve los sólidos fuera del
-alto del propio); confirmaron #1. Mover cara (con ventana): prueba escrita, falta correrla (el
-usuario estaba usando la PC).
+alto del propio); confirmaron #1. Mover cara (con ventana): HECHO, equidistanciar y girar bien;
+comprobado que atrapa una distancia rota a propósito (+10 %). Paso 8.2 terminado salvo planos
+(consignado) y comparar la chapa contra SW mismo (falta que el puente mida desarrollos).
 
 **Checklist de control de calidad**: pestaña "Control de calidad" del documento de checklists (https://claude.ai/artifact/URHdbLtcw8n3aXAYoYt6U1#94f370dd-1e97), pedida por el usuario el 08/11; tildar ahí lo que se cierra.
 

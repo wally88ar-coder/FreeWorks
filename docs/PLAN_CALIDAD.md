@@ -7,8 +7,9 @@ y `casos_*.py`). **Los paneles de planos (TechDraw) quedan fuera hasta que se en
 de forma integral** (decisión del usuario, 08/11). Encontró
 #31 a #40 y verificó #6, #19 y #29; descartó #16. Paso 8.2 (geometría al azar), en curso: hechos
 los grupos 1 (operaciones de pieza), 2 (soldadas: amplió #2), 3 (chapa, salvo comparar contra SW
-mismo) y 4 (ensamblajes, 10 reglas). Siguen croquis, multicuerpo, Mover cara, Evaluar y configuraciones
-de pieza. Pasos 8.3 a 8.5 y 9: sin empezar. El avance se tilda en la pestaña "Control de calidad"
+mismo) y 4 (ensamblajes, 10 reglas). Hechos también croquis (#41), multicuerpo (#42), Mover cara, Evaluar y
+configuraciones de pieza: paso 8.2 terminado salvo planos (consignado) y comparar la chapa contra SW
+mismo. Pasos 8.3 a 8.5 y 9: sin empezar. El avance se tilda en la pestaña "Control de calidad"
 del documento de checklists. Corrección de errores: después de terminar las herramientas
 (decisión del usuario, 08/11).
 
