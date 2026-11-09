@@ -34,13 +34,19 @@ def hypothesis_listo():
                                                              "FreeWorks-dev", "pkgs")
     if herr not in sys.path:
         sys.path.insert(0, herr)
-    from hypothesis import HealthCheck, given, settings
+    from hypothesis import HealthCheck, Phase, given, settings
     from hypothesis import strategies as st
     from hypothesis.database import DirectoryBasedExampleDatabase
     base = DirectoryBasedExampleDatabase(os.path.join(os.path.dirname(herr), "hypothesis"))
+    # Cuando una regla falla, Hypothesis "achica" el caso probando muchas variantes más chicas: con
+    # ventana eso son decenas de piezas más (08/11: más de 50 en Mover cara). FW_ACHICAR=0 lo apaga
+    # (para comprobar que una prueba atrapa una rotura a propósito, basta con que falle).
+    fases = [Phase.explicit, Phase.reuse, Phase.generate]
+    if os.environ.get("FW_ACHICAR", "1") != "0":
+        fases.append(Phase.shrink)
     cfg = settings(max_examples=int(os.environ.get("FW_CASOS_AZAR", "6")), deadline=None,
                    database=base, derandomize=False, print_blob=False, report_multiple_bugs=False,
-                   suppress_health_check=list(HealthCheck))
+                   phases=fases, suppress_health_check=list(HealthCheck))
     return given, cfg, st
 
 
@@ -158,8 +164,19 @@ def tildar(nombre, valor):
 # --- Piezas --------------------------------------------------------------------------------------
 
 
+MAX_ABIERTOS = 4  # pedido del usuario (08/11): no acumular archivos abiertos (la PC tiene ~7,4 GB)
+
+
+def cerrar_viejos(dejar=MAX_ABIERTOS - 1):
+    """Antes de abrir otro: si ya hay `dejar` o más documentos abiertos, se cierran todos (cada caso
+    al azar arma los suyos de cero; nada de lo anterior hace falta)."""
+    if len(FreeCAD.listDocuments()) >= dejar:
+        limpiar()
+
+
 def documento(nombre="Azar"):
     import FreeCADGui
+    cerrar_viejos()
     doc = FreeCAD.newDocument(nombre)
     doc.UndoMode = 1
     body = doc.addObject("PartDesign::Body", "Cuerpo")

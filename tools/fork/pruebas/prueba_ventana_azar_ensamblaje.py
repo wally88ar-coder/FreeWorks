@@ -122,6 +122,10 @@ giro = st.tuples(st.floats(-1, 1), st.floats(-1, 1), st.floats(-1, 1), st.floats
 
 
 def _armar(data, agujero=0.0, perno=None):
+    # cada caso abre 3 archivos (ensamblaje + 2 piezas): se cierran los del caso anterior antes de
+    # armar el nuevo (la PC tiene poca memoria; pedido del usuario 08/11)
+    from azar_comun import limpiar
+    limpiar()
     carpeta = carpeta_temporal()
     W, D, H = data.draw(medida), data.draw(medida), data.draw(medida)
     if perno:

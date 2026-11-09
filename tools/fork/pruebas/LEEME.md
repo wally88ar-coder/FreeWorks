@@ -66,6 +66,10 @@ forma integral.
 `pip install --target ... hypothesis`). Van por el panel, como el usuario; cada regla compara la
 pieza con la fórmula de libro y lo puesto en el panel con lo que quedó en el objeto. Si una falla,
 Hypothesis achica el caso al más simple y lo recuerda (`%LOCALAPPDATA%/FreeWorks-dev/hypothesis`).
+Memoria (pedido del usuario 08/11): nunca más de 4 archivos abiertos a la vez (`cerrar_viejos`;
+en ensamblajes, se cierran los del caso anterior). Al fallar, Hypothesis achica el caso probando
+muchas variantes (con ventana, decenas de piezas): para comprobar una rotura a propósito usar
+`FW_ACHICAR=0`, y no hacerlo con ventana mientras el usuario usa la PC.
 Casos por regla: `FW_CASOS_AZAR` (6 por omisión, de noche cientos). Una regla sola:
 `FW_CASO=redondeo`. Ojo al escribir en campos de FreeCAD: Enter = Aceptar del panel (usar Tab).
 
