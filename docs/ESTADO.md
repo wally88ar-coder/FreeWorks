@@ -1,5 +1,14 @@
 # Estado del fork
 
+**08/11 noche, FUZZING DE SECUENCIAS ("el mono", paso 8.3): CÓDIGO HECHO.**
+`tools/fork/pruebas/prueba_ventana_mono.py`: seguidillas al azar de Aceptar / Cancelar en 10
+paneles, suprimir, deshacer, rehacer y guardar-abrir, controlando todo después de cada paso.
+Corrida corta: 8 seguidillas de hasta 8 pasos, bien; la regla con Ecuaciones/Material abiertos
+da el error conocido #3. Comprobado rompiendo el Cancelar a propósito (lo atrapa al primer
+caso). Encontró otra cara de la #36 (Ctrl+Z de una operación nueva deja visible el origen:
+comentado en la Issue). Las corridas largas van de noche (tarea programada, al final). Próximo:
+fuzzing de campos (8.4).
+
 **08/11 noche, MEDIDAS AL AZAR, grupo 1 (operaciones de pieza): HECHO.** `prueba_ventana_azar_pieza.py`
 (Hypothesis, por el panel): 10 reglas, todas bien con 6-10 casos cada una; ningún error nuevo.
 Siguen: soldadas, chapa (referencia SW), ensamblajes, croquis, multicuerpo, Mover cara, Evaluar,

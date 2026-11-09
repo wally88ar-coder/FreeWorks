@@ -111,6 +111,24 @@ Casos por regla: `FW_CASOS_AZAR` (6 por omisión, de noche cientos). Una regla s
 - Mover cara (`prueba_ventana_azar_mover_cara.py`, con ventana): equidistanciar (volumen = área ×
   d) y girar (inclinación exacta).
 
+## Fuzzing de secuencias, "el mono" (paso 8.3)
+
+`prueba_ventana_mono.py` (con ventana): sobre una pieza, una seguidilla de acciones al azar en
+cualquier orden, como un usuario apurado: abrir un panel (Redondeo, Chaflán, Ángulo de salida,
+Matrices, Simetría, Plano, Eje, Punto, Mover cara), elegir y Aceptar (Ctrl+Z vuelve exacto,
+Ctrl+Y lo trae igual) o Cancelar (todo igual); suprimir desde el árbol y Ctrl+Z; Deshacer y
+Rehacer sueltos; guardar, cerrar y abrir (igual y sin "modificado"). Después de cada paso: sin
+errores en el informe, nada colgado, sin objetos con error nuevos. Regla aparte con Ecuaciones /
+Material abiertos con el panel abierto (error conocido #3).
+- Cuántas seguidillas: `FW_CASOS_AZAR` (6); largo: 3 a `FW_LARGO_MONO` (8). De noche, muchas y
+  largas. Con `FW_ACHICAR=0` no achica el caso al fallar (para comprobar roturas a propósito).
+- No cuenta: la visibilidad después de Ctrl+Z / Ctrl+Y (es la #36, la miden las reglas de
+  paneles) ni el aviso propio de FreeCAD "... not possible ..." cuando lo elegido al azar no
+  sirve (si viene de código de FreeWorks, sí cuenta).
+- Cada seguidilla arranca de cero con un solo archivo abierto.
+- Comprobado (08/11): sacando el `abortTransaction` del Cancelar de los paneles SW, falla al
+  primer caso ("sobra DatumPoint").
+
 ## Enganche de git
 
 `tools/fork/hooks/pre-commit` corre antes de cada commit (si el commit toca algún `.py`):

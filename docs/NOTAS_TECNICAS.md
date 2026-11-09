@@ -1063,3 +1063,13 @@ que usan está en `tools/test_load.py` (`check_ia`): si una cambia de firma, el 
 - Un panel de Tareas que FreeCAD cierra solo (otro comando, "Sí" a "Un diálogo ya está
   abierto") no llama a accept/reject: sin panel_guard el escucha de selección y el filtro de
   eventos quedan vivos y tocan widgets borrados ("QListWidget already deleted").
+
+## Pruebas con ventana: Cuerpo recién creado (08/11)
+
+- Un Cuerpo nuevo creado por guion con la ventana abierta tarda un momento en asentarse: si se
+  toma la "foto" del documento enseguida y después se abre y cancela un panel, el origen del
+  Cuerpo aparece como visible (falsa alarma). Bombear la ventana ~1 s después de armar la pieza
+  antes de la primera foto (`prueba_ventana_mono.py`).
+- Con un radio que no entra (o una arista de costura de un cilindro), FreeCAD escribe en el
+  informe "Fillet: Fillet not possible on selected shapes" durante la vista previa: es aviso
+  nativo, no de FreeWorks.

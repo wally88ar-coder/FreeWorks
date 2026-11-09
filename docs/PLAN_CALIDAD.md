@@ -9,7 +9,9 @@ de forma integral** (decisión del usuario, 08/11). Encontró
 los grupos 1 (operaciones de pieza), 2 (soldadas: amplió #2), 3 (chapa, salvo comparar contra SW
 mismo) y 4 (ensamblajes, 10 reglas). Hechos también croquis (#41), multicuerpo (#42), Mover cara, Evaluar y
 configuraciones de pieza: paso 8.2 terminado salvo planos (consignado) y comparar la chapa contra SW
-mismo. Pasos 8.3 a 8.5 y 9: sin empezar. El avance se tilda en la pestaña "Control de calidad"
+mismo. Paso 8.3 (fuzzing de secuencias, el "mono"): código hecho el 08/11
+(`tools/fork/pruebas/prueba_ventana_mono.py`), comprobado rompiendo el Cancelar a propósito; las
+corridas largas, de noche. Pasos 8.4, 8.5 y 9: sin empezar. El avance se tilda en la pestaña "Control de calidad"
 del documento de checklists. Corrección de errores: después de terminar las herramientas
 (decisión del usuario, 08/11).
 

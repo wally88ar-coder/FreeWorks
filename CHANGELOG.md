@@ -27,6 +27,9 @@ Neueste Version oben. / Newest version first.
   ensamblajes (relaciones con piezas giradas al azar, concéntrica, pieza fija, matriz de
   componentes, taladro de ensamblaje en una pieza girada). Cada grupo se comprobó rompiendo algo
   a propósito. Checklist de control de calidad: pestaña nueva en el documento de checklists.
+- **Fuzzing de secuencias, "el mono"** (`tools/fork/pruebas/prueba_ventana_mono.py`):
+  seguidillas al azar de Aceptar, Cancelar, suprimir, deshacer, rehacer y guardar-abrir sobre una
+  pieza, controlando después de cada paso que todo quede como debe. Corridas largas, de noche.
 - **Sin el aviso "Referencia" de FreeCAD, como SW** (`swui/fork/cross_body.py`): elegir una cara o
   arista de otro sólido (piezas soldadas, multicuerpo) ya no pregunta "Hacer copia independiente /
   dependiente / referencia cruzada". La operación va al sólido de lo elegido (se activa solo, también
