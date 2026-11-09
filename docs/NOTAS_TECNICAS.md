@@ -18,6 +18,19 @@
   - `body.removeObject(op)` reengancha la operación siguiente a la anterior y, si `op` era la
     punta, pasa la punta a la anterior; `doc.removeObject` solo, no (Issue #1). Usar
     `safe_ops.remove_feature`.
+  - Medidas al azar (Hypothesis, 08/11), hallazgos:
+    - En un panel de Tareas, Enter en un campo de cantidad = Aceptar el panel. Para escribir un
+      valor como el usuario y seguir: Tab (QTest.keyClick Key_Tab).
+    - La unión de varios sólidos (`fuse`) con caños redondos da unos mm³ de diferencia con la suma
+      sin que haya superposición real: para "¿se superponen?" medir `common` par por par.
+    - Un `Part.Compound` (forma de un Cuerpo de soldadura) no tiene `CenterOfMass`: promediar el
+      de sus sólidos por volumen.
+    - Desarrollo de chapa con K de SW: superficie = volumen/espesor − Σ pliegues (superficie
+      interior del pliegue / radio interior)·(0,5 − K)·espesor. No depende de qué lado del perfil
+      se dibujó (sirve de referencia para comparar con lo que da SheetMetal).
+    - Hypothesis guarda los casos que fallaron (`%LOCALAPPDATA%/FreeWorks-dev/hypothesis`) y los
+      repite primero en la corrida siguiente: después de una rotura a propósito, la primera
+      corrida "buena" repite ese caso.
   - Reglas comunes de paneles (`reglas_paneles.py`), hallazgos al armarlas (08/11):
     - La caja envolvente (`BoundBox`, y también `optimalBoundingBox`) de un sólido varía unas
       centésimas entre recálculos y al reabrir (superficies curvas: hasta 0,1 mm). Para "¿se

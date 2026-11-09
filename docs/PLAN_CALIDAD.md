@@ -5,9 +5,13 @@ Estado: pasos 1 a 6 implementados el 08/11 (reglas en CLAUDE.md, `swui/fork/safe
 (reglas comunes de paneles) hecho el 08/11 para 48 paneles + 4 variantes (`tools/fork/pruebas/reglas_paneles.py`
 y `casos_*.py`). **Los paneles de planos (TechDraw) quedan fuera hasta que se encaren los planos
 de forma integral** (decisión del usuario, 08/11). Encontró
-#31 a #40 y verificó #6, #19 y #29; descartó #16. Resto del paso 8 (8.2 geometría al azar, 8.3 y
-8.4 fuzzing, 8.5 agente atacante) y paso 9 (todo `swui`, capturas de referencia, tiempos): sin
-empezar. Pasos 7 a 9 y corrección de errores: cuando el usuario diga.
+#31 a #40 y verificó #6, #19 y #29; descartó #16. Paso 8.2 (geometría al azar), en curso: hechos
+los grupos 1 (operaciones de pieza), 2 (soldadas: amplió #2), 3 (chapa, salvo comparar contra SW
+mismo) y 4 (ensamblajes, lo principal; faltan Tangente, simetría de componentes, corte de
+ensamblaje y configuraciones). Siguen croquis, multicuerpo, Mover cara, Evaluar y configuraciones
+de pieza. Pasos 8.3 a 8.5 y 9: sin empezar. El avance se tilda en la pestaña "Control de calidad"
+del documento de checklists. Corrección de errores: después de terminar las herramientas
+(decisión del usuario, 08/11).
 
 Objetivo: trabajar al nivel de un proyecto abierto serio ("profesional bueno"), no al de aviones
 o equipos médicos. Base: las 4 causas que mostró la auditoría (`docs/AUDITORIA_2026-11-08.md`):

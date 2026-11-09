@@ -18,6 +18,15 @@ Neueste Version oben. / Newest version first.
   editar y guardar. Encontró 5 errores nuevos (#31 a #35) y confirmó 3 de la auditoría. Segunda
   tanda: 48 paneles + 4 variantes, reglas de edición (cambiar y Cancelar / Aceptar) y Deshacer real
   del usuario; encontró #36 a #40. Los paneles de planos quedan para cuando se encaren los planos.
+- **Pruebas con medidas al azar** (`tools/fork/pruebas/azar_comun.py` y `prueba_*azar_*.py`, con
+  la herramienta Hypothesis): cientos de piezas inventadas comparadas con fórmulas de libro, en 4
+  grupos. Operaciones de pieza por el panel (extruir, corte, revolución, redondeo, chaflán, taladro
+  con Ø ISO 273, matrices, simetría, ángulo de salida); piezas soldadas (marcos al azar: sin
+  superposición ni huecos, lista de cortes = largo real, editar el esqueleto = armar de cero:
+  amplió el error #2, también a tope); chapa (el desarrollo da lo que da SW con el factor K; DXF);
+  ensamblajes (relaciones con piezas giradas al azar, concéntrica, pieza fija, matriz de
+  componentes, taladro de ensamblaje en una pieza girada). Cada grupo se comprobó rompiendo algo
+  a propósito. Checklist de control de calidad: pestaña nueva en el documento de checklists.
 - **Sin el aviso "Referencia" de FreeCAD, como SW** (`swui/fork/cross_body.py`): elegir una cara o
   arista de otro sólido (piezas soldadas, multicuerpo) ya no pregunta "Hacer copia independiente /
   dependiente / referencia cruzada". La operación va al sólido de lo elegido (se activa solo, también
