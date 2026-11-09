@@ -9,6 +9,8 @@ que se pueden abrir y las acciones propias de cada parte de FreeWorks. Cada prue
 
 import os
 
+import FreeCAD
+
 from azar_comun import bombear
 from mono_comun import Entorno, correr, diferencias, solo_lo_de_antes
 
@@ -170,3 +172,85 @@ class Ensamblaje(Entorno):
         bombear(800)
         d = diferencias(f0, self.foto(), visibilidad=False)
         assert not d, "%s: al volver el largo del Bloque, el conjunto no quedó como estaba: %s" % (que, d[:3])
+
+
+class Soldada(Entorno):
+    nombre = "soldadas"
+    vinculos = ("esqueleto", "cuerpos")
+    acciones = ("esqueleto", "esqueleto")
+    # errores ya registrados: #6 (paneles de soldadas fuera del guardia: escuchas que siguen
+    # vivas), #2 (el corte de la esquina no sigue al esqueleto), #40 (el reabierto se cierra solo)
+    deuda = (("#6", "already deleted", None), ("#6", "deleted object", None))
+    deuda_pasos = (("#2", "no siguen al esqueleto", "esqueleto"),
+                   ("~#40", "se cerró solo", "guardar"))
+
+    def armar(self):
+        from casos_soldadas import _anotar_paneles
+        from comun import marco
+        _anotar_paneles()
+        self.esqueleto, self._cota, self.cuerpos = marco(self.doc, esquina="inglete")
+
+    def crear_casos(self):
+        from casos_soldadas import Cartela, Esquinas, Miembro, Tapa
+        return [Miembro(), Esquinas(), Esquinas(), Cartela(), Tapa()]
+
+    def cuerpo(self):
+        return None  # cada caño es un Cuerpo: se prueba con el esqueleto y las esquinas
+
+    def accion_esqueleto(self, rng, que, f0):
+        """Cambiar el ancho y el alto del esqueleto (sus cotas, como el usuario): los caños lo siguen
+        sin superponerse ni dejar huecos, la lista de cortes da el largo real y cada caño queda igual
+        que en un marco armado de cero con las medidas nuevas; volver las cotas: como antes."""
+        ancho, alto = round(rng.uniform(450.0, 800.0), 1), round(rng.uniform(300.0, 550.0), 1)
+        que = "%s (esqueleto %s x %s)" % (que, ancho, alto)
+        self._cotas(ancho, alto)
+        try:
+            self._chequear_marco(que, ancho, alto)
+        finally:
+            self._cotas(600.0, 400.0)  # siempre de vuelta, aunque falle (el paso siguiente arranca sano)
+        d = diferencias(f0, self.foto(), visibilidad=False)
+        assert not d, "%s: al volver las cotas del esqueleto, no quedó como estaba: %s" % (que, d[:3])
+
+    def _chequear_marco(self, que, ancho, alto):
+        from comun import marco
+        from swui.fork import weldments as w
+        cuerpos = [b for b in self.cuerpos if b is not None]
+        malos = [b.Label for b in cuerpos if b.Shape.isNull() or not b.Shape.isValid()]
+        assert not malos, "%s: caños con error al cambiar el esqueleto: %s" % (que, malos)
+        for a in range(len(cuerpos)):
+            for b in range(a + 1, len(cuerpos)):
+                comun = cuerpos[a].Shape.common(cuerpos[b].Shape).Volume
+                assert comun < 0.01, "%s: los caños no siguen al esqueleto: %s y %s se superponen %.3f mm³" % (
+                    que, cuerpos[a].Label, cuerpos[b].Label, comun)
+        for c in w.find_corners(cuerpos):
+            d = c["a"].Shape.distToShape(c["b"].Shape)[0]
+            assert d < 1e-3, "%s: los caños no siguen al esqueleto: hueco de %.2f mm" % (que, d)
+        largos = {}
+        for f in w.cut_list(self.doc):
+            for etiqueta in f["members"]:
+                largos[etiqueta] = f["length"]
+        for b in cuerpos:
+            _p0, _p1, u = w.axis(b)
+            proy = [v.Point.dot(u) for v in b.Shape.Vertexes]
+            real = max(proy) - min(proy)
+            assert b.Label in largos and abs(largos[b.Label] - real) <= 0.1,                 "%s: la lista de cortes no da el largo de %s (%s, mide %.2f)" % (que, b.Label, largos.get(b.Label), real)
+        # el control fuerte: igual que un marco armado de cero con el esqueleto nuevo
+        activo = FreeCAD.ActiveDocument
+        otro = FreeCAD.newDocument("MonoDeCero")
+        try:
+            _sk2, _c2, cuerpos2 = marco(otro, ancho=ancho, alto=alto, esquina="inglete")
+            for a, b in zip(self.cuerpos[:4], cuerpos2):
+                ca, cb = a.Shape.CenterOfMass if a.Shape.Solids else a.Shape.BoundBox.Center,                     b.Shape.CenterOfMass if b.Shape.Solids else b.Shape.BoundBox.Center
+                assert abs(a.Shape.Volume - b.Shape.Volume) < 0.5 and (ca - cb).Length < 0.01,                     "%s: los caños no siguen al esqueleto: %s no quedó como armado de cero (volumen %.1f vs %.1f)" % (
+                        que, a.Label, a.Shape.Volume, b.Shape.Volume)
+        finally:
+            FreeCAD.closeDocument(otro.Name)
+            if activo is not None:
+                FreeCAD.setActiveDocument(activo.Name)
+
+    def _cotas(self, ancho, alto):
+        sk = self.esqueleto
+        sk.setDatum(self._cota, FreeCAD.Units.Quantity("%s mm" % ancho))
+        sk.setDatum(self._cota + 1, FreeCAD.Units.Quantity("%s mm" % alto))
+        self.doc.recompute()
+        bombear(600)
