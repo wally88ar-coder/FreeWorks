@@ -254,3 +254,97 @@ class Soldada(Entorno):
         sk.setDatum(self._cota + 1, FreeCAD.Units.Quantity("%s mm" % alto))
         self.doc.recompute()
         bombear(600)
+
+
+class Croquis(Entorno):
+    nombre = "croquis"
+    vinculos = ("body", "croquis")
+
+    def armar(self):
+        from casos_croquis import Simetria
+        h = Simetria()
+        h.preparar(self.doc)  # rectángulo de 30 x 20 y un eje constructivo
+        self.body, self.croquis = self.doc.getObject("Cuerpo"), h.croquis
+
+    def crear_casos(self):
+        from casos_croquis import CASOS
+        return [c() for c in CASOS]
+
+    def cuerpo(self):
+        return None  # el Cuerpo solo tiene el croquis
+
+
+class Multicuerpo(Entorno):
+    nombre = "multicuerpo"
+    vinculos = ("body", "hueco", "otro_body")
+
+    def armar(self):
+        from casos_pieza2 import Combinar
+        h = Combinar()
+        h.preparar(self.doc)  # la pieza con agujero y un segundo Cuerpo que la toca
+        self.body, self.hueco, self.otro_body = h.body, h.hueco, h.otro_body
+
+    def crear_casos(self):
+        from casos_grupo3 import EliminarConservar, MoverCopiarSolidos
+        from casos_pieza import Chaflan, Redondeo
+        from casos_pieza2 import Combinar
+        return [Combinar(), Combinar(), MoverCopiarSolidos(), EliminarConservar(), Redondeo(), Chaflan()]
+
+
+class Configuraciones(Entorno):
+    """Pieza con configuraciones: además de los paneles, agregar configuraciones con otro largo y
+    pasar de una a otra en cualquier orden (cada una con SU largo)."""
+    nombre = "configuraciones"
+    vinculos = ("body", "hueco")
+    acciones = ("config_nueva", "config_ir", "config_ir")
+    # #47: deshacer una operación nueva deja su columna "Suprimir ..." en la tabla
+    deuda_pasos = (("#47", "TablaDiseno cambió (contenido)", "aceptar"),)
+
+    def armar(self):
+        from casos_otros import anotar
+        from casos_pieza import armar_pieza
+        from swui.fork import config_tab
+        from swui.fork import configurations as cf
+        anotar(config_tab._AddPanel)
+        self.body, self.hueco = armar_pieza(self.doc)
+        cf.ensure(self.doc)
+        self.largos = {cf.active(self.doc) or cf.names(self.doc)[0]: 40.0}
+
+    def crear_casos(self):
+        from casos_otros import AgregarConfiguracion
+        from casos_pieza import Chaflan, Redondeo
+        return [Redondeo(), Chaflan(), AgregarConfiguracion()]
+
+    def _caja(self):
+        return self.doc.getObject("Caja")
+
+    def accion_config_nueva(self, rng, que, f0):
+        from swui.fork import configurations as cf
+        if len(self.largos) >= 4:
+            return
+        nombre = cf.add(self.doc, "Mono%d" % rng.randint(1, 9999))
+        largo = round(rng.uniform(25.0, 70.0), 1)
+        cf.configure(self.doc, ("prop", self._caja(), "Length"), largo, scope="this")
+        self.doc.recompute()
+        bombear(400)
+        self.largos[nombre] = largo
+        assert abs(self._caja().Length.Value - largo) < 1e-6, "%s: la configuración nueva no tomó su largo" % que
+
+    def accion_config_ir(self, rng, que, f0):
+        from swui.fork import configurations as cf
+        conocidas = [n for n in sorted(self.largos) if n in cf.names(self.doc)]
+        if not conocidas:
+            return
+        nombre = rng.choice(conocidas)
+        cf.activate(self.doc, nombre)
+        self.doc.recompute()
+        bombear(400)
+        largo = self._caja().Length.Value
+        assert abs(largo - self.largos[nombre]) < 1e-6, \
+            "%s: en la configuración %s el largo es %s, debería ser %s" % (que, nombre, largo, self.largos[nombre])
+        malos = self.malos()
+        assert not malos, "%s: al pasar a %s quedaron con error: %s" % (que, nombre, sorted(malos))
+
+    def reabierto(self):
+        from swui.fork import configurations as cf
+        self.largos = {n: v for n, v in self.largos.items() if n in cf.names(self.doc)}

@@ -53,11 +53,29 @@ def abrir(caso, rng):
     """Abre el panel del caso. Si falla ANTES de abrirlo porque no hay qué elegir (lista vacía), el
     paso se saltea: es un límite de la prueba, no de FreeWorks."""
     import FreeCADGui
+    from PySide import QtCore, QtWidgets
+    # Si la herramienta contesta con un aviso en ventanita ("Hacen falta al menos dos sólidos"), la
+    # llamada queda adentro de esa ventanita hasta que alguien toque OK: un reloj la lee y la cierra.
+    avisos = []
+
+    def mirar():
+        d = QtWidgets.QApplication.activeModalWidget()
+        if isinstance(d, QtWidgets.QMessageBox):
+            avisos.append(d.text())
+            d.accept()
+    reloj = QtCore.QTimer()
+    reloj.timeout.connect(lambda: mirar())
+    reloj.start(300)
     try:
         correr(caso.abrir(rng))
     except IndexError:
         if FreeCADGui.Control.activeDialog():
             raise
+        raise NadaQueElegir()
+    finally:
+        reloj.stop()
+    if avisos and not FreeCADGui.Control.activeDialog():
+        traza("    (%s no se abrió, avisó: %s)" % (caso.nombre, avisos[0][:120]))
         raise NadaQueElegir()
 
 
@@ -284,6 +302,7 @@ def paso(m, accion, semilla, historia):
             if nuevos and getattr(caso, "cambiar", None) is not None:
                 m.hechos.append((nuevos[-1], caso))
             deshacer_y_rehacer(m, que, f0, f1, caso)
+            correr(caso.despues_de_aceptar())  # p. ej. salir del croquis
         else:
             correr(caso.cancelar())
             bombear(800)
