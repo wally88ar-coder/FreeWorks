@@ -143,7 +143,7 @@ class Noche:
         self.tanda("3c. Capturas de referencia", ["solo_ventana", "capturas"], {})
         largas = {"FW_TIEMPO_VENTANA": "2400"}  # el mono largo necesita más que los 15 min de las demás
         self.tanda("4a. El mono", ["solo_ventana", "mono"], dict(largas, FW_CASOS_AZAR=mono, FW_LARGO_MONO=largo))
-        self.tanda("4b. Fuzzing de campos", ["solo_ventana", "campos"], {"FW_CASOS_AZAR": "2" if c else "20"})
+        self.tanda("4b. Fuzzing de campos", ["solo_ventana", "campos"], {"FW_CASOS_CAMPOS": "1" if c else "6", "FW_TIEMPO_VENTANA": "5400"})
         if not c:
             mapa = {"FW_CASOS_AZAR": "2", "FW_MAPA": self.base + "_mapa_cobertura.md"}
             if self.sin_ventana:

@@ -13,11 +13,11 @@ mismo. Paso 8.3 (fuzzing de secuencias, el "mono"): código hecho 08-09/11 para 
 chapa, ensamblaje, soldadas, croquis, multicuerpo, configuraciones; `mono_comun.py`,
 `mono_entornos.py`), cada uno comprobado rompiendo algo a propósito; encontró #43, #44 y #47.
 Paso 8.4 (fuzzing de campos): Ecuaciones (#45, #46) y configuraciones, material y chapa (#55) hechos;
-paneles escritos, sin terminar de probar (necesita ventana). Control de que los errores tolerados
+paneles con ventana hechos el 09/11 (~40 paneles, bien). Control de que los errores tolerados
 sigan abiertos (`prueba_azar_conocidos.py`). Paso 8.5 (agente atacante): hecho el 09/11, 7 pruebas, #48 a #54. Paso 9:
 tiempos máximos hechos; mapa de todo `swui/` hecho sin ventana (9 %), el completo de noche;
-capturas escritas sin correr. Paso 7: cuadro `docs/SIETE_PREGUNTAS.md` y 3 pruebas nuevas sin
-probar. Corrida de noche (`noche.py`) lista, sin tarea programada. El avance se tilda en la pestaña "Control de calidad"
+capturas hechas (09/11; falta que el usuario apruebe las de referencia). Paso 7: cuadro
+`docs/SIETE_PREGUNTAS.md` y 3 pruebas nuevas, probadas con ventana el 09/11. Corrida de noche (`noche.py`) lista, sin tarea programada. El avance se tilda en la pestaña "Control de calidad"
 del documento de checklists. Corrección de errores: después de terminar las herramientas
 (decisión del usuario, 08/11).
 

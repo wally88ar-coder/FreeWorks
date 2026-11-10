@@ -75,6 +75,9 @@ Abreviaturas de las pruebas:
   ecuaciones, espejo, material y chapa abren sin FreeWorks.
 
 - Cuadro armado: 09/11.
-- Las tres pruebas nuevas (medida_base, otro_archivo y abrir sin FreeWorks en la regla
-  "guardar") están escritas pero **sin probar**. Necesitan la ventana: corren la noche del 09/11
-  y se suben si dan bien.
+- Las tres pruebas nuevas, probadas con ventana el 09/11 (bien, y cada una falla si se rompe a
+  propósito lo que controla): medida_base (pieza y multicuerpo) y otro_archivo (todos los
+  entornos del mono), y abrir sin FreeWorks en la regla "guardar" de las reglas de paneles.
+  Con esto, la columna 3 suma M en Redondeo/Chaflán/Ángulo, Matrices/Simetría, Plano/Eje/Punto,
+  Mover cara y Combinar/sólidos; la 4 suma SF en todos los paneles con R; la 6 suma M en todo lo
+  que tiene M.

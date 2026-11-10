@@ -49,6 +49,14 @@ def tipo(ruta):
     return m.group(1) if m else "rapida"
 
 
+def tiempo_propio(ruta):
+    """Segundos que la prueba pide para sí (TIEMPO_MAXIMO = N en el archivo), si los pide: las largas
+    a propósito (fuzzing de campos en ~25 paneles) no entran en el tope de su clase. 0: no pide."""
+    with open(ruta, encoding="utf-8") as fh:
+        m = re.search(r"^TIEMPO_MAXIMO\s*=\s*(\d+)", fh.read(), re.M)
+    return int(m.group(1)) if m else 0
+
+
 def matar(proc):
     try:
         subprocess.run(["taskkill", "/PID", str(proc.pid), "/T", "/F"], capture_output=True)
@@ -60,10 +68,11 @@ def matar(proc):
         pass
 
 
-def tiempo_para(clase):
-    """Segundos que puede durar una prueba: el de su clase, recortado por la hora tope de la corrida
-    de noche (FW_HORA_TOPE, en segundos desde la época), si la hay. None: ya no hay tiempo."""
-    limite = TIEMPO[clase]
+def tiempo_para(clase, propio=0):
+    """Segundos que puede durar una prueba: el de su clase (o el que pide la prueba, si es más),
+    recortado por la hora tope de la corrida de noche (FW_HORA_TOPE, en segundos desde la época), si
+    la hay. None: ya no hay tiempo."""
+    limite = max(TIEMPO[clase], propio)
     tope = os.environ.get("FW_HORA_TOPE")
     if tope:
         queda = float(tope) - time.time() - 60
@@ -75,13 +84,19 @@ def tiempo_para(clase):
 
 def correr_una(ruta, clase, cobertura, tmp):
     nombre = os.path.splitext(os.path.basename(ruta))[0]
-    limite = tiempo_para(clase)
+    limite = tiempo_para(clase, tiempo_propio(ruta))
     if limite is None:
         return {"nombre": nombre, "segundos": 0.0, "que": "", "conocido": "", "ok": False, "saltada": True,
                 "error": "no corrió: llegó la hora tope de la corrida de noche"}
     salida = os.path.join(tmp, nombre + ".json")
     env = dict(os.environ, FW_RESULTADO=salida, FW_HERRAMIENTAS=HERRAMIENTAS, PYTHONIOENCODING="utf-8",
                FW_PRUEBA=ruta)
+    # carpeta de temporales PROPIA de cada prueba (ahí FreeCAD guarda la recuperación de documentos):
+    # una prueba cortada por tiempo dejaba su recuperación en la del usuario, y la siguiente prueba
+    # (y el FreeCAD del usuario) arrancaba con la ventana "Recuperación de documentos" (09/11)
+    temporales = os.path.join(tmp, "temp_" + nombre)
+    os.makedirs(temporales, exist_ok=True)
+    env["FREECAD_USER_TEMP"] = temporales
     lanzar = os.path.join(AQUI, "_lanzar.py")
     if cobertura:
         env["FW_COBERTURA"] = os.path.join(tmp, ".coverage." + nombre)

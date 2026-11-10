@@ -1,0 +1,2 @@
+Capturas de referencia (plan de calidad, paso 9): las de `aprobadas/` las aprueba el usuario;
+`nuevas/` la genera la prueba `prueba_ventana_capturas.py` (no se sube a git).

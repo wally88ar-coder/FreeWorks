@@ -17,6 +17,11 @@ from mono_comun import Entorno, correr, diferencias, solo_lo_de_antes
 class Pieza(Entorno):
     nombre = "pieza"
     vinculos = ("body", "hueco")
+    acciones = ("medida_base",)
+
+    def medida_base(self):
+        caja = self.doc.getObject("Caja")
+        return (caja, "Length") if caja is not None else None
 
     def armar(self):
         from casos_pieza import armar_pieza
@@ -48,6 +53,7 @@ class Chapa(Entorno):
     acciones = ("aplanar", "dxf")
     deuda = (("#43", "Invalid shape name ?Face", "Unfold"),
              ("#44", "Failed to recompute suppressed feature", None))
+    deuda_pasos = (("#59", "Ctrl+Z después de suprimir no volvió", "suprimir", "aplanar"),)
 
     def armar(self):
         from casos_grupo3 import BridaArista, BridaBase
@@ -105,7 +111,10 @@ class Ensamblaje(Entorno):
     nombre = "ensamblaje"
     vinculos = ("asm", "comps")
     acciones = ("suprimir_componente", "cambiar_pieza")
-    deuda = (("#38", "The graph must be a DAG", None),)
+    # al guardar con Taladro/Corte de ensamblaje, junto con el aviso de #38 sale el de la exportación
+    # (mismo caso; solo se perdona si salen los dos en el mismo paso)
+    deuda = (("#38", ("The graph must be a DAG", "ExportOCAF2.cpp(320): Failed to get subshape"), None),
+             ("#38", "The graph must be a DAG", None))
     deuda_pasos = (("#37", "Ctrl+Z no volvió", "aceptar Taladro de ensamblaje"),
                    ("#38", "al abrir quedó modificado", "guardar"))
 
@@ -259,6 +268,7 @@ class Soldada(Entorno):
 class Croquis(Entorno):
     nombre = "croquis"
     vinculos = ("body", "croquis")
+    deuda = (("#63", "makeOffset2D: wires are nonplanar", None),)
 
     def armar(self):
         from casos_croquis import Simetria
@@ -277,6 +287,15 @@ class Croquis(Entorno):
 class Multicuerpo(Entorno):
     nombre = "multicuerpo"
     vinculos = ("body", "hueco", "otro_body")
+    acciones = ("medida_base",)
+    # suprimir Combinar con un Redondeo encima: el hijo suprimido igual se recalcula y avisa que su
+    # arista ya no existe (#44); "Invalid edge link" solo se perdona si viene con ese aviso
+    deuda = (("#44", ("Failed to recompute suppressed feature", "Invalid edge link"), None),
+             ("#44", "Failed to recompute suppressed feature", None))
+
+    def medida_base(self):
+        caja = self.doc.getObject("Caja")
+        return (caja, "Length") if caja is not None else None
 
     def armar(self):
         from casos_pieza2 import Combinar

@@ -121,6 +121,8 @@ def prueba():
     FreeCAD.closeDocument(doc.Name)
     with zipfile.ZipFile(ruta) as z:
         xml = z.read("Document.xml").decode("utf-8", "replace")
+        if "GuiDocument.xml" in z.namelist():  # (sin ventana no se guarda, pero por si acaso)
+            xml += z.read("GuiDocument.xml").decode("utf-8", "replace")
     propios = sorted(set(re.findall(r'module="(swui[^"]*)"', xml)))
     assert not propios, "el archivo necesita FreeWorks para abrir: guarda objetos de %s" % propios
     doc = FreeCAD.openDocument(ruta)

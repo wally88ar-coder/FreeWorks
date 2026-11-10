@@ -128,6 +128,8 @@ def _armar(data, agujero=0.0, perno=None):
     limpiar()
     carpeta = carpeta_temporal()
     W, D, H = data.draw(medida), data.draw(medida), data.draw(medida)
+    if agujero:  # que el agujero entre en la placa (si no, la placa se queda sin caras planas)
+        W, D = max(W, 2 * agujero + 5), max(D, 2 * agujero + 5)
     if perno:
         rutas = [_pieza(carpeta, "Placa", W, D, H, agujero=agujero), _pieza(carpeta, "Perno", 0, 0, 0, cilindro=perno)]
     else:
@@ -494,13 +496,15 @@ def configuraciones(data):
 def prueba():
     fallas = Fallas()
     solo = os.environ.get("FW_CASO", "")
+    conocidos = {"relaciones entre caras": "#62", "cambiar una pieza": "#62", "guardar y abrir": "#62",
+                 "tangente": "#64"}
     for nombre, fn in (("relaciones entre caras", caras), ("concéntrica", concentrica),
                        ("cambiar una pieza", cambiar_pieza), ("guardar y abrir", guardar),
                        ("matriz de componentes", matriz_componentes), ("taladro en pieza girada", taladro_girado),
                        ("tangente", tangente), ("simetría de componentes", simetria_componentes),
                        ("corte en pieza girada", corte_girado), ("configuraciones", configuraciones)):
         if not solo or solo.lower() in nombre:
-            fallas.correr(nombre, fn)
+            fallas.correr(nombre, fn, conocidos.get(nombre, ""))
     fallas.terminar()
 
 

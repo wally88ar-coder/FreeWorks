@@ -79,7 +79,13 @@ def _caja(o):
 def _ubicacion(o):
     try:
         p = o.Placement
-        return tuple(_r(x) for x in (p.Base.x, p.Base.y, p.Base.z)) + tuple(_r(x) for x in p.Rotation.Q)
+        q = p.Rotation.Q
+        # q y -q son el mismo giro (FreeCAD da uno u otro según cómo se llegó, p. ej. al rehacer):
+        # se escribe siempre el que tiene la primera componente no nula positiva
+        primera = next((x for x in (q[3], q[0], q[1], q[2]) if abs(x) > 5e-3), 1.0)  # (lo que el redondeo no borra)
+        if primera < 0:
+            q = tuple(-x for x in q)
+        return tuple(_r(x) for x in (p.Base.x, p.Base.y, p.Base.z)) + tuple(_r(x) + 0.0 for x in q)
     except Exception:
         return None
 
@@ -111,6 +117,20 @@ def _firma(sk):
         out.append((type(g).__name__, constr, tuple(_r(c) for p in pts for c in (p.x, p.y)),
                     _r(getattr(g, "Radius", 0))))
     return hash(tuple(out))
+
+
+def sin_freeworks(ruta):
+    """Módulos de FreeWorks que el archivo guarda como objetos de Python ([] = abre sin FreeWorks):
+    los objetos van en Document.xml y su aspecto (proveedores de vista) en GuiDocument.xml."""
+    import zipfile
+    try:
+        with zipfile.ZipFile(ruta) as z:
+            xml = z.read("Document.xml").decode("utf-8", "replace")
+            if "GuiDocument.xml" in z.namelist():
+                xml += z.read("GuiDocument.xml").decode("utf-8", "replace")
+    except Exception as exc:
+        return ["(no se pudo leer el archivo guardado: %s)" % exc]
+    return sorted(set(re.findall(r'module="(swui[^"]*)"', xml)))
 
 
 def foto_varios(doc, otros):
@@ -794,6 +814,11 @@ def correr_caso(caso, inf, semillas=(1,)):
         abiertos = set(FreeCAD.listDocuments())
         FreeCAD.closeDocument(doc.Name)
         yield ESPERA_CORTA
+        # pregunta 4 de las 7 (paso 7): el archivo abre SIN FreeWorks: no guarda objetos de Python
+        # de FreeWorks (si los guardara, sin el addon esas operaciones quedarían rotas)
+        for r in [ruta] + rutas_otros:
+            for modulo in sin_freeworks(r):
+                inf.falla(caso.nombre, "guardar", "el archivo necesita FreeWorks para abrir: guarda %s" % modulo)
         desde = informe_largo()
         doc = FreeCAD.openDocument(ruta)
         yield ESPERA_PANEL

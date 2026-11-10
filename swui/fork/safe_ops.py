@@ -135,7 +135,31 @@ def undo_step(doc, name):
         doc.abortTransaction()
         raise
     _open_steps.discard(doc.Name)
-    doc.commitTransaction()
+    end_step(doc)
+
+
+def end_step(doc, abort=False):
+    """
+    Cierra la transacción de un panel o comando (abort=True la anula, como Cancelar). En 1.1.4
+    (probado con FreeCADCmd): si no hubo cambios, `doc.abortTransaction()` / `commitTransaction()`
+    dejan abierta la de la aplicación (`FreeCAD.getActiveTransaction()` la sigue dando), y lo
+    próximo que haga el usuario, en cualquier documento, se suma a ese paso (Issue #60). Acá se
+    cierra también esa.
+    """
+    if abort:
+        doc.abortTransaction()
+    else:
+        doc.commitTransaction()
+    try:
+        if _active_transaction() and not getattr(doc, "HasPendingTransaction", False):
+            # la de la aplicación es una sola para todos los documentos: si mientras tanto se
+            # cambió algo en OTRO (quedó en este mismo paso), anularla lo desharía sin avisar;
+            # entonces se confirma (queda como un paso de deshacer en ese documento)
+            otros = any(getattr(d, "HasPendingTransaction", False)
+                        for d in FreeCAD.listDocuments().values() if d is not doc)
+            FreeCAD.closeActiveTransaction(bool(abort) and not otros)
+    except Exception:
+        pass
 
 
 def _active_transaction():

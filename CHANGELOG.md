@@ -36,6 +36,16 @@ Neueste Version oben. / Newest version first.
   encontró #45 y #46.
 - **Agente atacante** (paso 8.5): 7 pruebas escritas sin ver el código
   (`prueba_azar_atacante_*.py`); encontró #48 a #54.
+- **Pruebas con ventana que faltaban**: capturas de referencia de la cinta y de 6 paneles,
+  fuzzing de campos en ~40 paneles, "dos archivos abiertos" y "cambiar una medida anterior" en
+  el mono, y "abre sin FreeWorks" en la regla guardar de los paneles. Cada prueba de FreeCAD usa
+  su propia carpeta de recuperación (una prueba cortada ya no deja la ventana de recuperación).
+- **Arreglado (#58)**: la relación Coincidente / Distancia / Paralela entre dos caras planas que
+  están a 90° no movía la pieza (error de FreeCAD); ahora la gira y quedan cara contra cara
+  (solo si esa pieza no está sujeta por otras relaciones).
+- **Arreglado (#60, en parte)**: cancelar Cartela (o cualquier panel de soldadas) sin cambiar nada
+  dejaba abierto el paso de deshacer y lo próximo que se hacía se sumaba a él (error de FreeCAD);
+  pieza común nueva `safe_ops.end_step`. El resto de los paneles se pasa a ella al tocarlos.
 - **Más pruebas sin ventana**: fuzzing de campos en configuraciones, material y chapa (encontró #55),
   "abre sin FreeWorks" con todo lo que se arma por funciones, y el control de que los errores que
   las pruebas toleran sigan abiertos en GitHub.

@@ -27,6 +27,7 @@ import FreeCAD
 import FreeCADGui
 
 from swui.compat import QtCore, QtWidgets
+from swui.fork import safe_ops
 from swui.fork import weldments as w
 
 TITLE = "Piezas soldadas"
@@ -142,9 +143,9 @@ class _Base:
         try:
             self._timer.stop()
             self._apply_final()
-            self.doc.commitTransaction()
+            safe_ops.end_step(self.doc)
         except Exception as e:
-            self.doc.abortTransaction()
+            safe_ops.end_step(self.doc, abort=True)
             FreeCAD.Console.PrintError("[SWUI fork] %s:\n%s\n" % (self.title, traceback.format_exc()))
             _info("No se pudo: %s" % e)
         self._finish()
@@ -158,7 +159,7 @@ class _Base:
 
     def reject(self):
         self._finish()
-        self.doc.abortTransaction()
+        safe_ops.end_step(self.doc, abort=True)
         _close()
         self.doc.recompute()
         return True
@@ -777,7 +778,7 @@ def show_cut_list(doc=None):
     def sheet():
         doc.openTransaction("Lista de cortes")
         w.cut_list_sheet(doc, rows)
-        doc.commitTransaction()
+        safe_ops.end_step(doc)
         _info("Se agregó la planilla \"Lista de cortes\" al documento (para ponerla en un plano).")
 
     b_csv.clicked.connect(export)

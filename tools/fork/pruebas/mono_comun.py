@@ -33,7 +33,7 @@ from _base import carpeta_temporal, traza
 from azar_comun import Fallas, bombear, comprobado, hypothesis_listo
 
 LARGO = int(os.environ.get("FW_LARGO_MONO", "8"))
-BASE = ["aceptar", "aceptar", "cancelar", "editar", "suprimir", "deshacer", "rehacer", "guardar"]
+BASE = ["aceptar", "aceptar", "cancelar", "editar", "suprimir", "deshacer", "rehacer", "guardar", "otro_archivo"]
 OTRA_HERRAMIENTA = ["ecuaciones", "material", "aceptar"]
 
 
@@ -92,10 +92,12 @@ class Entorno:
     acciones = ()         # acciones propias del entorno (métodos accion_<nombre>)
     # errores ya registrados que el mono no frena (para que siga buscando otros): ("#N", texto que
     # aparece en el informe, parte del nombre del objeto que queda con error o None). Se anotan en
-    # la traza.
+    # la traza. El texto puede ser una tupla: cuenta solo si aparecen TODOS en el informe del paso
+    # (así un aviso que suele acompañar al error conocido no se perdona cuando sale solo).
     deuda = ()
     # comprobaciones que fallan por un error ya registrado: ("#N", texto del aviso, parte del paso,
-    # p. ej. "aceptar Taladro de ensamblaje"). El paso se anota en la traza y el mono sigue.
+    # p. ej. "aceptar Taladro de ensamblaje"), y opcional un cuarto: un paso que tiene que haber
+    # pasado antes en la seguidilla (p. ej. "aplanar"). El paso se anota en la traza y el mono sigue.
     deuda_pasos = ()
 
     def __init__(self):
@@ -183,6 +185,77 @@ class Entorno:
     def reabierto(self):
         """Después de abrir de nuevo: volver a buscar lo que haga falta (otros documentos...)."""
 
+    # --- pregunta 6 de las 7: dos archivos abiertos ---
+    otro = None
+    otro_foto = None
+
+    def accion_otro_archivo(self, rng, que, f0):
+        """Abrir (crear) otro archivo con una pieza, y volver al de trabajo como el usuario (su
+        pestaña). Desde acá, después de cada paso se controla que el otro archivo no cambie."""
+        import FreeCADGui
+        from reglas_paneles import foto
+        try:
+            vivo = self.otro is not None and self.otro.Name in FreeCAD.listDocuments()
+        except ReferenceError:  # se cerró por otro lado
+            vivo = False
+        if not vivo:
+            self.otro = FreeCAD.newDocument("OtroArchivo")
+            b = self.otro.addObject("PartDesign::Body", "Cuerpo")
+            c = b.newObject("PartDesign::AdditiveBox", "Caja")
+            c.Length, c.Width, c.Height = 25, 15, 5
+            self.otro.recompute()
+            bombear(600)
+            self.otro_foto = foto(self.otro)
+        FreeCAD.setActiveDocument(self.doc.Name)
+        FreeCADGui.setActiveDocument(self.doc.Name)
+        bombear(600)
+        if getattr(self, "body", None) is not None:
+            FreeCADGui.ActiveDocument.ActiveView.setActiveObject("pdbody", self.body)
+        # abrir otro archivo y volver no cambia nada del de trabajo
+        d = diferencias(f0, self.foto(), visibilidad=False)
+        assert not d, "%s: abrir otro archivo y volver cambió el de trabajo: %s" % (que, d[:3])
+
+    def otro_igual(self, que):
+        from reglas_paneles import foto
+        if self.otro is None:
+            return
+        try:
+            ahora = foto(self.otro)
+        except Exception:  # también ReferenceError: el documento se cerró
+            raise AssertionError("%s: el otro archivo abierto se cerró o se rompió" % que)
+        d = diferencias(self.otro_foto, ahora)
+        assert not d, "%s: cambió el OTRO archivo abierto (no el de trabajo): %s" % (que, d[:3])
+
+    # --- pregunta 3 de las 7: cambiar una medida de algo anterior y recalcular ---
+    def medida_base(self):
+        """(objeto, propiedad) de una medida del principio de la pieza, o None."""
+        return None
+
+    def accion_medida_base(self, rng, que, f0):
+        """Cambiar una medida de la base (el largo del cubo), recalcular sin errores de Python, y al
+        volverla, todo exactamente como estaba."""
+        mb = self.medida_base()
+        if mb is None:
+            return
+        obj, prop = mb
+        antes = getattr(obj, prop)
+        malos0 = self.malos()
+        # 0,9 a 1,3: achicar más puede hacer que el agujero (borde a 7 mm del borde de la caja de 40)
+        # corte la cara y cambie la topología: las operaciones atadas a "Edge3"/"Face6" fallarían
+        # por los nombres topológicos de FreeCAD, no por FreeWorks
+        setattr(obj, prop, round(float(getattr(antes, "Value", antes)) * rng.uniform(0.9, 1.3), 1))
+        try:
+            self.doc.recompute()
+            bombear(600)
+            nuevos = self.malos() - malos0
+            assert not nuevos, "%s: con el %s de %s cambiado quedaron con error: %s" % (que, prop, obj.Label, sorted(nuevos))
+        finally:
+            setattr(obj, prop, antes)
+            self.doc.recompute()
+            bombear(600)
+        d = diferencias(f0, self.foto(), visibilidad=False)
+        assert not d, "%s: cambiar el %s de %s y volverlo no dejó todo como estaba: %s" % (que, prop, obj.Label, d[:3])
+
 
 def solo_lo_de_antes(f0, f1):
     """f1 recortado a los objetos que ya estaban en f0 (para acciones que agregan algo a propósito,
@@ -240,9 +313,10 @@ def chequear_ventana(m, que, desde, malos0):
         errores = [l for l in errores if "pyException" not in l and not any(a in l for a in ajenos)]
     nuevos = m.malos() - malos0
     for issue, texto, objeto in m.deuda:
-        if any(texto in l for l in errores):
+        textos = texto if isinstance(texto, tuple) else (texto,)
+        if all(any(x in l for l in errores) for x in textos):
             traza("    (deuda %s en: %s)" % (issue, que))
-            errores = [l for l in errores if texto not in l and "pyException" not in l]
+            errores = [l for l in errores if not any(x in l for x in textos) and "pyException" not in l]
             if objeto:
                 nuevos = {n for n in nuevos if objeto not in n}
     if errores:  # el informe entero de este paso a la traza: de dónde viene el error
@@ -252,6 +326,8 @@ def chequear_ventana(m, que, desde, malos0):
             traza("    informe del paso: " + rv.toPlainText()[desde:][-4000:])
     assert not errores, "%s: informe de FreeCAD: %s" % (que, errores[:3])
     assert not nuevos, "%s: quedaron con error: %s" % (que, sorted(nuevos))
+    if hasattr(m, "otro_igual"):
+        m.otro_igual(que)
 
 
 def sin_lo_previo(caso, f, f0):
@@ -411,7 +487,9 @@ def regla_mono(entorno, acciones):
             except AssertionError as e:
                 texto = str(e)
                 ultimo = texto.split(": ", 1)[0].split(" → ")[-1]
-                cual = [i for i, aviso, parte in m.deuda_pasos if aviso in texto and parte in ultimo]
+                antes = texto.split(": ", 1)[0].split(" → ")[:-1]
+                cual = [d[0] for d in m.deuda_pasos if d[1] in texto and d[2] in ultimo
+                        and (len(d) < 4 or any(d[3] in h for h in antes))]
                 if not cual:
                     raise
                 traza("    (deuda %s en: %s)" % (cual[0], texto.split(": ", 1)[0]))
@@ -419,6 +497,13 @@ def regla_mono(entorno, acciones):
                 limpiar_ventana()
                 historia.append(ultimo)
         comprobado()
+    # memoria de Hypothesis propia de cada entorno y lista de acciones (el código de la regla es el
+    # mismo para todos: sin esto, la seguidilla que falló en un entorno se repite en los otros)
+    try:
+        clave = "%s|%s|%s" % (entorno.__name__, ",".join(acciones), LARGO)
+        regla.hypothesis.inner_test._hypothesis_internal_add_digest = clave.encode("utf-8")
+    except Exception:
+        pass
     return regla
 
 

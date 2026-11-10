@@ -136,7 +136,10 @@ Material abiertos con un panel abierto (error conocido #3; en croquis no aplica)
   largas. `FW_ACHICAR=0`: no achica el caso al fallar (más rápido; para comprobar roturas).
 - **Deudas**: errores ya registrados que el mono anota en la traza ("deuda #N en: ...") y no lo
   frenan, para que siga buscando otros: `deuda` (texto en el informe) y `deuda_pasos` (aviso de
-  una comprobación) en cada entorno. Al arreglar la Issue, sacar su renglón.
+  una comprobación) en cada entorno. Al arreglar la Issue, sacar su renglón. Para no perdonar de
+  más: en `deuda` el texto puede ser una tupla (cuenta solo si salen todos juntos) y en
+  `deuda_pasos` un cuarto dato pide un paso anterior en la seguidilla (p. ej. #59, solo después
+  de "aplanar").
 - No cuentan: la visibilidad después de Ctrl+Z / Ctrl+Y (#36), el aviso de FreeCAD "... not
   possible ..." y los errores que vienen enteros de adentro de otro addon (SheetMetal): lo que
   importa es que FreeWorks no deje una operación con error, y eso sí se mide.
@@ -167,8 +170,13 @@ Material abiertos con un panel abierto (error conocido #3; en croquis no aplica)
   cada panel, escribir lo que sea en un campo al azar y Aceptar o Cancelar. Al teclear se manda
   cada carácter como una tecla con su texto, porque `QTest.keyClicks` cierra FreeCAD de golpe con
   caracteres como "∞". Reglas: sin errores de Python ni ventanas colgadas; lo aceptado es válido y
-  se deshace exacto. Sin terminar de probar (09/11): dio bien en los primeros 4 paneles; la corrida
-  completa va de noche.
+  se deshace exacto; Cancelar deja todo igual. Probado el 09/11 con ventana: bien en los ~45
+  paneles; con un error metido a propósito (el Redondeo aceptando un radio imposible) falla.
+  Casos por panel: FW_CASOS_CAMPOS (2 en cada entrega, ~5 min por prueba; 6 de noche). Los
+  paneles sin campos (Simetría, Eje, Punto, Combinar...) controlan solo el Cancelar. Las
+  herramientas de entidades del croquis dejan el croquis abierto al Aceptar (como SW): ahí se
+  sale del croquis y se controla que nada quede con error (el Ctrl+Z adentro del croquis lo
+  controlan las reglas de paneles).
 
 ## Tiempos máximos y capturas de referencia (paso 9)
 
@@ -178,10 +186,21 @@ Material abiertos con un panel abierto (error conocido #3; en croquis no aplica)
 - `prueba_ventana_capturas.py` (con ventana): una foto de cada pestaña de la cinta y de 6 paneles,
   comparada con la aprobada (`capturas/aprobadas/`). Las fotos que no tienen aprobada quedan en
   `capturas/nuevas/` (no se suben) para que el usuario las apruebe copiándolas a `aprobadas/`.
+  No se compara el dibujo de la vista 3D (se corre un píxel de una corrida a otra) ni la barra
+  de estado. Probado el 09/11: dos corridas seguidas dan 0,00 % de diferencia; con un texto del
+  panel de Redondeo cambiado, 0,11 %: la tolerancia es 0,02 %. Los paneles se fotografían con
+  la pestaña Operaciones al frente.
 - Mapa de cobertura de TODO FreeWorks (`swui/`, no solo `swui/fork/`): `correr.py completa
   --cobertura` (lo corre la noche) o `correr.py sin_ventana --cobertura` (rápida + al azar).
 
 ## Las 7 preguntas (paso 7)
+
+- Con ventana (09/11, probadas): en el mono, "otro_archivo" (pregunta 6: abre un segundo
+  archivo, vuelve al de trabajo y después de cada paso controla que el otro no cambie) y
+  "medida_base" para pieza y multicuerpo (pregunta 3: cambia el largo de la caja base un
+  20-30 %, recalcula sin que nada quede con error, la vuelve y todo queda igual). En la regla
+  "guardar" de las reglas de paneles, el archivo guardado no puede guardar objetos de Python de
+  FreeWorks (pregunta 4, en unos 50 paneles). Cada control comprobado rompiendo algo a propósito.
 
 - Sin ventana, pregunta 4 ("abre sin FreeWorks"): `prueba_azar_sin_freeworks.py` arma con las
   funciones públicas un marco soldado con esquinas, cartela y tapa, configuraciones, ecuaciones, un
@@ -202,6 +221,14 @@ Agregado a partir de ese cuadro:
 pruebas toleran (CONOCIDO, conocido=, DEUDA, deuda, deuda_pasos) y consulta GitHub: si una está
 cerrada o no existe, falla con el archivo y el número. Así una prueba no queda tapando un error
 que ya se arregló. Comprobado con un #16 (cerrada) y un #9999 (no existe) puestos a propósito.
+
+## Cosas del corredor (`correr.py`)
+
+- Cada prueba usa su propia carpeta de temporales (`FREECAD_USER_TEMP`), donde FreeCAD guarda la
+  recuperación de documentos: una prueba cortada por tiempo ya no deja la ventana "Recuperación
+  de documentos" en la siguiente prueba ni en el FreeCAD del usuario (pasó el 09/11).
+- Una prueba larga a propósito declara `TIEMPO_MAXIMO = <segundos>` (el fuzzing de campos:
+  2400); si no, el tope es el de su clase (10 min con ventana).
 
 ## La corrida de noche
 

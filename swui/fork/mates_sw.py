@@ -298,6 +298,8 @@ def create_joint(asm, key, refs, value=None, label=None):
     if key == "lock":
         _keep_position(joint, connectors)
     joint.Proxy.setJointConnectors(joint, connectors)
+    if key in PLANE_PARALLEL:
+        unstick_perpendicular(asm, joint, refs)
     if key == "tangent":
         _tangent_axis(asm, joint, refs, connectors)
     hide_markers([joint] + companions(joint))
@@ -500,6 +502,106 @@ def _keep_position(joint, connectors):
         joint.Offset2 = p2.inverse().multiply(g2.inverse()).multiply(g1).multiply(p1)
     except Exception:
         FreeCAD.Console.PrintLog("[SWUI fork] Bloquear: %s\n" % traceback.format_exc())
+
+
+# las relaciones que dejan dos caras planas paralelas (unión "Distance" o "Parallel")
+PLANE_PARALLEL = ("coincident", "distance", "parallel")
+
+
+def _global_z(joint, n):
+    _jo, ua = _assembly_modules()
+    plc = ua.getJcsGlobalPlc(getattr(joint, "Placement%d" % n), getattr(joint, "Reference%d" % n))
+    return plc.Base, plc.Rotation.multVec(FreeCAD.Vector(0, 0, 1))
+
+
+def _outward(comp, sub, z):
+    """El eje Z de la unión sale del eje de la superficie, que en una cara "dada vuelta" (las de
+    adentro de un agujero o un corte) apunta para adentro del sólido: se da vuelta para que sea la
+    normal hacia afuera de la cara (la que dice de qué lado está la pieza)."""
+    try:
+        face = _global(comp, sub)
+        u0, u1, v0, v1 = face.ParameterRange
+        n = face.normalAt((u0 + u1) / 2, (v0 + v1) / 2)
+        return -z if z.dot(n) < 0 else z
+    except Exception:
+        return z
+
+
+def unstick_perpendicular(asm, joint, refs):
+    """
+    Coincidente / Distancia / Paralela entre dos caras planas que están a 90° justos (dos piezas
+    sin girar, una cara de costado contra una de frente: lo más común): el solver de FreeCAD 1.1
+    no las mueve y dice que resolvió (probado 09/11, ver docs/NOTAS_TECNICAS.md). SW gira la pieza
+    y deja las caras enfrentadas. Acá, si después de resolver no quedaron paralelas, la pieza que
+    se mueve se gira hasta dejar su cara enfrentada a la otra (cara contra cara) y se resuelve de
+    nuevo, que solo la corre; si eso no alcanza, vuelve a donde estaba. Un giro de unos pocos
+    grados no alcanza: con la pieza que se mueve elegida primero el solver falla (probado 09/11).
+    Devuelve True si tuvo que girarla.
+    """
+    if {_ref_kind(c, s) for c, s in refs} != {"plane"}:
+        return False
+    _jo, ua = _assembly_modules()
+    before = {}
+    try:
+        o1, z1 = _global_z(joint, 1)
+        o2, z2 = _global_z(joint, 2)
+        if abs(z1.dot(z2)) > 1 - 1e-6:
+            return False
+        part1 = ua.getMovingPart(joint.Reference1)
+        part2 = ua.getMovingPart(joint.Reference2)
+        joint.Suppressed = True
+        try:
+            libre1 = part1 is not None and not asm.isPartConnected(part1)
+            libre2 = part2 is not None and not asm.isPartConnected(part2)
+        finally:
+            joint.Suppressed = False
+        n1, n2 = _outward(refs[0][0], refs[0][1], z1), _outward(refs[1][0], refs[1][1], z2)
+        # solo se gira una pieza que no tiene otras relaciones que la sujeten: si las tiene, girarla
+        # rompería esas relaciones (o la nueva choca con ellas) y el solver falla con un error en el
+        # informe (lo encontró el mono, 09/11); entonces queda como lo deja FreeCAD
+        if libre2:
+            moving, origin, nm, nf = part2, o2, n2, n1
+        elif libre1:
+            moving, origin, nm, nf = part1, o1, n1, n2
+        else:
+            return False
+        # la normal hacia afuera de la cara que se mueve, hacia la contraria de la fija: cara
+        # contra cara (las piezas quedan una al lado de la otra, no metidas)
+        axis = nm.cross(-nf)
+        if axis.Length < 1e-9:
+            return False
+        parts = [moving]
+        try:
+            parts += list(asm.getDownstreamParts(moving, joint))
+        except Exception:
+            pass
+        before = {p: p.Placement for p in parts}
+        import math
+
+        angle = math.degrees(nm.getAngle(-nf))
+        turn = FreeCAD.Placement(FreeCAD.Vector(), FreeCAD.Rotation(axis, angle), origin)
+        for p in parts:
+            p.Placement = turn.multiply(p.Placement)
+        ok = solve(asm) == 0
+        if ok:
+            o1, z1 = _global_z(joint, 1)
+            o2, z2 = _global_z(joint, 2)
+            ok = abs(z1.dot(z2)) > 1 - 1e-6
+        if not ok:
+            for p, plc in before.items():
+                p.Placement = plc
+            solve(asm)
+        return ok
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Caras a 90°: %s\n" % traceback.format_exc())
+        try:  # si falló después de girarla, la pieza vuelve a donde estaba
+            for p, plc in before.items():
+                p.Placement = plc
+            if before:
+                solve(asm)
+        except Exception:
+            pass
+        return False
 
 
 def solve(asm):

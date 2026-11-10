@@ -485,6 +485,28 @@ Cada uno con lo que hace el fork mientras tanto. Buscado en los issues de FreeCA
    - Arreglo del fork: `config_asm._force_copy` (pasar por otra configuración y volver) y
      `settle_doc` / `settle_assembly` (recalcular hasta que no quede nada tocado, después de
      cualquier recálculo de una pieza con componentes configurados abiertos).
+6. **Unión "Distance" (o "Parallel") entre dos caras planas a 90° justos: el solver no gira la
+   pieza y devuelve 0 (resuelto)** (FreeCAD 1.1.4, 2026-11-09, encontrado por
+   `prueba_ventana_azar_ensamblaje`, #58). Ese par de uniones no tiene el pre-acomodo nativo
+   (`JointUsingPreSolve` en `JointObject.py`: solo Fixed, Revolute, Cylindrical, Slider, Ball).
+   Con las normales a 90° exactos (dos cajas sin girar, una cara de costado contra una de frente)
+   la pieza queda igual; con 1° de diferencia ya las deja paralelas.
+   - Prueba (con ventana): placa 15,3x11x100 fija, bloque 76,5x69,1x44,3 sin girar; Distance 0
+     entre placa Face1 y bloque Face3: `asm.solve()` = 0 y el coseno entre normales sigue en 0.
+   - Arreglo del fork: `mates_sw.unstick_perpendicular` (después de crear la unión, si las caras
+     no quedaron paralelas, gira la pieza que se mueve hasta dejar las caras enfrentadas, con la
+     normal hacia afuera de cada cara, y resuelve de nuevo). Girarla solo unos grados no alcanza:
+     con la pieza que se mueve elegida primero, el solver devuelve -1. Prueba:
+     `prueba_ventana_coincidente_90.py` (también con una cara de adentro de una ranura). Solo se
+     gira una pieza sin otras relaciones (con otras, el solver falla: "Solve failed: invalid
+     vector subscript").
+7. **Transacción vacía que no se cierra** (FreeCAD 1.1.4, 2026-11-09, #60): `doc.openTransaction`
+   abre también la de la aplicación (`FreeCAD.getActiveTransaction()`); si después se llama
+   `doc.abortTransaction()` o `commitTransaction()` sin que haya habido cambios, la de la
+   aplicación sigue abierta y el próximo cambio, en cualquier documento, cae en ese paso. Con
+   cambios sí se cierra. Hay que llamar además `FreeCAD.closeActiveTransaction(abort)`: lo hace
+   `safe_ops.end_step`. Prueba: `prueba_transaccion_vacia.py` (avisa si una versión nueva lo
+   arregla).
 
 ## Chapa (fase 1): hallazgos con SheetMetal 0.8.26 en FreeCAD 1.1.4
 - SheetMetal se importa por módulos (`SheetMetalBaseCmd`, `SheetMetalCmd`, `SheetMetalUnfoldCmd`):

@@ -212,7 +212,7 @@ def guardar(pts, datos, esquina):
 def prueba():
     fallas = Fallas()
     solo = os.environ.get("FW_CASO", "")
-    reglas = [("marco", marco, ""), ("guardar y abrir", guardar, ""),
+    reglas = [("marco", marco, "#61"), ("guardar y abrir", guardar, ""),
               ("sigue al esqueleto (tope)", _sigue("tope"), "#2"),
               ("sigue al esqueleto (inglete)", _sigue("inglete"), "#2")]
     for nombre, fn, conocido in reglas:

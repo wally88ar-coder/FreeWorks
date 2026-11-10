@@ -1,5 +1,52 @@
 # Estado del fork
 
+**09/11 tarde (con ventana, el usuario fuera de la PC), LO QUE FALTABA DEL CONTROL DE CALIDAD.**
+- Capturas de referencia (`prueba_ventana_capturas.py`): estables (dos corridas, 0,00 %) sin
+  comparar la vista 3D; detectan un texto cambiado (0,11 %, tolerancia 0,02 %). **Falta que el
+  usuario apruebe las 14 imágenes** de `tools/fork/pruebas/capturas/nuevas/` (copiarlas a
+  `aprobadas/`). Visto en las capturas: la primera pestaña de la cinta es Evaluar (en SW 2018
+  la primera es Operaciones): preguntar al usuario si la quiere así.
+- Fuzzing de campos en ~40 paneles (`prueba_ventana_campos_pieza.py` y `_otros.py`): bien, y
+  atrapa un error metido a propósito. Arreglos de la prueba: 2 casos por panel en cada entrega
+  (6 de noche) y tiempo propio (TIEMPO_MAXIMO), paneles sin campos, croquis que queda abierto.
+- Mono: "otro_archivo" y "medida_base" (preguntas 6 y 3), y regla "guardar" con abrir sin
+  FreeWorks (pregunta 4): bien, cada una comprobada rompiendo algo a propósito.
+- Hallazgo: una prueba cortada por tiempo dejaba su recuperación de documentos en la carpeta del
+  usuario y todas las pruebas siguientes arrancaban con la ventana de recuperación. Arreglado
+  (`FREECAD_USER_TEMP` propio por prueba); borrados los 2 restos de prueba ("Campos" y "Mono",
+  de la madrugada) de la carpeta del usuario.
+- `ExportOCAF2.cpp(320): Failed to get subshape Face1` al guardar: el mono lo repitió (Matriz →
+  Corte → Taladro de ensamblaje → guardar), siempre junto con el aviso de #38: anotado en #38 y
+  como deuda de esa ficha en el mono.
+- **Arreglado #58 (grave)**: relación Coincidente / Distancia / Paralela entre dos caras planas a
+  90° justos (dos piezas sin girar, cara de costado contra cara de frente): no movía la pieza y
+  decía que había resuelto (error de FreeCAD, NOTAS_TECNICAS "Errores de FreeCAD encontrados" 6).
+  Ahora la gira y quedan cara contra cara, como SW; Ctrl+Z / Ctrl+Y exactos
+  (`prueba_ventana_coincidente_90.py`, que falla sin el arreglo). Sin probar con el mouse.
+  Solo gira una pieza que no tiene otras relaciones: si las tiene, el mono encontró que el
+  solver falla con error en el informe (dos relaciones que chocan); ahí queda como FreeCAD.
+- **#60 (mediano, arreglado en parte)**: cancelar o aceptar un panel sin cambios deja abierta la
+  transacción de la aplicación (FreeCAD 1.1.4: `abortTransaction` sin cambios no la cierra; NOTAS
+  "Errores de FreeCAD encontrados" 7) y lo próximo se suma a ese paso. Lo encontró el mono de
+  soldadas (cancelar Cartela → guardar). Pieza común `safe_ops.end_step`; pasados: soldadas y
+  `undo_step`. Quedan ~140 lugares: pasarlos al tocar cada módulo (`prueba_transaccion_vacia.py`).
+  Revisión: si mientras tanto se cambió algo en otro documento, Cancelar confirma ese paso en
+  vez de anularlo (si no, deshacía lo del otro documento sin avisar); probado.
+- Encontrados por las pruebas al azar en la batería del 10/11 (ninguno por los cambios de esa
+  noche; #62 probado sin el arreglo de #58): **#61** soldadas, esquina a tope en un marco no
+  rectangular, la lista de cortes da otro largo; **#62** ensamblaje, coincidente entre dos piezas
+  iguales superpuestas mueve la fija (también en "guardar y abrir"); **#64** Tangente plano-cilindro deja el eje inclinado; **#63** croquis, Equidistanciar entidades da
+  "makeOffset2D: wires are nonplanar". Quedan como CONOCIDO / deuda. La regla "tangente" sacaba
+  una placa más chica que su agujero (error de la prueba, arreglado).
+- Las pruebas comparan los giros sin importar el signo del cuaternión (q y -q son el mismo giro;
+  al rehacer FreeCAD da uno u otro): daba una falla falsa en el mono de ensamblaje.
+- Encontrados por el mono con la memoria nueva de Hypothesis: #59 (chapa: después de Aplanar,
+  suprimir una brida y Ctrl+Z la deja sin la brida) y #44 también en multicuerpo (suprimir
+  Combinar con un Redondeo encima da error en el informe). Quedan como deuda conocida en el mono.
+- Ajustes de las pruebas nuevas pedidos por la revisión (14): limpieza si una vuelta falla, paneles
+  sin campos explícitos, capturas a tamaño fijo y como CONOCIDO #57 hasta que el usuario apruebe,
+  memoria de Hypothesis propia por panel y por entorno del mono, etc.
+
 **09/11 mediodía (sin ventanas), TRES PRUEBAS MÁS:** fuzzing de campos en configuraciones, material
 y chapa (`prueba_azar_campos_otros.py`: encontró #55, renombrar una configuración con la pieza en
 error la deja rota, y más casos de #46); "abre sin FreeWorks" con todo lo que se arma por funciones
