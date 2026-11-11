@@ -336,9 +336,7 @@ class Configuraciones(Entorno):
     nombre = "configuraciones"
     vinculos = ("body", "hueco")
     acciones = ("config_nueva", "config_ir", "config_ir")
-    # #47: deshacer una operación nueva deja su columna "Suprimir ..." en la tabla
-    deuda_pasos = (("#47", "TablaDiseno cambió (contenido)", "aceptar"),
-                   ("#75", "No hay una configuración", "config_nueva"))
+    deuda_pasos = (("#75", "No hay una configuración", "config_nueva"),)
     # suprimir el Agujero con un Redondeo sobre su arista: el redondeo se suprime con él (como SW)
     # pero FreeCAD igual lo recalcula y avisa (#44; reproducido sin ventana el 10/11)
     deuda = (("#44", ("Failed to recompute suppressed feature", "Invalid edge link"), None, "suprimir"),

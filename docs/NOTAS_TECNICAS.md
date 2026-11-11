@@ -508,6 +508,18 @@ Cada uno con lo que hace el fork mientras tanto. Buscado en los issues de FreeCA
    `safe_ops.end_step`. Prueba: `prueba_transaccion_vacia.py` (avisa si una versión nueva lo
    arregla).
 
+8. **Tras Deshacer/Rehacer, una fórmula deja de seguir a lo que lee** (FreeCAD 1.1.4,
+   2026-11-11, #47). Un objeto que Deshacer o Rehacer vuelve a crear (creado con una fórmula en
+   el mismo paso, o borrado y traído de vuelta) recupera `ExpressionEngine` pero su `OutList`
+   queda sin el objeto que la fórmula lee: si ese cambia, el objeto no se recalcula.
+   - Prueba (FreeCADCmd): planilla con alias `a` = 5; en un paso, `Part::Box` con
+     `setExpression("Length", "Hoja.a")`; undo, redo, recompute; `a` = 8 y recompute: Length
+     sigue en 5 y OutList = []. Lo mismo con `Suppressed` de una operación de PartDesign.
+   - El fork: `swui/fork/redo_links.py` anota los objetos creados mientras `doc.Transacting` y,
+     en `slotUndoDocument` / `slotRedoDocument`, les saca y vuelve a poner las fórmulas (rearma la
+     dependencia; sin pasos de deshacer nuevos). `prueba_formulas_tras_rehacer` avisa el día que
+     FreeCAD lo arregle.
+
 ## Chapa (fase 1): hallazgos con SheetMetal 0.8.26 en FreeCAD 1.1.4
 - SheetMetal se importa por módulos (`SheetMetalBaseCmd`, `SheetMetalCmd`, `SheetMetalUnfoldCmd`):
   al importarlos registran sus comandos aunque su banco no esté activo. Sus objetos dentro de un

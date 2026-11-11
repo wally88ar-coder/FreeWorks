@@ -567,8 +567,9 @@ def _hook_equations():
 class _NewFeatures:
     """
     Como SW: una operación nueva queda en la configuración activa y suprimida en las demás. Se
-    anota al crearse y se aplica cuando ya no hay panel abierto (mientras se edita, cambiar su
-    supresión la rompería) y fuera de deshacer / rehacer.
+    anota al crearse y se aplica al salir de edición, dentro del paso de deshacer de su panel
+    (#47; mientras se edita, cambiar su supresión la rompería). Lo que se crea sin panel, con el
+    temporizador cuando ya no hay panel abierto. Nunca durante deshacer / rehacer.
     """
 
     def __init__(self):
@@ -594,6 +595,30 @@ class _NewFeatures:
             self.timer.timeout.connect(self._apply)
         self.timer.start()
 
+    def slotResetEdit(self, view_provider):
+        """
+        La operación sale de edición (Aceptar o Cancelar de su panel). Los paneles, propios y
+        nativos, salen de edición ANTES de cerrar su paso de deshacer: si se suprime acá en las
+        otras configuraciones, eso entra en el mismo paso que la operación y Ctrl+Z / Ctrl+Y la
+        sacan y la traen completa, como SW (#47). Si se canceló, el paso se descarta entero y la
+        supresión con él.
+        """
+        from swui.fork import safe_ops
+
+        try:
+            obj = view_provider.Object
+            doc = obj.Document
+            pending = bool(getattr(doc, "HasPendingTransaction", False))
+        except Exception:
+            return
+        if safe_ops.doc_busy(doc):
+            return  # Cancelar: FreeCAD deshace el paso y, mientras tanto, sale de edición
+        mine = [q for q in self.queue if q[0] == doc.Name and q[1] == obj.Name]
+        if not mine or not pending:
+            return  # sin paso abierto: queda para el temporizador (como antes)
+        self.queue = [q for q in self.queue if q not in mine]
+        self._run(mine)
+
     def _apply(self):
         try:
             if FreeCADGui.Control.activeDialog() or (FreeCADGui.ActiveDocument and FreeCADGui.ActiveDocument.getInEdit()):
@@ -602,6 +627,9 @@ class _NewFeatures:
             pass
         queue, self.queue = self.queue, []
         self.timer.stop()
+        self._run(queue)
+
+    def _run(self, queue):
         _state["busy_new"] = True
         try:
             for doc_name, obj_name, conf in queue:
@@ -646,6 +674,7 @@ def install():
     if _state.get("new_obs") is None:
         _state["new_obs"] = _NewFeatures()
         FreeCAD.addDocumentObserver(_state["new_obs"])
+        FreeCADGui.addDocumentObserver(_state["new_obs"])  # slotResetEdit (#47)
     if _state.get("rows_obs") is None:
         _state["rows_obs"] = _TableRows()
         FreeCAD.addDocumentObserver(_state["rows_obs"])

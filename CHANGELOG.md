@@ -26,6 +26,9 @@ Neueste Version oben. / Newest version first.
   una operación no se puede construir se acepta, la operación queda con error en el árbol y el
   aviso dice cuál (antes se rechazaba); una fórmula mal escrita se sigue rechazando.
   #77 era de la prueba (el Ángulo de salida buscaba la cara en la operación nueva).
+  #47: con configuraciones, la supresión de una operación nueva en las otras entra en el mismo
+  paso de deshacer (Ctrl+Z la saca entera y Ctrl+Y la trae suprimida donde corresponde); rodeo
+  a un error de FreeCAD 1.1.4 por el que una fórmula dejaba de seguir a la tabla tras Rehacer.
   #34: toda la interfaz trata de usted, como SW 2018 en castellano.
 - **Segunda tanda de la noche del 11/11:** Ecuaciones "todo o nada" (#45, #46, #48, #49: una
   fórmula que FreeCAD no puede calcular se rechaza con aviso en castellano y deja todo como

@@ -304,6 +304,13 @@ def install(workbench=None):
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] Configuraciones:\n%s\n" % traceback.format_exc())
     try:
+        # rodeo a FreeCAD 1.1.4: fórmulas que dejan de seguir a lo que leen tras deshacer/rehacer
+        from swui.fork import redo_links
+
+        redo_links.install()
+    except Exception:
+        FreeCAD.Console.PrintError("[SWUI fork] Fórmulas tras deshacer:\n%s\n" % traceback.format_exc())
+    try:
         from swui.fork import always_swui
 
         always_swui.install()
