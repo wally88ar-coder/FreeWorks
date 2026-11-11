@@ -116,7 +116,7 @@ con el mouse sobre un conjunto realista y comparada con SW; lo que aparezca usá
 sobre la marcha); fases 1 a 4: todas las pruebas del checklist hechas con mouse y teclado (Claude,
 casi todas comparadas con SW; el usuario probó redondeo y girar cara) y todas las decisiones
 tomadas; quedan solo las que necesitan algo del usuario (un STEP suyo, una pieza suya, abrir el
-DXF en CypCut, Brida base de punta a punta) y el Dobladillo abierto (Claude). Repositorio en
+Brida base de punta a punta; CypCut no lo usa) y el Dobladillo abierto (Claude). Repositorio en
 GitHub: wally88ar-coder/FreeWorks (todo subido). Fase 6 (chequeo de compatibilidad) acordada,
 sin empezar.
 Hecho además fuera de las fases: barra de menús como SW 2018 (2026-11-01, `swui/fork/menus_sw.py`;

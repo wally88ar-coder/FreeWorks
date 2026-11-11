@@ -1741,37 +1741,8 @@ Pendiente:
 - 5) Rosca en planos: **sí, la quiere** (representación simplificada: círculo de 3/4 fino de
   frente, líneas finas en lateral/corte). Decidido: va con el trabajo de planos (ver Falta).
 - Pedido a FreeCAD (planos en ángulo / punto medio): el usuario lo dejó por ahora.
-- **#2 (noche del 11/11, sin código): las esquinas de soldadas no siguen al esqueleto.** Causa raíz:
-  el inglete y la punta a tope en ángulo son cajas de corte ubicadas con números fijos calculados
-  al crearlas (`_box_cut`), y los alargues también son números fijos; si el esqueleto cambia,
-  quedan donde estaban. Arreglarlo de raíz es un cambio de diseño, por eso no lo toqué de noche.
-  Propuesta (para aprobar): que la ubicación y el giro de esas cajas, y los alargues, sean
-  **fórmulas nativas de FreeCAD** atadas a la línea del esqueleto (FreeCAD 1.x trae funciones de
-  vectores en las fórmulas). Así FreeCAD los recalcula solo, también sin FreeWorks instalado, y
-  el archivo sigue siendo 100 % nativo. Alternativa más simple, que no recomiendo: que FreeWorks
-  rehaga las esquinas cuando cambia el esqueleto; sin FreeWorks el archivo quedaría mal.
-  Prueba ya armada: `prueba_azar_soldadas.py` (reglas "sigue al esqueleto") + `prueba_inglete_sigue_esqueleto.py`.
-- **#34 (11/11): ¿FreeWorks te habla de "vos" o de "usted"?** Hoy casi todo dice "Elegí...", y 13
-  avisos del croquis dicen "Elija..." (SW 2018 en castellano usa "usted"). Con tu respuesta se
-  unifica todo y queda la regla escrita.
-- **#47 (11/11): operación nueva con varias configuraciones y Ctrl+Z.** Como SW, la operación nueva
-  queda suprimida en las otras configuraciones: eso agrega una columna a la tabla, y se hace al
-  cerrar el panel, cuando FreeCAD ya cerró su paso de deshacer (no deja sumarle cosas). Por eso
-  Ctrl+Z saca la operación y deja la columna. Opciones: (a) hacerlo ANTES de cerrar el panel,
-  dentro de su paso (hay que tocar el cierre de todos los paneles, propios y nativos); (b) al
-  deshacer, limpiar columnas de operaciones que ya no existen (pero Rehacer la trae sin suprimir
-  en las otras). Recomiendo (a); es trabajo de diseño, no de una noche.
-- **#22 (11/11): copiar y pegar un miembro estructural o una chapa.** Las marcas internas guardan
-  NOMBRES de objetos; al pegar, la copia apunta al original. Arreglo de raíz: guardarlas como
-  vínculos (FreeCAD los actualiza solo al copiar). Toca cómo se guardan los archivos (nombres
-  estables para siempre, ver Decisiones): necesita tu OK.
-- **Densidad "7.850" (11/11, revisión).** Con UN solo punto y sin coma, FreeWorks lo toma como
-  decimal: "7.850" = 7,85. Con dos o más puntos ("1.000.000") ya los toma como miles. ¿Querés que
-  "7.850" (punto y justo 3 cifras) dé 7850, o que avise "¿quisiste decir 7850 o 7,85?"? Hoy no
-  cambia nada respecto de antes.
-- **Ecuación que deja una operación imposible (11/11, revisión).** Hoy se rechaza ("Con ese valor
-  «Corte1» no se puede construir; quedó como estaba"). SW la acepta y marca el error en el árbol.
-  ¿Lo dejamos así (todo o nada) o como SW?
+- Las preguntas del 11/11 (#2, #34, #47, #22, densidad "7.850", ecuación que deja una
+  operación imposible) ya tienen respuesta: ver Decisiones (11/11).
 - Bajo, sin tocar (revisión del 11/11): después de una fórmula rechazada el documento puede
   quedar "modificado" aunque nada cambió; taladro/corte de ensamblaje con un componente
   reemplazado por otra pieza que tenga una operación con el mismo nombre (sin probar).
@@ -2724,6 +2695,21 @@ Etapas:
   FreeCAD, no acepta caras). Resuelto con el panel propio.
 
 ## Decisiones
+- **Respuestas del usuario (11/11) a las preguntas de la noche:**
+  - #2 esquinas de soldadas: **fórmulas nativas** de FreeCAD atadas al esqueleto (ubicación y
+    giro de las cajas de corte y los alargues), para que sigan solas también sin FreeWorks.
+  - #34 trato: **usted** en toda la interfaz ("Elija...", "Escriba..."), como SW 2018 en
+    castellano. Regla para todo texto nuevo.
+  - #47 Ctrl+Z con configuraciones: **igual que SW**: la supresión en las otras configuraciones
+    entra en el mismo paso de deshacer que la operación (Ctrl+Z y Ctrl+Y la sacan y la traen
+    completa).
+  - #22 copiar y pegar: **como SW**, la copia queda independiente del original; las marcas
+    internas pasan a guardarse como vínculos (los archivos viejos se siguen abriendo).
+  - Densidad "7.850": **se deja como 7,85** (un punto = coma decimal), como hasta ahora.
+  - **CypCut: el usuario no lo usa** (11/11): la prueba "abrir el DXF en CypCut" sale de los
+    pendientes; el DXF se valida con lo que él use.
+  - Ecuación que deja una operación imposible: **como SW**: se acepta el valor y la operación
+    queda marcada con error en el árbol (no se rechaza).
 - **Estructuras / piezas soldadas (usuario, 01/11):** con Cuerpos nativos de FreeCAD (como el
   multicuerpo), NO con el addon FrameForge como dependencia; se puede copiar código de FrameForge
   (LGPL-3.0-only) cuando sea útil y esté probado, con su aviso. Detalle en "Falta / ideas".

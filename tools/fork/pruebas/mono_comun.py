@@ -510,6 +510,33 @@ def paso(m, accion, semilla, historia):
     historia.append(("%s %s" % (accion, nombre)).strip())
 
 
+class _Vigia:
+    """Si un paso tarda más de 60 s (#78: la prueba se cortó a los 600 s sin decir dónde), anota en
+    el registro qué paso es y qué ventanas había arriba (un aviso modal suele ser la causa)."""
+
+    def __init__(self, accion):
+        from swui.compat import QtCore
+        self.accion = accion
+        self.timer = QtCore.QTimer()
+        self.timer.setSingleShot(True)
+        self.timer.timeout.connect(self._avisar)
+        self.timer.start(int(float(os.environ.get("FW_VIGIA_S", "60")) * 1000))
+
+    def _avisar(self):
+        from swui.compat import QtWidgets
+        app = QtWidgets.QApplication.instance()
+        modal = app.activeModalWidget()
+        arriba = ["%s «%s»%s" % (w.metaObject().className(), w.windowTitle(),
+                                 (" «%s»" % w.text()[:120]) if hasattr(w, "text") and callable(w.text) else "")
+                  for w in app.topLevelWidgets() if w.isVisible() and w.isWindow()]
+        traza("    VIGÍA: «%s» lleva más de lo previsto; modal: %s; ventanas: %s"
+              % (self.accion, modal.metaObject().className() + " «%s»" % modal.windowTitle() if modal else "ninguna",
+                 arriba[:8]))
+
+    def parar(self):
+        self.timer.stop()
+
+
 def regla_mono(entorno, acciones):
     given, cfg, st = hypothesis_listo()
 
@@ -520,6 +547,7 @@ def regla_mono(entorno, acciones):
         historia = []
         traza("  seguidilla: %s" % [a for a, _s in pasos])
         for accion, semilla in pasos:
+            vigia = _Vigia(accion)
             try:
                 paso(m, accion, semilla, historia)
             except NadaQueElegir:
@@ -536,6 +564,8 @@ def regla_mono(entorno, acciones):
                 from reglas_paneles import limpiar_ventana
                 limpiar_ventana()
                 historia.append(ultimo)
+            finally:
+                vigia.parar()
         comprobado()
     # memoria de Hypothesis propia de cada entorno y lista de acciones (el código de la regla es el
     # mismo para todos: sin esto, la seguidilla que falló en un entorno se repite en los otros)

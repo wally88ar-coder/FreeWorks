@@ -137,8 +137,11 @@ class AnguloSalida(_ConPieza):
     def abrir(self, rng):
         import FreeCADGui
         FreeCADGui.Selection.clearSelection()
-        lados = caras_planas(self.punta, normal_z=0.0)
-        FreeCADGui.Selection.addSelection(self.punta, rng.choice(lados))
+        # la pieza de antes: al abrir, el Ángulo de salida nuevo pasa a ser la punta del Cuerpo y,
+        # hasta que tenga plano neutro, puede no tener forma (#77: buscaba la cara de arriba ahí)
+        self.base = self.punta
+        lados = caras_planas(self.base, normal_z=0.0)
+        FreeCADGui.Selection.addSelection(self.base, rng.choice(lados))
         correr_cinta("PartDesign_Draft")
         yield from esperar_panel()
 
@@ -147,7 +150,7 @@ class AnguloSalida(_ConPieza):
         p = self.panel()
         p._activate(p.neutral)
         yield 200
-        FreeCADGui.Selection.addSelection(self.punta, caras_planas(self.punta, normal_z=1.0)[0])
+        FreeCADGui.Selection.addSelection(self.base, caras_planas(self.base, normal_z=1.0)[0])
         yield 600
         p.angle.setValue(round(rng.uniform(1.0, 10.0), 1))
         p.preview()
