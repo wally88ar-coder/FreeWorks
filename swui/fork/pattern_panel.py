@@ -667,7 +667,7 @@ class MirrorPanel(TransformedPanel):
             self.preview()
         if not self.valid:
             return False
-        from swui.fork import mirror_bodies, multibody
+        from swui.fork import mirror_bodies, safe_ops
 
         doc, name, ref = self.doc, self.obj.Name, self.refs.get("MirrorPlane")
         bodies = list(self.mirror_bodies)
@@ -681,12 +681,7 @@ class MirrorPanel(TransformedPanel):
         try:
             feature = doc.getObject(name)
             if feature is not None:  # se editaba una existente: pasa a sólidos aparte
-                body = multibody.body_of(feature)
-                previous = feature.BaseFeature
-                was_tip = body is not None and body.Tip is feature
-                doc.removeObject(name)
-                if was_tip and previous is not None:
-                    multibody._set_tip(body, previous)
+                safe_ops.remove_feature(feature)  # sin dejar a la siguiente sin base (Issue #1)
             for body in bodies:
                 mirror_bodies.make_mirror_body(body, ref)
             doc.commitTransaction()

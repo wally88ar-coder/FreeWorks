@@ -566,7 +566,15 @@ class _EquationsDialog(QtWidgets.QDialog):
         self.setWindowTitle("Ecuaciones, variables globales y cotas")
         self.setModal(False)  # se puede tocar el modelo (clic en una cota la inserta), como pidió el usuario
         self.resize(900, 460)
-        doc.openTransaction("Ecuaciones")
+        from swui.fork import safe_ops
+
+        # paso propio, o sumado al de un panel abierto (abrir uno nuevo confirmaría el del panel
+        # y su Cancelar ya no desharía: Issue #3)
+        self.own_step = safe_ops.begin_step(doc, "Ecuaciones")
+        # se tocó algo desde esta ventana: sin esto, con un panel abierto y sin cambios, Aceptar o
+        # Cancelar recalculaban igual el documento a medio armar del panel (en ensamblaje, una
+        # relación a medias hacía fallar el resolvedor: "Solve failed", 11/11)
+        self.touched = False
         box = QtWidgets.QVBoxLayout(self)
         split = QtWidgets.QHBoxLayout()
         box.addLayout(split, 1)
@@ -680,6 +688,7 @@ class _EquationsDialog(QtWidgets.QDialog):
         kind, data = self.rows[r]
         name_cell = self.table.item(r, 0).text().strip().strip('"')
         value_text = self.table.item(r, 1).text().strip()
+        self.touched = True
         try:
             if kind == VAR and col == 3:
                 data[0].setDocumentationOfProperty(data[1], item.text())
@@ -761,6 +770,7 @@ class _EquationsDialog(QtWidgets.QDialog):
         if not 0 <= r < len(self.rows):
             return
         kind, data = self.rows[r]
+        self.touched = True
         try:
             if kind == VAR:
                 self.model.remove_variable(*data)
@@ -795,22 +805,29 @@ class _EquationsDialog(QtWidgets.QDialog):
             pass
 
     def accept(self):
+        from swui.fork import safe_ops
+
         self._unpick()
-        self.doc.commitTransaction()
-        self.doc.recompute()
+        if self.own_step:
+            safe_ops.end_step(self.doc)
+        if self.own_step or self.touched:
+            self.doc.recompute()
         _refresh_dims()
         _changed()
         super().accept()
 
     def reject(self):
         self._unpick()
-        # sin ventana: lo pendiente es lo de Ecuaciones. Con un panel de operación abierto, lo
-        # pendiente es de ese panel (FreeCAD ya cerró el de Ecuaciones): no se toca.
-        if FreeCADGui.Control.activeDialog():
-            FreeCAD.Console.PrintWarning("[SWUI] Ecuaciones: hay un panel abierto, los cambios ya aplicados quedan.\n")
+        from swui.fork import safe_ops
+
+        # paso propio: se anula. Sumado al de un panel abierto: lo deshace el Cancelar del panel
+        if self.own_step:
+            safe_ops.end_step(self.doc, abort=True)
         else:
-            self.doc.abortTransaction()
-        self.doc.recompute()
+            FreeCAD.Console.PrintWarning("[SWUI] Ecuaciones: hay un panel abierto; lo cambiado acá lo "
+                                         "deshace el Cancelar del panel.\n")
+        if self.own_step or self.touched:  # paso propio: lo anulado (también cotas cambiadas) se recalcula
+            self.doc.recompute()
         _refresh_dims()  # Cancelar deshace: las cotas a la vista vuelven a los valores de antes
         _changed()
         super().reject()

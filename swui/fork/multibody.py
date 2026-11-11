@@ -512,7 +512,6 @@ def set_scope_mode(feature, mode):
 
 def _remove_copy(copy):
     doc = copy.Document
-    body = body_of(copy)
     binder = profile_object(copy)
     helpers = [binder]
     try:
@@ -525,11 +524,10 @@ def _remove_copy(copy):
             helpers.append(copy.ReferenceAxis[0])
         except Exception:
             pass
-    previous = copy.BaseFeature
-    was_tip = body is not None and body.Tip is copy
-    doc.removeObject(copy.Name)
-    if was_tip and previous is not None:
-        _set_tip(body, previous)
+    # la pieza común reengancha la operación siguiente a la anterior (si no, el sólido pierde
+    # todo lo de antes de la copia: Issue #1) y deja a la vista la punta
+    from swui.fork import safe_ops
+    safe_ops.remove_feature(copy)
     for helper in helpers:
         try:
             if helper is not None and helper.TypeId in ("PartDesign::SubShapeBinder", "PartDesign::Line") \

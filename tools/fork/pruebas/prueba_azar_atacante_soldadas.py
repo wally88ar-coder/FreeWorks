@@ -173,7 +173,7 @@ def prueba():
             comprobado()
         finally:
             FreeCAD.closeDocument(doc.Name)
-    f.correr("iguales_en_un_renglon", iguales_en_un_renglon, "#53")  # error registrado: Issue #53
+    f.correr("iguales_en_un_renglon", iguales_en_un_renglon, "")  # era el Issue #53 (arreglado)
 
     f.terminar()
 

@@ -455,19 +455,20 @@ def apply_value(dim, value):
     """Poner el valor nuevo (con deshacer) y reconstruir."""
     kind, obj, which = dim.setter
     doc = obj.Document
-    doc.openTransaction("Modificar cota")
+    from swui.fork import safe_ops
+
     try:
-        if kind == "sketch":
-            unit = "deg" if dim.kind == "angle" else "mm"
-            obj.setDatum(which, FreeCAD.Units.Quantity("%r %s" % (value, unit)))
-        else:
-            setattr(obj, which, value)
-        doc.recompute()
+        # con un panel o Ecuaciones abiertos, se suma a su paso: su Cancelar lo deshace (#3, #13)
+        with safe_ops.undo_step(doc, "Modificar cota"):
+            if kind == "sketch":
+                unit = "deg" if dim.kind == "angle" else "mm"
+                obj.setDatum(which, FreeCAD.Units.Quantity("%r %s" % (value, unit)))
+            else:
+                setattr(obj, which, value)
+            doc.recompute()
     except Exception:
-        doc.abortTransaction()
         FreeCAD.Console.PrintError("[SWUI fork] No se pudo cambiar la cota:\n%s\n" % traceback.format_exc())
         return False
-    doc.commitTransaction()
     return True
 
 

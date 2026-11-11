@@ -4,9 +4,7 @@
 QUE = """Dos sólidos apilados (cubos de 10). Un taladro pasante del primero, con Alcance, se lleva
 también al segundo; después el segundo recibe otra operación (un cubo más al costado). Si se
 quita el segundo sólido del Alcance, el segundo vuelve a ser cubo + cubo sin agujero (2000 mm³):
-no pierde nada de lo anterior a la copia borrada."""
-CONOCIDO = "#1"
-ESPERA = "el segundo sólido quedó con"
+no pierde nada de lo anterior a la copia borrada (Issue #1, arreglado)."""
 
 import FreeCAD  # noqa: E402
 import Part  # noqa: E402

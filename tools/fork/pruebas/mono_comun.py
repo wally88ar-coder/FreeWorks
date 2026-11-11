@@ -16,7 +16,7 @@ Acciones comunes:
 - suprimir: una operación desde el árbol; Ctrl+Z la vuelve;
 - deshacer / rehacer sueltos;
 - guardar: guardar, cerrar y abrir: todo igual y sin quedar "modificado";
-- ecuaciones / material (regla aparte, error conocido #3): con un panel abierto, abrir Ecuaciones
+- ecuaciones / material (regla aparte; era el error #3, arreglado): con un panel abierto, abrir Ecuaciones
   o Material, cerrarlos y Cancelar el panel: todo igual.
 Después de CADA paso: sin errores en el informe, nada colgado, sin objetos con error nuevos.
 
@@ -547,9 +547,9 @@ def regla_mono(entorno, acciones):
     return regla
 
 
-def correr_reglas(entorno, conocido_otra="#3", extra=()):
+def correr_reglas(entorno, conocido_otra="", extra=()):
     """Las dos reglas del mono para un entorno: la seguidilla común (+ las acciones propias) y la de
-    otra herramienta abierta con el panel abierto (error conocido #3)."""
+    otra herramienta abierta con el panel abierto (era el #3, arreglado el 11/11)."""
     fallas = Fallas()
     solo = os.environ.get("FW_CASO", "").lower()
     reglas = [("mono", BASE + list(entorno.acciones) + list(extra), ""),

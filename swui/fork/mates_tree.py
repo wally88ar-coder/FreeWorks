@@ -494,14 +494,11 @@ def _set_preselection(key):
 
 
 def toggle_suppressed(joint):
+    from swui.fork import safe_ops
+
     doc = joint.Document
-    doc.openTransaction("Suprimir relación")
-    try:
+    with safe_ops.undo_step(doc, "Suprimir relación"):  # con un panel abierto, se suma al suyo (#3)
         joint.Suppressed = not bool(joint.Suppressed)
-        doc.commitTransaction()
-    except Exception:
-        doc.abortTransaction()
-        raise
     doc.recompute()
 
 

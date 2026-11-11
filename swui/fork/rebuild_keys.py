@@ -70,15 +70,14 @@ def _update_move_faces(doc):
 
         if not move_face.stale_in(doc):
             return 0
-        doc.openTransaction("Actualizar Mover cara")
-        done = move_face.update_stale(doc)
-        doc.commitTransaction()
+        from swui.fork import safe_ops
+
+        with safe_ops.undo_step(doc, "Actualizar Mover cara"):  # con un panel abierto, se suma (#3)
+            done = move_face.update_stale(doc)
         if done:
             doc.recompute()
         return done
     except Exception:
-        if doc.HasPendingTransaction:
-            doc.abortTransaction()
         FreeCAD.Console.PrintError("[SWUI fork] Ctrl+Q, Mover cara:\n%s\n" % traceback.format_exc())
         return 0
 

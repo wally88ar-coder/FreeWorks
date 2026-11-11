@@ -158,15 +158,15 @@ class Dialog(QtWidgets.QDialog):
             QtWidgets.QMessageBox.warning(self, TITLE, str(e))
             return
         if changes:
-            self.doc.openTransaction(TITLE)
+            from swui.fork import safe_ops
+
             try:
-                apply(self.doc, self.feature, changes)
+                with safe_ops.undo_step(self.doc, TITLE):  # con un panel abierto, se suma al suyo (#3)
+                    apply(self.doc, self.feature, changes)
             except Exception:
-                self.doc.abortTransaction()
                 FreeCAD.Console.PrintError("[SWUI fork] %s:\n%s\n" % (TITLE, traceback.format_exc()))
                 QtWidgets.QMessageBox.warning(self, TITLE, "No se pudo aplicar (detalle en la vista de informe).")
                 return
-            self.doc.commitTransaction()
         self.accept()
 
 

@@ -688,19 +688,19 @@ def picked_component():
 
 
 def _run(doc, name, fn):
-    doc.openTransaction(name)
+    """Un paso de deshacer; con un panel abierto se suma al suyo (pieza común, Issue #3)."""
+    from swui.fork import safe_ops
+
     try:
-        fn()
-        doc.recompute()
+        with safe_ops.undo_step(doc, name):
+            fn()
+            doc.recompute()
     except ValueError as e:
-        doc.abortTransaction()
         QtWidgets.QMessageBox.information(FreeCADGui.getMainWindow(), name, str(e))
         return False
     except Exception:
-        doc.abortTransaction()
         FreeCAD.Console.PrintError("[SWUI fork] %s:\n%s\n" % (name, traceback.format_exc()))
         return False
-    doc.commitTransaction()
     return True
 
 

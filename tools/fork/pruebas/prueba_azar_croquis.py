@@ -7,7 +7,7 @@ azar: un polígono cerrado (3 a 6 lados, unido con coincidencias) y un círculo,
 constructiva como eje. Entidades elegidas al azar:
 - Mover +d y después −d: todo vuelve a donde estaba (con y sin conservar relaciones);
 - Girar a° y después −a° alrededor de un punto: vuelve; y un giro deja cada punta donde dice la
-  cuenta (error conocido #41: con el centro fuera del origen gira mal);
+  cuenta (con el centro fuera del origen: era el #41, arreglado);
 - Escalar ×f y después ×1/f desde un punto: vuelve;
 - Simetría sin copiar dos veces por el mismo eje: vuelve;
 - Copiar con d: aparece una copia de cada entidad, corrida exactamente d;
@@ -247,8 +247,8 @@ def girar_cuenta(fig, ang, cx, cy):
 def prueba():
     fallas = Fallas()
     solo = os.environ.get("FW_CASO", "")
-    for nombre, fn, conocido in (("mover y volver", mover_ida_vuelta, ""), ("girar y volver", girar_ida_vuelta, "#41"),
-                                 ("girar: donde dice la cuenta", girar_cuenta, "#41"),
+    for nombre, fn, conocido in (("mover y volver", mover_ida_vuelta, ""), ("girar y volver", girar_ida_vuelta, ""),
+                                 ("girar: donde dice la cuenta", girar_cuenta, ""),
                                  ("escalar y volver", escalar_ida_vuelta, ""),
                                  ("simetría dos veces", simetria_dos_veces, ""), ("copiar", copiar, ""),
                                  ("matriz", matriz, "")):

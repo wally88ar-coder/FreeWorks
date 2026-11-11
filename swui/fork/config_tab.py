@@ -57,20 +57,20 @@ def _status(text, ms=5000):
 
 
 def _run(doc, name, fn):
-    """fn dentro de una transacción (se puede deshacer); los errores se avisan en castellano."""
-    doc.openTransaction(name)
+    """fn dentro de una transacción (se puede deshacer; con un panel abierto se suma a la suya,
+    Issue #3); los errores se avisan en castellano."""
+    from swui.fork import safe_ops
+
     try:
-        result = fn()
-        doc.recompute()
+        with safe_ops.undo_step(doc, name):
+            result = fn()
+            doc.recompute()
     except ValueError as e:
-        doc.abortTransaction()
         QtWidgets.QMessageBox.information(FreeCADGui.getMainWindow(), name, str(e))
         return None
     except Exception:
-        doc.abortTransaction()
         FreeCAD.Console.PrintError("[SWUI fork] %s:\n%s\n" % (name, traceback.format_exc()))
         return None
-    doc.commitTransaction()
     refresh(force=True)
     return result
 
@@ -416,24 +416,23 @@ def _hook_dims():
             return _orig(dim, value)
         target = (kind, obj, which)
         scope = _state.get("scope", "this")
-        doc.openTransaction("Modificar cota")
+        picked = [n for n in _state.get("picked") or [] if n in cf.names(doc)]
+        if scope == "pick" and not picked:
+            _status("Elegí al menos una configuración.")
+            return False
+        from swui.fork import safe_ops
+
         try:
-            if scope == "pick":
-                picked = [n for n in _state.get("picked") or [] if n in cf.names(doc)]
-                if not picked:
-                    doc.abortTransaction()
-                    _status("Elegí al menos una configuración.")
-                    return False
-                cf.set_values(doc, target, {n: value for n in picked})
-                cf.activate(doc, cf.active(doc))  # la vista con la configuración activa al día
-            else:
-                cf.configure(doc, target, value, scope)
-            doc.recompute()
+            with safe_ops.undo_step(doc, "Modificar cota"):  # con un panel abierto, se suma al suyo (#3)
+                if scope == "pick":
+                    cf.set_values(doc, target, {n: value for n in picked})
+                    cf.activate(doc, cf.active(doc))  # la vista con la configuración activa al día
+                else:
+                    cf.configure(doc, target, value, scope)
+                doc.recompute()
         except Exception:
-            doc.abortTransaction()
             FreeCAD.Console.PrintError("[SWUI fork] No se pudo cambiar la cota:\n%s\n" % traceback.format_exc())
             return False
-        doc.commitTransaction()
         if scope == "this":
             _status("Cota cambiada solo en la configuración %s." % cf.active(doc))
         elif scope == "pick":

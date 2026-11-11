@@ -197,9 +197,10 @@ class _Strip(QtWidgets.QWidget):
             doc = FreeCAD.ActiveDocument
             if doc is None:
                 return
-            doc.openTransaction("Quitar material")
-            material.assign(material.targets(doc), None)
-            doc.commitTransaction()
+            from swui.fork import safe_ops
+
+            with safe_ops.undo_step(doc, "Quitar material"):  # con un panel abierto, se suma al suyo (#3)
+                material.assign(material.targets(doc), None)
             self.last = None
             self.refresh()
 

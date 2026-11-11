@@ -112,10 +112,13 @@ def _translate(delta):
 
 
 def _rotate(center, angle):
-    plc = FreeCAD.Placement(V(0, 0, 0), FreeCAD.Rotation(V(0, 0, 1), angle), center)
+    # giro alrededor de `center` como transformación completa. Geometry.rotate(placement) NO sirve:
+    # en 1.1.4 descarta el centro (90° de (10, 0) alrededor de (0, 2) daba (4, 10) y no (2, 12):
+    # Issue #41, medido con FreeCADCmd)
+    matrix = FreeCAD.Placement(V(0, 0, 0), FreeCAD.Rotation(V(0, 0, 1), angle), center).toMatrix()
 
     def change(geo):
-        geo.rotate(plc)
+        geo.transform(matrix)
     return change
 
 

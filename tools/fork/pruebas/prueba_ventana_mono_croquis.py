@@ -13,7 +13,7 @@ from mono_entornos import Croquis  # noqa: E402
 
 
 def prueba():
-    correr_reglas(Croquis, conocido_otra="")  # sus herramientas no son paneles de Tareas: el #3 no las toca
+    correr_reglas(Croquis)
 
 
 from _base import ejecutar  # noqa: E402

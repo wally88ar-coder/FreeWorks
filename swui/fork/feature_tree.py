@@ -663,15 +663,16 @@ def _first(test):
 
 
 def _transaction(doc, name, fn):
-    doc.openTransaction(name)
+    """Un paso de deshacer; con un panel abierto se suma al suyo (pieza común, Issue #3)."""
+    from swui.fork import safe_ops
+
     try:
-        result = fn()
-        doc.recompute()
+        with safe_ops.undo_step(doc, name):
+            result = fn()
+            doc.recompute()
     except Exception:
-        doc.abortTransaction()
         FreeCAD.Console.PrintError("[SWUI fork] %s:\n%s\n" % (name, traceback.format_exc()))
         return None
-    doc.commitTransaction()
     return result
 
 

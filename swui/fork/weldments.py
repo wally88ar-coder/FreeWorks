@@ -1057,6 +1057,11 @@ def cut_list(doc):
     """Lista de cortes agrupada (como SW): [{"n", "qty", "profile", "length", "angle1", "angle2",
     "unit_kg", "total_kg", "assumed_steel", "members"}]."""
     groups = {}
+    # iguales = mismo perfil y largo y ángulos que difieren menos que el ruido de la cuenta. Se
+    # compara el valor SIN redondear: agrupar por el redondeado partía en dos renglones un largo
+    # que cae justo en la mitad (169,05 salía como 169,0 y 169,1: Issue #53)
+    tol_len, tol_ang = 0.02, 0.02
+    members_rows = []  # [(clave de perfil, largo, ángulos ordenados, fila)]
     for b in members(doc):
         try:
             length, a1, a2 = _end_angles(b)
@@ -1065,10 +1070,15 @@ def cut_list(doc):
         rho, assumed = _density(b)
         kg = b.Shape.Volume * rho
         angs = tuple(sorted([x if x is not None else -1 for x in (a1, a2)]))
-        key = (b.SWUI_WeldKind, b.SWUI_WeldSize, round(length, 1), angs)
-        g = groups.setdefault(key, {"qty": 0, "profile": profile_text(b.SWUI_WeldKind, b.SWUI_WeldSize),
-                                    "length": round(length, 1), "angle1": a1, "angle2": a2,
-                                    "unit_kg": kg, "assumed_steel": assumed, "members": []})
+        prof = (b.SWUI_WeldKind, b.SWUI_WeldSize)
+        g = next((row for p, ln, an, row in members_rows
+                  if p == prof and abs(ln - length) <= tol_len
+                  and all(abs(x - y) <= tol_ang for x, y in zip(an, angs))), None)
+        if g is None:
+            g = {"qty": 0, "profile": profile_text(*prof), "length": round(length, 1), "angle1": a1,
+                 "angle2": a2, "unit_kg": kg, "assumed_steel": assumed, "members": []}
+            members_rows.append((prof, length, angs, g))
+            groups[len(groups)] = g
         g["qty"] += 1
         g["members"].append(b.Label)
     # tapas y cartelas (como SW: van en la lista como chapas, sin largo ni ángulos)

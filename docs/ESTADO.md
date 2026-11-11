@@ -1715,6 +1715,16 @@ Pendiente:
 - 5) Rosca en planos: **sí, la quiere** (representación simplificada: círculo de 3/4 fino de
   frente, líneas finas en lateral/corte). Decidido: va con el trabajo de planos (ver Falta).
 - Pedido a FreeCAD (planos en ángulo / punto medio): el usuario lo dejó por ahora.
+- **#2 (noche del 11/11, sin código): las esquinas de soldadas no siguen al esqueleto.** Causa raíz:
+  el inglete y la punta a tope en ángulo son cajas de corte ubicadas con números fijos calculados
+  al crearlas (`_box_cut`), y los alargues también son números fijos; si el esqueleto cambia,
+  quedan donde estaban. Arreglarlo de raíz es un cambio de diseño, por eso no lo toqué de noche.
+  Propuesta (para aprobar): que la ubicación y el giro de esas cajas, y los alargues, sean
+  **fórmulas nativas de FreeCAD** atadas a la línea del esqueleto (FreeCAD 1.x trae funciones de
+  vectores en las fórmulas). Así FreeCAD los recalcula solo, también sin FreeWorks instalado, y
+  el archivo sigue siendo 100 % nativo. Alternativa más simple, que no recomiendo: que FreeWorks
+  rehaga las esquinas cuando cambia el esqueleto; sin FreeWorks el archivo quedaría mal.
+  Prueba ya armada: `prueba_azar_soldadas.py` (reglas "sigue al esqueleto") + `prueba_inglete_sigue_esqueleto.py`.
 
 ## Plan: fase 1 — Chapa (aprobado por el usuario el 2026-10-27)
 Por debajo el addon SheetMetal (0.8.26 instalado; usa networkx de

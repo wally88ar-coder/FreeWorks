@@ -8,6 +8,8 @@ QUE = """Las piezas comunes (`swui/fork/safe_ops.py`) hacen lo que dicen:
 - `undo_step` sin nada abierto deja un paso de deshacer propio; con una transacción en curso, aun
   VACÍA, se suma a esa (no la confirma); dos anidados dan un solo paso; si algo falla adentro, se
   anula;
+- `begin_step` (paso que dura, como Ecuaciones): lo que se cambia en el medio con `undo_step` se suma
+  y su Cancelar lo deshace todo (#13); con un panel abierto se suma al suyo sin confirmarlo (#3);
 - `doc_key` guarda la ruta del archivo y `find_doc` la encuentra, también con dos "Placa.FCStd"
   de carpetas distintas abiertos a la vez;
 - `QuietObserver.busy` está prendido mientras FreeCAD abre un archivo."""
@@ -85,6 +87,27 @@ def prueba():
     except ValueError:
         pass
     assert cerca(caja_.Length, 12), "no anuló lo hecho antes del error: %s" % caja_.Length
+    # paso largo (Ecuaciones abierta): una cota cambiada en el medio se suma; Cancelar deshace todo (#13)
+    propio = safe_ops.begin_step(doc, "Ecuaciones")
+    assert propio, "begin_step sin nada abierto no abrió un paso propio"
+    caja_.Width = 15
+    with safe_ops.undo_step(doc, "Modificar cota") as suelta:
+        caja_.Height = 15
+    assert not suelta, "la cota abrió su propio paso y confirmó el de Ecuaciones"
+    safe_ops.end_step(doc, abort=True)
+    assert cerca(caja_.Width, 10) and cerca(caja_.Height, 10), \
+        "Cancelar de Ecuaciones no deshizo la cota cambiada en el medio: %s %s" % (caja_.Width, caja_.Height)
+    # paso largo con un "panel" abierto: se suma al suyo y no lo confirma (#3)
+    doc.openTransaction("Panel")
+    caja_.Width = 16
+    propio = safe_ops.begin_step(doc, "Ecuaciones")
+    caja_.Height = 16
+    assert not propio and doc.HasPendingTransaction, "begin_step confirmó la transacción del panel"
+    doc.abortTransaction()
+    assert cerca(caja_.Width, 10) and cerca(caja_.Height, 10), "Cancelar del 'panel' no deshizo lo de Ecuaciones"
+    with safe_ops.undo_step(doc, "Después") as propio:
+        caja_.Length = 13
+    assert propio, "después de cerrar todo, undo_step quedó creyendo que había un paso abierto"
 
     # documentos por ruta (dos "Placa.FCStd" de carpetas distintas)
     sin = safe_ops.doc_key(doc)

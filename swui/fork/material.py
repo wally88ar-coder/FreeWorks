@@ -945,14 +945,14 @@ class _MaterialDialog(QtWidgets.QDialog):
                 return
         if info is None:
             return
-        self.doc.openTransaction("Asignar material")
+        from swui.fork import safe_ops
+
         try:
-            assign(self.targets, info)
+            with safe_ops.undo_step(self.doc, "Asignar material"):  # con un panel abierto, se suma al suyo (#3)
+                assign(self.targets, info)
         except Exception as exc:
-            self.doc.abortTransaction()
             self.Qt.QMessageBox.warning(self, "Material", str(exc))
             return
-        self.doc.commitTransaction()
         _changed()
         self.note.setText("Asignado a: " + ", ".join(o.Label for o in self.targets))
 
@@ -966,14 +966,14 @@ class _MaterialDialog(QtWidgets.QDialog):
     def _remove(self):
         if not self.targets:
             return
-        self.doc.openTransaction("Quitar material")
+        from swui.fork import safe_ops
+
         try:
-            assign(self.targets, None)
+            with safe_ops.undo_step(self.doc, "Quitar material"):  # con un panel abierto, se suma al suyo (#3)
+                assign(self.targets, None)
         except Exception as exc:
-            self.doc.abortTransaction()
             self.Qt.QMessageBox.warning(self, "Material", str(exc))
             return
-        self.doc.commitTransaction()
         _changed()
         self.note.setText("Sin material: densidad 0, la masa da 0.")
 

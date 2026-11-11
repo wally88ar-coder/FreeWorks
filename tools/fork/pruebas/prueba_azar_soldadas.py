@@ -122,8 +122,12 @@ def chequear(doc, cuerpos, que):
             por_caño[etiqueta] = f["length"]
     for b in cuerpos:
         _p0, _p1, u = w.axis(b)
-        proy = [v.Point.dot(u) for v in b.Shape.Vertexes]
-        real = max(proy) - min(proy)
+        # largo de punta a punta, exacto y por otro camino que la lista: el caño girado con su eje
+        # sobre X y su caja justa. Solo con los vértices no alcanza: la punta de un caño redondo
+        # cortado en ángulo es una elipse sin vértice en el extremo (#61 era eso, de la prueba)
+        girado = b.Shape.copy()
+        girado.transformShape(FreeCAD.Placement(V(), FreeCAD.Rotation(u, V(1, 0, 0))).toMatrix())
+        real = girado.optimalBoundingBox(True, False).XLength
         lista = por_caño.get(b.Label)
         assert lista is not None, "%s: %s no está en la lista de cortes" % (que, b.Label)
         assert abs(lista - real) <= 0.1, \
@@ -212,7 +216,7 @@ def guardar(pts, datos, esquina):
 def prueba():
     fallas = Fallas()
     solo = os.environ.get("FW_CASO", "")
-    reglas = [("marco", marco, "#61"), ("guardar y abrir", guardar, ""),
+    reglas = [("marco", marco, ""), ("guardar y abrir", guardar, ""),
               ("sigue al esqueleto (tope)", _sigue("tope"), "#2"),
               ("sigue al esqueleto (inglete)", _sigue("inglete"), "#2")]
     for nombre, fn, conocido in reglas:

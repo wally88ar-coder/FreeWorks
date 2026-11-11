@@ -67,9 +67,10 @@ def set_plane_rect(plane, rect):
     """Fijar el tamaño del plano (como las agarraderas de SW), en un paso de deshacer."""
     from swui.fork import plane_look as pl
 
+    from swui.fork import safe_ops
+
     doc = plane.Document
-    doc.openTransaction("Tamaño del plano")
-    try:
+    with safe_ops.undo_step(doc, "Tamaño del plano"):  # con un panel abierto, se suma al suyo (#3)
         if not hasattr(plane, pl.RECT_PROP):
             plane.addProperty("App::PropertyFloatList", pl.RECT_PROP, "SWUI",
                               "Tamaño del plano puesto con las agarraderas (x0, y0, x1, y1)")
@@ -79,10 +80,6 @@ def set_plane_rect(plane, rect):
             except Exception:
                 pass
         setattr(plane, pl.RECT_PROP, [float(v) for v in rect])
-        doc.commitTransaction()
-    except Exception:
-        doc.abortTransaction()
-        raise
     pl.refresh(doc)
 
 

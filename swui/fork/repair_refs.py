@@ -169,15 +169,15 @@ def repair(obj, kind):
     if kind == SUPPORT:
         found = auto_support(obj)
         if found is not None:
-            doc.openTransaction("Reparar referencia")
+            from swui.fork import safe_ops
+
             try:
-                fix_support(obj, *found)
-                doc.recompute()
+                with safe_ops.undo_step(doc, "Reparar referencia"):  # con un panel abierto, se suma (#3)
+                    fix_support(obj, *found)
+                    doc.recompute()
             except Exception:
-                doc.abortTransaction()
                 FreeCAD.Console.PrintError("[SWUI fork] Reparar:\n%s\n" % traceback.format_exc())
                 return "No se pudo reparar %s." % obj.Label
-            doc.commitTransaction()
             return "%s quedó apoyado en %s.%s." % (obj.Label, found[0].Label, found[1])
         FreeCADGui.Selection.clearSelection()
         FreeCADGui.Selection.addSelection(obj)

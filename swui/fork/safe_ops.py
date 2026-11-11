@@ -121,21 +121,33 @@ def undo_step(doc, name):
     (también con `doc.openTransaction`). Límite: un panel que no abre transacción (solo muestra
     datos) también hace que se sume: ese cambio queda sin paso de deshacer propio.
     """
-    join = (doc.Name in _open_steps or bool(getattr(doc, "HasPendingTransaction", False))
-            or bool(_active_transaction()) or task_open(doc))
-    if join:
+    if not begin_step(doc, name):
         yield False
         return
-    doc.openTransaction(name)
-    _open_steps.add(doc.Name)
     try:
         yield True
     except BaseException:
-        _open_steps.discard(doc.Name)
-        doc.abortTransaction()
+        end_step(doc, abort=True)
         raise
-    _open_steps.discard(doc.Name)
     end_step(doc)
+
+
+def begin_step(doc, name):
+    """
+    Lo mismo que `undo_step`, para un paso que dura (una ventana que queda abierta y después se
+    Acepta o se Cancela, como Ecuaciones): abre un paso propio y devuelve True (cerrarlo con
+    `end_step`, abort=True para Cancelar), o devuelve False si se suma al que ya estaba abierto
+    (el de un panel: su Cancelar deshace también esto; entonces NO llamar a `end_step`).
+    Mientras dure, otro `undo_step` / `begin_step` sobre el documento se suma a este (Issue #13:
+    cambiar una cota con doble clic con Ecuaciones abierta confirmaba el paso de Ecuaciones).
+    """
+    join = (doc.Name in _open_steps or bool(getattr(doc, "HasPendingTransaction", False))
+            or bool(_active_transaction()) or task_open(doc))
+    if join:
+        return False
+    doc.openTransaction(name)
+    _open_steps.add(doc.Name)
+    return True
 
 
 def end_step(doc, abort=False):
@@ -146,6 +158,7 @@ def end_step(doc, abort=False):
     próximo que haga el usuario, en cualquier documento, se suma a ese paso (Issue #60). Acá se
     cierra también esa.
     """
+    _open_steps.discard(doc.Name)
     if abort:
         doc.abortTransaction()
     else:
