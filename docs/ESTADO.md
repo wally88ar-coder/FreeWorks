@@ -9,6 +9,15 @@ más inofensivos", con causa raíz).** Resumen por tandas (detalle en CHANGELOG 
   punto en el eje; la precisión con esferas y cilindros sigue abierta), #19, #7, #23, #5.
 - Cada tanda pasó por la revisión de un agente que no la escribió; lo que encontró se arregló
   antes de entregar.
+- **Tanda 2 NO subida a GitHub** (queda solo en esta PC, commits locales): la batería completa
+  (06:37) dio 52 bien, 3 conocidos y 3 fallas. Una era una marca vieja de #6/#50 (arreglada).
+  Las otras dos quedaron como fichas nuevas sin investigar: **#77** (mono de pieza: después de
+  Ecuaciones, el Ángulo de salida no encuentra la cara de arriba; puede ser la prueba o un error
+  real) y **#78** (mono de configuraciones se pasa de 600 s con Ecuaciones/Material). Primero hay
+  que aclarar esas dos; después correr la completa de nuevo y subir. Las fichas de la tanda 2
+  siguen abiertas hasta entonces.
+- Un descuido de la noche: corrí dos FreeCAD de prueba juntos unos minutos (la regla es uno).
+- **Terminé a las 06:45 del 11/11; PC libre, sin FreeCAD abierto.**
 - **No tocados (necesitan una decisión del usuario o un diseño, ver "Preguntas para el usuario"):**
   #2 (esquinas de soldadas con fórmulas nativas), #34 (vos o usted), #47 (columna de supresión
   de una operación nueva fuera de su paso de deshacer: FreeCAD no deja sumar a un paso cerrado),

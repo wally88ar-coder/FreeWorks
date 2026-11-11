@@ -11,13 +11,10 @@ TIEMPO_MAXIMO = 2400  # ~25 paneles: no entra en los 10 min de las demás
 from campos_comun import correr_campos  # noqa: E402
 
 # errores ya registrados que no frenan la búsqueda (como en las reglas de paneles)
-_ESCUCHA = (("#6", "already deleted", None), ("#6", "deleted object", None))
-DEUDA = {"Miembro estructural": _ESCUCHA, "Cartela": _ESCUCHA, "Esquinas": _ESCUCHA,
-         "Tapa de extremo": _ESCUCHA, "Taladro de ensamblaje": (("#38", "The graph must be a DAG", None),),
+DEUDA = {"Taladro de ensamblaje": (("#38", "The graph must be a DAG", None),),
          "Matriz de componentes": (("#32", "deleted object", None),)}
 # los mismos errores cuando aparecen como una comprobación que falla (no en el informe)
-DEUDA_PASOS = {"Taladro de ensamblaje": (("#37", "Ctrl+Z no volvió"), ("#37", "Ctrl+Y no lo trajo")),
-               "Agregar configuración": (("#50", "Ctrl+Z no volvió"), ("#50", "Ctrl+Y no lo trajo"))}
+DEUDA_PASOS = {"Taladro de ensamblaje": (("#37", "Ctrl+Z no volvió"), ("#37", "Ctrl+Y no lo trajo"))}
 
 
 def prueba():
