@@ -72,7 +72,9 @@ class Miembro(_Soldada):
     ayudantes = ("App::Origin", "App::Line", "App::Plane", "App::Point", "App::DocumentObjectGroup",
                  "Sketcher::SketchObject", "PartDesign::Pad", "PartDesign::SubShapeBinder",
                  "PartDesign::Pocket", "PartDesign::SubtractiveBox", "App::VarSet")
-    otro = "SWUI_WeldCorners"
+    # otro comando que abre su panel sin miembros hechos: Esquinas, desde el 11/11, avisa con razón
+    # "hacen falta dos miembros" (la vista previa del primer panel ya se borró al cerrarlo)
+    otro = "SWUI_WeldMember"
 
     def abrir(self, rng):
         import FreeCADGui
