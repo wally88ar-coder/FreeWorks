@@ -22,6 +22,9 @@ Neueste Version oben. / Newest version first.
   sin "None" fantasma al deshacer; borrar la primera con una medida configurada ya anda);
   #6, #29 y #30 (paneles de soldadas, vista de sección, referencia de ensamblaje y Agregar
   configuración anotados en el guardia; las escuchas de soldadas ya no tocan un panel cerrado).
+- **Tercera tanda (11/11):** #9 (Extruir corte de la pestaña Chapa: lo de "hasta el espesor"
+  vale solo para el corte pedido; Cancelar ya no deja nada armado que cambie el próximo corte,
+  ni uno que traiga FreeCAD al abrir un archivo o deshacer).
 - **Decisiones del 11/11:** Ecuaciones como SW: una ecuación que se calcula bien pero con la que
   una operación no se puede construir se acepta, la operación queda con error en el árbol y el
   aviso dice cuál (antes se rechazaba); una fórmula mal escrita se sigue rechazando.

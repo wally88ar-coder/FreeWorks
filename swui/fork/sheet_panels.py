@@ -1079,25 +1079,75 @@ def start_convert():
 
 class _CutThroughThickness:
     """
-    El próximo Vaciado que nazca en una chapa queda "Vincular al espesor" (como el corte de chapa
-    de SW): profundidad = espesor de la Brida base, con fórmula, así sigue si el espesor cambia.
-    Antes quedaba en 5 mm fijos: con chapa de más de 5 mm no atravesaba (visto con el mouse,
-    2026-10-29). Se desengancha con el primer Vaciado que aparezca.
+    El Vaciado que pide Extruir corte de la pestaña Chapa queda "Vincular al espesor" (como el
+    corte de chapa de SW): profundidad = espesor de la Brida base, con fórmula, así sigue si el
+    espesor cambia. Antes quedaba en 5 mm fijos: con chapa de más de 5 mm no atravesaba (visto con
+    el mouse, 2026-10-29).
+
+    Vale solo para ESE corte (#9): el del documento donde se pidió, nunca uno que traiga FreeCAD al
+    abrir un archivo o deshacer, y se desarma sola cuando el flujo (elegir plano, croquis, panel
+    del corte) termina sin corte, por ejemplo con Cancelar.
     """
 
+    GRACE_MS = 3000  # el flujo arranca en un QTimer: hasta verlo andar, no se desarma
+
+    def __init__(self, doc_name):
+        import time
+
+        self.doc = doc_name
+        self.started = time.monotonic()
+        self.seen_flow = False
+        self.timer = QtCore.QTimer()
+        self.timer.setInterval(500)
+        self.timer.timeout.connect(self._check)
+        self.timer.start()
+
     def slotCreatedObject(self, obj):
+        from swui.fork import safe_ops
+
         if getattr(obj, "TypeId", "") != "PartDesign::Pocket":
             return
-        _cut_watch["observer"] = None
+        doc = obj.Document
+        if doc.Name != self.doc or safe_ops.doc_busy(doc):
+            return
+        _disarm_cut()
+        name = obj.Name
+        QtCore.QTimer.singleShot(0, lambda: _link_to_thickness(doc.Name, name))
+
+    def slotDeletedDocument(self, doc):
+        if doc.Name == self.doc:
+            _disarm_cut()
+
+    def _check(self):
+        import time
+
+        from swui import pick_plane
+
         try:
-            FreeCAD.removeDocumentObserver(self)
+            gdoc = FreeCADGui.ActiveDocument
+            busy = bool(FreeCADGui.Control.activeDialog() or (gdoc is not None and gdoc.getInEdit())
+                        or pick_plane.armed())
         except Exception:
-            pass
-        name, doc = obj.Name, obj.Document.Name
-        QtCore.QTimer.singleShot(0, lambda: _link_to_thickness(doc, name))
+            busy = False
+        if busy:
+            self.seen_flow = True
+        elif self.seen_flow or (time.monotonic() - self.started) * 1000 > self.GRACE_MS:
+            _disarm_cut()  # el flujo terminó (o nunca arrancó) sin corte
 
 
 _cut_watch = {"observer": None}
+
+
+def _disarm_cut():
+    obs = _cut_watch["observer"]
+    _cut_watch["observer"] = None
+    if obs is None:
+        return
+    obs.timer.stop()
+    try:
+        FreeCAD.removeDocumentObserver(obs)
+    except Exception:
+        pass
 
 
 def _link_to_thickness(doc_name, name):
@@ -1117,8 +1167,10 @@ def start_cut():
     """Extruir corte nativo, con el mismo flujo SW de la pestaña Operaciones (plano o cara, croquis)."""
     from swui import ribbon
 
-    if _cut_watch["observer"] is None:
-        _cut_watch["observer"] = _CutThroughThickness()
+    doc = FreeCAD.ActiveDocument
+    _disarm_cut()
+    if doc is not None:
+        _cut_watch["observer"] = _CutThroughThickness(doc.Name)
         FreeCAD.addDocumentObserver(_cut_watch["observer"])
     # fuera del Activated de este comando (correr un comando adentro de otro: ver NOTAS_TECNICAS)
     QtCore.QTimer.singleShot(0, lambda: ribbon._run("PartDesign_Pocket"))
