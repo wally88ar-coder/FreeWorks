@@ -40,6 +40,9 @@ COMMAND = "SWUI_Equations"
 VARSET_NAME = "VariablesGlobales"  # nombre interno del VarSet que crea el addon (estable)
 VARSET_LABEL = "Variables globales"
 VAR_GROUP = "Variables"
+# VarSets donde FreeWorks guarda datos propios (no son variables): matrices de componentes
+# (component_patterns.KIND) y taladro / corte de ensamblaje (assembly_features.KIND)
+INTERNAL_VARSET_MARKS = ("SWUI_Pattern", "SWUI_AsmFeature")
 NOTES_PROP = "SWUI_EquationNotes"  # comentarios de las ecuaciones, en el VarSet (nombre estable)
 SKETCH_DIMS = ("Distance", "DistanceX", "DistanceY", "Radius", "Diameter", "Angle")
 VARSET_BASE = ("ExpressionEngine", "Label", "Label2", "Visibility", "Placement")
@@ -201,6 +204,117 @@ def to_sw(expr, name_of, local=None):
     return "".join(p if p.startswith('"') else re.sub(r"(\d)\.(\d)", r"\1,\2", p) for p in parts)
 
 
+# --- Fórmulas que FreeCAD no puede calcular (Issues #45, #48, #49) ---------------------------
+
+
+def is_freecad_word(name):
+    """¿FreeCAD lee este nombre como unidad o constante (h, m, s, mm, kg, N, pi, e...)? Una
+    variable con ese nombre no se puede usar en fórmulas (#48)."""
+    if name in ("pi", "e"):
+        return True
+    try:
+        FreeCAD.Units.Quantity(name)
+        return True
+    except Exception:
+        return False
+
+
+class Rejected(ValueError):
+    """Rechazo propio, ya escrito en castellano para el usuario."""
+
+
+def spanish_error(exc):
+    """Lo que dice FreeCAD (en inglés) cuando no puede con una fórmula -> aviso en castellano.
+    Los rechazos propios (Rejected) pasan tal cual."""
+    if isinstance(exc, Rejected):
+        return str(exc)
+    text = str(exc)
+    low = text.lower()
+    if "parse" in low or "syntax" in low or "unexpected" in low:
+        return "La fórmula está mal escrita (revisá paréntesis, signos y comas)."
+    if "overflow" in low or "infinit" in low or "too large" in low:
+        return "El resultado es demasiado grande (o no es un número)."
+    if "unit" in low:
+        return ("Las unidades no cierran (por ejemplo, un ángulo de atn() sumado a un número): "
+                "FreeCAD no puede calcularla.")
+    if "not found" in low:
+        return "La fórmula usa algo que no existe (revisá los nombres entre comillas)."
+    if "can not evaluate" in low or "cannot evaluate" in low:
+        return "La fórmula no da un número."
+    if "division by zero" in low:
+        return "La fórmula divide por cero."
+    if "cyclic" in low or "circular" in low:
+        return "La fórmula depende de sí misma (referencia circular)."
+    return "FreeCAD no pudo calcular la fórmula (%s)." % text
+
+
+def is_invalid(obj):
+    return "Invalid" in list(getattr(obj, "State", []) or [])
+
+
+def check_result(obj, prop=None, was_invalid=False):
+    """Recalcula obj y comprueba que la fórmula dio algo usable (sin error, y finito si se da la
+    propiedad). Si no, lanza la excepción con lo que dijo FreeCAD. Si obj YA estaba con error antes
+    del cambio, ese error no es de la fórmula: no se rechaza (si no, una pieza rota no se podía
+    arreglar cambiando medidas de a una; revisión del 11/11)."""
+    import math
+
+    obj.recompute()
+    if is_invalid(obj) and not was_invalid:
+        try:
+            why = obj.getStatusString()
+        except Exception:
+            why = "Invalid"
+        expression_words = ("parse", "syntax", "unexpected", "unit", "cyclic", "circular", "overflow",
+                            "expression", "property binding", "not found", "division")
+        if obj.TypeId not in ("App::VarSet", "Spreadsheet::Sheet") and not any(
+                k in (why or "").lower() for k in expression_words):
+            # la fórmula se calculó, pero con ese valor la OPERACIÓN no se puede construir (un
+            # corte que sale del sólido...): decirlo así, no "no pudo calcular la fórmula"
+            raise Rejected("Con ese valor «%s» no se puede construir; quedó como estaba." % obj.Label)
+        raise RuntimeError(why or "Invalid")
+    if prop is not None:
+        value = getattr(obj, prop)
+        value = getattr(value, "Value", value)
+        if isinstance(value, (int, float)) and not math.isfinite(float(value)):
+            raise OverflowError("not finite (infinite or nan)")
+
+
+def raw_value(obj, path):
+    """El valor crudo de una cota o propiedad, para devolverlo tal cual (ver `restore`)."""
+    try:
+        if obj.TypeId == "Sketcher::SketchObject":
+            p = path if path.startswith(".") else "." + path
+            m = re.match(r"^\.Constraints(?:\.([A-Za-z_][A-Za-z0-9_]*)|\[(\d+)\])$", p)
+            if m is None:
+                return None
+            if m.group(2) is not None:
+                index = int(m.group(2))
+            else:
+                index = [c.Name for c in obj.Constraints].index(m.group(1))
+            return ("datum", index, obj.Constraints[index].Value)
+        return ("prop", path.lstrip("."), getattr(obj, path.lstrip(".")))
+    except Exception:
+        return None
+
+
+def restore(obj, path, expr, value=None):
+    """Vuelve una propiedad a su fórmula de antes y, si no tenía, a su VALOR de antes (`raw_value`):
+    una fórmula rechazada ya dejó su resultado escrito y quedaba la cota cambiada (revisión 11/11)."""
+    try:
+        obj.setExpression(path, expr)
+        if expr is None and value is not None:
+            if isinstance(value, tuple) and value and value[0] == "datum":
+                obj.setDatum(value[1], value[2])
+            elif isinstance(value, tuple) and value and value[0] == "prop":
+                setattr(obj, value[1], value[2])
+            else:
+                setattr(obj, path.lstrip("."), value)
+        obj.recompute()
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Ecuaciones, volver atrás:\n%s\n" % __import__("traceback").format_exc())
+
+
 def fmt(value, unit=""):
     if value is None:
         return ""
@@ -224,12 +338,17 @@ class Model:
     def varsets(self):
         return [o for o in self.doc.Objects if o.TypeId == "App::VarSet"]
 
+
     def main_varset(self, create=False):
         for vs in self.varsets():
             if vs.Name == VARSET_NAME or vs.Label == VARSET_LABEL:
                 return vs
         if not create:
-            return self.varsets()[0] if self.varsets() else None
+            # el primero del usuario; nunca uno de datos de FreeWorks (matriz de componentes...):
+            # sus valores se mostraban como variables "sueltas" y una variable con ese nombre le
+            # pisaba el espaciado (Issue #4). Esos siguen a la vista como "Espaciado@MatrizLineal1"
+            own = [v for v in self.varsets() if not any(m in v.PropertiesList for m in INTERNAL_VARSET_MARKS)]
+            return own[0] if own else None
         vs = self.doc.addObject("App::VarSet", VARSET_NAME)
         vs.Label = VARSET_LABEL
         return vs
@@ -431,36 +550,63 @@ class Model:
     # cambios
 
     def set_variable(self, name, text, comment=None):
-        """Crea o cambia una variable global. text: '100', '2,5' o '= "Largo" / 2'."""
+        """
+        Crea o cambia una variable global. text: '100', '2,5' o '= "Largo" / 2'. Todo o nada: si
+        FreeCAD no puede calcularla (fórmula mal escrita, unidades que no cierran, resultado
+        infinito) se deja todo como estaba, sin variable a medias, y se avisa en castellano
+        (ValueError). Issues #45, #48, #49.
+        """
         if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", name):
             raise ValueError("El nombre «%s» no sirve: solo letras sin acento, números y _, "
                              "empezando con letra." % name)
         target = self.target(name)
-        if target is None:
+        created = target is None
+        if created and is_freecad_word(name):
+            raise ValueError("«%s» no se puede usar de nombre: FreeCAD lo toma como unidad o constante "
+                             "(h = hora, m = metro, pi...). Usá otro, por ejemplo «%s1» o «Alto»." % (name, name))
+        text = (text or "").strip()
+        new_set = False
+        if created:
+            # ¿hay que crear "Variables globales" para esta variable? (si se rechaza, se va también)
+            new_set = not any(v.Name == VARSET_NAME or v.Label == VARSET_LABEL for v in self.varsets())
             vs = self.main_varset(create=True)
             vs.addProperty("App::PropertyFloat", name, VAR_GROUP, comment or "")
-            target = (vs, name)
-        vs, prop = target
-        text = (text or "").strip()
-        if text.startswith("="):
-            expr, unknown = to_freecad(text, lambda n: self.resolve(n))
-            if unknown:
-                raise ValueError("No existe: %s" % ", ".join('"%s"' % u for u in unknown))
-            vs.setExpression(prop, expr)
+            prop, before = name, None
         else:
-            from swui.fork.material import parse_number
+            vs, prop = target
+            before = (self.expression_of(vs, prop), getattr(vs, prop))
+        was_invalid = is_invalid(vs)
+        try:
+            if text.startswith("="):
+                expr, unknown = to_freecad(text, lambda n: self.resolve(n))
+                if unknown:
+                    raise Rejected("No existe: %s" % ", ".join('"%s"' % u for u in unknown))
+                vs.setExpression(prop, expr)
+            else:
+                from swui.fork.material import parse_number
 
-            number = parse_number(text)
-            if number is None:
-                raise ValueError("«%s» no es un número (para una fórmula, empezá con =)." % text)
-            vs.setExpression(prop, None)
-            setattr(vs, prop, number)
+                number = parse_number(text)
+                if number is None:
+                    raise Rejected("«%s» no es un número (para una fórmula, empezá con =)." % text)
+                vs.setExpression(prop, None)
+                setattr(vs, prop, number)
+            check_result(vs, prop, was_invalid=was_invalid)
+        except Exception as exc:
+            if created:
+                vs.setExpression(prop, None)
+                vs.removeProperty(prop)
+                if new_set:  # "Variables globales" recién creado para esta variable: se va también
+                    self.doc.removeObject(vs.Name)
+            else:
+                restore(vs, prop, *before)
+            raise ValueError(spanish_error(exc)) from exc
         if comment is not None:
             vs.setDocumentationOfProperty(prop, comment)
         return vs, prop
 
     def set_equation(self, name, text):
-        """Ecuación sobre una cota: '"D1@Croquis1"' = text. text vacío la borra."""
+        """Ecuación sobre una cota: '"D1@Croquis1"' = text. text vacío la borra. Todo o nada, como
+        `set_variable`: si FreeCAD no la puede calcular, la cota queda como estaba."""
         target = self.target(name, rename=True)
         if target is None:
             raise ValueError("No existe la cota «%s»." % name)
@@ -471,7 +617,15 @@ class Model:
         expr, unknown = to_freecad(text, lambda n: self.resolve(n))
         if unknown:
             raise ValueError("No existe: %s" % ", ".join('"%s"' % u for u in unknown))
-        obj.setExpression(path, expr)
+        before = self.expression_of(obj, path)
+        old_value = raw_value(obj, path)
+        was_invalid = is_invalid(obj)
+        try:
+            obj.setExpression(path, expr)
+            check_result(obj, was_invalid=was_invalid)
+        except Exception as exc:
+            restore(obj, path, before, old_value)
+            raise ValueError(spanish_error(exc)) from exc
         return obj, path
 
     def _notes(self):

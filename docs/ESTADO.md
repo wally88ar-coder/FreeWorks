@@ -1,5 +1,22 @@
 # Estado del fork
 
+**Noche del 10 al 11/11 (el usuario durmiendo, "corregí todos los bugs, de los más críticos a los
+más inofensivos", con causa raíz).** Resumen por tandas (detalle en CHANGELOG y en cada Issue):
+- Tanda 1 (batería completa + subida): #1, #3 + #13 (todas las herramientas que se abren con un
+  panel abierto pasan por `safe_ops.undo_step` / `begin_step`), #41, #53, #61 (era de la
+  prueba), #42, #36 (editar + Ctrl+Z), #8, #50, #51, #6, #29, #30, #35. Nuevo detrás de #3: #76.
+- Tanda 2: Ecuaciones "todo o nada" (#45, #46, #48, #49) y #4, #54, #55, #56, #52 (parte del
+  punto en el eje; la precisión con esferas y cilindros sigue abierta), #19, #7, #23, #5.
+- Cada tanda pasó por la revisión de un agente que no la escribió; lo que encontró se arregló
+  antes de entregar.
+- **No tocados (necesitan una decisión del usuario o un diseño, ver "Preguntas para el usuario"):**
+  #2 (esquinas de soldadas con fórmulas nativas), #34 (vos o usted), #47 (columna de supresión
+  de una operación nueva fuera de su paso de deshacer: FreeCAD no deja sumar a un paso cerrado),
+  #22 (copiar y pegar: las marcas guardan nombres; habría que pasarlas a vínculos).
+- Quedan para otra vez (necesitan pruebas con ventana largas): #59, #37, #38, #44, #43, #21, #12,
+  #11, #9, #10, #17, #18, #20, #24, #25, #31, #32, #33, #39, #40, #62, #63, #64, #66, #68, #74,
+  #75, #76.
+
 **09/11 tarde (con ventana, el usuario fuera de la PC), LO QUE FALTABA DEL CONTROL DE CALIDAD.**
 - Capturas de referencia (`prueba_ventana_capturas.py`): estables (dos corridas, 0,00 %) sin
   comparar la vista 3D; detectan un texto cambiado (0,11 %, tolerancia 0,02 %). **Falta que el
@@ -1725,6 +1742,30 @@ Pendiente:
   el archivo sigue siendo 100 % nativo. Alternativa más simple, que no recomiendo: que FreeWorks
   rehaga las esquinas cuando cambia el esqueleto; sin FreeWorks el archivo quedaría mal.
   Prueba ya armada: `prueba_azar_soldadas.py` (reglas "sigue al esqueleto") + `prueba_inglete_sigue_esqueleto.py`.
+- **#34 (11/11): ¿FreeWorks te habla de "vos" o de "usted"?** Hoy casi todo dice "Elegí...", y 13
+  avisos del croquis dicen "Elija..." (SW 2018 en castellano usa "usted"). Con tu respuesta se
+  unifica todo y queda la regla escrita.
+- **#47 (11/11): operación nueva con varias configuraciones y Ctrl+Z.** Como SW, la operación nueva
+  queda suprimida en las otras configuraciones: eso agrega una columna a la tabla, y se hace al
+  cerrar el panel, cuando FreeCAD ya cerró su paso de deshacer (no deja sumarle cosas). Por eso
+  Ctrl+Z saca la operación y deja la columna. Opciones: (a) hacerlo ANTES de cerrar el panel,
+  dentro de su paso (hay que tocar el cierre de todos los paneles, propios y nativos); (b) al
+  deshacer, limpiar columnas de operaciones que ya no existen (pero Rehacer la trae sin suprimir
+  en las otras). Recomiendo (a); es trabajo de diseño, no de una noche.
+- **#22 (11/11): copiar y pegar un miembro estructural o una chapa.** Las marcas internas guardan
+  NOMBRES de objetos; al pegar, la copia apunta al original. Arreglo de raíz: guardarlas como
+  vínculos (FreeCAD los actualiza solo al copiar). Toca cómo se guardan los archivos (nombres
+  estables para siempre, ver Decisiones): necesita tu OK.
+- **Densidad "7.850" (11/11, revisión).** Con UN solo punto y sin coma, FreeWorks lo toma como
+  decimal: "7.850" = 7,85. Con dos o más puntos ("1.000.000") ya los toma como miles. ¿Querés que
+  "7.850" (punto y justo 3 cifras) dé 7850, o que avise "¿quisiste decir 7850 o 7,85?"? Hoy no
+  cambia nada respecto de antes.
+- **Ecuación que deja una operación imposible (11/11, revisión).** Hoy se rechaza ("Con ese valor
+  «Corte1» no se puede construir; quedó como estaba"). SW la acepta y marca el error en el árbol.
+  ¿Lo dejamos así (todo o nada) o como SW?
+- Bajo, sin tocar (revisión del 11/11): después de una fórmula rechazada el documento puede
+  quedar "modificado" aunque nada cambió; taladro/corte de ensamblaje con un componente
+  reemplazado por otra pieza que tenga una operación con el mismo nombre (sin probar).
 
 ## Plan: fase 1 — Chapa (aprobado por el usuario el 2026-10-27)
 Por debajo el addon SheetMetal (0.8.26 instalado; usa networkx de

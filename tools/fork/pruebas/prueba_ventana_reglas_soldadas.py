@@ -16,9 +16,6 @@ _NO_CANCELA = ("no se canceló", "siguió abierto", "cambió", "pasos de deshace
 _ESCUCHA = ("already deleted", "deleted object")
 _ERROR = ("ValueError", "No se pudo", "QPushButton")
 DEUDA = {
-    ("Miembro estructural", "invalido"): ("#19",) + _ERROR,
-    ("Cartela", "invalido"): ("#19",) + _ERROR,
-    ("Tapa de extremo", "invalido"): ("#19",) + _ERROR,
     ("Esquinas", "guardar"): ("~#40", "se cerró solo"),
 }
 

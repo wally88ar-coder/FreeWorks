@@ -74,20 +74,35 @@ def _any_perp(n):
 # --- Fórmulas exactas -------------------------------------------------------
 
 
+def _in_plane_dir(v, n, size):
+    """
+    Dirección de v dentro del plano de normal n, o None si v es "cero" para piezas de este
+    tamaño. Con el punto sobre el eje de un círculo (o dos círculos concéntricos), v es ruido de la
+    cuenta: con un umbral fijo de 1e-15 ese ruido pasaba por una dirección, al azar y fuera del
+    plano, y la medida salía mal (Issue #52: 5,0 en vez de 6,083).
+    """
+    v = _sub(v, _mul(n, _dot(v, n)))  # siempre en el plano
+    if _norm(v) <= 1e-9 * max(1.0, size):
+        return None
+    return _unit(v)
+
+
 def max_point_circle(p, center, normal, radius):
     """Distancia máxima de un punto a un círculo completo: (d, punto del círculo)."""
     n = _unit(normal)
     w = _sub(p, center)
-    h = _dot(w, n)
-    radial = _sub(w, _mul(n, h))
-    u = _unit(radial) or _any_perp(n)  # punto sobre el eje: cualquier punto del círculo
+    size = max(_norm(w), radius)
+    # punto sobre el eje: todos los puntos del círculo están igual de lejos; cualquiera sirve
+    u = _in_plane_dir(w, n, size) or _any_perp(n)
     far = _sub(center, _mul(u, radius))
     return dist(p, far), far
 
 
 def max_coplanar_circles(c1, r1, c2, r2, normal):
     """Dos círculos completos en el mismo plano: centros + radios. (d, punto1, punto2)."""
-    u = _unit(_sub(c2, c1)) or _any_perp(_unit(normal))  # concéntricos: cualquier dirección
+    n = _unit(normal)
+    size = max(dist(c1, c2), r1, r2)
+    u = _in_plane_dir(_sub(c2, c1), n, size) or _any_perp(n)  # concéntricos: cualquier dirección
     p1 = _sub(c1, _mul(u, r1))
     p2 = _add(c2, _mul(u, r2))
     return dist(p1, p2), p1, p2

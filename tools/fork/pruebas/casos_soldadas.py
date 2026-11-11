@@ -5,7 +5,7 @@
 Casos de las reglas de paneles: piezas soldadas (Miembro estructural, Esquinas, Cartela, Tapa
 de extremo). Esqueleto: rectángulo de 600 x 400 sin cotas.
 
-Los paneles de soldadas no se anotan en el guardia de paneles (Issue #6): para manejarlos, la
+Para manejar los paneles de soldadas, la
 prueba guarda el último que se creó (envuelve `_Base.__init__`, solo en esta prueba).
 """
 

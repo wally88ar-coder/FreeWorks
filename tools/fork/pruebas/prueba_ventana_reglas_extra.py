@@ -15,8 +15,6 @@ from reglas_paneles import correr  # noqa: E402
 _ESCUCHA = ("already deleted", "deleted object")
 _ERROR = ("ValueError", "No se pudo", "QPushButton")
 DEUDA = {
-    ("Recortar miembro", "invalido"): ("#19",) + _ERROR,
-    ("Tapa de extremo (clic)", "invalido"): ("#19",) + _ERROR,
 }
 
 

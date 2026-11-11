@@ -128,7 +128,9 @@ class Ensamblaje(Entorno):
     # al guardar con Taladro/Corte de ensamblaje, junto con el aviso de #38 sale el de la exportación
     # (mismo caso; solo se perdona si salen los dos en el mismo paso)
     deuda = (("#38", ("The graph must be a DAG", "ExportOCAF2.cpp(320): Failed to get subshape"), None),
-             ("#38", "The graph must be a DAG", None))
+             ("#38", "The graph must be a DAG", None),
+             # el resolvedor de FreeCAD con Matriz + Taladro/Corte + Relaciones (también sin Ecuaciones)
+             ("#76", "Solve failed: invalid vector subscript", None))
     deuda_pasos = (("#37", "Ctrl+Z no volvió", "aceptar Taladro de ensamblaje"),
                    ("#38", "al abrir quedó modificado", "guardar"),
                    ("#68", "abrió el panel sin medida de taladro", "Taladro de ensamblaje"))
@@ -202,9 +204,9 @@ class Soldada(Entorno):
     nombre = "soldadas"
     vinculos = ("esqueleto", "cuerpos")
     acciones = ("esqueleto", "esqueleto")
-    # errores ya registrados: #6 (paneles de soldadas fuera del guardia: escuchas que siguen
-    # vivas), #2 (el corte de la esquina no sigue al esqueleto), #40 (el reabierto se cierra solo)
-    deuda = (("#6", "already deleted", None), ("#6", "deleted object", None))
+    # errores ya registrados: #2 (el corte de la esquina no sigue al esqueleto), #40 (el reabierto
+    # se cierra solo)
+    deuda = ()
     deuda_pasos = (("#2", "no siguen al esqueleto", "esqueleto"),
                    ("~#40", "se cerró solo", "guardar"))
 

@@ -298,15 +298,26 @@ def set_extension(body, start=None, end=None):
 
 
 def extension(body):
-    """(alargue inicial, alargue final)."""
+    """(alargue inicial, alargue final). El final se mide (largo del caño menos el de su línea),
+    no se lee del texto de la fórmula: editada a mano en Ecuaciones ("... + 30 * 2", o un número
+    solo) se leía 0 (Issue #23)."""
     pad, route = _pad_of(body), _route_of(body)
-    e1 = 0.0
-    for prop, expr in pad.ExpressionEngine:
-        if prop == "Length" and "+" in expr:
-            try:
-                e1 = float(expr.split("+")[-1])
-            except ValueError:
-                pass
+    try:
+        expr = dict((p.lstrip("."), e) for p, e in pad.ExpressionEngine).get("Length")
+        total = pad.evalExpression(expr) if expr else pad.Length  # la fórmula, al momento
+        e1 = float(getattr(total, "Value", total)) - float(route.Shape.Edges[0].Length)
+    except Exception:
+        # sin poder medir (Ruta sin aristas, fórmula rota): el número después del último "+",
+        # como antes, para no perder el alargue (revisión del 11/11)
+        e1 = 0.0
+        for prop, expr in pad.ExpressionEngine:
+            if prop.lstrip(".") == "Length" and "+" in expr:
+                try:
+                    e1 = float(expr.split("+")[-1])
+                except ValueError:
+                    pass
+    if abs(e1) < 1e-9:
+        e1 = 0.0
     return float(pad.Length2), e1
 
 

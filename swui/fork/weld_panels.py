@@ -101,15 +101,22 @@ class _Sel:
     def __init__(self, fn, panel=None):
         self.fn = fn
         self.panel = panel
+        self._pending = False
 
     def _notify(self):
         from swui.fork import panel_guard
 
         if self.panel is not None and panel_guard.orphaned(self):
             return
-        QtCore.QTimer.singleShot(0, self._fire)
+        # varios avisos seguidos (recuadro de selección, o varias líneas elegidas de una) se
+        # atienden UNA vez con la selección completa: atendidos de a uno, el segundo veía las
+        # líneas del primero todavía elegidas y las sacaba (clic de nuevo = sacar, como SW)
+        if not self._pending:
+            self._pending = True
+            QtCore.QTimer.singleShot(0, self._fire)
 
     def _fire(self):
+        self._pending = False
         # el aviso se atiende un instante después: si en el medio el panel se cerró (Aceptar,
         # Cancelar), ya no se toca (daba "deleted object" / "already deleted": Issue #6)
         if self.panel is not None and getattr(self.panel, "_done", False):
@@ -159,11 +166,39 @@ class _Base:
             pass
         self._timer.stop()
 
+    def _say(self, text):
+        """Aviso adentro del panel (arriba de todo), como SW."""
+        label = getattr(self, "message", None)
+        if label is None:
+            label = QtWidgets.QLabel()
+            label.setWordWrap(True)
+            label.setStyleSheet("color: #c00000;")
+            lay = self.form.layout()
+            if isinstance(lay, QtWidgets.QFormLayout):
+                lay.insertRow(0, label)
+            else:
+                lay.insertWidget(0, label)
+            self.message = label
+        label.setText(text[:1].upper() + text[1:] if text else text)
+        label.show()
+
     def accept(self):
         try:
+            # un cambio de medida todavía sin vista previa (espera 350 ms): se aplica antes de
+            # aceptar; si no, quedaba guardada la vista previa vieja (Issue #7)
+            pending = self._timer.isActive()
             self._timer.stop()
+            if pending:
+                self._preview()
             self._apply_final()
             safe_ops.end_step(self.doc)
+        except ValueError as e:
+            # un dato que falta o no sirve (sin líneas, un solo miembro, sin punta): el panel queda
+            # abierto con el aviso adentro y con lo cargado, como SW; Cancelar sigue deshaciendo.
+            # Antes se cerraba, se perdía todo y quedaba el error de Python en el informe (#19)
+            self._say(str(e))
+            FreeCAD.Console.PrintLog("[SWUI fork] %s, dato inválido:\n%s\n" % (self.title, traceback.format_exc()))
+            return False
         except Exception as e:
             safe_ops.end_step(self.doc, abort=True)
             FreeCAD.Console.PrintError("[SWUI fork] %s:\n%s\n" % (self.title, traceback.format_exc()))

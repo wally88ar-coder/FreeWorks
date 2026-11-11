@@ -113,6 +113,19 @@ def read_spec(text):
         return None
     data.setdefault("k", DEFAULT_K)
     data.setdefault("radius", data["thickness"])
+    # números de verdad, controlados al leer (un dato roto daba ValueError en thickness / radius:
+    # Issue #56); espesor > 0, radio >= 0, K entre 0 y 1
+    import math
+
+    try:
+        for key in ("thickness", "radius", "k"):
+            data[key] = float(data[key])
+            if not math.isfinite(data[key]):
+                return None
+    except (TypeError, ValueError):
+        return None
+    if data["thickness"] <= 0 or data["radius"] < 0 or not 0 <= data["k"] <= 1:
+        return None
     return data
 
 

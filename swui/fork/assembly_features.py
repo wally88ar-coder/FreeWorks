@@ -304,6 +304,27 @@ def remove_from_part(binder, feat):
             pass
 
 
+def _entry_doc(asm_doc, entry):
+    """
+    El documento de la pieza de una entrada guardada. Sale de su COMPONENTE (estable, vive en el
+    ensamblaje), no del nombre interno del documento, que cambia entre sesiones: dos "Placa.FCStd"
+    de carpetas distintas abiertos son "Placa" y "Placa1", y el vínculo se perdía o tocaba la otra
+    (Issue #5). Lo guardado (la ruta del archivo; en archivos viejos, el nombre interno) queda
+    solo de respaldo, si el componente ya no está.
+    """
+    link = asm_doc.getObject(entry[0])
+    body = part_of(link) if link is not None else None
+    if body is not None:
+        return body.Document
+    from swui.fork import safe_ops
+
+    key = entry[1]
+    doc = safe_ops.find_doc(key)
+    if doc is None and not key.startswith(safe_ops.UNSAVED) and "/" not in key and "\\" not in key:
+        doc = FreeCAD.listDocuments().get(key)  # archivo de antes del 11/11: nombre interno
+    return doc
+
+
 def entries_of(v):
     """[(componente, binder, operación)] de una operación guardada."""
     out = []
@@ -312,10 +333,9 @@ def entries_of(v):
         e = parse_entry(text)
         if e is None:
             continue
-        link_name, doc_name, binder_name, feat_name = e
-        try:
-            pdoc = FreeCAD.getDocument(doc_name)
-        except Exception:
+        link_name, _doc, binder_name, feat_name = e
+        pdoc = _entry_doc(asm_doc, e)
+        if pdoc is None:
             continue
         link, binder, feat = asm_doc.getObject(link_name), pdoc.getObject(binder_name), pdoc.getObject(feat_name)
         if link is not None and binder is not None and feat is not None:
@@ -333,7 +353,10 @@ def record(asm, kind, sk, entries, data=None, title=None):
         v.addProperty("App::PropertyStringList", ENTRIES, "SW", "componente|documento|binder|operación")
         setattr(v, KIND, kind)
         setattr(v, SKETCH, sk)
-    setattr(v, ENTRIES, [entry_text(l.Name, f.Document.Name, b.Name, f.Name) for l, b, f in entries])
+    from swui.fork import safe_ops
+
+    # el documento, por su archivo (respaldo; el que manda es el componente: _entry_doc, #5)
+    setattr(v, ENTRIES, [entry_text(l.Name, safe_ops.doc_key(f.Document), b.Name, f.Name) for l, b, f in entries])
     return v
 
 
@@ -351,7 +374,7 @@ def operation_of(obj):
                 return v
             for text in getattr(v, ENTRIES, []) or []:
                 e = parse_entry(text)
-                if e and e[1] == obj.Document.Name and obj.Name in (e[2], e[3]):
+                if e and obj.Name in (e[2], e[3]) and _entry_doc(doc, e) is obj.Document:
                     return v
     return None
 

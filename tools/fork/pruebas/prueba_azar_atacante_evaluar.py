@@ -218,7 +218,7 @@ def prueba():
         assert v is not None and cerca(v, esperado, rel=1e-12, absoluto=1e-9), \
             "parse_number(%r) = %r, y en Argentina es %r" % (texto, v, esperado)
         comprobado()
-    f.correr("parse_argentino", parse_argentino, "#54")  # error registrado: Issue #54
+    f.correr("parse_argentino", parse_argentino)
 
     @cfg
     @given(x=st.floats(-1e12, 1e12, allow_nan=False))
@@ -264,7 +264,7 @@ def prueba():
             {"LPT%d" % i for i in range(1, 10)}, \
             "safe_file_name(%r) = %r es un nombre reservado de Windows (no se puede crear %s.FCMat)" % (nombre, t, t)
         comprobado()
-    f.correr("nombre_de_archivo", nombre_de_archivo, "#54")  # error registrado: Issue #54
+    f.correr("nombre_de_archivo", nombre_de_archivo)
 
     f.terminar()
 

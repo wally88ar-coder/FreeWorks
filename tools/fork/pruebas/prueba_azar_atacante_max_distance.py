@@ -144,7 +144,7 @@ def prueba():
                                                             "r=%r) dio %r, y es %r" % (p, c, n, r, d, esperado))
         assert abs((q - c).dot(n)) < 1e-6 * (1 + r), "el punto %r no está en el plano del círculo" % q
         comprobado()
-    f.correr("punto_en_el_eje_formula", punto_en_el_eje, "#52")  # error registrado: Issue #52
+    f.correr("punto_en_el_eje_formula", punto_en_el_eje)
 
     @cfg
     @given(c=_pos(st), n=_dir(st), r=med, h=st.floats(-100, 100))
@@ -153,7 +153,7 @@ def prueba():
         borde = Part.makeCircle(r, c, n)
         _revisar(md, Part.Vertex(p), borde, math.sqrt(r * r + h * h), r + abs(h) + 400, "punto del eje contra el borde")
         comprobado()
-    f.correr("punto_en_el_eje_medir", punto_en_el_eje_medir, "#52")  # error registrado: Issue #52
+    f.correr("punto_en_el_eje_medir", punto_en_el_eje_medir)
 
     @cfg
     @given(c1=_pos(st, 100), n1=_dir(st), r1=med, h1=med, c2=_pos(st, 100), n2=_dir(st), r2=med, h2=med)
@@ -191,7 +191,7 @@ def prueba():
         assert cerca(r[0], esperado, rel=1e-9, absoluto=1e-9), "fórmula %r, esperado %r" % (r[0], esperado)
         _revisar(md, a, b, esperado, r1 + r2 + 800, "círculos en el mismo plano")
         comprobado()
-    f.correr("dos_circulos_mismo_plano", dos_circulos_mismo_plano, "#52")  # error registrado: Issue #52 (círculos concéntricos)
+    f.correr("dos_circulos_mismo_plano", dos_circulos_mismo_plano)
 
     f.terminar()
 

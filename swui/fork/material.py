@@ -93,16 +93,28 @@ def category_path(directory):
 
 
 def parse_number(text):
-    """'7850' / '7.850,5' / '0,3' / '2e5' -> float, o None. Coma decimal como en Argentina."""
+    """
+    '7850' / '7.850,5' / '0,3' / '2e5' / '1.000.000' -> float, o None. Coma decimal como en
+    Argentina; con más de un punto y sin coma, los puntos son de miles (#54). Nunca infinito ni
+    "no es un número": 1e400, inf o nan dan None (#46).
+    """
+    import math
+
     t = (text or "").strip().replace(" ", "")
     if not t:
         return None
-    if "," in t:
+    if "," not in t and t.count(".") > 1:
+        # puntos de miles: solo si están bien puestos (1.000.000); "1.5.3" no es un número
+        if not re.match(r"^[+-]?\d{1,3}(\.\d{3})+$", t):
+            return None
+        t = t.replace(".", "")
+    elif "," in t:
         t = t.replace(".", "").replace(",", ".")
     try:
-        return float(t)
+        value = float(t)
     except ValueError:
         return None
+    return value if math.isfinite(value) else None
 
 
 def fmt_number(value):
@@ -153,9 +165,14 @@ def fcmat_text(data):
     return "\n".join(lines) + "\n"
 
 
+WINDOWS_RESERVED = {"CON", "PRN", "AUX", "NUL"} | {"COM%d" % i for i in range(1, 10)} | {"LPT%d" % i for i in range(1, 10)}
+
+
 def safe_file_name(name):
-    """Nombre de archivo válido en Windows para un material."""
-    clean = re.sub(r'[<>:"/\\|?*]+', "_", (name or "").strip()).strip(". ")
+    """Nombre de archivo válido en Windows para un material (tampoco CON, PRN, NUL...: #54)."""
+    clean = re.sub(r'[<>:"/\\|?*\x00-\x1f]+', "_", (name or "").strip()).strip(". ")
+    if clean.split(".")[0].upper() in WINDOWS_RESERVED:
+        clean = "_" + clean
     return clean or "Material"
 
 
@@ -173,9 +190,26 @@ def read_copy(text):
         data = json.loads(text or "")
     except (TypeError, ValueError):
         return None
-    if not isinstance(data, dict) or not data.get("uuid"):
+    if not isinstance(data, dict) or not data.get("uuid") or not isinstance(data.get("name"), str):
         return None
-    data["values"] = {k: (float(v[0]), str(v[1])) for k, v in (data.get("values") or {}).items()}
+    # se controla acá, al leer, para que nadie más tenga que hacerlo: un archivo dañado, editado a
+    # mano o de otra versión daba IndexError / ValueError / AttributeError (Issue #56)
+    import math
+
+    values = data.get("values") or {}
+    if not isinstance(values, dict):
+        return None
+    clean = {}
+    for k, v in values.items():
+        try:
+            number, unit = v
+            number = float(number)
+        except (TypeError, ValueError):
+            return None
+        if not math.isfinite(number):
+            return None
+        clean[k] = (number, str(unit))
+    data["values"] = clean
     return data
 
 

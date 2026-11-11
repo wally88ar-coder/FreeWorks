@@ -116,20 +116,12 @@ def configuraciones(acciones):
                     return
             elif a[0] == "valor":
                 if not math.isfinite(a[1]):
-                    # registrado: #46 (con infinito o NaN, configure revienta o lo acepta, en vez de
-                    # avisar). Se anota y se vuelve a un largo sano SOLO en la activa; después siguen
-                    # los controles de siempre
-                    try:
-                        cf.configure(doc, ("prop", caja, "Length"), a[1], scope=a[2])
-                        DEUDA_VISTA.add("#46 (acepta %s)" % a[1])
-                    except (OverflowError, ValueError):
-                        DEUDA_VISTA.add("#46 (revienta con %s)" % a[1])
-                    try:
-                        for n in cf.names(doc):
-                            if not math.isfinite(_valor_en(cf, doc, caja, n)):
-                                cf.set_values(doc, ("prop", caja, "Length"), {n: 40.0})
-                    except (OverflowError, ValueError):  # también #46: con NaN en la tabla, set_values revienta
-                        cf.configure(doc, ("prop", caja, "Length"), 40.0, scope="all")
+                    # con infinito o NaN: aviso en castellano y nada tocado (antes reventaba o lo
+                    # aceptaba, #46)
+                    aviso = _aviso(lambda: cf.configure(doc, ("prop", caja, "Length"), a[1], scope=a[2]))
+                    assert aviso, "aceptó %s como valor de configuración" % a[1]
+                    assert all(math.isfinite(_valor_en(cf, doc, caja, n)) for n in cf.names(doc)), \
+                        "con %s quedó una configuración que no es un número" % a[1]
                 else:
                     aviso = _aviso(lambda: cf.configure(doc, ("prop", caja, "Length"), a[1], scope=a[2]))
             elif a[0] == "celda":

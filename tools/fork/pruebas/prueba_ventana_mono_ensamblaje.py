@@ -19,7 +19,7 @@ from mono_entornos import Ensamblaje  # noqa: E402
 
 
 def prueba():
-    correr_reglas(Ensamblaje, conocido_otra="#76")  # detrás de #3 (arreglado) apareció #76
+    correr_reglas(Ensamblaje)  # #76 (aviso del resolvedor) va como deuda del entorno
 
 
 from _base import ejecutar  # noqa: E402

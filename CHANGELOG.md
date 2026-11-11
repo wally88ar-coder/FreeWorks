@@ -22,6 +22,18 @@ Neueste Version oben. / Newest version first.
   sin "None" fantasma al deshacer; borrar la primera con una medida configurada ya anda);
   #6, #29 y #30 (paneles de soldadas, vista de sección, referencia de ensamblaje y Agregar
   configuración anotados en el guardia; las escuchas de soldadas ya no tocan un panel cerrado).
+- **Segunda tanda de la noche del 11/11:** Ecuaciones "todo o nada" (#45, #46, #48, #49: una
+  fórmula que FreeCAD no puede calcular se rechaza con aviso en castellano y deja todo como
+  estaba; nombres que FreeCAD toma como unidad, como h o m, se rechazan antes de crear nada;
+  1e400, inf y nan no son números, tampoco como valor de una configuración) y sin tocar los VarSets de datos de FreeWorks (#4); números
+  argentinos con puntos de miles y nombres reservados de Windows (#54); datos guardados rotos
+  se controlan al leerlos (#56); configuraciones: agregar, renombrar y borrar con la pieza en
+  error (#55); Medir distancia máxima con un punto en el eje de un círculo (#52, la parte de
+  precisión sigue abierta); soldadas: Aceptar con un dato inválido deja el panel abierto con el
+  aviso (#19), varias líneas elegidas de una (recuadro) se suman todas en vez de anularse,
+  Aceptar enseguida de cambiar la medida usa la medida nueva (#7), alargue de un
+  miembro editado a mano (#23); taladro y corte de ensamblaje encuentran la pieza por su
+  componente y no por el nombre interno del documento (#5).
 - **Forma de trabajar para cometer menos errores** (plan de calidad, `docs/PLAN_CALIDAD.md`):
   piezas comunes para las tareas delicadas (`swui/fork/safe_ops.py`: borrar una operación,
   paso de deshacer que no rompe el Cancelar de un panel, escuchas que no actúan al abrir o

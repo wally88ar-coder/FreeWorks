@@ -27,6 +27,7 @@ NOMBRES INTERNOS ESTABLES (quedan en los archivos, no cambiarlos nunca): la prop
 "<Croquis>_<Restricción>" y "<Operación>_<Propiedad>".
 """
 
+import math
 import re
 import traceback
 
@@ -287,6 +288,26 @@ def rebind_rows(doc):
     return True
 
 
+def _rows_changed(doc, sheet, keep):
+    """
+    Después de agregar, renombrar o borrar filas de configuración: la lista del Cuerpo al día y la
+    configuración `keep` activa, AUNQUE la pieza esté en error. La fila 2 toma los valores de la
+    activa por su POSICIÓN en la lista; si la lista quedaba vieja (las operaciones con error frenan
+    el recálculo del Cuerpo), apuntaba a otra fila o a una vacía, las medidas configuradas se
+    quedaban sin valor y todo se trababa (Issues #51 y #55). Orden: tabla, lista nueva, recalcular
+    SOLO el Cuerpo (actualiza la lista), la activa por su nombre, el enlace de la fila 2, todo.
+    """
+    body = owner(doc)
+    sheet.recompute()
+    _bind_enum(sheet, body)
+    body.recompute()
+    if keep in names(doc) and getattr(body, PROP) != keep:
+        setattr(body, PROP, keep)
+    _rebind(sheet, body)
+    sheet.recompute()
+    doc.recompute()
+
+
 def show_table(doc):
     """
     Como SW: con una sola configuración la tabla es interna (la arma, por ejemplo, suprimir un
@@ -331,9 +352,7 @@ def add(doc, name):
         c = col_letter(n)
         sheet.set("%s%d" % (c, row), _contents(sheet, "%s%d" % (c, src)))
     sheet.set("A%d" % row, text_cell(name))
-    sheet.recompute()
-    _bind_enum(sheet, owner(doc))
-    doc.recompute()
+    _rows_changed(doc, sheet, active(doc))
     activate(doc, name)
     return name
 
@@ -371,8 +390,11 @@ def rename(doc, old, new):
     if row is None:
         raise ValueError("No hay una configuración \"%s\"." % old)
     was = active(doc)
-    table(doc).set("A%d" % row, text_cell(new))
-    doc.recompute()
+    sheet = table(doc)
+    sheet.set("A%d" % row, text_cell(new))
+    # con la pieza en error, recalcular todo no actualizaba la lista y el renombre quedaba a medias
+    # ("No hay una configuración «Nueva»", Issue #55): misma secuencia que agregar y borrar
+    _rows_changed(doc, sheet, new if was == old else was)
     activate(doc, new if was == old else was)
 
 
@@ -385,21 +407,8 @@ def delete(doc, name):
         raise ValueError("No hay una configuración \"%s\"." % name)
     was = active(doc)
     sheet = table(doc)
-    body = owner(doc)
     sheet.removeRows(str(row), 1)
-    # Issue #51: la fila 2 toma los valores de la activa por su POSICIÓN en la lista; borrada una
-    # fila de arriba, la posición vieja apuntaba a una fila vacía, las medidas configuradas
-    # quedaban sin valor y el recálculo se trababa (la lista del Cuerpo no se actualizaba porque
-    # sus operaciones fallaban). Orden: lista nueva, recalcular solo el Cuerpo (actualiza la
-    # lista), la activa otra vez por su nombre, y recién ahí el enlace de la fila 2.
-    sheet.recompute()
-    _bind_enum(sheet, body)
-    body.recompute()
-    if getattr(body, PROP) != was:
-        setattr(body, PROP, was)
-    _rebind(sheet, body)
-    sheet.recompute()
-    doc.recompute()
+    _rows_changed(doc, sheet, was)
     activate(doc, was)
 
 
@@ -505,22 +514,33 @@ def _add_column(doc, alias, title, value):
     return n
 
 
+def check_value(value):
+    """Un valor de configuración tiene que ser un número de verdad: con infinito o "no es un
+    número" (NaN) la tabla quedaba rota o saltaba un OverflowError de Python (Issue #46). Se avisa
+    ANTES de tocar nada."""
+    if isinstance(value, float) and not math.isfinite(value):
+        raise ValueError("La medida tiene que ser un número (no infinito).")
+
+
 def configure(doc, target, value, scope="this"):
     """
     Poner value en target. scope "this": solo en la configuración activa (ata la cota o la
     supresión a la tabla si no lo estaba); "all": en todas.
     """
+    check_value(value)
     obj, path, alias, title, current = target_info(target)
     bound = bound_alias(obj, path) is not None
     if scope == "all" and not bound:
         _set_plain(target, value)
         return
     sheet = ensure(doc)
+    rows = config_rows(sheet) if scope == "all" else [row_of(doc, active(doc))]
+    if None in rows:  # la tabla y la lista no coinciden: aviso ANTES de tocar nada (antes TypeError, #55)
+        raise ValueError("La configuración activa no está en la tabla de diseño: revisá la tabla.")
     n = _add_column(doc, alias, title, current)
     if not bound:
         obj.setExpression(path, "%s.%s" % (sheet.Name, alias))
     c = col_letter(n)
-    rows = config_rows(sheet) if scope == "all" else [row_of(doc, active(doc))]
     for row in rows:
         sheet.set("%s%d" % (c, row), fmt_value(value))
     doc.recompute()
@@ -547,6 +567,8 @@ def set_values(doc, target, values):
     Configurar operación (como SW): {configuración: valor} de una vez. Ata target a la tabla si
     no lo estaba (las demás configuraciones quedan con el valor actual).
     """
+    for value in values.values():
+        check_value(value)
     obj, path, alias, title, current = target_info(target)
     sheet = ensure(doc)
     n = _add_column(doc, alias, title, current)

@@ -186,7 +186,7 @@ def prueba():
             comprobado()
         finally:
             FreeCAD.closeDocument(doc.Name)
-    f.correr("nombre_valido", nombre_valido, "#48")  # error registrado: Issue #48
+    f.correr("nombre_valido", nombre_valido)
 
     # 3) una fórmula válida en SW no queda aceptada y rota
     @cfg
@@ -209,7 +209,7 @@ def prueba():
             comprobado()
         finally:
             FreeCAD.closeDocument(doc.Name)
-    f.correr("trig_mezclada", trig_mezclada, "#49")  # error registrado: Issue #49
+    f.correr("trig_mezclada", trig_mezclada)
 
     # 4) ecuación sobre cota: guardar/abrir, deshacer/rehacer, borrar
     @cfg
