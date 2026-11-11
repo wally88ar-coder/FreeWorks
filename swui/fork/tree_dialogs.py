@@ -25,7 +25,7 @@ WAITING = "waiting"
 # (texto que aparece en el mensaje de FreeCAD, explicación). Se busca en orden.
 EXPLAIN = (
     ("subshape not found", "Perdió la cara o arista donde estaba apoyado (cambió o desapareció). "
-                           "Usá «Reparar referencias...»: si puede, la vuelve a encontrar sola."),
+                           "Use «Reparar referencias...»: si puede, la vuelve a encontrar sola."),
     ("total length of zero", "La profundidad es cero."),
     ("Base feature's TopoShape is invalid", "No hay sólido antes de esta operación (lo de arriba está "
                                             "suprimido, vacío o con error): no tiene sobre qué trabajar."),

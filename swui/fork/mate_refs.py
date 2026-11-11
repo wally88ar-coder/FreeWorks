@@ -432,7 +432,7 @@ def _fix_ref(joint, prop, ref, stored):
         if here is not None and here <= best_cost + 1e-9:
             best = name  # la misma sigue siendo la más parecida: solo cambió de forma
         elif best_cost >= CLOSE:
-            _warn(joint, obj, "la %s elegida cambió; se tomó la más parecida (%s). Revisala."
+            _warn(joint, obj, "la %s elegida cambió; se tomó la más parecida (%s). Revísela."
                   % (_what(want), best))
         else:
             FreeCAD.Console.PrintLog("[SWUI fork] %s: %s -> %s\n" % (joint.Label, name, best))

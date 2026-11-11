@@ -56,7 +56,7 @@ def check_file(path):
     norm = os.path.normcase(os.path.abspath(path))
     for doc in FreeCAD.listDocuments().values():
         if os.path.normcase(os.path.abspath(doc.FileName or "")) == norm:
-            return "abierto", ["Cerrala y volvé a chequear para incluirla."]
+            return "abierto", ["Ciérrela y vuelva a chequear para incluirla."]
     before = set(FreeCAD.listDocuments())
     try:
         doc = FreeCAD.openDocument(path, True)  # oculta

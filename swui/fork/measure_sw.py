@@ -168,7 +168,7 @@ def measure(shapes, mode="center", decimals=DEFAULT_DECIMALS):
         return fmt(value, decimals, unit)
 
     if not shapes:
-        return [("Elegí vértices, aristas o caras en la vista.", "")], None
+        return [("Elija vértices, aristas o caras en la vista.", "")], None
     kinds = [kind_of(s) for s in shapes]
     if len(shapes) == 1:
         s, k = shapes[0], kinds[0]
@@ -204,7 +204,7 @@ def measure(shapes, mode="center", decimals=DEFAULT_DECIMALS):
             return [("Longitud total", f(sum(s.Length for s in shapes)))], None
         if all(k in ("plane", "cylinder", "face") for k in kinds):
             return [("Área total", f(sum(s.Area for s in shapes), unit="mm²"))], None
-        return [("Para medir distancias, elegí dos elementos.", "")], None
+        return [("Para medir distancias, elija dos elementos.", "")], None
     a, b = shapes
     ka, kb = kinds
     if mode == "max":

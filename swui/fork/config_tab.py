@@ -94,7 +94,7 @@ def add_config():
     if not _is_part(doc):
         return
     if FreeCADGui.Control.activeDialog():
-        _status("Cerrá primero el panel abierto.")
+        _status("Cierre primero el panel abierto.")
         return
     from swui.fork import safe_ops
 
@@ -142,7 +142,7 @@ class _AddPanel:
         name = self.name.text().strip()
         if not name:
             # antes Aceptar no hacía nada y no decía por qué (Issue #35)
-            self.message.setText("Escribí un nombre para la configuración.")
+            self.message.setText("Escriba un nombre para la configuración.")
             self.message.show()
             return False
         try:
@@ -320,7 +320,7 @@ def refresh(force=False):
         _state["sig"] = sig
         tree.clear()
         if sig == (None,):
-            item = QtWidgets.QTreeWidgetItem(["(abrí una pieza o un ensamblaje)"])
+            item = QtWidgets.QTreeWidgetItem(["(abra una pieza o un ensamblaje)"])
             item.setFlags(QtCore.Qt.ItemFlag.NoItemFlags)
             tree.addTopLevelItem(item)
             return
@@ -443,7 +443,7 @@ def _hook_dims():
         scope = _state.get("scope", "this")
         picked = [n for n in _state.get("picked") or [] if n in cf.names(doc)]
         if scope == "pick" and not picked:
-            _status("Elegí al menos una configuración.")
+            _status("Elija al menos una configuración.")
             return False
         from swui.fork import safe_ops
 

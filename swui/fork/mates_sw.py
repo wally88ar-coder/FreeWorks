@@ -837,18 +837,18 @@ class MatePanel:
         if problem:
             text = problem
         elif not self.entities:
-            text = "Elegí dos caras, aristas o vértices de dos componentes distintos."
+            text = "Elija dos caras, aristas o vértices de dos componentes distintos."
         elif len(self.entities) == 1:
-            text = "Elegí la segunda entidad, en otro componente."
+            text = "Elija la segunda entidad, en otro componente."
         elif len(self.entities) > 2:
-            text = "Hay más de dos entidades elegidas: sacá las que sobran."
+            text = "Hay más de dos entidades elegidas: quite las que sobran."
         elif self.entities[0][0] is self.entities[1][0]:
-            text = "Las dos entidades son del mismo componente: elegí una de otro."
+            text = "Las dos entidades son del mismo componente: elija una de otro."
         elif "attached" in kinds:
-            text = ("Ese plano/eje está apoyado en una pieza y FreeCAD no lo toma en relaciones: elegí la "
-                    "cara de la pieza y usá Distancia (o un plano hecho sobre el origen del ensamblaje).")
+            text = ("Ese plano/eje está apoyado en una pieza y FreeCAD no lo toma en relaciones: elija la "
+                    "cara de la pieza y use Distancia (o un plano hecho sobre el origen del ensamblaje).")
         elif self.joint is not None and not self.editing:
-            text = "Revisá la vista y apretá Agregar (o elegí otra relación)."
+            text = "Revise la vista y presione Agregar (o elija otra relación)."
         else:
             text = ""
         self.message.setText(text)
@@ -1070,7 +1070,7 @@ def start(key=None, joint=None):
     global _panel
     asm = ensure_active()
     if asm is None:
-        FreeCAD.Console.PrintWarning("[SWUI] Relación de posición: abrí o activá un ensamblaje primero.\n")
+        FreeCAD.Console.PrintWarning("[SWUI] Relación de posición: abra o active un ensamblaje primero.\n")
         return None
     try:
         if FreeCADGui.Control.activeDialog():
@@ -1249,7 +1249,7 @@ class _MateCommand:
         from swui import paths
 
         return {"MenuText": "Relación de posición",
-                "ToolTip": "Relaciones de posición como SW: elegí dos entidades, revisá y Agregar; "
+                "ToolTip": "Relaciones de posición como SW: elija dos entidades, revise y Agregar; "
                            "el panel queda abierto para la siguiente",
                 "Pixmap": paths.icon("sketch/m_coincident") or ""}
 

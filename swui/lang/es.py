@@ -359,7 +359,7 @@ TEXTS = {
     "Im offenen Dokument wurde kein Teil und keine Baugruppe gefunden.":
         "En el documento abierto no hay ninguna pieza ni ensamblaje.",
     "Bitte das Teil bzw. die Baugruppe zuerst speichern –\ndie Zeichnung verweist auf diese Datei.":
-        "Primero guardá la pieza o el ensamblaje –\nel dibujo hace referencia a ese archivo.",
+        "Primero guarde la pieza o el ensamblaje –\nel dibujo hace referencia a ese archivo.",
     "Zeichnung": "Dibujo",
     # === Schritt 2b: Skizzen-/Baugruppen-Fenster ======================
     # --- Beziehungen (sketch_relations.py) --------------------------
@@ -400,22 +400,22 @@ TEXTS = {
     "Kreiskante": "Arista circular",
     "Bauteil": "Componente",
     "Zweites Element an einem anderen Bauteil wählen.": "Seleccionar una segunda entidad en otro componente.",
-    "Bitte genau zwei Elemente wählen.": "Seleccioná exactamente dos entidades.",
+    "Bitte genau zwei Elemente wählen.": "Seleccione exactamente dos entidades.",
     "Beide Elemente liegen am selben Bauteil – bitte ein Element an einem anderen Bauteil wählen.":
-        "Las dos entidades están en el mismo componente – seleccioná una entidad de otro componente.",
+        "Las dos entidades están en el mismo componente – seleccione una entidad de otro componente.",
     "Keine passende Verknüpfung für diese Auswahl.": "No hay ninguna relación de posición aplicable a esta selección.",
     # --- Freie Drehung (commands/free_rotate.py) --------------------
     "Freie Drehung": "Girar componente",
     "Freie Drehung: linke Maustaste ziehen  ·  Esc oder Rechtsklick beendet":
         "Girar componente: arrastrar con el botón izquierdo  ·  Esc o clic derecho para terminar",
-    "Bitte genau ein Teil der aktiven Baugruppe wählen.": "Seleccioná exactamente una pieza del ensamblaje activo.",
+    "Bitte genau ein Teil der aktiven Baugruppe wählen.": "Seleccione exactamente una pieza del ensamblaje activo.",
     "„%s“ ist fixiert – freie Drehung nur für lose Teile.": "“%s” está fijo – solo se pueden girar piezas flotantes.",
     "„%s“ hat die Verknüpfung „%s“ – freie Drehung nur für Teile ohne Verknüpfung.":
         "“%s” tiene la relación de posición “%s” – solo se pueden girar piezas sin relaciones.",
-    "Zuerst eine Baugruppe aktivieren.": "Primero activá un ensamblaje.",
+    "Zuerst eine Baugruppe aktivieren.": "Primero active un ensamblaje.",
     # --- Sonstige Fenster, Rueckgaengig-Eintraege -------------------
     "Baugruppe zuerst speichern (Verknüpfungen brauchen einen Speicherort)":
-        "Primero guardá el ensamblaje (las referencias necesitan una ubicación de archivo)",
+        "Primero guarde el ensamblaje (las referencias necesitan una ubicación de archivo)",
     "Komponente einfügen": "Insertar componente",
     "Konstruktionslinie": "Línea constructiva",
     "Mittellinie (symmetrisch)": "Línea por punto medio",
@@ -679,11 +679,11 @@ TEXTS = {
     # === Skizze ohne Auswahl: Ebene waehlen (pick_plane.py) ==============
     "Skizze: Ebene wählen": "Croquis: seleccionar un plano",
     "Eine Ebene oder ebene Fläche im Grafikbereich, im Baum oder in der Liste wählen.":
-        "Seleccioná un plano o una cara plana en la zona de gráficos, en el árbol o en la lista.",
+        "Seleccione un plano o una cara plana en la zona de gráficos, en el árbol o en la lista.",
     "Das ist keine Ebene und keine ebene Fläche.": "Eso no es un plano ni una cara plana.",
     "[SWUI] Ebene wählen: %s\n": "[SWUI] Seleccionar plano: %s\n",
     # === Linieneigenschaften (line_format.py) ===========================
-    'Erst Linien in einer Ansicht wählen, dann „Linieneigenschaften“ klicken.': 'Primero seleccioná líneas en una vista y después hacé clic en "Formato de línea".',
+    'Erst Linien in einer Ansicht wählen, dann „Linieneigenschaften“ klicken.': 'Primero seleccione líneas en una vista y después haga clic en "Formato de línea".',
     'Ja': 'Sí',
     'Nein': 'No',
     'Linien': 'Líneas',
@@ -703,7 +703,7 @@ TEXTS = {
     '[SWUI] Blatt-Skizze: %s\n': '[SWUI] Croquis de hoja: %s\n',
     # === Feld Text (text_note.py) =======================================
     'Baum|Text': 'Texto',
-    'Erst das Blatt-Fenster anklicken, dann „Text“.': 'Primero hacé clic en la ventana de la hoja y después en "Texto".',
+    'Erst das Blatt-Fenster anklicken, dann „Text“.': 'Primero haga clic en la ventana de la hoja y después en "Texto".',
     'Text': 'Texto',
     'Text aufs Blatt setzen: Knopf, dann aufs Blatt klicken und tippen (gewählten Text ändern). Esc bricht ab.': 'Poner texto en la hoja: botón, después clic en la hoja y escribir (edita el texto seleccionado). Esc cancela.',
     'Text:': 'Texto:',

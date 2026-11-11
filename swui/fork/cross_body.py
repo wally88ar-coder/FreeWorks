@@ -251,9 +251,9 @@ def _circle_edge(shape, sub):
 
 
 OTHER_SOLID = ("Eso es de otro sólido (%s). En FreeCAD cada operación trabaja sobre un solo sólido "
-               "(%s): aceptá esta y hacé otra para aquel.")
+               "(%s): acepte esta y haga otra para aquel.")
 OTHER_FEATURE = ("Esa operación es de otro sólido (%s): acá solo se repiten operaciones de este "
-                 "sólido. Para copiar otro sólido entero usá Insertar > Operaciones > Mover/Copiar "
+                 "sólido. Para copiar otro sólido entero use Insertar > Operaciones > Mover/Copiar "
                  "(o, en Simetría, «Sólidos para simetría»).")
 
 

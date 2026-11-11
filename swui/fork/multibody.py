@@ -298,7 +298,7 @@ def separate(feature):
         axis = _axis_in(new, feature.ReferenceAxis, sketch)
         if axis is None:
             doc.removeObject(new.Name)
-            raise ValueError("el eje de la revolución no se puede llevar a otro sólido (usá un eje del "
+            raise ValueError("el eje de la revolución no se puede llevar a otro sólido (use un eje del "
                              "origen o del croquis)")
     previous = feature.BaseFeature
     was_tip = owner.Tip is feature
@@ -333,7 +333,7 @@ def rejoin(feature):
               and o.TypeId not in ("PartDesign::SubShapeBinder", "PartDesign::Line", "PartDesign::Plane",
                                    "PartDesign::Point")]
     if others:
-        raise ValueError("ese sólido ya tiene otras operaciones (%s): para unirlo usá Combinar"
+        raise ValueError("ese sólido ya tiene otras operaciones (%s): para unirlo use Combinar"
                          % ", ".join(o.Label for o in others))
     helpers = [o for o in new.Group if o is not feature and o not in others
                and o.TypeId in ("PartDesign::SubShapeBinder", "PartDesign::Line")]
@@ -642,7 +642,7 @@ class _Section(QtWidgets.QGroupBox):
             self._refresh()
         box.addWidget(self.note)
         if self.additive and is_separated(feature):
-            self.note.setText("Este sólido está aparte (%s). Prendé la casilla para volver a fusionarlo."
+            self.note.setText("Este sólido está aparte (%s). Active la casilla para volver a fusionarlo."
                               % body_of(feature).Label)
 
     def _fill_list(self, with_copy):
@@ -745,7 +745,7 @@ def _inject(doc_name, name):
     original = original_of(feature)
     if original is not None:
         label = QtWidgets.QLabel("Esta es la copia de «%s» en otro sólido: sus medidas siguen al original. "
-                                 "Para cambiarlas, editá «%s»." % (original.Label, original.Label))
+                                 "Para cambiarlas, edite «%s»." % (original.Label, original.Label))
         label.setWordWrap(True)
         section = QtWidgets.QGroupBox("Alcance de la operación")
         section.setObjectName(SECTION_NAME)

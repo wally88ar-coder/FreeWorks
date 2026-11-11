@@ -578,7 +578,7 @@ class _Draw:
         except Exception:
             normal = None
         if normal is None:
-            self.panel.message("Ctrl + clic: elegí una cara plana o un plano.")
+            self.panel.message("Ctrl + clic: elija una cara plana o un plano.")
             return
         self.custom, self.plane = (base, normal, name), -1
         self.panel.show_plane()
@@ -796,12 +796,12 @@ class Sketch3DPanel:
 
     def _tool_toggled(self, on):
         if on:
-            self.message("Clic para empezar y clic en cada punto (o arrastrar). Escribí el largo y Enter "
+            self.message("Clic para empezar y clic en cada punto (o arrastrar). Escriba el largo y Enter "
                          "para fijarlo. Doble clic, clic derecho o Esc cortan la cadena.")
             FreeCADGui.Selection.clearSelection()
         else:
             self.draw.end_chain()
-            self.message("Elegí líneas con el mouse para ver y agregar relaciones. Doble clic en una línea "
+            self.message("Elija líneas con el mouse para ver y agregar relaciones. Doble clic en una línea "
                          "cambia su largo. Supr borra.")
         self.show_plane()
 
@@ -870,13 +870,13 @@ class Sketch3DPanel:
         sel = self.selected_lines()
         if key in ("X", "Y", "Z", "fix"):
             if not sel:
-                self.message("Elegí una o más líneas del croquis.")
+                self.message("Elija una o más líneas del croquis.")
                 return
             for line in sel:
                 self.run(lambda l=line: s3.fix(l) if key == "fix" else s3.set_axis(l, key))
         else:
             if len(sel) != 2:
-                self.message("Elegí dos líneas: la segunda toma la dirección (Paralela) o el largo (Igual) "
+                self.message("Elija dos líneas: la segunda toma la dirección (Paralela) o el largo (Igual) "
                              "de la primera.")
                 return
             ref, line = sel
@@ -885,7 +885,7 @@ class Sketch3DPanel:
     def dimension(self):
         sel = self.selected_lines()
         if len(sel) != 1:
-            self.message("Elegí una línea para acotar su largo.")
+            self.message("Elija una línea para acotar su largo.")
             return
         self.edit_length(sel[0])
 

@@ -778,11 +778,11 @@ class PatternPanel:
         if self.problem:
             text = self.problem
         elif not self.dir1:
-            text = {"linear": "Elegí una arista, cara o eje para la dirección.",
-                    "circular": "Elegí el eje: una arista circular, una cara cilíndrica o un eje.",
-                    "mirror": "Elegí el plano de simetría: una cara plana o un plano."}[self.kind]
+            text = {"linear": "Elija una arista, cara o eje para la dirección.",
+                    "circular": "Elija el eje: una arista circular, una cara cilíndrica o un eje.",
+                    "mirror": "Elija el plano de simetría: una cara plana o un plano."}[self.kind]
         elif not self.seeds:
-            text = "Elegí los componentes en la vista o en el árbol."
+            text = "Elija los componentes en la vista o en el árbol."
         else:
             text = ""
         self.message.setText(text)
@@ -829,7 +829,7 @@ class PatternPanel:
             # solo si el clic va al plano: con la lista activa, cualquier cara elige su componente
             if self.kind == "mirror" and self.active == "dir1" and kind not in ("part", "plane", "datum_plane"):
                 # el plano de simetría es una cara plana o un plano (SW no toma vértices ni aristas)
-                self.problem = "Para el plano de simetría elegí una cara plana o un plano."
+                self.problem = "Para el plano de simetría elija una cara plana o un plano."
                 self._refresh()
                 return
             if self.active in ("dir1", "dir2") and kind != "part":
@@ -914,7 +914,7 @@ class PatternPanel:
             # el archivo opuesto se crea recién al Aceptar; la vista previa usa la misma pieza
             v, warn = make_mirror(self.asm, self.seeds, plane, (), title)
             if [s for s in warn if s not in [o.Label for o in self.opposite]]:
-                self.problem = ("No es simétrica: %s. Marcá 'Versión simétrica' para que quede espejada de verdad."
+                self.problem = ("No es simétrica: %s. Marque 'Versión simétrica' para que quede espejada de verdad."
                                 % ", ".join(warn))
             return v
         if kind == "linear":
@@ -970,7 +970,7 @@ class PatternPanel:
             if not path.lower().endswith(".fcstd"):
                 path += ".FCStd"
             if os.path.normcase(path) in taken or path in paths.values():
-                self.message.setText("'%s' ya está abierto: elegí otro nombre." % os.path.basename(path))
+                self.message.setText("'%s' ya está abierto: elija otro nombre." % os.path.basename(path))
                 self.message.setVisible(True)
                 return None
             paths[seed.Name] = path
@@ -1063,7 +1063,7 @@ def start(kind, data=None):
 
     asm = mates_sw.ensure_active()
     if asm is None:
-        FreeCAD.Console.PrintWarning("[SWUI] %s: abrí o activá un ensamblaje primero.\n" % LABELS[kind])
+        FreeCAD.Console.PrintWarning("[SWUI] %s: abra o active un ensamblaje primero.\n" % LABELS[kind])
         return None
     try:
         if FreeCADGui.Control.activeDialog():

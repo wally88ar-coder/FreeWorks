@@ -82,8 +82,8 @@ class _ListClick(QtCore.QObject):
 
 
 class TransformedPanel(dp.SwPanel):
-    FAIL = "FreeCAD no puede hacer la operación así: revisá la dirección y las medidas."
-    NOTHING = "Elegí al menos una operación (o tildá Sólidos)."
+    FAIL = "FreeCAD no puede hacer la operación así: revise la dirección y las medidas."
+    NOTHING = "Elija al menos una operación (o marque Sólidos)."
     REFS = ()  # [(propiedad, etiqueta, ayuda)]
 
     def __init__(self, obj):
@@ -332,7 +332,7 @@ class LinearPanel(TransformedPanel):
 
     TRANSACTION = "Editar matriz lineal"
     REQUIRED_REF = "Direction"
-    REQUIRED_MSG = "Elegí la dirección 1 (una arista, eje o cara plana)."
+    REQUIRED_MSG = "Elija la dirección 1 (una arista, eje o cara plana)."
 
     def _build(self):
         obj = self.obj
@@ -406,7 +406,7 @@ class LinearPanel(TransformedPanel):
     def _apply(self):
         problem = super()._apply()
         if not problem and self.use2.isChecked() and not self.refs.get("Direction2"):
-            problem = "Elegí la dirección 2 (una arista, eje o cara plana)."
+            problem = "Elija la dirección 2 (una arista, eje o cara plana)."
         return problem
 
     def _apply_values(self):
@@ -432,7 +432,7 @@ class LinearPanel(TransformedPanel):
 class PolarPanel(TransformedPanel):
     TRANSACTION = "Editar matriz circular"
     REQUIRED_REF = "Axis"
-    REQUIRED_MSG = "Elegí el eje (un eje, una arista o la cara de un agujero)."
+    REQUIRED_MSG = "Elija el eje (un eje, una arista o la cara de un agujero)."
     # Como SW 2018 (comparado a mano, 2026-10-28): nueva con el eje vacío, "Operaciones y caras"
     # esperando y 4 instancias (después, las últimas escritas).
 
@@ -524,11 +524,11 @@ class PolarPanel(TransformedPanel):
 
 class MirrorPanel(TransformedPanel):
     TRANSACTION = "Editar simetría"
-    FAIL = "FreeCAD no puede hacer la simetría así: revisá el plano."
+    FAIL = "FreeCAD no puede hacer la simetría así: revise el plano."
     REQUIRED_REF = "MirrorPlane"
-    REQUIRED_MSG = "Elegí la cara o el plano de simetría."
+    REQUIRED_MSG = "Elija la cara o el plano de simetría."
     ONLY_OWN = ("Con «Fusionar sólidos» va solo el sólido de esta operación: para espejar otros "
-                "sólidos, destildalo (quedan como sólidos aparte).")
+                "sólidos, desmárquelo (quedan como sólidos aparte).")
 
     def __init__(self, obj):
         from swui.fork import multibody
@@ -638,7 +638,7 @@ class MirrorPanel(TransformedPanel):
         if self.merge.isChecked():
             problem = self.ONLY_OWN
         elif mirror_bodies.plane_link(self.refs.get("MirrorPlane")) is None:
-            problem = "Elegí el plano de simetría (un plano o una cara plana)."
+            problem = "Elija el plano de simetría (un plano o una cara plana)."
         else:
             for body in self.mirror_bodies:
                 shape = mirror_bodies.mirrored_shape(body, self.refs.get("MirrorPlane"))

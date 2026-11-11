@@ -33,8 +33,8 @@ def pedido(accion, titulo="", documento=None):
     if accion == "deshacer":
         c.require_free()
         if k is None:
-            return c.fail("El historial de deshacer cambió desde que empezó el pedido (¿deshiciste algo a mano?). "
-                          "Deshacé con Ctrl+Z mirando la lista.")
+            return c.fail("El historial de deshacer cambió desde que empezó el pedido (¿deshizo algo a mano?). "
+                          "Deshaga con Ctrl+Z mirando la lista.")
         names = list(doc.UndoNames)[:k]
         for _ in range(k):
             doc.undo()

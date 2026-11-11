@@ -447,7 +447,7 @@ def _hook_rename_delete():
             # como SW: no se borra una configuración que usa un ensamblaje abierto (SW avisa "No se
             # puede eliminar ninguna entidad seleccionada"; visto con el mouse 01/11)
             who = ", ".join(sorted("%s (%s)" % (link.Label, link.Document.Label) for link, _c in users))
-            raise ValueError("No se puede eliminar «%s»: la usa %s. Pasá esos componentes a otra "
+            raise ValueError("No se puede eliminar «%s»: la usa %s. Pase esos componentes a otra "
                              "configuración primero." % (name, who))
         _orig(doc, name)
 
@@ -777,7 +777,7 @@ class _Bar(QtWidgets.QFrame):
             self.combo.addItems([active])
             self.combo.setEnabled(False)
             self.setToolTip("Pieza multicuerpo: este sólido muestra la configuración activa de la pieza. "
-                            "Para elegir la configuración en el ensamblaje, insertá el sólido «%s»."
+                            "Para elegir la configuración en el ensamblaje, inserte el sólido «%s»."
                             % owner.Label)
             self.current = active
         else:

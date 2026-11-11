@@ -103,10 +103,10 @@ def user_busy():
         editing = None  # el ensamblaje activo está "en edición" siempre: no es algo abierto por el usuario
     if editing is not None and obj is not None:
         what = "el croquis" if obj.TypeId.startswith("Sketcher::") else "el panel de"
-        return "Tenés abierto %s %s. Cerralo y sigo (no toqué nada)." % (what, obj.Label)
+        return "Tiene abierto %s %s. Ciérrelo y sigo (no toqué nada)." % (what, obj.Label)
     try:
         if FreeCADGui.Control.activeDialog():
-            return "Tenés un panel abierto. Cerralo (Aceptar o Cancelar) y sigo (no toqué nada)."
+            return "Tiene un panel abierto. Ciérrelo (Aceptar o Cancelar) y sigo (no toqué nada)."
     except Exception:
         pass
     return ""

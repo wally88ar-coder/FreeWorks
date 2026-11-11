@@ -234,7 +234,7 @@ def faces_problem(shape, subs, same_plane=False, curved_ok=False):
     for sub in subs:
         face = dp._element(shape, sub)
         if face is None:
-            return "Hay caras que ya no existen (en rojo): borralas y elegí las nuevas."
+            return "Hay caras que ya no existen (en rojo): bórrelas y elija las nuevas."
         if not is_planar(face):
             if not curved_ok:
                 return ("Solo se pueden trasladar o girar caras planas (las cilíndricas, con "
@@ -265,7 +265,7 @@ def hinge_refs(shape, subs, hinge):
     face = dp._element(shape, subs[0])
     edge = dp._element(shape, hinge)
     if face is None or edge is None or not _is_line(edge):
-        return None, None, "Elegí como eje una arista recta de la cara."
+        return None, None, "Elija como eje una arista recta de la cara."
     n = face_normal(face)
     h = _edge_dir(edge)
     origin = face.Vertexes[0].Point
@@ -400,7 +400,7 @@ def ring_geometry(face, distance, flip):
     move = normal_move(OFFSET, (0, 0, 0), distance, flip)
     radii = ring_radii(radius, move, away)
     if radii is None:
-        return None, None, None, "Con esa distancia el agujero se cierra: probá con una menor."
+        return None, None, None, "Con esa distancia el agujero se cierra: pruebe con una menor."
     radial = axis.cross(FreeCAD.Vector(0, 0, 1))
     if radial.Length < 1e-6:
         radial = axis.cross(FreeCAD.Vector(1, 0, 0))
@@ -844,7 +844,7 @@ def _fix(want, target, sub, multi):
         if len(pieces) > 1 and best in pieces:
             return pieces, "la cara quedó partida en %d: se mueven todos los pedazos" % len(pieces)
     if best_cost >= mr.CLOSE:
-        return [best], "la %s elegida cambió; se tomó la más parecida: revisala" % mr._what(want)
+        return [best], "la %s elegida cambió; se tomó la más parecida: revísela" % mr._what(want)
     return [best], ""
 
 
@@ -1054,7 +1054,7 @@ def update_stale(doc, passes=5):
 
 
 STALE_TEXT = "⚠ desactualizado: Ctrl+Q"
-LOST_TEXT = "⚠ perdió la cara: Ctrl+Q o abrilo"
+LOST_TEXT = "⚠ perdió la cara: Ctrl+Q o ábralo"
 _stale = {}  # Name del documento -> {Name de los Mover cara atrasados}
 _lost = {}  # Name del documento -> {Name de los Mover cara que perdieron la cara}
 
@@ -1095,14 +1095,14 @@ def check(doc, fix=False):
     _stale[doc.Name], _lost[doc.Name] = now, lost_now
     new = [doc.getObject(n) for n in sorted(now - before)]
     if new:
-        _warn(doc, "%s quedó desactualizado porque cambió la pieza: apretá Ctrl+Q para actualizarlo.\n"
+        _warn(doc, "%s quedó desactualizado porque cambió la pieza: presione Ctrl+Q para actualizarlo.\n"
               % ", ".join(o.Label for o in new if o is not None))
     gone = [doc.getObject(n) for n in sorted(lost_now - lost_before)]
     if gone:
-        hint = (" Si otro Mover cara de antes quedó desactualizado, apretá primero Ctrl+Q: al ponerlo al día "
+        hint = (" Si otro Mover cara de antes quedó desactualizado, presione primero Ctrl+Q: al ponerlo al día "
                 "suele volver la cara." if now else "")
         _warn(doc, "%s perdió la cara que movía porque cambió la pieza (FreeCAD renumeró las caras): "
-                   "abrilo (clic derecho > Editar operación) y elegí la cara de nuevo.%s\n"
+                   "ábralo (clic derecho > Editar operación) y elija la cara de nuevo.%s\n"
               % (", ".join(o.Label for o in gone if o is not None), hint))
     if now != before or lost_now != lost_before:
         try:
@@ -1219,17 +1219,17 @@ def _links_to(user, obj):
 
 class MoveFacePanel(dp.SwPanel):
     TRANSACTION = "Mover cara"
-    NOTHING = "Elegí al menos una cara."
+    NOTHING = "Elija al menos una cara."
 
     @property
     def FAIL(self):
         if self.spec["mode"] == ROTATE:
             # con la ubicación ya corregida (place_draft), falla cuando la cara girada atravesaría
             # la de enfrente o chocaría con otra
-            return "Con ese ángulo la cara atraviesa la pieza: probá un ángulo menor o el otro sentido."
+            return "Con ese ángulo la cara atraviesa la pieza: pruebe un ángulo menor o el otro sentido."
         if self.spec["mode"] == TRANSLATE and self.spec["end"] != END_DEPTH:
-            return "FreeCAD no pudo llevar la cara hasta ahí: probá con otra referencia."
-        return "FreeCAD no pudo mover la cara así: probá con una distancia menor."
+            return "FreeCAD no pudo llevar la cara hasta ahí: pruebe con otra referencia."
+        return "FreeCAD no pudo mover la cara así: pruebe con una distancia menor."
 
     def __init__(self, obj, faces=None):
         self.spec = read_spec(getattr(obj, MARK, ""))
@@ -1399,7 +1399,7 @@ class MoveFacePanel(dp.SwPanel):
             if self.base is None or dp._element(self.base.Shape, sub) is None:
                 from swui.compat import QtGui
 
-                item.setText(text + "  (no se encuentra: borrala y elegí otra)")
+                item.setText(text + "  (no se encuentra: bórrela y elija otra)")
                 item.setForeground(QtGui.QBrush(QtGui.QColor(dp.MISSING_COLOR)))
             self.list.addItem(item)
         if 0 <= row < len(self.faces):
@@ -1720,9 +1720,9 @@ class MoveFacePanel(dp.SwPanel):
 
         end = self.spec["end"]
         if self.target is None:
-            return {END_VERTEX: "Elegí el vértice hasta donde llega la cara.",
-                    END_BODY: "Elegí el sólido hasta donde llega la cara."}.get(
-                        end, "Elegí la cara o el plano hasta donde llega la cara.")
+            return {END_VERTEX: "Elija el vértice hasta donde llega la cara.",
+                    END_BODY: "Elija el sólido hasta donde llega la cara."}.get(
+                        end, "Elija la cara o el plano hasta donde llega la cara.")
         n = face_normal(face)
         origin = face.CenterOfMass
         tobj, tsub = self.target
@@ -1747,7 +1747,7 @@ class MoveFacePanel(dp.SwPanel):
                 point = geo.Point if end == END_VERTEX else (
                     geo.CenterOfMass if geo is not None else _local(self._body(), tobj.getGlobalPlacement()).Base)
             except Exception:
-                return "Esa referencia ya no existe: elegí otra."
+                return "Esa referencia ya no existe: elija otra."
             side = (point - origin).dot(n)
         if abs(side) < TOL:
             return "La cara ya está ahí: no hay nada que mover."
@@ -1878,7 +1878,7 @@ class MoveFacePanel(dp.SwPanel):
         elif self.axis:
             axis_ref = self.axis
         else:
-            return "Elegí el eje de giro: una arista recta o un eje."
+            return "Elija el eje de giro: una arista recta o un eje."
         axis = axis_of(axis_ref, self.base, self._body())
         if axis is None:
             return hinge_problem or "El eje de giro tiene que ser una recta."
@@ -1934,7 +1934,7 @@ class MoveFacePanel(dp.SwPanel):
                 return ""
         except Exception:
             return ""
-        return "FreeCAD dejó la cara sin girar: probá un ángulo menor o el otro sentido."
+        return "FreeCAD dejó la cara sin girar: pruebe un ángulo menor o el otro sentido."
 
     def _write_spec(self):
         self.spec["geo"] = {}  # lo elegido ahora es lo bueno: la firma se guarda al recalcular (snapshot_geo)
@@ -2027,7 +2027,7 @@ def start(doc=None, preset=None):
         return None
     if FreeCADGui.Control.activeDialog():
         QtWidgets.QMessageBox.information(FreeCADGui.getMainWindow(), LABEL,
-                                          "Cerrá primero el panel que está abierto.")
+                                          "Cierre primero el panel que está abierto.")
         return None
     sels = FreeCADGui.Selection.getSelectionEx(doc.Name)
     if not sels and _active_body(doc) is None:
@@ -2042,7 +2042,7 @@ def start(doc=None, preset=None):
         if body is None or (body.Tip is None and body.BaseFeature is None):
             doc.abortTransaction()
             QtWidgets.QMessageBox.information(FreeCADGui.getMainWindow(), LABEL,
-                                              "Elegí una cara plana de la pieza (o activá un Cuerpo con sólido).")
+                                              "Elija una cara plana de la pieza (o active un Cuerpo con sólido).")
             return None
         obj = body.newObject(PAD, "Pad")
         obj.addProperty("App::PropertyString", MARK, "SWUI", "Mover cara (fork de LikeSolidWorks UI)")
@@ -2163,7 +2163,7 @@ class _WaitFacePanel:
         sels = FreeCADGui.Selection.getSelectionEx(self.doc.Name)
         faces = [s for s in sels if any(n.split(".")[-1].startswith("Face") for n in s.SubElementNames)]
         if not faces:
-            self.message.setText("Elegí una cara (no una arista ni un vértice).")
+            self.message.setText("Elija una cara (no una arista ni un vértice).")
             self.message.show()
             self.busy = True
             try:

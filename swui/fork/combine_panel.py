@@ -70,7 +70,7 @@ def _body_of(obj):
 class CombinePanel(dp.SwPanel):
     TRANSACTION = "Combinar"
     FAIL = "FreeCAD no pudo combinar esos sólidos."
-    NOTHING = "Elegí al menos dos sólidos."
+    NOTHING = "Elija al menos dos sólidos."
 
     def __init__(self, obj):
         self.host = _body_of(obj)
@@ -221,7 +221,7 @@ class CombinePanel(dp.SwPanel):
     def _apply(self):
         main, tools = split_roles(self.kind, self.bodies, self.main)
         if main is None:
-            return "Elegí el sólido principal."
+            return "Elija el sólido principal."
         self._move_to(main)
         tools = [t for t in tools if t is not self.host]
         if self.obj.Type != self.kind:

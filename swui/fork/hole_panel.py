@@ -149,7 +149,7 @@ def _narrow(combo):
 
 class HolePanel(dp.SwPanel):
     TRANSACTION = "Editar taladro"
-    FAIL = "FreeCAD no puede hacer el taladro así: revisá la profundidad y los centros del croquis."
+    FAIL = "FreeCAD no puede hacer el taladro así: revise la profundidad y los centros del croquis."
     NOTHING = "El croquis de posiciones no tiene centros (puntos o círculos)."
 
     def __init__(self, obj):
@@ -482,7 +482,7 @@ class HolePanel(dp.SwPanel):
             if original is not None:
                 box = QtWidgets.QGroupBox("Alcance de la operación")
                 label = QtWidgets.QLabel("Esta es la copia de «%s» en otro sólido: sus medidas siguen al "
-                                         "original. Para cambiarlas, editá «%s»." % (original.Label, original.Label))
+                                         "original. Para cambiarlas, edite «%s»." % (original.Label, original.Label))
                 label.setWordWrap(True)
                 QtWidgets.QVBoxLayout(box).addWidget(label)
                 return box

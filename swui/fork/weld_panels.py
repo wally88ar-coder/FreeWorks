@@ -321,7 +321,7 @@ class MemberPanel(_Base):
         self.list = QtWidgets.QListWidget()
         self.list.setMaximumHeight(110)
         v.addWidget(self.list)
-        hint = QtWidgets.QLabel("Hacé clic en las líneas del croquis esqueleto: cada clic suma una línea; "
+        hint = QtWidgets.QLabel("Haga clic en las líneas del croquis esqueleto: cada clic suma una línea; "
                                 "un clic en un caño ya puesto lo saca.")
         hint.setWordWrap(True)
         v.addWidget(hint)
@@ -476,13 +476,13 @@ class MemberPanel(_Base):
     def _apply_final(self):
         if self.edit is not None:
             if not self.edges:
-                raise ValueError("dejá al menos una línea (para sacar el miembro entero, borralo del árbol)")
+                raise ValueError("deje al menos una línea (para sacar el miembro entero, bórrelo del árbol)")
             self._preview()
             return
         if not self.bodies:
             self._preview()
         if not self.bodies:
-            raise ValueError("elegí al menos una línea del esqueleto")
+            raise ValueError("elija al menos una línea del esqueleto")
 
 
 # --- Esquinas ---------------------------------------------------------------------------------------
@@ -671,7 +671,7 @@ class TrimPanel(_Base):
 
     def _apply_final(self):
         if not self.targets or self.boundary is None:
-            raise ValueError("elegí los cuerpos a recortar y el límite")
+            raise ValueError("elija los cuerpos a recortar y el límite")
         for m in self.targets:
             if self.boundary[0] == "member":
                 if self.boundary[1] == m:
@@ -709,7 +709,7 @@ class EndCapPanel(_Base):
         self.inset.setSuffix(" mm")
         g.addRow("Espesor", self.thick)
         g.addRow("Distancia al borde", self.inset)
-        hint = QtWidgets.QLabel("Hacé clic en el miembro cerca de la punta que querés tapar.")
+        hint = QtWidgets.QLabel("Haga clic en el miembro cerca de la punta que quiere tapar.")
         hint.setWordWrap(True)
         g.addRow(hint)
         return f
@@ -738,7 +738,7 @@ class EndCapPanel(_Base):
 
     def _apply_final(self):
         if self.pick is None:
-            raise ValueError("elegí la cara de la punta de un miembro")
+            raise ValueError("elija la cara de la punta de un miembro")
         w.end_cap(self.pick[0], self.pick[1], self.thick.value(), self.inset.value())
 
 
@@ -768,7 +768,7 @@ class GussetPanel(_Base):
         self.thick.setSuffix(" mm")
         g.addRow("Largo de los lados", self.size)
         g.addRow("Espesor", self.thick)
-        hint = QtWidgets.QLabel("Hacé clic en cada uno de los dos miembros que forman la esquina.")
+        hint = QtWidgets.QLabel("Haga clic en cada uno de los dos miembros que forman la esquina.")
         hint.setWordWrap(True)
         g.addRow(hint)
         return f
@@ -796,7 +796,7 @@ class GussetPanel(_Base):
 
     def _apply_final(self):
         if len(self.members) != 2:
-            raise ValueError("elegí dos miembros que formen una esquina")
+            raise ValueError("elija dos miembros que formen una esquina")
         w.gusset(self.members[0], self.members[1], self.size.value(), self.thick.value())
 
 
@@ -830,7 +830,7 @@ def show_cut_list(doc=None):
     total = sum(r["total_kg"] for r in rows)
     note = "Peso total: %s kg." % w._fmt(round(total, 2))
     if any(r["assumed_steel"] for r in rows):
-        note += "  Los miembros sin material se pesaron como acero (7850 kg/m³); asignale material en Evaluar."
+        note += "  Los miembros sin material se pesaron como acero (7850 kg/m³); asígnele material en Evaluar."
     if not rows:
         note = "No hay miembros estructurales en este documento."
     lab = QtWidgets.QLabel(note)

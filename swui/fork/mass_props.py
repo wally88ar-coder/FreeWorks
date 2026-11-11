@@ -313,7 +313,7 @@ def compute(parts):
         if len(found) > 1:
             notes.append("%s: tiene %d sólidos sueltos (se suman todos)." % (name, len(found)))
         if source is None:
-            notes.append("%s: sin material (densidad 0): su masa no cuenta. Asignale un material." % name)
+            notes.append("%s: sin material (densidad 0): su masa no cuenta. Asígnele un material." % name)
         elif source == "copia":
             notes.append("%s: su material falta en la biblioteca; se usó la copia guardada en la pieza." % name)
     return combine(items), rhos, names, notes
@@ -411,7 +411,7 @@ class _MassDialog(QtWidgets.QDialog):
                                 + "   (sin selección: todo el documento)")
         else:
             parts = components(self.doc, self.cb_hidden.isChecked())
-            self.lb_sel.setText("Todo el documento (%s). Elegí sólidos o componentes para ver solo esos."
+            self.lb_sel.setText("Todo el documento (%s). Elija sólidos o componentes para ver solo esos."
                                 % self.doc.Label)
         try:
             result, rhos, names, notes = compute(parts)

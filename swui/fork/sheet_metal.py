@@ -72,7 +72,7 @@ def available():
 
 
 MISSING_TEXT = ("Para la chapa hace falta el addon SheetMetal (Herramientas > Gestor de complementos > "
-                "SheetMetal). Después reiniciá FreeCAD.")
+                "SheetMetal). Después reinicie FreeCAD.")
 
 
 def kind(obj):

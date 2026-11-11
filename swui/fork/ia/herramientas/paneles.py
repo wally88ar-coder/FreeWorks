@@ -119,7 +119,7 @@ def _interrupted():
     import FreeCADGui
 
     FreeCADGui.getMainWindow().statusBar().showMessage(
-        "Cancelé lo que hacía la IA en el panel porque tocaste el mouse o el teclado (no se aplicó nada).", 10000)
+        "Cancelé lo que hacía la IA en el panel porque tocó el mouse o el teclado (no se aplicó nada).", 10000)
 
 
 def _cancel_dialog():
@@ -450,7 +450,7 @@ def _open(operacion, preseleccion):
     _run.update(op=operacion, title=title, touched=False, undo0=list(doc.UndoNames),
                 err0={o.Name for o in doc.Objects if "Invalid" in (getattr(o, "State", None) or [])})
     c._state["ia_panel"] = True
-    _banner("La IA está usando el panel de %s: no toques el mouse ni el teclado hasta que termine." % title)
+    _banner("La IA está usando el panel de %s: no toque el mouse ni el teclado hasta que termine." % title)
     _guard_install()
     FreeCADGui.Selection.clearSelection()
     if preseleccion:
@@ -566,7 +566,7 @@ def register(registry):
         name="panel",
         description=(
             "Maneja en pantalla, como el usuario, los paneles SW cuya lógica de FreeWorks vive adentro del panel: "
-            + ", ".join(OPS) + ". Mientras dura, FreeWorks muestra 'no toques el mouse'; si el usuario toca algo, "
+            + ", ".join(OPS) + ". Mientras dura, FreeWorks muestra 'no toque el mouse'; si el usuario toca algo, "
             "se cancela sin aplicar. Pasos: accion='abrir' (con preseleccion si el comando necesita algo elegido "
             "antes, p. ej. 'Body.Face6'); 'ver' (campos con id, etiqueta, valor y opciones, y los avisos del panel); "
             "'elegir' referencias como clics ('Objeto.FaceN'; con campo=id de una caja de referencia, la activa "

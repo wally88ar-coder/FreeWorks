@@ -401,7 +401,7 @@ def rename(doc, old, new):
 def delete(doc, name):
     """Borrar una configuración (no la activa, como SW)."""
     if name == active(doc):
-        raise ValueError("No se puede eliminar la configuración activa: mostrá otra primero.")
+        raise ValueError("No se puede eliminar la configuración activa: muestre otra primero.")
     row = row_of(doc, name)
     if row is None:
         raise ValueError("No hay una configuración \"%s\"." % name)
@@ -536,7 +536,7 @@ def configure(doc, target, value, scope="this"):
     sheet = ensure(doc)
     rows = config_rows(sheet) if scope == "all" else [row_of(doc, active(doc))]
     if None in rows:  # la tabla y la lista no coinciden: aviso ANTES de tocar nada (antes TypeError, #55)
-        raise ValueError("La configuración activa no está en la tabla de diseño: revisá la tabla.")
+        raise ValueError("La configuración activa no está en la tabla de diseño: revise la tabla.")
     n = _add_column(doc, alias, title, current)
     if not bound:
         obj.setExpression(path, "%s.%s" % (sheet.Name, alias))

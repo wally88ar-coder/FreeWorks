@@ -236,7 +236,7 @@ class _RefTypePanel(dp.SwPanel):
         self._fill()
         plan = self._plan()
         if plan is None:
-            self.status.setText("Elegí las selecciones del tipo marcado." if self.refs else "")
+            self.status.setText("Elija las selecciones del tipo marcado." if self.refs else "")
             self.status.setStyleSheet("")
             return "Con estas selecciones no se puede hacer este tipo." if self.refs and self._kind() else ""
         mode, order = plan
@@ -296,7 +296,7 @@ class AxisPanel(_RefTypePanel):
     TITLE = "Selecciones del eje"
     TRANSACTION = "Editar eje"
     FAIL = "FreeCAD no puede ubicar el eje con estas selecciones."
-    NOTHING = "Elegí las selecciones del eje."
+    NOTHING = "Elija las selecciones del eje."
     TYPES = AXIS_TYPES
 
     def _guess(self, kinds):
@@ -333,7 +333,7 @@ class PointPanel(_RefTypePanel):
     TITLE = "Selecciones del punto"
     TRANSACTION = "Editar punto"
     FAIL = "FreeCAD no puede ubicar el punto con estas selecciones."
-    NOTHING = "Elegí las selecciones del punto."
+    NOTHING = "Elija las selecciones del punto."
     TYPES = POINT_TYPES
 
     def _build_extra(self, lay):

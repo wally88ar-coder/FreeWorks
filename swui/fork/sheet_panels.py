@@ -201,9 +201,9 @@ class BaseFlangePanel(dp.SwPanel):
 
 class EdgeFlangePanel(dp.SwPanel):
     TRANSACTION = "Brida de arista"
-    FAIL = ("SheetMetal no pudo armar la brida así: probá con otra longitud, otro ángulo o "
+    FAIL = ("SheetMetal no pudo armar la brida así: pruebe con otra longitud, otro ángulo o "
             "Invertir dirección.")
-    NOTHING = "Elegí al menos una arista de la chapa."
+    NOTHING = "Elija al menos una arista de la chapa."
 
     def __init__(self, obj):
         _leave_native_edit(obj)
@@ -292,7 +292,7 @@ class EdgeFlangePanel(dp.SwPanel):
         for sub, text in zip(self.edges, dp.sw_names(self.edges)):
             item = QtWidgets.QListWidgetItem(text)
             if self.base is None or dp._element(self.base.Shape, sub) is None:
-                item.setText(text + "  (no se encuentra: borrala y elegí otra)")
+                item.setText(text + "  (no se encuentra: bórrela y elija otra)")
                 item.setForeground(QtGui.QBrush(QtGui.QColor(dp.MISSING_COLOR)))
             self.list.addItem(item)
         if 0 <= row < len(self.edges):
@@ -412,7 +412,7 @@ HEM_POSITIONS = (("Material interior", "Material Inside"), ("Pliegue exterior", 
 
 class HemPanel(EdgeFlangePanel):
     TRANSACTION = "Dobladillo"
-    FAIL = "SheetMetal no pudo armar el dobladillo así: probá con otra longitud, radio o Invertir dirección."
+    FAIL = "SheetMetal no pudo armar el dobladillo así: pruebe con otra longitud, radio o Invertir dirección."
 
     def __init__(self, obj):
         self.hem_type = obj.HemType
@@ -548,7 +548,7 @@ class ConvertPanel:
         box.addWidget(self.message)
         box.addStretch(1)
         if body is None:
-            self._say("Elegí la cara fija: una cara grande y plana de la chapa.")
+            self._say("Elija la cara fija: una cara grande y plana de la chapa.")
         elif self.data.get("face") and self.body.Tip is not None:
             face = face or sm.face_at(self.body.Tip.Shape, self.data["face"])
         if face:
@@ -598,7 +598,7 @@ class ConvertPanel:
         created = body is None
         body = body or move_face._body_for(self.doc, obj)
         if body is None or body.Tip is None:
-            self._say("Elegí una cara de un sólido.")
+            self._say("Elija una cara de un sólido.")
             return None
         self.body, self.created = body, created
         if created:
@@ -640,7 +640,7 @@ class ConvertPanel:
 
     def accept(self):
         if not self.face:
-            self._say("Elegí la cara fija: una cara grande y plana de la chapa.")
+            self._say("Elija la cara fija: una cara grande y plana de la chapa.")
             return False
         self.data["radius"] = self.radius.value()
         self.data["k"] = self.k.value()
@@ -822,7 +822,7 @@ def _ready_to_start():
         _info(sm.MISSING_TEXT)
         return False
     if FreeCADGui.Control.activeDialog():
-        _info("Cerrá primero el panel que está abierto.")
+        _info("Cierre primero el panel que está abierto.")
         return False
     return True
 
@@ -863,7 +863,7 @@ def start_base_flange():
     sketch = sels[0].Object if len(sels) == 1 and sels[0].Object.TypeId == "Sketcher::SketchObject" else None
     if sketch is None:
         if not pick_plane.handle(BASE_COMMAND):
-            _info("Elegí un croquis, un plano o una cara plana (o tocá Brida base sin nada elegido).")
+            _info("Elija un croquis, un plano o una cara plana (o toque Brida base sin nada elegido).")
         return None
     body = sm.body_of(sketch)
     if body is None:
@@ -871,7 +871,7 @@ def start_base_flange():
         return None
     if _has_solid(body):
         _info("Esta pieza ya tiene un sólido. La Brida base es la primera operación de una chapa: "
-              "hacela en una pieza nueva.")
+              "hágala en una pieza nueva.")
         return None
     import SheetMetalBaseCmd
     from swui.fork import multibody
@@ -930,8 +930,8 @@ def target_body(doc=None, quiet=False):
     if len(bodies) == 1:
         return bodies[0]
     if not quiet:
-        _info("Elegí la chapa (o activá su Cuerpo)." if bodies else
-              "Esta pieza no tiene chapa: empezá con Brida base.")
+        _info("Elija la chapa (o active su Cuerpo)." if bodies else
+              "Esta pieza no tiene chapa: empiece con Brida base.")
     return None
 
 
@@ -1054,7 +1054,7 @@ def start_convert():
         body = body or move_face._body_for(doc, obj)
         if body is None or body.Tip is None:
             doc.abortTransaction()
-            _info("Elegí una cara de un sólido.")
+            _info("Elija una cara de un sólido.")
             return None
         face = None
         subs = [s.split(".")[-1] for s in sels[0].SubElementNames if s.split(".")[-1].startswith("Face")]
@@ -1180,7 +1180,7 @@ def toggle_flat():
         _info("No se pudo desplegar la chapa: %s" % exc)
         return None
     if not flat.isValid():
-        _info("SheetMetal no pudo desplegar esta chapa (mirá la Vista de informe).")
+        _info("SheetMetal no pudo desplegar esta chapa (mire la Vista de informe).")
         return None
     body.Visibility = False
     flat.Visibility = True
@@ -1408,7 +1408,7 @@ def start_fold():
         return None  # croquis abierto: lo cierra y vuelve a llamar
     body = target_body(quiet=True)
     if body is None:
-        _info("Elegí la chapa a doblar.")
+        _info("Elija la chapa a doblar.")
         return None
     doc = body.Document
     sketch = sm.pending_cut(body)
@@ -1447,7 +1447,7 @@ def start_fold():
             elif obj.Shape.Volume >= support.Shape.Volume - 1e-6:
                 # SheetMetal solo enrolla lo que toca la cara fija o cruza un pliegue (probado)
                 problem = ("Ese corte no toca la cara fija ni cruza un pliegue (queda entero sobre una "
-                           "brida): hacelo con Extruir corte sobre la cara de la brida.")
+                           "brida): hágalo con Extruir corte sobre la cara de la brida.")
             if problem:
                 doc.abortTransaction()
                 doc.recompute()
@@ -1477,7 +1477,7 @@ def _check_edited_cuts(doc):
         support = cut.baseObject[0] if cut.baseObject else None
         if not cut.isValid():
             _info("%s quedó con error: el croquis tiene que ser un contorno cerrado que toque la cara fija "
-                  "o cruce un pliegue. Corregilo con Editar operación > Editar croquis sobre el desarrollo."
+                  "o cruce un pliegue. Corríjalo con Editar operación > Editar croquis sobre el desarrollo."
                   % cut.Label)
         elif support is not None and cut.Shape.Volume >= support.Shape.Volume - 1e-6:
             _info("%s ya no corta nada: el croquis quedó entero sobre una brida (eso va con Extruir corte "

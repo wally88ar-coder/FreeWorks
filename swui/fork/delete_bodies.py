@@ -296,7 +296,7 @@ def build(doc, group, spec):
             continue
         idx = piece_of(body.Shape, FreeCAD.Vector(*item["point"]))
         if idx is None:
-            return "No se encuentra un pedazo de %s: elegilo de nuevo." % body.Label
+            return "No se encuentra un pedazo de %s: elíjalo de nuevo." % body.Label
         chosen, _total = pieces.get(body.Name, (set(), 0))
         chosen.add(idx)
         pieces[body.Name] = (chosen, len(body.Shape.Solids))
@@ -560,7 +560,7 @@ class DeleteBodiesPanel:
             return False
         if not self.spec["items"]:
             if self.group is None:
-                self.message.setText("Elegí al menos un sólido (clic en la pieza o en el árbol).")
+                self.message.setText("Elija al menos un sólido (clic en la pieza o en el árbol).")
                 self.message.show()
                 return False
             _deleting["busy"] = True  # ya se desarmó al abrir el panel
@@ -631,7 +631,7 @@ def start(doc=None):
     if doc is None:
         return None
     if FreeCADGui.Control.activeDialog():
-        QtWidgets.QMessageBox.information(FreeCADGui.getMainWindow(), LABEL, "Cerrá primero el panel que está abierto.")
+        QtWidgets.QMessageBox.information(FreeCADGui.getMainWindow(), LABEL, "Cierre primero el panel que está abierto.")
         return None
     picked = [(sel.Object, sub) for sel in FreeCADGui.Selection.getSelectionEx("", 0)
               for sub in (sel.SubElementNames or [""])]  # antes: el panel limpia la selección

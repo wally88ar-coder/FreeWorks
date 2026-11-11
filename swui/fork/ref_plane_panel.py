@@ -478,7 +478,7 @@ class _RefGroup:
 class PlanePanel(dp.SwPanel):
     TRANSACTION = "Editar plano"
     FAIL = "FreeCAD no puede ubicar el plano con estas referencias."
-    NOTHING = "Elegí las referencias del plano."
+    NOTHING = "Elija las referencias del plano."
     UNPICKABLE_PREVIEW = True
 
     def _base(self):
@@ -608,7 +608,7 @@ class PlanePanel(dp.SwPanel):
             self.status.setText("Totalmente definido")
             self.status.setStyleSheet("color: %s;" % OK_COLOR)
         else:
-            self.status.setText("Elegí referencias y relaciones hasta que el plano quede definido.")
+            self.status.setText("Elija referencias y relaciones hasta que el plano quede definido.")
             self.status.setStyleSheet("")
 
     def _overlays(self, base, result):

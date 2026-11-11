@@ -182,15 +182,15 @@ def repair(obj, kind):
         FreeCADGui.Selection.clearSelection()
         FreeCADGui.Selection.addSelection(obj)
         FreeCADGui.runCommand("Part_EditAttachment")
-        return "Elegí en la pieza la cara nueva para %s y aceptá." % obj.Label
+        return "Elija en la pieza la cara nueva para %s y acepte." % obj.Label
     FreeCADGui.Selection.clearSelection()
     FreeCADGui.Selection.addSelection(obj)
     FreeCADGui.getDocument(doc.Name).setEdit(obj)
     if kind == DRESS_UP:
         if obj.TypeId in ("PartDesign::Fillet", "PartDesign::Chamfer"):  # panel SW (dress_up_panel): las perdidas salen en rojo
-            return "En el panel de %s, borrá las referencias en rojo y tocá las nuevas en la pieza." % obj.Label
-        return "Volvé a elegir las aristas/caras de %s en su diálogo." % obj.Label
-    return "En el croquis, borrá las referencias marcadas y volvé a traer las aristas."
+            return "En el panel de %s, borre las referencias en rojo y toque las nuevas en la pieza." % obj.Label
+        return "Vuelva a elegir las aristas/caras de %s en su diálogo." % obj.Label
+    return "En el croquis, borre las referencias marcadas y vuelva a traer las aristas."
 
 
 def show_dialog(doc=None):

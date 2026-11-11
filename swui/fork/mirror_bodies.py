@@ -109,7 +109,7 @@ def make_mirror_body(body, ref):
 
     how = plane_link(ref)
     if how is None:
-        raise ValueError("el plano de simetría no sirve (elegí un plano o una cara plana)")
+        raise ValueError("el plano de simetría no sirve (elija un plano o una cara plana)")
     doc = body.Document
     mirror = doc.addObject(PART_MIRROR, "Simetria")
     multibody._keep_label(mirror, MIRROR_LABEL % body.Label)

@@ -609,7 +609,7 @@ def check_document(doc, ask=True):
     if not lost or not ask:
         return lost
     names = sorted(set(c["name"] for _o, c in lost))
-    text = ("Esta pieza usa materiales que no están en tu biblioteca de FreeCAD:\n\n  %s\n\n"
+    text = ("Esta pieza usa materiales que no están en su biblioteca de FreeCAD:\n\n  %s\n\n"
             "FreeCAD los cambió por «Default». La pieza guarda una copia de cada uno.\n"
             "¿Recrearlos en Materiales personalizados y volver a asignarlos?") % "\n  ".join(names)
     answer = QtWidgets.QMessageBox.question(FreeCADGui.getMainWindow(), "Material faltante", text)
@@ -862,7 +862,7 @@ class _MaterialDialog(QtWidgets.QDialog):
                 if not self._select_uuid(info["uuid"]):
                     self._show(info, editable=False)
                     if source == "copia":
-                        self.note.setText("Este material falta en tu biblioteca: se muestra la copia guardada "
+                        self.note.setText("Este material falta en su biblioteca: se muestra la copia guardada "
                                           "en la pieza. Al abrir el archivo se ofrece recrearlo.")
                 return
         self._show(None, editable=False)
@@ -884,7 +884,7 @@ class _MaterialDialog(QtWidgets.QDialog):
         self.ed_cat.setText(cat if editable else " / ".join(category_path(cat)))
         self.ed_desc.setText((info or {}).get("description", ""))
         lib = (info or {}).get("library", "")
-        self.lb_lib.setText({"": "", SYSTEM: "FreeCAD (solo lectura: usá Copiar para cambiarlo)"}.get(lib, "Personalizados"))
+        self.lb_lib.setText({"": "", SYSTEM: "FreeCAD (solo lectura: use Copiar para cambiarlo)"}.get(lib, "Personalizados"))
         flags = self.QtCore.Qt.ItemFlag
         for i, (key, _name, _unit, _model) in enumerate(PROPS):
             item = self.table.item(i, 1)
@@ -932,7 +932,7 @@ class _MaterialDialog(QtWidgets.QDialog):
         self.tree.setCurrentItem(None)
         self.tree.blockSignals(False)
         self._show(info, editable=True)
-        self.note.setText("Material nuevo: completá los datos y tocá Guardar.")
+        self.note.setText("Material nuevo: complete los datos y toque Guardar.")
         self.ed_name.setFocus()
         self.ed_name.selectAll()
 

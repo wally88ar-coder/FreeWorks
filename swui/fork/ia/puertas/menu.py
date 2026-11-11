@@ -61,7 +61,7 @@ def turn_off():
 class _Bridge:
     def GetResources(self):
         return {"MenuText": "Puente IA",
-                "ToolTip": ("Prende o apaga el puente para que la IA de tu suscripción (Claude Code...) "
+                "ToolTip": ("Prende o apaga el puente para que la IA de su suscripción (Claude Code...) "
                             "maneje FreeWorks. Solo escucha en esta PC y pide clave."),
                 "Checkable": False}
 
@@ -87,9 +87,9 @@ class _ConnectDialog(QtWidgets.QDialog):
         lay = QtWidgets.QVBoxLayout(self)
         state = "prendido" if puente.running() else "apagado"
         intro = QtWidgets.QLabel(
-            "La IA de tu suscripción maneja FreeWorks a través del puente IA (ahora: <b>%s</b>).<br><br>"
-            "<b>1.</b> Prendé el puente: FreeWorks &gt; IA &gt; Puente IA.<br>"
-            "<b>2.</b> Una sola vez por PC, copiá esta línea y pegala en una terminal "
+            "La IA de su suscripción maneja FreeWorks a través del puente IA (ahora: <b>%s</b>).<br><br>"
+            "<b>1.</b> Active el puente: FreeWorks &gt; IA &gt; Puente IA.<br>"
+            "<b>2.</b> Una sola vez por PC, copie esta línea y péguela en una terminal "
             "(PowerShell o la de Claude Code):" % state)
         intro.setWordWrap(True)
         lay.addWidget(intro)
@@ -107,8 +107,8 @@ class _ConnectDialog(QtWidgets.QDialog):
         row.addStretch(1)
         lay.addLayout(row)
         outro = QtWidgets.QLabel(
-            "<b>3.</b> Abrí Claude Code y pedile lo que quieras: va a ver FreeWorks como "
-            "\"freeworks\".<br><br>La línea tiene la clave del puente: no la compartas. Si cambiás la "
+            "<b>3.</b> Abra Claude Code y pídale lo que quiera: va a ver FreeWorks como "
+            "\"freeworks\".<br><br>La línea tiene la clave del puente: no la comparta. Si cambia la "
             "clave, hay que volver a pegar la línea (antes, <i>claude mcp remove freeworks</i>).")
         outro.setWordWrap(True)
         lay.addWidget(outro)

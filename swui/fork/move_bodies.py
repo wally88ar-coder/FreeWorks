@@ -717,7 +717,7 @@ class MoveBodiesPanel:
 
     def _problem(self):
         if not self.sources:
-            return "Elegí al menos un sólido (clic en la pieza o en el árbol)."
+            return "Elija al menos un sólido (clic en la pieza o en el árbol)."
         for b in binders_of_op(self.doc, self.spec["op"]):
             body = body_from(b)
             if body is not None and len(body.Group) > 1 and source_of(b) not in self.sources:
@@ -825,7 +825,7 @@ def start(doc=None):
     if doc is None:
         return None
     if FreeCADGui.Control.activeDialog():
-        QtWidgets.QMessageBox.information(FreeCADGui.getMainWindow(), LABEL, "Cerrá primero el panel que está abierto.")
+        QtWidgets.QMessageBox.information(FreeCADGui.getMainWindow(), LABEL, "Cierre primero el panel que está abierto.")
         return None
     bodies = multibody.solid_bodies(doc)
     if not bodies:

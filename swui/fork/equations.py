@@ -231,14 +231,14 @@ def spanish_error(exc):
     text = str(exc)
     low = text.lower()
     if "parse" in low or "syntax" in low or "unexpected" in low:
-        return "La fórmula está mal escrita (revisá paréntesis, signos y comas)."
+        return "La fórmula está mal escrita (revise paréntesis, signos y comas)."
     if "overflow" in low or "infinit" in low or "too large" in low:
         return "El resultado es demasiado grande (o no es un número)."
     if "unit" in low:
         return ("Las unidades no cierran (por ejemplo, un ángulo de atn() sumado a un número): "
                 "FreeCAD no puede calcularla.")
     if "not found" in low:
-        return "La fórmula usa algo que no existe (revisá los nombres entre comillas)."
+        return "La fórmula usa algo que no existe (revise los nombres entre comillas)."
     if "can not evaluate" in low or "cannot evaluate" in low:
         return "La fórmula no da un número."
     if "division by zero" in low:
@@ -581,7 +581,7 @@ class Model:
         created = target is None
         if created and is_freecad_word(name):
             raise ValueError("«%s» no se puede usar de nombre: FreeCAD lo toma como unidad o constante "
-                             "(h = hora, m = metro, pi...). Usá otro, por ejemplo «%s1» o «Alto»." % (name, name))
+                             "(h = hora, m = metro, pi...). Use otro, por ejemplo «%s1» o «Alto»." % (name, name))
         text = (text or "").strip()
         new_set = False
         if created:
@@ -607,7 +607,7 @@ class Model:
 
                 number = parse_number(text)
                 if number is None:
-                    raise Rejected("«%s» no es un número (para una fórmula, empezá con =)." % text)
+                    raise Rejected("«%s» no es un número (para una fórmula, empiece con =)." % text)
                 vs.setExpression(prop, None)
                 setattr(vs, prop, number)
             check_result(vs, prop, was_invalid=was_invalid)
@@ -687,7 +687,7 @@ class Model:
                  if re.search(r"\b%s\.%s\b" % (re.escape(vs.Name), re.escape(prop)), e)
                  or ("<<%s>>.%s" % (vs.Label, prop)) in e]
         if users:
-            raise ValueError("La usan: %s. Sacala primero de esas ecuaciones." % ", ".join(sorted(set(users))))
+            raise ValueError("La usan: %s. Quítela primero de esas ecuaciones." % ", ".join(sorted(set(users))))
         vs.removeProperty(prop)
 
 

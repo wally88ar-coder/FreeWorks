@@ -201,7 +201,7 @@ def start(kind):
 
     asm = mates_sw.ensure_active()
     if asm is None:
-        FreeCAD.Console.PrintWarning("[SWUI] %s: abrí o activá un ensamblaje primero.\n" % LABELS[kind])
+        FreeCAD.Console.PrintWarning("[SWUI] %s: abra o active un ensamblaje primero.\n" % LABELS[kind])
         return None
     try:
         if FreeCADGui.Control.activeDialog():

@@ -979,7 +979,7 @@ def trim_to_member(member, tool, extend=True):
 def _face_plane(obj, sub):
     f = obj.getSubObject(sub)
     if f is None or f.ShapeType != "Face" or f.Surface.__class__.__name__ != "Plane":
-        raise ValueError("Elegí una cara plana")
+        raise ValueError("Elija una cara plana")
     u0, u1, v0, v1 = f.ParameterRange
     return f.CenterOfMass, f.normalAt((u0 + u1) / 2, (v0 + v1) / 2)
 

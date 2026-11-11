@@ -519,7 +519,7 @@ def edit_redirect(obj):
                 FreeCAD.Console.PrintLog("[SWUI fork] Editar desde la pieza:\n%s\n" % traceback.format_exc())
         name = asm_doc.Label if asm_doc is not None else getattr(binder, BINDER_MARK)
         FreeCAD.Console.PrintTranslatedUserWarning(
-            label, "%s se hizo desde el ensamblaje %s: se edita desde ahí (abrí el ensamblaje, clic "
+            label, "%s se hizo desde el ensamblaje %s: se edita desde ahí (abra el ensamblaje, clic "
                    "derecho > Editar operación).\n" % (label, name))
 
     return act
@@ -594,7 +594,7 @@ def start(kind):
 
     asm = mates_sw.ensure_active()
     if asm is None:
-        FreeCAD.Console.PrintWarning("[SWUI] %s: abrí o activá un ensamblaje primero.\n" % LABELS[kind])
+        FreeCAD.Console.PrintWarning("[SWUI] %s: abra o active un ensamblaje primero.\n" % LABELS[kind])
         return
     face = _picked_face(asm)
     if face is not None:
@@ -628,9 +628,9 @@ class _FacePanel:
         self.form = QtWidgets.QWidget()
         self.form.setWindowTitle(LABELS[kind])
         box = QtWidgets.QVBoxLayout(self.form)
-        text = QtWidgets.QLabel("Elegí la cara plana donde empieza el %s. Se abre un croquis ahí: %s"
+        text = QtWidgets.QLabel("Elija la cara plana donde empieza el %s. Se abre un croquis ahí: %s"
                                 % ("taladro" if kind == "hole" else "corte",
-                                   "marcá los centros con puntos." if kind == "hole" else "dibujá el perfil."))
+                                   "marque los centros con puntos." if kind == "hole" else "dibuje el perfil."))
         text.setWordWrap(True)
         box.addWidget(text)
         box.addStretch(1)
@@ -718,7 +718,7 @@ def open_panel_new(asm, kind, sk):
         binder, feat = add_to_part(link, sk, kind, title)
         entries.append((link, binder, feat))
     if kind == "hole" and not entries:
-        FreeCAD.Console.PrintWarning("[SWUI] El taladro no atraviesa ninguna pieza: elegí las piezas en el panel.\n")
+        FreeCAD.Console.PrintWarning("[SWUI] El taladro no atraviesa ninguna pieza: elija las piezas en el panel.\n")
     _show(asm, kind, sk, entries, None, title, repeated)
 
 
@@ -1083,7 +1083,7 @@ class CutPanel(_Scope):
             if bad:
                 problem = "FreeCAD no pudo cortar: %s." % ", ".join(bad)
             elif not self.entries:
-                problem = "El corte no toca ninguna pieza: elegí las piezas (clic en la vista)."
+                problem = "El corte no toca ninguna pieza: elija las piezas (clic en la vista)."
         except Exception:
             problem = "No se pudo calcular el corte."
             FreeCAD.Console.PrintError("[SWUI fork] Corte de ensamblaje:\n%s\n" % traceback.format_exc())

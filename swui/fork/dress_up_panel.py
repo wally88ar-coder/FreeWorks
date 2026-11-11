@@ -902,7 +902,7 @@ class DressUpPanel(SwPanel):
     """Lo común de Redondeo y Chaflán; cada uno agrega sus valores (_build_values / _apply_values)."""
 
     TITLE = ""
-    NOTHING = "Elegí al menos una arista o cara."
+    NOTHING = "Elija al menos una arista o cara."
     LIST_LABEL = "Aristas y caras (clic en la pieza):"
     VALUES_FIRST = True  # SW: en redondeo y chaflán los parámetros van debajo de la lista
     PARAMS_LABEL = ""  # título de los parámetros cuando van debajo ("Parámetros de chaflán")
@@ -982,7 +982,7 @@ class DressUpPanel(SwPanel):
         for sub, text in zip(self.subs, sw_names(self.subs)):
             item = QtWidgets.QListWidgetItem(text)
             if self._missing(sub):
-                item.setText(text + "  (no se encuentra: borrala y elegí otra)")
+                item.setText(text + "  (no se encuentra: bórrela y elija otra)")
                 item.setForeground(QtGui.QBrush(QtGui.QColor(MISSING_COLOR)))
             self.list.addItem(item)
         if self.subs:
@@ -1081,7 +1081,7 @@ class DressUpPanel(SwPanel):
             self.obj.Base = (self.base, self.subs)
         self._apply_values()
         if any(self._missing(s) for s in self.subs):
-            return "Hay referencias que ya no existen (en rojo): borralas y elegí las nuevas."
+            return "Hay referencias que ya no existen (en rojo): bórrelas y elija las nuevas."
         return ""
 
     def _ready(self):
@@ -1312,7 +1312,7 @@ class DraftPanel(DressUpPanel):
     TITLE = "Ángulo de salida"
     TRANSACTION = "Editar ángulo de salida"
     FAIL = "FreeCAD no puede dar salida a estas caras con este plano neutro y este ángulo."
-    NOTHING = "Elegí al menos una cara de salida."
+    NOTHING = "Elija al menos una cara de salida."
     LIST_LABEL = "Caras de salida (clic en la pieza):"
 
     def _build_values(self, form):
@@ -1380,7 +1380,7 @@ class DraftPanel(DressUpPanel):
         if self.neutral_ref and self.obj.NeutralPlane != self.neutral_ref:
             self.obj.NeutralPlane = self.neutral_ref
 
-    NO_NEUTRAL = "Elegí el plano neutro: tocá una cara plana o un plano."
+    NO_NEUTRAL = "Elija el plano neutro: toque una cara plana o un plano."
 
     def _ready(self):
         return super()._ready() and bool(self.neutral_ref)  # SW: sin plano neutro, sin vista previa ni aviso
