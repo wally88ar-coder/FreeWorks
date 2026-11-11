@@ -51,7 +51,9 @@ Neueste Version oben. / Newest version first.
   nueva `prueba_croquis_cota_atada.py`) y #68 (taladro de ensamblaje que no toca pieza: panel sin
   medida) quedan como conocidos; #65 y #67 eran de las pruebas (cerrados); #69 y #70 arreglados en
   las pruebas. El mono ya no cuenta como error nuevo lo que repite un objeto que ya estaba roto.
-  Encontrados al reproducirlos: #74 y #75 (configuraciones), como conocidos.
+  Encontrados al reproducirlos: #74 y #75 (configuraciones), como conocidos. La batería completa
+  encontró #59 por otro camino (Exportar DXF en vez de Aplanar antes de suprimir), también como
+  conocido.
 - **Más pruebas sin ventana**: fuzzing de campos en configuraciones, material y chapa (encontró #55),
   "abre sin FreeWorks" con todo lo que se arma por funciones, y el control de que los errores que
   las pruebas toleran sigan abiertos en GitHub.

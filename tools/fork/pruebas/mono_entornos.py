@@ -65,7 +65,9 @@ class Chapa(Entorno):
     acciones = ("aplanar", "dxf")
     deuda = (("#43", "Invalid shape name ?Face", "Unfold"),
              ("#44", "Failed to recompute suppressed feature", None))
-    deuda_pasos = (("#59", "Ctrl+Z después de suprimir no volvió", "suprimir", "aplanar"),)
+    # el DXF también despliega por dentro: mismo #59 (noche/batería del 10/11)
+    deuda_pasos = (("#59", "Ctrl+Z después de suprimir no volvió", "suprimir", "aplanar"),
+                   ("#59", "Ctrl+Z después de suprimir no volvió", "suprimir", "dxf"))
 
     def armar(self):
         from casos_grupo3 import BridaArista, BridaBase
@@ -307,7 +309,7 @@ class Multicuerpo(Entorno):
              ("#44", "Failed to recompute suppressed feature", None))
     # editar Combinar le cambia el tipo (sumar / restar / común): el sólido es otro y la arista de
     # un Redondeo de encima puede dejar de existir; en SW también queda con error (no es falla, #65)
-    deuda = deuda + (("esperado, como SW (#65)", "Invalid edge link", "Fillet", "editar Combinar"),)
+    deuda = deuda + (("esperado, como SW (no es falla)", "Invalid edge link", "Fillet", "editar Combinar"),)
 
     def medida_base(self):
         caja = self.doc.getObject("Caja")
