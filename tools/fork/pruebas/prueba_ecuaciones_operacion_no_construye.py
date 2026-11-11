@@ -2,8 +2,9 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
 # SPDX-FileCopyrightText: 2026 wally88ar-coder
 QUE = """Ecuaciones: una fórmula que se calcula bien pero con la que la OPERACIÓN no se puede construir
-(profundidad 0 en un Extruir) se rechaza con un aviso que dice eso ("no se puede construir"), no
-"FreeCAD no pudo calcular la fórmula", y la cota queda como estaba (revisión del 11/11)."""
+(profundidad 0 en un Extruir) se ACEPTA, como SW: la operación queda con error en el árbol y el aviso
+dice cuál ("no se puede construir: «Pad»"). Cambiar la variable a un valor bueno la arregla, y una
+fórmula mal escrita se sigue rechazando (decisión del usuario, 11/11)."""
 
 import FreeCAD  # noqa: E402
 import Part  # noqa: E402
@@ -34,16 +35,25 @@ def prueba():
     assert cerca(b.Shape.Volume, 350.0)
     m = eq.Model(doc)
     m.set_variable("Cero", "0")
-    try:
-        m.set_equation("D1@Pad", '"Cero"')
-    except ValueError as exc:
-        texto = str(exc)
-    else:
-        raise AssertionError("aceptó una profundidad 0")
-    assert "no se puede construir" in texto, "aviso engañoso: %r" % texto
+    assert m.warning == "", "aviso sin motivo: %r" % m.warning
+    m.set_equation("D1@Pad", '"Cero"')
+    assert "no se puede construir" in m.warning and "Pad" in m.warning, "sin aviso: %r" % m.warning
+    assert pad.ExpressionEngine, "no quedó la fórmula"
+    assert eq.is_invalid(pad), "la operación no quedó marcada con error"
+    # arreglarla cambiando la variable: vuelve a construir y el aviso se va
+    m.set_variable("Cero", "3")
+    assert m.warning == "", "aviso de más: %r" % m.warning
     doc.recompute()
-    assert not pad.ExpressionEngine, "quedó la fórmula: %s" % pad.ExpressionEngine
-    assert cerca(pad.Length.Value, 7.0) and cerca(b.Shape.Volume, 350.0), pad.Length
+    assert not eq.is_invalid(pad) and cerca(b.Shape.Volume, 150.0), b.Shape.Volume
+    # un error de la FÓRMULA (no de la operación) se sigue rechazando y queda como estaba
+    try:
+        m.set_equation("D1@Pad", '"Cero" +* 2')
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("aceptó una fórmula mal escrita")
+    doc.recompute()
+    assert cerca(b.Shape.Volume, 150.0), b.Shape.Volume
     FreeCAD.closeDocument(doc.Name)
 
 

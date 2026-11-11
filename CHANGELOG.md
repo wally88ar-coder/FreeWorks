@@ -22,6 +22,10 @@ Neueste Version oben. / Newest version first.
   sin "None" fantasma al deshacer; borrar la primera con una medida configurada ya anda);
   #6, #29 y #30 (paneles de soldadas, vista de sección, referencia de ensamblaje y Agregar
   configuración anotados en el guardia; las escuchas de soldadas ya no tocan un panel cerrado).
+- **Decisiones del 11/11:** Ecuaciones como SW: una ecuación que se calcula bien pero con la que
+  una operación no se puede construir se acepta, la operación queda con error en el árbol y el
+  aviso dice cuál (antes se rechazaba); una fórmula mal escrita se sigue rechazando.
+  #77 era de la prueba (el Ángulo de salida buscaba la cara en la operación nueva).
 - **Segunda tanda de la noche del 11/11:** Ecuaciones "todo o nada" (#45, #46, #48, #49: una
   fórmula que FreeCAD no puede calcular se rechaza con aviso en castellano y deja todo como
   estaba; nombres que FreeCAD toma como unidad, como h o m, se rechazan antes de crear nada;

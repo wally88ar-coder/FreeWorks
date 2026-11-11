@@ -270,14 +270,31 @@ def check_result(obj, prop=None, was_invalid=False):
         if obj.TypeId not in ("App::VarSet", "Spreadsheet::Sheet") and not any(
                 k in (why or "").lower() for k in expression_words):
             # la fórmula se calculó, pero con ese valor la OPERACIÓN no se puede construir (un
-            # corte que sale del sólido...): decirlo así, no "no pudo calcular la fórmula"
-            raise Rejected("Con ese valor «%s» no se puede construir; quedó como estaba." % obj.Label)
+            # corte que sale del sólido...): como SW, se acepta y la operación queda con error en
+            # el árbol (decisión del usuario, 11/11); `Model.warning` lo dice
+            return
         raise RuntimeError(why or "Invalid")
     if prop is not None:
         value = getattr(obj, prop)
         value = getattr(value, "Value", value)
         if isinstance(value, (int, float)) and not math.isfinite(float(value)):
             raise OverflowError("not finite (infinite or nan)")
+
+
+def invalid_names(doc):
+    """Nombres de los objetos del documento que hoy están con error."""
+    return {o.Name for o in doc.Objects if is_invalid(o)}
+
+
+def broken_warning(doc, before):
+    """Después de un cambio aceptado: aviso con las operaciones que quedaron con error y antes no
+    lo estaban (como SW, que acepta el valor y marca el error en el árbol), o "" si no hay."""
+    doc.recompute()
+    labels = sorted(o.Label for o in doc.Objects if is_invalid(o) and o.Name not in before)
+    if not labels:
+        return ""
+    return ("Aplicado, pero con ese valor no se puede construir: %s (marcado con error en el árbol)."
+            % ", ".join("«%s»" % lb for lb in labels))
 
 
 def raw_value(obj, path):
@@ -332,6 +349,7 @@ class Model:
 
     def __init__(self, doc):
         self.doc = doc
+        self.warning = ""  # lo deja el último cambio aceptado (operación que quedó con error, como SW)
 
     # objetos y nombres
 
@@ -576,6 +594,8 @@ class Model:
             vs, prop = target
             before = (self.expression_of(vs, prop), getattr(vs, prop))
         was_invalid = is_invalid(vs)
+        self.warning = ""
+        broken_before = invalid_names(self.doc)
         try:
             if text.startswith("="):
                 expr, unknown = to_freecad(text, lambda n: self.resolve(n))
@@ -602,6 +622,7 @@ class Model:
             raise ValueError(spanish_error(exc)) from exc
         if comment is not None:
             vs.setDocumentationOfProperty(prop, comment)
+        self.warning = broken_warning(self.doc, broken_before)
         return vs, prop
 
     def set_equation(self, name, text):
@@ -620,12 +641,15 @@ class Model:
         before = self.expression_of(obj, path)
         old_value = raw_value(obj, path)
         was_invalid = is_invalid(obj)
+        self.warning = ""
+        broken_before = invalid_names(self.doc)
         try:
             obj.setExpression(path, expr)
             check_result(obj, was_invalid=was_invalid)
         except Exception as exc:
             restore(obj, path, before, old_value)
             raise ValueError(spanish_error(exc)) from exc
+        self.warning = broken_warning(self.doc, broken_before)
         return obj, path
 
     def _notes(self):
@@ -875,8 +899,9 @@ class _EquationsDialog(QtWidgets.QDialog):
             self.msg.setText("No se aplicó: %s" % exc)
             self.msg.setStyleSheet("color: #c00000;")
             return
-        self.msg.setText("Aplicado.")
-        self.msg.setStyleSheet("")
+        warning = getattr(self.model, "warning", "")
+        self.msg.setText(warning or "Aplicado.")
+        self.msg.setStyleSheet("color: #b05a00;" if warning else "")
         self.doc.recompute()
         _refresh_dims()
         QtCore.QTimer.singleShot(0, self._fill)
