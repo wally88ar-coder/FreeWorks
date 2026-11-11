@@ -37,7 +37,11 @@ def eje(body, rol):
 def aristas_rectas(obj, largo_min=15):
     out = []
     for i, e in enumerate(obj.Shape.Edges):
-        if e.Curve.__class__.__name__ == "Line" and e.Length >= largo_min:
+        try:
+            curva = e.Curve.__class__.__name__
+        except TypeError:  # "undefined curve type": curvas que FreeCAD no expone (tras redondeos)
+            continue
+        if curva == "Line" and e.Length >= largo_min:
             out.append("Edge%d" % (i + 1))
     return out
 

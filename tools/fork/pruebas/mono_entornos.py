@@ -14,6 +14,18 @@ import FreeCAD
 from azar_comun import bombear
 from mono_comun import Entorno, correr, diferencias, solo_lo_de_antes
 
+def _centro(shape):
+    """Centro de masa de los sólidos (un Compound no tiene CenterOfMass en 1.1.4: Issue #67, era de
+    la prueba); sin sólidos, el centro de la caja."""
+    vol = sum(abs(s.Volume) for s in shape.Solids)
+    if not shape.Solids or vol <= 0:
+        return shape.BoundBox.Center
+    c = FreeCAD.Vector()
+    for s in shape.Solids:
+        c = c + s.CenterOfMass * (abs(s.Volume) / vol)
+    return c
+
+
 class Pieza(Entorno):
     nombre = "pieza"
     vinculos = ("body", "hueco")
@@ -116,7 +128,8 @@ class Ensamblaje(Entorno):
     deuda = (("#38", ("The graph must be a DAG", "ExportOCAF2.cpp(320): Failed to get subshape"), None),
              ("#38", "The graph must be a DAG", None))
     deuda_pasos = (("#37", "Ctrl+Z no volvió", "aceptar Taladro de ensamblaje"),
-                   ("#38", "al abrir quedó modificado", "guardar"))
+                   ("#38", "al abrir quedó modificado", "guardar"),
+                   ("#68", "abrió el panel sin medida de taladro", "Taladro de ensamblaje"))
 
     def armar(self):
         from casos_ensamblaje import Relacion
@@ -249,7 +262,7 @@ class Soldada(Entorno):
         try:
             _sk2, _c2, cuerpos2 = marco(otro, ancho=ancho, alto=alto, esquina="inglete")
             for a, b in zip(self.cuerpos[:4], cuerpos2):
-                ca, cb = a.Shape.CenterOfMass if a.Shape.Solids else a.Shape.BoundBox.Center,                     b.Shape.CenterOfMass if b.Shape.Solids else b.Shape.BoundBox.Center
+                ca, cb = _centro(a.Shape), _centro(b.Shape)
                 assert abs(a.Shape.Volume - b.Shape.Volume) < 0.5 and (ca - cb).Length < 0.01,                     "%s: los caños no siguen al esqueleto: %s no quedó como armado de cero (volumen %.1f vs %.1f)" % (
                         que, a.Label, a.Shape.Volume, b.Shape.Volume)
         finally:
@@ -292,6 +305,9 @@ class Multicuerpo(Entorno):
     # arista ya no existe (#44); "Invalid edge link" solo se perdona si viene con ese aviso
     deuda = (("#44", ("Failed to recompute suppressed feature", "Invalid edge link"), None),
              ("#44", "Failed to recompute suppressed feature", None))
+    # editar Combinar le cambia el tipo (sumar / restar / común): el sólido es otro y la arista de
+    # un Redondeo de encima puede dejar de existir; en SW también queda con error (no es falla, #65)
+    deuda = deuda + (("esperado, como SW (#65)", "Invalid edge link", "Fillet", "editar Combinar"),)
 
     def medida_base(self):
         caja = self.doc.getObject("Caja")
@@ -317,7 +333,15 @@ class Configuraciones(Entorno):
     vinculos = ("body", "hueco")
     acciones = ("config_nueva", "config_ir", "config_ir")
     # #47: deshacer una operación nueva deja su columna "Suprimir ..." en la tabla
-    deuda_pasos = (("#47", "TablaDiseno cambió (contenido)", "aceptar"),)
+    deuda_pasos = (("#47", "TablaDiseno cambió (contenido)", "aceptar"),
+                   ("#75", "No hay una configuración", "config_nueva"))
+    # suprimir el Agujero con un Redondeo sobre su arista: el redondeo se suprime con él (como SW)
+    # pero FreeCAD igual lo recalcula y avisa (#44; reproducido sin ventana el 10/11)
+    deuda = (("#44", ("Failed to recompute suppressed feature", "Invalid edge link"), None, "suprimir"),
+             ("#44", "Failed to recompute suppressed feature", None, "suprimir"),
+             # configuración nueva con el Agujero suprimido y su Redondeo no: el Chaflán de encima
+             # pierde su arista (#74)
+             ("#74", "Invalid edge link", "Chamfer", "config_nueva"))
 
     def armar(self):
         from casos_otros import anotar
@@ -341,7 +365,10 @@ class Configuraciones(Entorno):
         from swui.fork import configurations as cf
         if len(self.largos) >= 4:
             return
-        nombre = cf.add(self.doc, "Mono%d" % rng.randint(1, 9999))
+        try:
+            nombre = cf.add(self.doc, "Mono%d" % rng.randint(1, 9999))
+        except ValueError as e:  # #75: con una operación en error
+            raise AssertionError("%s: %s" % (que, e))
         largo = round(rng.uniform(25.0, 70.0), 1)
         cf.configure(self.doc, ("prop", self._caja(), "Length"), largo, scope="this")
         self.doc.recompute()

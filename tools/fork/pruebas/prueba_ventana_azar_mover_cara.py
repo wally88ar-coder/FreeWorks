@@ -22,6 +22,30 @@ given, cfg, st = hypothesis_listo()
 V = FreeCAD.Vector
 
 
+def _abrir(base, sub):
+    """Elegir la cara y abrir Mover cara. Si la selección todavía no llegó cuando corre el comando,
+    se abre el panel que espera una cara (Issue #69, de la prueba): se le da la cara ahí, como el
+    usuario, y se espera el panel de siempre."""
+    import FreeCADGui
+    from swui.fork import panel_guard
+    FreeCADGui.Selection.clearSelection()
+    FreeCADGui.Selection.addSelection(base, sub)
+    bombear(200)
+    cinta("SWUI_MoveFace")
+    if not esperar_panel():
+        return False
+    for _i in range(20):
+        cual = type(panel_guard.open_panel()).__name__
+        if cual == "MoveFacePanel":
+            return True
+        if cual != "_WaitFacePanel":
+            return False  # otro panel o ninguno: que lo diga el assert, no un AttributeError
+        FreeCADGui.Selection.clearSelection()
+        FreeCADGui.Selection.addSelection(base, sub)
+        bombear(300)
+    return False
+
+
 def _caras(obj):
     out = []
     for i, f in enumerate(obj.Shape.Faces):
@@ -45,9 +69,7 @@ def equidistanciar(L, A, H, cual, d, afuera):
     if not afuera and d >= min(L, A, H) - 0.5:
         return
     antes = body.Shape.Volume
-    FreeCADGui.Selection.addSelection(base, sub)
-    cinta("SWUI_MoveFace")
-    assert esperar_panel(), "no se abrió Mover cara"
+    assert _abrir(base, sub), "no se abrió Mover cara con la cara elegida"
     from swui.fork import panel_guard
     p = panel_guard.open_panel()
     p.radios["offset"].setChecked(True)
@@ -80,9 +102,7 @@ def girar(L, A, H, lado, ang):
     laterales = [(s, f) for s, f in _caras(base) if abs(f.normalAt(*f.ParameterRange[0:3:2]).z) < 1e-6]
     sub, cara = laterales[lado % len(laterales)]
     n0 = cara.normalAt(*cara.ParameterRange[0:3:2])
-    FreeCADGui.Selection.addSelection(base, sub)
-    cinta("SWUI_MoveFace")
-    assert esperar_panel(), "no se abrió Mover cara"
+    assert _abrir(base, sub), "no se abrió Mover cara con la cara elegida"
     from swui.fork import panel_guard
     p = panel_guard.open_panel()
     p.radios["rotate"].setChecked(True)

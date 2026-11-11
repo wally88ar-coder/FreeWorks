@@ -14,8 +14,8 @@ from reglas_paneles import correr  # noqa: E402
 
 DEUDA = {
     ("Taladro de ensamblaje", "aceptar"): ("#37", "después de Deshacer"),
-    ("Taladro de ensamblaje", "guardar"): ("#38", "DAG", "modificado"),
-    ("Extruir corte de ensamblaje", "guardar"): ("#38", "DAG", "modificado"),
+    ("Taladro de ensamblaje", "guardar"): ("#38", "DAG", "modificado", "Failed to get subshape"),
+    ("Extruir corte de ensamblaje", "guardar"): ("#38", "DAG", "modificado", "Failed to get subshape"),
 }
 
 

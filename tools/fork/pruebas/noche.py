@@ -139,7 +139,9 @@ class Noche:
         self.tanda("1. Batería rápida", ["rapida"], {}, minimo=300)
         self.tanda("2. Al azar sin ventana", ["solo_azar"], {"FW_CASOS_AZAR": casos})
         self.tanda("3a. Reglas de paneles", ["solo_ventana", "reglas"], {"FW_SEMILLAS": "1" if c else "3"})
-        self.tanda("3b. Medidas al azar con ventana", ["solo_ventana", "ventana_azar"], {"FW_CASOS_AZAR": "2" if c else "40"})
+        # con 40 casos, las de pieza y ensamblaje (8-10 reglas) no entran en 15 min (Issue #70)
+        self.tanda("3b. Medidas al azar con ventana", ["solo_ventana", "ventana_azar"],
+                   {"FW_CASOS_AZAR": "2" if c else "40", "FW_TIEMPO_VENTANA": "2400"})
         self.tanda("3c. Capturas de referencia", ["solo_ventana", "capturas"], {})
         largas = {"FW_TIEMPO_VENTANA": "2400"}  # el mono largo necesita más que los 15 min de las demás
         self.tanda("4a. El mono", ["solo_ventana", "mono"], dict(largas, FW_CASOS_AZAR=mono, FW_LARGO_MONO=largo))

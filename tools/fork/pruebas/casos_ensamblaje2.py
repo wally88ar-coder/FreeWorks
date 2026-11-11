@@ -79,6 +79,11 @@ class TaladroEnsamblaje(_AsmCorte):
 
     def elegir(self, rng):
         p = self.panel()
+        if not hasattr(p, "size"):
+            # el punto cayó donde no hay pieza (p. ej. adentro de otro taladro): FreeWorks abre el
+            # panel de corte, sin medida de taladro (Issue #68)
+            raise AssertionError("Taladro de ensamblaje: el taladro no toca ninguna pieza y se "
+                                 "abrió el panel sin medida de taladro (%s)" % type(p).__name__)
         if p.size.count():
             p.size.setCurrentIndex(rng.randrange(min(p.size.count(), 6)))
         p.preview()

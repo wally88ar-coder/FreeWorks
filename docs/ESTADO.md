@@ -38,6 +38,26 @@
   iguales superpuestas mueve la fija (también en "guardar y abrir"); **#64** Tangente plano-cilindro deja el eje inclinado; **#63** croquis, Equidistanciar entidades da
   "makeOffset2D: wires are nonplanar". Quedan como CONOCIDO / deuda. La regla "tangente" sacaba
   una placa más chica que su agujero (error de la prueba, arreglado).
+- Corrida de noche del 10/11 (55 pruebas, 9 con falla; la mayoría, errores ya registrados).
+  Nuevos, reproducidos el 10/11 sin tocar el programa:
+  **#66** (croquis, de FreeWorks): Equidistanciar ata las cotas a "Equidistancia1"; si Mover o
+  Girar borran esa cota, las demás quedan con una fórmula a la nada y el croquis con error
+  (`prueba_croquis_cota_atada.py`, CONOCIDO). **#68** (ensamblaje, de FreeWorks, baja): un
+  taladro de ensamblaje que no toca ninguna pieza (punto adentro de otro taladro) abre el panel de
+  corte, sin medida de taladro; deuda en el mono. **#65** cerrado, no es error: lo de
+  configuraciones era el #44 (suprimir un padre con un Redondeo sobre su arista: quedan
+  suprimidos sin error y vuelven bien, solo el aviso de FreeCAD) y lo de multicuerpo es que la
+  prueba le cambia el tipo a Combinar y la arista del Redondeo deja de existir (como en SW).
+  **#67** cerrado, era de la prueba (Compound sin CenterOfMass). **#69** y **#70** eran de las
+  pruebas (selección que llegaba tarde en Mover cara; 15 min no alcanzan para 40 casos),
+  arreglados. El mono no cuenta como error nuevo lo que repite en cada recálculo un objeto que ya
+  estaba con error antes del paso (lo sigue viendo la lista de objetos con error).
+  Al volver a correr el mono de configuraciones salieron dos más (de FreeWorks, sin investigar):
+  **#74** al crear una configuración nueva, un Chaflán sobre una arista de un Redondeo pierde su
+  arista; **#75** con una operación en error, Agregar configuración falla ("No hay una
+  configuración ..."; probable: la lista de configuraciones del Cuerpo no se actualiza). Deudas en
+  el mono, cada una solo en su paso. La revisión pidió que cada deuda valga solo en su acción y
+  no tape errores de Python (hecho: cuarto dato opcional de `deuda`).
 - Las pruebas comparan los giros sin importar el signo del cuaternión (q y -q son el mismo giro;
   al rehacer FreeCAD da uno u otro): daba una falla falsa en el mono de ensamblaje.
 - Encontrados por el mono con la memoria nueva de Hypothesis: #59 (chapa: después de Aplanar,

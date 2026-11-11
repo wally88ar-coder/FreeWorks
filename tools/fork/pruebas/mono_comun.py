@@ -26,6 +26,7 @@ aviso propio de FreeCAD "... not possible ..." cuando lo elegido al azar no sirv
 
 import os
 import random
+import re
 
 import FreeCAD
 
@@ -295,6 +296,38 @@ def _errores_ajenos(desde):
     return {t for t in out if t}
 
 
+def _sin_los_ya_rotos(m, errores, malos0, desde):
+    """Saca del informe lo que repite un objeto que YA estaba con error antes del paso (un Redondeo
+    que perdió su arista con razón vuelve a avisar en cada recálculo: no es un error nuevo; que no
+    se arregle solo lo sigue viendo `malos`). Se sacan su renglón ("Redondeo4: ...") y el renglón
+    gemelo de FreeCAD que termina igual ("<Exception> ...: Invalid edge link: ...")."""
+    nombres = set()
+    for n in malos0:
+        if ":" in n:
+            continue  # de otro documento
+        o = m.doc.getObject(n)
+        if o is not None and o.TypeId in _CONTENEDORES:
+            continue  # con error por un hijo: sus avisos taparían los de otros
+        nombres |= {n, o.Label} if o is not None else {n}
+    if not nombres:
+        return errores
+    from reglas_paneles import _report_view
+    rv = _report_view()
+    todo = rv.toPlainText()[desde:].splitlines() if rv is not None else []
+    colas = set()
+    for l in todo:  # el renglón con el nombre no es de los que cuentan como error: todo el informe
+        for x in nombres:
+            mm = re.search(r"(?:^|\s)%s: (.+)$" % re.escape(x), l)
+            if mm and mm.group(1).strip():
+                colas.add(mm.group(1).strip())
+    if not colas:
+        return errores
+    return [l for l in errores if not any(l.rstrip().endswith(c) for c in colas)]
+
+
+_CONTENEDORES = ("PartDesign::Body", "App::Part", "Assembly::AssemblyObject", "App::Link")
+
+
 def chequear_ventana(m, que, desde, malos0):
     """Después de cada paso: nada colgado, sin errores en el informe, sin objetos con error nuevos."""
     from reglas_paneles import limpiar_ventana, mensajes_nuevos
@@ -311,12 +344,19 @@ def chequear_ventana(m, que, desde, malos0):
     ajenos = _errores_ajenos(desde)
     if ajenos:
         errores = [l for l in errores if "pyException" not in l and not any(a in l for a in ajenos)]
+    errores = _sin_los_ya_rotos(m, errores, malos0, desde)
     nuevos = m.malos() - malos0
-    for issue, texto, objeto in m.deuda:
+    paso_ahora = que.split(" → ")[-1]
+    for d in m.deuda:
+        issue, texto, objeto = d[:3]
+        accion = d[3] if len(d) > 3 else None  # solo en ese paso (y sin tapar errores de Python)
+        if accion is not None and accion not in paso_ahora:
+            continue
         textos = texto if isinstance(texto, tuple) else (texto,)
         if all(any(x in l for l in errores) for x in textos):
             traza("    (deuda %s en: %s)" % (issue, que))
-            errores = [l for l in errores if not any(x in l for x in textos) and "pyException" not in l]
+            errores = [l for l in errores if not any(x in l for x in textos)
+                       and (accion is not None or "pyException" not in l)]
             if objeto:
                 nuevos = {n for n in nuevos if objeto not in n}
     if errores:  # el informe entero de este paso a la traza: de dónde viene el error
