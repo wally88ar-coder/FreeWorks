@@ -180,7 +180,7 @@ def prueba():
         finally:
             for d in list(FreeCAD.listDocuments()):
                 FreeCAD.closeDocument(d)
-    f.correr("seguidilla", seguidilla, "#51")  # error registrado: Issue #51
+    f.correr("seguidilla", seguidilla, "")  # era el Issue #51 (arreglado)
 
     @cfg
     @given(nombre=st.sampled_from(["", "   ", "Predeterminado", "Otra"]))
@@ -274,7 +274,7 @@ def prueba():
         finally:
             for d in list(FreeCAD.listDocuments()):
                 FreeCAD.closeDocument(d)
-    f.correr("deshacer_agregar", deshacer_agregar, "#50")  # error registrado: Issue #50
+    f.correr("deshacer_agregar", deshacer_agregar, "")  # era el Issue #50 (arreglado)
 
     @cfg
     @given(n=st.integers(1, 20000))

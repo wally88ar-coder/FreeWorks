@@ -22,6 +22,7 @@ import FreeCAD
 import FreeCADGui
 
 from swui.compat import QtCore
+from swui.fork import safe_ops
 
 PLANE_CMD = "SWUI_AssemblyPlane"
 AXIS_CMD = "SWUI_AssemblyAxis"
@@ -188,7 +189,7 @@ def open_editor(obj):
         pass
     try:
         panel = _choose(obj)(obj)
-        FreeCADGui.Control.showDialog(panel)
+        safe_ops.show_panel(panel)  # anotado en el guardia (#30)
         return panel
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] Editar referencia:\n%s\n" % traceback.format_exc())
@@ -214,7 +215,7 @@ def start(kind):
     obj.MapMode = "Deactivated"
     try:
         panel = panel_class(kind)(obj)
-        FreeCADGui.Control.showDialog(panel)
+        safe_ops.show_panel(panel)  # anotado en el guardia: otro comando lo cancela (#30)
         for ref_obj, sub in picked:  # lo elegido antes del comando entra como primeras referencias
             panel._pick(ref_obj, sub)
         if picked:

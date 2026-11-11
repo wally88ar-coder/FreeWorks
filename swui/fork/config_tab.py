@@ -96,7 +96,9 @@ def add_config():
     if FreeCADGui.Control.activeDialog():
         _status("Cerrá primero el panel abierto.")
         return
-    FreeCADGui.Control.showDialog(_AddPanel(doc))
+    from swui.fork import safe_ops
+
+    safe_ops.show_panel(_AddPanel(doc))  # anotado en el guardia: otro comando lo cancela (#30)
 
 
 class _AddPanel:
@@ -115,25 +117,48 @@ class _AddPanel:
                                 % cf.active(doc) if cf.active(doc) else "Arranca como copia de la pieza.")
         note.setWordWrap(True)
         lay.addWidget(note)
+        self.message = QtWidgets.QLabel("")
+        self.message.setWordWrap(True)
+        self.message.setStyleSheet("color: #c00000;")
+        self.message.hide()
+        lay.addWidget(self.message)
         lay.addStretch(1)
         self.name.returnPressed.connect(lambda: FreeCADGui.Control.closeDialog() if self.accept() else None)
         QtCore.QTimer.singleShot(0, self.name.setFocus)
+        from swui.fork import safe_ops
+
+        # paso de deshacer propio, abierto ANTES de mostrarse: con el panel ya en Tareas, el paso de
+        # "Agregar" se sumaba a uno que el panel no tenía y Ctrl+Z no lo sacaba (revisión del 11/11)
+        self.own_step = safe_ops.begin_step(doc, "Agregar configuración")
+
+    def _end(self, abort):
+        from swui.fork import safe_ops
+
+        if self.own_step:
+            self.own_step = False
+            safe_ops.end_step(self.doc, abort=abort)
 
     def accept(self):
         name = self.name.text().strip()
         if not name:
+            # antes Aceptar no hacía nada y no decía por qué (Issue #35)
+            self.message.setText("Escribí un nombre para la configuración.")
+            self.message.show()
             return False
         try:
             cf.names(self.doc)
         except Exception:
+            self._end(abort=True)
             return True
         result = _run(self.doc, "Agregar configuración", lambda: cf.add(self.doc, name))
         if result is None and name not in cf.names(self.doc):
             return False  # nombre repetido o inválido: el aviso ya salió, el panel queda abierto
+        self._end(abort=False)
         _show_tab()
         return True
 
     def reject(self):
+        self._end(abort=True)
         return True
 
 
@@ -595,10 +620,35 @@ class _NewFeatures:
             _state["busy_new"] = False
 
 
+class _TableRows:
+    """
+    Filas de configuración escritas a mano en la tabla de diseño (como en SW): la lista del Cuerpo
+    usa un rango exacto (#50), así que al cambiar la tabla se reajusta. Se hace en el mismo aviso,
+    dentro del mismo paso de deshacer que la edición de la celda (Deshacer lleva las dos cosas
+    juntas); nunca al abrir un archivo ni al deshacer / rehacer (lo vuelve FreeCAD solo).
+    """
+
+    def slotChangedObject(self, obj, prop):
+        try:
+            if prop != "cells" or getattr(obj, "TypeId", "") != "Spreadsheet::Sheet":
+                return
+            from swui.fork import safe_ops
+
+            doc = obj.Document
+            if safe_ops.doc_busy(doc) or obj is not cf.table(doc):
+                return
+            cf.rebind_rows(doc)
+        except Exception:
+            FreeCAD.Console.PrintLog("[SWUI fork] Tabla de diseño, filas:\n%s\n" % traceback.format_exc())
+
+
 def install():
     if _state.get("new_obs") is None:
         _state["new_obs"] = _NewFeatures()
         FreeCAD.addDocumentObserver(_state["new_obs"])
+    if _state.get("rows_obs") is None:
+        _state["rows_obs"] = _TableRows()
+        FreeCAD.addDocumentObserver(_state["rows_obs"])
     _hook_dims()
     _hook_suppress()
     try:

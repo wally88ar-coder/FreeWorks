@@ -14,10 +14,6 @@ from _base import ADDON  # noqa: E402
 
 REGISTRA = ("panel_guard.track", "show_panel(", "_PickObserver", "_SelObserver")
 DEUDA = {
-    "weld_panels.py": "#6",
-    "section_view.py": "#29",
-    "asm_reference.py": "#30",
-    "config_tab.py": "#30",
 }
 
 

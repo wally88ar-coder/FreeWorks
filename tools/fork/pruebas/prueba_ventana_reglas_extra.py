@@ -16,13 +16,7 @@ _ESCUCHA = ("already deleted", "deleted object")
 _ERROR = ("ValueError", "No se pudo", "QPushButton")
 DEUDA = {
     ("Recortar miembro", "invalido"): ("#19",) + _ERROR,
-    ("Recortar miembro", "aceptar"): ("#6",) + _ESCUCHA,
-    ("Recortar miembro", "cancelar"): ("~#6",) + _ESCUCHA,
-    ("Recortar miembro", "otro_comando"): ("~#6",) + _ESCUCHA,
     ("Tapa de extremo (clic)", "invalido"): ("#19",) + _ERROR,
-    ("Tapa de extremo (clic)", "aceptar"): ("#6",) + _ESCUCHA,
-    ("Tapa de extremo (clic)", "cancelar"): ("~#6",) + _ESCUCHA,
-    ("Tapa de extremo (clic)", "otro_comando"): ("~#6",) + _ESCUCHA,
 }
 
 

@@ -402,6 +402,15 @@ class SectionPanel:
         self._close()
         return True
 
+    def _orphaned(self):
+        """FreeCAD cerró el panel sin Cancelar: como Cancelar (sin corte a medias)."""
+        try:
+            section_off(self.view)
+        except Exception:
+            pass
+        _state["panel"] = None
+        _sync_buttons()
+
     def getStandardButtons(self):
         return QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel
 
@@ -411,6 +420,10 @@ class _PanelSel:
         self.panel = panel
 
     def addSelection(self, *_a):
+        from swui.fork import panel_guard
+
+        if panel_guard.orphaned(self):  # FreeCAD cerró el panel: la escucha se apaga (#29)
+            return
         QtCore.QTimer.singleShot(0, self.panel.picked)
 
 
@@ -457,5 +470,7 @@ def toggle():
         FreeCADGui.Control.closeDialog()
     panel = SectionPanel(view)
     _state["panel"] = panel
-    FreeCADGui.Control.showDialog(panel)
+    from swui.fork import safe_ops
+
+    safe_ops.show_panel(panel)  # anotado en el guardia: otro comando lo cancela de verdad (#29)
     _sync_buttons()

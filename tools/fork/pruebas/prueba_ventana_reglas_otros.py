@@ -15,9 +15,6 @@ from reglas_paneles import correr  # noqa: E402
 _NO_CANCELA = ("no se canceló", "siguió abierto", "cambió", "pasos de deshacer", "diálogo", "sobra",
                "transacción")
 DEUDA = {
-    ("Vista de sección", "otro_comando"): ("#29",) + _NO_CANCELA,
-    ("Agregar configuración", "invalido"): ("#35", "no dijo por qué"),
-    ("Agregar configuración", "otro_comando"): ("#30",) + _NO_CANCELA,
 }
 
 

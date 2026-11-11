@@ -84,9 +84,12 @@ class VistaSeccion(Caso):
         self.body, _h = armar_pieza(doc)
 
     def panel(self):
-        import FreeCADGui
+        # el panel abierto de verdad, según el guardia (estos paneles se anotan ahí desde el 11/11):
+        # "el último creado + hay algún panel" daba por abierto el primero cuando el comando nuevo
+        # ya había abierto el suyo
+        from swui.fork import panel_guard
         p = _ULTIMO.get("SectionPanel")
-        return p if p is not None and FreeCADGui.Control.activeDialog() else None
+        return p if p is not None and p is panel_guard.open_panel() else None
 
     def abrir(self, rng):
         from swui.fork import section_view
@@ -113,9 +116,12 @@ class AgregarConfiguracion(Caso):
         self.body, _h = armar_pieza(doc)
 
     def panel(self):
-        import FreeCADGui
+        # el panel abierto de verdad, según el guardia (estos paneles se anotan ahí desde el 11/11):
+        # "el último creado + hay algún panel" daba por abierto el primero cuando el comando nuevo
+        # ya había abierto el suyo
+        from swui.fork import panel_guard
         p = _ULTIMO.get("_AddPanel")
-        return p if p is not None and FreeCADGui.Control.activeDialog() else None
+        return p if p is not None and p is panel_guard.open_panel() else None
 
     def abrir(self, rng):
         from swui.fork import config_tab

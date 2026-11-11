@@ -252,13 +252,39 @@ def ensure(doc, body=None):
     if PROP not in body.PropertiesList:
         body.addProperty("App::PropertyEnumeration", PROP, GROUP, "Configuración activa (FreeWorks)")
     body.setPropertyStatus(PROP, "CopyOnChange")
-    body.setExpression(ENUM_PATH, "%s.cells[<<A%d:|>>]" % (sheet.Name, FIRST_ROW))
+    _bind_enum(sheet, body)
     body.recompute()
     sheet.set("A%d" % BIND_ROW, "=<<Activa: >> + hiddenref(%s.%s.String)" % (body.Name, PROP))
     _style(sheet, 1)
     sheet.recompute()
     show_table(doc)
     return sheet
+
+
+def _bind_enum(sheet, body):
+    """
+    La lista de configuraciones del Cuerpo = las celdas A de las filas de configuración, con el
+    rango EXACTO (A3:A5), no "hasta la última fila usada" (A3:|): al deshacer "Agregar", la celda
+    vuelve a vacía pero la planilla la sigue contando como usada y aparecía una configuración
+    fantasma "None" (Issue #50). La fórmula es una propiedad del Cuerpo: cambiarla en el mismo paso
+    que la tabla hace que Deshacer y Rehacer la lleven junto con las filas. Los archivos con la
+    fórmula vieja siguen andando; pasan a la nueva al agregar o borrar una configuración.
+    """
+    last = FIRST_ROW + max(1, len(config_rows(sheet))) - 1
+    body.setExpression(ENUM_PATH, "%s.cells[<<A%d:A%d>>]" % (sheet.Name, FIRST_ROW, last))
+
+
+def rebind_rows(doc):
+    """La lista del Cuerpo con las filas que tiene hoy la tabla (si cambió). True si la cambió."""
+    sheet, body = table(doc), owner(doc)
+    if sheet is None or body is None:
+        return False
+    last = FIRST_ROW + max(1, len(config_rows(sheet))) - 1
+    want = "%s.cells[<<A%d:A%d>>]" % (sheet.Name, FIRST_ROW, last)
+    if any(p.lstrip(".") == ENUM_PATH and e == want for p, e in body.ExpressionEngine):
+        return False
+    _bind_enum(sheet, body)
+    return True
 
 
 def show_table(doc):
@@ -305,6 +331,8 @@ def add(doc, name):
         c = col_letter(n)
         sheet.set("%s%d" % (c, row), _contents(sheet, "%s%d" % (c, src)))
     sheet.set("A%d" % row, text_cell(name))
+    sheet.recompute()
+    _bind_enum(sheet, owner(doc))
     doc.recompute()
     activate(doc, name)
     return name
@@ -356,7 +384,21 @@ def delete(doc, name):
     if row is None:
         raise ValueError("No hay una configuración \"%s\"." % name)
     was = active(doc)
-    table(doc).removeRows(str(row), 1)
+    sheet = table(doc)
+    body = owner(doc)
+    sheet.removeRows(str(row), 1)
+    # Issue #51: la fila 2 toma los valores de la activa por su POSICIÓN en la lista; borrada una
+    # fila de arriba, la posición vieja apuntaba a una fila vacía, las medidas configuradas
+    # quedaban sin valor y el recálculo se trababa (la lista del Cuerpo no se actualizaba porque
+    # sus operaciones fallaban). Orden: lista nueva, recalcular solo el Cuerpo (actualiza la
+    # lista), la activa otra vez por su nombre, y recién ahí el enlace de la fila 2.
+    sheet.recompute()
+    _bind_enum(sheet, body)
+    body.recompute()
+    if getattr(body, PROP) != was:
+        setattr(body, PROP, was)
+    _rebind(sheet, body)
+    sheet.recompute()
     doc.recompute()
     activate(doc, was)
 

@@ -13,11 +13,6 @@ from casos_pieza import CASOS  # noqa: E402
 from reglas_paneles import correr  # noqa: E402
 
 DEUDA = {
-    ("Redondeo", "editar_cambiar"): ("#36", "(visible)"),
-    ("Chaflán", "editar_cambiar"): ("#36", "(visible)"),
-    ("Ángulo de salida", "editar_cambiar"): ("#36", "(visible)"),
-    ("Matriz lineal", "editar_cambiar"): ("#36", "(visible)"),
-    ("Matriz circular", "editar_cambiar"): ("#36", "(visible)"),
 }
 
 

@@ -571,6 +571,13 @@ class SwPanel:
         self.yellow = []
         self.base = self._base()
         self.is_new = self.doc.HasPendingTransaction  # la transacción del comando que la creó
+        if not self.is_new:
+            # Editar una existente: al entrar a editar, FreeCAD ya ocultó la punta, FUERA de todo
+            # paso de deshacer. Si el paso del panel se abría así, lo que quedaba anotado como "antes"
+            # era la vista de edición, y Ctrl+Z dejaba la operación oculta y a la vista la anterior
+            # (Issue #36, medido con la ventana). Se vuelve a la vista normal del Cuerpo antes de
+            # anotar nada; el panel después muestra lo que necesita, ya dentro de su paso.
+            self._normal_view()
         self.visible = self._remember_visibility()
         self.timer = QtCore.QTimer()
         self.timer.setSingleShot(True)
@@ -614,6 +621,22 @@ class SwPanel:
             except Exception:
                 pass
         return out
+
+    def _normal_view(self):
+        """Como lo deja Part Design fuera de la edición: se ve la punta del Cuerpo, el resto no."""
+        from swui.fork import feature_tree as ft
+
+        body = ft.body_of(self.obj)
+        tip = getattr(body, "Tip", None) if body is not None else None
+        if tip is None or not tip.isDerivedFrom("PartDesign::Feature"):
+            return  # punta rara (un croquis): no se toca nada
+        for o in ft.features(body):
+            try:
+                want = o is tip
+                if o.Visibility != want:
+                    o.Visibility = want
+            except Exception:
+                pass
 
     def _restore_visibility(self):
         for name, vis in self.visible.items():

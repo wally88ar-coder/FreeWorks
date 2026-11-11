@@ -804,11 +804,30 @@ class _EquationsDialog(QtWidgets.QDialog):
         except Exception:
             pass
 
+    def _own_step_alive(self):
+        """
+        ¿El paso abierto sigue siendo el de Ecuaciones? Si mientras tanto se abrió un panel (otra
+        operación, editar con doble clic), FreeCAD ya confirmó el de Ecuaciones y el abierto es el
+        del panel: cerrarlo desde acá anulaba o confirmaba lo del panel (revisión del 11/11).
+        """
+        from swui.fork import safe_ops
+
+        if not self.own_step:
+            return False
+        try:
+            if safe_ops.task_open(self.doc):
+                safe_ops.forget_step(self.doc)
+                return False
+        except Exception:  # el documento se cerró con la ventana abierta
+            safe_ops.forget_step(self.doc)
+            return False
+        return True
+
     def accept(self):
         from swui.fork import safe_ops
 
         self._unpick()
-        if self.own_step:
+        if self._own_step_alive():
             safe_ops.end_step(self.doc)
         if self.own_step or self.touched:
             self.doc.recompute()
@@ -821,7 +840,7 @@ class _EquationsDialog(QtWidgets.QDialog):
         from swui.fork import safe_ops
 
         # paso propio: se anula. Sumado al de un panel abierto: lo deshace el Cancelar del panel
-        if self.own_step:
+        if self._own_step_alive():
             safe_ops.end_step(self.doc, abort=True)
         else:
             FreeCAD.Console.PrintWarning("[SWUI] Ecuaciones: hay un panel abierto; lo cambiado acá lo "

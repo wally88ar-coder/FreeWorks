@@ -108,6 +108,24 @@ def prueba():
     with safe_ops.undo_step(doc, "Después") as propio:
         caja_.Length = 13
     assert propio, "después de cerrar todo, undo_step quedó creyendo que había un paso abierto"
+    # al revés: Ecuaciones abierta y DESPUÉS un panel abre su transacción (FreeCAD confirma la de
+    # Ecuaciones). Ecuaciones suelta la marca sin tocar la del panel; el Cancelar del panel deshace lo suyo
+    propio = safe_ops.begin_step(doc, "Ecuaciones")
+    caja_.Width = 18
+    doc.openTransaction("Panel")
+    caja_.Height = 18
+    safe_ops.forget_step(doc)
+    assert doc.HasPendingTransaction, "soltar la marca tocó la transacción del panel"
+    doc.abortTransaction()
+    assert cerca(caja_.Height, 10) and cerca(caja_.Width, 18), (caja_.Width, caja_.Height)
+    # marca colgada (el paso lo cerró otro, sin end_step): se cura sola y no se suma a la nada
+    assert safe_ops.begin_step(doc, "Colgada")
+    caja_.Length = 14
+    doc.commitTransaction()
+    n = doc.UndoCount
+    with safe_ops.undo_step(doc, "Propio") as propio:
+        caja_.Length = 15
+    assert propio and doc.UndoCount == n + 1, "con la marca colgada no abrió su paso: %s" % doc.UndoNames[:3]
 
     # documentos por ruta (dos "Placa.FCStd" de carpetas distintas)
     sin = safe_ops.doc_key(doc)

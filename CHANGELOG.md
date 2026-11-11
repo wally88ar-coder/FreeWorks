@@ -14,6 +14,14 @@ Neueste Version oben. / Newest version first.
   #53 (lista de cortes: iguales en un solo renglón, agrupando con tolerancia y no por el valor
   redondeado); #61 era de la prueba (la punta de un caño redondo en ángulo no tiene vértice en el
   extremo: ahora se mide exacto). Encontrado detrás de #3: #76 (ensamblaje, conocido).
+  Además: #42 (Alcance automático con Por todo: la forma del corte se leía en otras coordenadas
+  y no llegaba a toda la pila); #36 (editar una operación y Ctrl+Z la dejaba oculta: el panel
+  anotaba como "antes" la vista de edición; ahora vuelve a la vista normal antes de abrir su
+  paso); #8 (Miembro estructural solo sobre líneas rectas, con aviso; antes salía un caño recto
+  sobre un arco o error sobre un círculo); #50 y #51 (configuraciones: lista con rango exacto,
+  sin "None" fantasma al deshacer; borrar la primera con una medida configurada ya anda);
+  #6, #29 y #30 (paneles de soldadas, vista de sección, referencia de ensamblaje y Agregar
+  configuración anotados en el guardia; las escuchas de soldadas ya no tocan un panel cerrado).
 - **Forma de trabajar para cometer menos errores** (plan de calidad, `docs/PLAN_CALIDAD.md`):
   piezas comunes para las tareas delicadas (`swui/fork/safe_ops.py`: borrar una operación,
   paso de deshacer que no rompe el Cancelar de un panel, escuchas que no actúan al abrir o

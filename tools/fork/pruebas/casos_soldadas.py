@@ -40,9 +40,12 @@ class _Soldada(Caso):
     cuantos = None
 
     def panel(self):
-        import FreeCADGui
+        # el panel abierto de verdad, según el guardia (estos paneles se anotan ahí desde el 11/11):
+        # "el último creado + hay algún panel" daba por abierto el primero cuando el comando nuevo
+        # ya había abierto el suyo
+        from swui.fork import panel_guard
         p = _ULTIMO.get("p")
-        return p if p is not None and FreeCADGui.Control.activeDialog() else None
+        return p if p is not None and p is panel_guard.open_panel() else None
 
     def mensaje(self):
         texto = super().mensaje()

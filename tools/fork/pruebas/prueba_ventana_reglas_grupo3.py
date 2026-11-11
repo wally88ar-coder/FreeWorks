@@ -19,7 +19,6 @@ DEUDA = {
     ("Brida de arista", "editar_cambiar"): ("#39", "pasos de deshacer"),
     ("Dobladillo", "editar_cancelar"): ("#39", "pasos de deshacer"),
     ("Dobladillo", "editar_cambiar"): ("#39", "pasos de deshacer"),
-    ("Taladro", "editar_cambiar"): ("#36", "(visible)"),
 }
 
 

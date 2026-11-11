@@ -310,9 +310,33 @@ def extension(body):
     return float(pad.Length2), e1
 
 
-def create_member(doc, edge, kind, size, rotation=0.0, anchor="Centro", mirror=False, label=None):
-    """Un miembro estructural sobre una línea del esqueleto. edge = (objeto, "EdgeN")."""
+NOT_STRAIGHT = ("«%s» no es una línea recta: el miembro estructural va sobre líneas rectas del "
+                "esqueleto (los arcos y círculos todavía no)")
+
+
+def is_straight(edge):
+    """¿(objeto, "EdgeN") es un tramo recto? Sobre un arco el miembro salía recto y tangente, y
+    sobre un círculo daba error y dejaba un sólido a medias (Issue #8)."""
     obj, sub = edge
+    try:
+        e = _edge_of(obj, sub)
+        return e.Curve.__class__.__name__ in ("Line", "LineSegment") and not e.isClosed()
+    except Exception:
+        return False
+
+
+def _check_straight(edges):
+    bad = [e for e in edges if not is_straight(e)]
+    if bad:
+        raise ValueError(NOT_STRAIGHT % ", ".join("%s de %s" % (sub, obj.Label) for obj, sub in bad))
+
+
+def create_member(doc, edge, kind, size, rotation=0.0, anchor="Centro", mirror=False, label=None):
+    """Un miembro estructural sobre una línea del esqueleto. edge = (objeto, "EdgeN"). Si no es
+    una línea recta, ValueError (sin crear nada)."""
+    obj, sub = edge
+    if not is_straight(edge):
+        raise ValueError(NOT_STRAIGHT % ("%s de %s" % (sub, obj.Label)))
     dims = dims_of(kind, size)
     body = doc.addObject("PartDesign::Body", "Miembro")
     body.Label = label or profile_text(kind, size)
@@ -365,7 +389,8 @@ def create_member(doc, edge, kind, size, rotation=0.0, anchor="Centro", mirror=F
 
 def create_members(doc, edges, kind, size, rotation=0.0, anchor="Centro", mirror=False, group_label=None):
     """Miembro estructural (como SW): un Cuerpo por línea, todos en una carpeta "Miembro
-    estructuralN". Devuelve los Cuerpos."""
+    estructuralN". Devuelve los Cuerpos. Si alguna no es una línea recta, ValueError sin crear nada."""
+    _check_straight(edges)
     n = 1 + sum(1 for o in doc.Objects if o.TypeId == "App::DocumentObjectGroup"
                 and o.Label.startswith("Miembro estructural"))
     group = doc.addObject("App::DocumentObjectGroup", "MiembroEstructural")
@@ -861,6 +886,7 @@ def edit_members(group, edges, kind, size, rotation=0.0, anchor="Centro", mirror
     (no se borran: las tapas, cartelas y recortes apoyados en ellos no se pierden). `treatment`:
     "tope", "inglete", "ninguno" o None (cada esquina como estaba; las nuevas, a tope).
     Devuelve los miembros de la carpeta."""
+    _check_straight(edges)
     doc = group.Document
     current = [m for m in group.Group if is_member(m)]
     keys = [(o.Name, sub) for o, sub in edges]

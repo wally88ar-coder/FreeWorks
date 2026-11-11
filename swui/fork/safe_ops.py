@@ -141,13 +141,24 @@ def begin_step(doc, name):
     Mientras dure, otro `undo_step` / `begin_step` sobre el documento se suma a este (Issue #13:
     cambiar una cota con doble clic con Ecuaciones abierta confirmaba el paso de Ecuaciones).
     """
-    join = (doc.Name in _open_steps or bool(getattr(doc, "HasPendingTransaction", False))
-            or bool(_active_transaction()) or task_open(doc))
+    pending = bool(getattr(doc, "HasPendingTransaction", False)) or bool(_active_transaction())
+    if doc.Name in _open_steps and not pending:
+        _open_steps.discard(doc.Name)  # marca colgada (el paso ya no existe): no sumarse a la nada
+    join = doc.Name in _open_steps or pending or task_open(doc)
     if join:
         return False
     doc.openTransaction(name)
     _open_steps.add(doc.Name)
     return True
+
+
+def forget_step(doc):
+    """El paso de `begin_step` ya no es nuestro (lo confirmó FreeCAD al abrirse un panel, o el
+    documento se cerró): se suelta la marca sin tocar ninguna transacción."""
+    try:
+        _open_steps.discard(doc.Name)
+    except Exception:
+        pass
 
 
 def end_step(doc, abort=False):

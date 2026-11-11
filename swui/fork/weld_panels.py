@@ -94,20 +94,39 @@ def _group_of(body):
 
 
 class _Sel:
-    def __init__(self, fn):
+    """Escucha de selección de un panel de soldadas. Si FreeCAD cerró el panel por su cuenta, se
+    apaga sola y el panel limpia su vista previa (`panel_guard.orphaned`; antes quedaba viva y
+    daba errores en cada clic: Issue #6)."""
+
+    def __init__(self, fn, panel=None):
         self.fn = fn
+        self.panel = panel
+
+    def _notify(self):
+        from swui.fork import panel_guard
+
+        if self.panel is not None and panel_guard.orphaned(self):
+            return
+        QtCore.QTimer.singleShot(0, self._fire)
+
+    def _fire(self):
+        # el aviso se atiende un instante después: si en el medio el panel se cerró (Aceptar,
+        # Cancelar), ya no se toca (daba "deleted object" / "already deleted": Issue #6)
+        if self.panel is not None and getattr(self.panel, "_done", False):
+            return
+        self.fn()
 
     def addSelection(self, *_a):
-        QtCore.QTimer.singleShot(0, self.fn)
+        self._notify()
 
     def removeSelection(self, *_a):
-        QtCore.QTimer.singleShot(0, self.fn)
+        self._notify()
 
     def clearSelection(self, *_a):
-        QtCore.QTimer.singleShot(0, self.fn)
+        self._notify()
 
     def setSelection(self, *_a):
-        QtCore.QTimer.singleShot(0, self.fn)
+        self._notify()
 
 
 class _Base:
@@ -116,7 +135,7 @@ class _Base:
     def __init__(self):
         self.doc = _doc()
         self.doc.openTransaction(self.title)
-        self._sel = _Sel(self._selection_changed)
+        self._sel = _Sel(self._selection_changed, self)
         FreeCADGui.Selection.addObserver(self._sel)
         self._timer = QtCore.QTimer()
         self._timer.setSingleShot(True)
@@ -133,6 +152,7 @@ class _Base:
         self._timer.start()
 
     def _finish(self):
+        self._done = True
         try:
             FreeCADGui.Selection.removeObserver(self._sel)
         except Exception:
@@ -156,6 +176,22 @@ class _Base:
 
     def _apply_final(self):
         self._preview()
+
+    def _orphaned(self):
+        """
+        FreeCAD cerró el panel sin Cancelar (menú o atajo + "Sí"): la escucha ya se apagó. NO se
+        anula ni se cierra nada: el paso abierto y el panel de Tareas ya son del comando nuevo
+        (revisión del 11/11). Solo se saca lo que este panel dibujó como vista previa.
+        """
+        self._finish()
+        try:
+            self._discard_preview()
+            self.doc.recompute()
+        except Exception:
+            FreeCAD.Console.PrintLog("[SWUI fork] %s, panel cerrado:\n%s\n" % (self.title, traceback.format_exc()))
+
+    def _discard_preview(self):
+        """Lo dibujado como vista previa, para un cierre forzado. Por omisión, nada."""
 
     def reject(self):
         self._finish()
@@ -314,6 +350,14 @@ class MemberPanel(_Base):
             return
         if not picked:
             return
+        curved = [e for e in picked if not w.is_straight(e)]
+        if curved:  # sobre un arco el caño salía recto y tangente (Issue #8): no se suma, y se avisa
+            picked = [e for e in picked if e not in curved]
+            QtCore.QTimer.singleShot(0, FreeCADGui.Selection.clearSelection)
+            QtCore.QTimer.singleShot(0, lambda: _info(w.NOT_STRAIGHT % ", ".join(
+                "%s de %s" % (sub.replace("Edge", "Línea"), o.Label) for o, sub in curved)))
+            if not picked:
+                return
         for o, sub in picked:
             keys = [(e[0].Name, e[1]) for e in self.edges]
             key = (o.Name, sub)
@@ -348,6 +392,9 @@ class MemberPanel(_Base):
             self.edges.pop(i)
             self._refresh_list()
             self._changed()
+
+    def _discard_preview(self):
+        self._clear_preview()
 
     def _clear_preview(self):
         if self.edit is not None:
@@ -824,7 +871,7 @@ def _open(panel_cls, *args):
     try:
         panel = panel_cls(*args)
         panel._wheel = guard_wheel(panel.form)
-        FreeCADGui.Control.showDialog(panel)
+        safe_ops.show_panel(panel)  # anotado en el guardia: otro comando lo cancela de verdad (#6)
     except Exception as e:
         FreeCAD.Console.PrintError("[SWUI fork] %s:\n%s\n" % (TITLE, traceback.format_exc()))
         _info("No se pudo abrir: %s" % e)
