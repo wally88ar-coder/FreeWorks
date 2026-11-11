@@ -7,9 +7,9 @@ separaciones al azar) y un agujero pasante del primero que los atraviesa a todos
 - Alcance con un subconjunto al azar: cada sólido elegido pierde exactamente su cilindro
   (π·r²·alto) y los no elegidos quedan iguales;
 - `touched_bodies` (selección automática): los sólidos que el corte Por todo atraviesa son todos
-  (error conocido #42: solo ve los que entran en el alto del sólido propio);
+  (era el #42, arreglado: la forma del corte estaba corrida y no llegaba a toda la pila);
 - sacar sólidos del Alcance: vuelven a su volumen original; si después de la copia el sólido tenía
-  otra operación, no pierde nada de lo anterior (error conocido #1).
+  otra operación, no pierde nada de lo anterior (era el #1, arreglado).
 Casos por regla: FW_CASOS_AZAR (6 por omisión)."""
 TIPO = "azar"
 
@@ -129,9 +129,9 @@ def _sacar(con_operacion_despues):
 def prueba():
     fallas = Fallas()
     solo = os.environ.get("FW_CASO", "")
-    for nombre, fn, conocido in (("alcance", alcance, ""), ("detecta los sólidos que atraviesa", detecta, "#42"),
+    for nombre, fn, conocido in (("alcance", alcance, ""), ("detecta los sólidos que atraviesa", detecta, ""),
                                  ("sacar del alcance", _sacar(False), ""),
-                                 ("sacar del alcance con operación después", _sacar(True), "#1")):
+                                 ("sacar del alcance con operación después", _sacar(True), "")):
         if not solo or solo.lower() in nombre:
             fallas.correr(nombre, fn, conocido)
     fallas.terminar()

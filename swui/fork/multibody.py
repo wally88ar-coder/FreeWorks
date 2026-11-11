@@ -358,18 +358,68 @@ def rejoin(feature):
     return owner
 
 
+def _is_through_all(feature):
+    return "ThroughAll" in (getattr(feature, "Type", ""), getattr(feature, "Type2", ""),
+                            getattr(feature, "DepthType", ""))
+
+
+def _through_all_tool(feature, tool, bodies):
+    """
+    El corte Por todo, alargado hasta pasar todos los sólidos. FreeCAD le da a su forma
+    (AddSubShape) un largo según el tamaño del sólido PROPIO (medido: ±58 mm para un sólido de 5
+    de alto), y una pila más alta queda afuera (Issue #42). Se
+    alargan, por la normal del croquis, las caras extremas planas que NO están en el plano del
+    croquis (el lado por donde sale el corte; las dos con "a dos lados"). Sirve igual para un
+    corte extruido que para un taladro. Devuelve las piezas (la forma de FreeCAD y los alargues;
+    cada una se compara aparte). Si algo no se puede, queda solo la forma de FreeCAD.
+    """
+    try:
+        sk = source_sketch(feature) or profile_object(feature)
+        pl = sk.getGlobalPlacement()
+        n = pl.Rotation.multVec(FreeCAD.Vector(0, 0, 1))
+        s0 = pl.Base.dot(n)
+        heights = [v.Point.dot(n) for v in tool.Vertexes]
+        lo, hi = min(heights), max(heights)
+        box = tool.BoundBox
+        for b in bodies:
+            if not b.Shape.isNull():
+                box.add(b.Shape.BoundBox)
+        far = box.DiagonalLength + 1.0
+        pieces = [tool]
+        for end, sign in ((lo, -1.0), (hi, 1.0)):
+            if abs(end - s0) < 1e-4:
+                continue  # el lado del croquis: por ahí no sale el corte
+            for f in tool.Faces:
+                if f.Surface.__class__.__name__ != "Plane" or abs(abs(f.normalAt(0, 0).dot(n)) - 1) > 1e-6:
+                    continue
+                if all(abs(v.Point.dot(n) - end) < 1e-4 for v in f.Vertexes):
+                    pieces.append(f.extrude(n * (sign * far)))
+        return pieces
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Alcance, Por todo:\n%s\n" % traceback.format_exc())
+        return [tool]
+
+
 def touched_bodies(feature):
     """Sólidos que el corte atraviesa (para "Selección automática"), en su estado sin este corte."""
     doc = feature.Document
     owner = body_of(feature)
     try:
         tool = feature.AddSubShape.copy()
+        # AddSubShape está en las coordenadas de la OPERACIÓN (su Placement, que hereda el de una
+        # primitiva de base corrida), no en las del Cuerpo: sin esto el corte "estaba" en otro
+        # lado y no tocaba los sólidos que sí atraviesa (Issue #42, medido con FreeCADCmd)
+        plc = feature.Placement
         if owner is not None:
-            tool.transformShape(owner.Placement.toMatrix())
+            plc = owner.Placement.multiply(plc)
+        tool.transformShape(plc.toMatrix())
     except Exception:
         return [owner] if owner else []
     if tool.isNull():
         return [owner] if owner else []
+    tools = [tool]
+    if _is_through_all(feature):
+        tools = _through_all_tool(feature, tool, solid_bodies(doc))
     copies = {body_of(c): c for c in copies_of(feature)}
     out = []
     for body in solid_bodies(doc):
@@ -380,7 +430,7 @@ def touched_bodies(feature):
             before = copies[body].BaseFeature.Shape if body in copies else body.Shape
             if before.isNull():
                 continue
-            if tool.common(before).Volume > TOUCH_VOLUME:
+            if any(t.common(before).Volume > TOUCH_VOLUME for t in tools):
                 out.append(body)
         except Exception:
             continue

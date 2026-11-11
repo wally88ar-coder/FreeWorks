@@ -5,6 +5,15 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Errores arreglados la noche del 11/11 (causa raíz):** #1 (multicuerpo y Simetría de sólidos
+  borraban operaciones sin la pieza común: el sólido perdía lo anterior); #3 y #13 (Ecuaciones,
+  Material, Suprimir, barra de retroceso, cotas con doble clic, configuraciones, agarraderas de
+  plano, suprimir relación, reparar referencias y Ctrl+Q abrían su propio paso de deshacer y
+  rompían el Cancelar del panel abierto: ahora todos usan `safe_ops.undo_step`/`begin_step`);
+  #41 (Girar entidades del croquis: `Geometry.rotate` descarta el centro; ahora `transform`);
+  #53 (lista de cortes: iguales en un solo renglón, agrupando con tolerancia y no por el valor
+  redondeado); #61 era de la prueba (la punta de un caño redondo en ángulo no tiene vértice en el
+  extremo: ahora se mide exacto). Encontrado detrás de #3: #76 (ensamblaje, conocido).
 - **Forma de trabajar para cometer menos errores** (plan de calidad, `docs/PLAN_CALIDAD.md`):
   piezas comunes para las tareas delicadas (`swui/fork/safe_ops.py`: borrar una operación,
   paso de deshacer que no rompe el Cancelar de un panel, escuchas que no actúan al abrir o
