@@ -362,7 +362,7 @@ def check_copies(asm_doc, tell=True):
     """Compara la huella del croquis de cada operación con la de sus copias: marca '->?' en las
     piezas desactualizadas y en la operación, y avisa en la barra de estado (#38)."""
     stale_ops = []
-    for v in [o for o in asm_doc.Objects if hasattr(o, KIND)]:
+    for v in operations(asm_doc):
         stale = stale_entries(v)
         title = _title(v)
         for _l, _b, feat in entries_of(v):
@@ -486,6 +486,13 @@ def entries_of(v):
     return out
 
 
+def operations(doc):
+    """Las operaciones de ensamblaje del documento (los VarSet con KIND). Filtra primero por tipo
+    en FreeCAD: se llama en cada cambio de ubicación de un componente y recorrer todos los objetos
+    en Python se notaba en ensamblajes grandes (Issue #15: 1,2 ms por cambio con 500 componentes)."""
+    return [o for o in doc.findObjects("App::VarSet") if hasattr(o, KIND)]
+
+
 def record(asm, kind, sk, entries, data=None, title=None):
     v = data
     if v is None:
@@ -510,9 +517,7 @@ def operation_of(obj):
     if hasattr(obj, KIND):
         return obj
     for doc in FreeCAD.listDocuments().values():
-        for v in doc.Objects:
-            if not hasattr(v, KIND):
-                continue
+        for v in operations(doc):
             if getattr(v, SKETCH, None) is obj:
                 return v
             for text in getattr(v, ENTRIES, []) or []:
@@ -543,9 +548,7 @@ class _Observer:
             if prop != "Placement" or obj.TypeId not in ("App::Link", "Sketcher::SketchObject")                     or obj.Document.Restoring:
                 return
             touched = []
-            for v in obj.Document.Objects:
-                if not hasattr(v, KIND):
-                    continue
+            for v in operations(obj.Document):
                 sk = getattr(v, SKETCH, None)
                 for link, binder, _feat in entries_of(v):
                     if link is obj or sk is obj:
@@ -570,7 +573,7 @@ class _Observer:
         cambió una cota del croquis): '->?' y aviso (#38). Nunca al abrir ni al deshacer."""
         from swui.fork import safe_ops
 
-        if safe_ops.doc_busy(doc) or not any(hasattr(o, KIND) for o in doc.Objects):
+        if safe_ops.doc_busy(doc) or not operations(doc):
             return
         name = doc.Name
         QtCore.QTimer.singleShot(0, lambda: _check_later(name))
@@ -602,7 +605,7 @@ def _after_save(doc_name):
     pasan a congeladas al guardar el ensamblaje; save_modified_parts guarda las piezas."""
     try:
         doc = FreeCAD.getDocument(doc_name)
-        for v in [o for o in doc.Objects if hasattr(o, KIND)]:
+        for v in operations(doc):
             if any(e[1].Support for e in entries_of(v)):
                 refresh_copies(v)
     except Exception:
@@ -737,7 +740,7 @@ def _tell_if_from_assembly(doc_name):
                     asms.append(d)
             mark = getattr(o, BINDER_MARK, "")
             d = FreeCAD.listDocuments().get(mark)
-            if d is not None and d not in asms and any(hasattr(v, KIND) for v in d.Objects):
+            if d is not None and d not in asms and operations(d):
                 asms.append(d)
         origins = sorted({getattr(o, ORIGIN, "").split(" en ")[-1] for o in binders if getattr(o, ORIGIN, "")})
         names = [d.Label for d in asms] or origins or sorted({getattr(o, BINDER_MARK) for o in binders})

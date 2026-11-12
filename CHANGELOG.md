@@ -5,6 +5,13 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **12/11 de día (sin ventanas):** #43 (chapa: el desarrollo que queda oculto después de Aplanar
+  perdía la cara fija, "?Face6", al agregar una brida o un dobladillo; ahora la vuelve a buscar
+  cada vez que se recalcula, como SW). #74, la variante que quedaba, era de la prueba (el mono
+  achicaba la caja hasta cortar el agujero: la pieza se rompía igual sin configuraciones).
+  #15 (lentitud): el Alcance automático descarta por caja envolvente antes del booleano (60
+  sólidos: 0,17 → 0,05 s por recálculo) y el ensamblaje busca sus operaciones solo entre los
+  VarSet (500 componentes: 1,2 → 0,02 ms por cada componente que se mueve).
 - **Errores arreglados la noche del 11/11 (causa raíz):** #1 (multicuerpo y Simetría de sólidos
   borraban operaciones sin la pieza común: el sólido perdía lo anterior); #3 y #13 (Ecuaciones,
   Material, Suprimir, barra de retroceso, cotas con doble clic, configuraciones, agarraderas de

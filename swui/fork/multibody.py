@@ -430,7 +430,11 @@ def touched_bodies(feature):
             before = copies[body].BaseFeature.Shape if body in copies else body.Shape
             if before.isNull():
                 continue
-            if any(t.common(before).Volume > TOUCH_VOLUME for t in tools):
+            # descarte rápido: si las cajas envolventes no se tocan, el booleano no hace falta (se
+            # corre después de cada recálculo, contra cada sólido: en una soldadura con muchos caños
+            # se notaba, Issue #15)
+            box = before.BoundBox
+            if any(t.BoundBox.intersect(box) and t.common(before).Volume > TOUCH_VOLUME for t in tools):
                 out.append(body)
         except Exception:
             continue
