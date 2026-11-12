@@ -332,17 +332,10 @@ class Configuraciones(Entorno):
     nombre = "configuraciones"
     vinculos = ("body", "hueco")
     acciones = ("config_nueva", "config_ir", "config_ir")
-    # configuración nueva: el primer Chaflán queda con error sin aviso en el informe (#74, camino que
-    # sigue abierto: Chaflán, Agregar configuración, Redondeo, Chaflán, Agregar configuración, nueva;
-    # pasa igual sin el arreglo del padre suprimido: probado 12/11)
-    deuda_pasos = (("#74", "quedaron con error: ['Chamfer", "config_nueva"),)
     # suprimir el Agujero con un Redondeo sobre su arista: el redondeo se suprime con él (como SW)
     # pero FreeCAD igual lo recalcula y avisa (#44; reproducido sin ventana el 10/11)
     deuda = (("#44", ("Failed to recompute suppressed feature", "Invalid edge link"), None, "suprimir"),
-             ("#44", "Failed to recompute suppressed feature", None, "suprimir"),
-             # configuración nueva: un Chaflán pierde su arista (#74; el caso del padre suprimido ya
-             # está arreglado, este camino no: Chaflán, Agregar configuración, Redondeo, Chaflán...)
-             ("#74", "Invalid edge link", "Chamfer", "config_nueva"))
+             ("#44", "Failed to recompute suppressed feature", None, "suprimir"))
 
     def armar(self):
         from casos_otros import anotar
@@ -370,7 +363,11 @@ class Configuraciones(Entorno):
             nombre = cf.add(self.doc, "Mono%d" % rng.randint(1, 9999))
         except ValueError as e:  # #75: con una operación en error
             raise AssertionError("%s: %s" % (que, e))
-        largo = round(rng.uniform(25.0, 70.0), 1)
+        # desde 40: más corta, la pared derecha (x = largo - 20) llega al Agujero (borde en x = 13) y
+        # a los redondeos/chaflanes de hasta 4 que lo rodean; la pieza se rompe de verdad (también
+        # sin configuraciones y en SW). Era la variante de #74 que quedaba (12/11, 300 casos sin
+        # ventana: 0 rotos de 38 a 70; con el agujero lejos de la pared, 0 rotos de 25 a 70)
+        largo = round(rng.uniform(40.0, 70.0), 1)
         cf.configure(self.doc, ("prop", self._caja(), "Length"), largo, scope="this")
         self.doc.recompute()
         bombear(400)
