@@ -53,6 +53,17 @@ def _alcance():
     nombres = sorted(b.Name for b in tocados)
     assert nombres == ["B0", "Lejos"], "atraviesa %s (esperado B0 y Lejos)" % nombres
     assert dt < 0.1, "tardó %.3f s con 60 sólidos (máximo 0,1)" % dt
+    # un caño grande apenas rozado (0,01 mm), con la malla gruesa que arma la vista: su caja sale
+    # de la malla y queda más chica que el sólido; igual tiene que contar (revisión del 12/11)
+    import MeshPart
+    roce = doc.addObject("PartDesign::Body", "Rozado")
+    cano = roce.newObject("PartDesign::AdditiveCylinder", "Grande")
+    cano.Radius, cano.Height = 100, 1000
+    cano.Placement.Base = V(0, 104.99, 0)
+    doc.recompute()
+    MeshPart.meshFromShape(Shape=roce.Shape, LinearDeflection=5.0, AngularDeflection=0.5, Relative=False)
+    nombres = sorted(b.Name for b in mb.touched_bodies(pk))
+    assert "Rozado" in nombres, "dejó afuera el caño rozado: %s" % nombres
     FreeCAD.closeDocument(doc.Name)
 
 

@@ -105,6 +105,19 @@ def prueba():
                 assert not _desplegable(doc, body, sm), "%s: el desarrollo da error y uno nuevo no" % donde
                 break
         FreeCAD.closeDocument(doc.Name)
+    # "Editar croquis sobre el desarrollo" lo apunta a la chapa de antes (una operación, no el
+    # Cuerpo): eso no se toca al recalcular (revisión del 12/11)
+    doc, body, base, flat = _chapa(sm)
+    w = doc.addObject("PartDesign::FeaturePython", "Bend")
+    SheetMetalCmd.SMBendWall(w, base, [_rectas(base)[0]])
+    body.addObject(w)
+    w.setExpression("radius", "%s.Radius" % base.Name)
+    doc.recompute()
+    cara = max(range(len(base.Shape.Faces)), key=lambda i: base.Shape.Faces[i].Area)
+    flat.baseObject = (base, ["Face%d" % (cara + 1)])
+    flat.recompute()
+    assert flat.baseObject[0] is base, "el desarrollo de antes del corte volvió a la pieza entera: %s" % (flat.baseObject,)
+    FreeCAD.closeDocument(doc.Name)
 
 
 from _base import ejecutar  # noqa: E402

@@ -600,6 +600,11 @@ def _refresh_face(flat):
     body = flat_body(flat)
     if body is None or body.TypeId != "PartDesign::Body":
         return
+    # Solo el desarrollo de la pieza entera (apunta al Cuerpo). "Editar croquis sobre el
+    # desarrollo" lo apunta a propósito a la operación de antes del corte (sheet_panels.
+    # edit_cut_sketch): ése se deja como está (lo encontró la revisión del 12/11).
+    if not flat.baseObject or flat.baseObject[0] is not body:
+        return
     face = fixed_face(body)
     if face is not None and flat.baseObject != (body, [face]):
         flat.baseObject = (body, [face])

@@ -432,8 +432,11 @@ def touched_bodies(feature):
                 continue
             # descarte rápido: si las cajas envolventes no se tocan, el booleano no hace falta (se
             # corre después de cada recálculo, contra cada sólido: en una soldadura con muchos caños
-            # se notaba, Issue #15)
-            box = before.BoundBox
+            # se notaba, Issue #15). Con ventana la caja sale de la malla de la vista y puede quedar
+            # algo más chica que el sólido (un caño de radio 100: 99,27): se agranda 1 mm + 2 % de
+            # la diagonal para no dejar afuera un sólido apenas rozado (revisión del 12/11)
+            box = FreeCAD.BoundBox(before.BoundBox)
+            box.enlarge(1.0 + 0.02 * box.DiagonalLength)
             if any(t.BoundBox.intersect(box) and t.common(before).Volume > TOUCH_VOLUME for t in tools):
                 out.append(body)
         except Exception:
