@@ -43,7 +43,11 @@ hasta correr la batería con ventana).**
 - **Probado y descartado:** Congelar (`Std_ToggleFreeze`) para el desarrollo oculto: sin función
   de Python en 1.1.4 y cuelga FreeCAD al guardar (anotado en NOTAS_TECNICAS).
 - **Taladro en error + "Editar posiciones" + Cancelar** (hoy el taladro roto queda): el usuario
-  pidió (12/11) que Claude lo pruebe en SW y haga lo mismo. **Pendiente: necesita la PC libre.**
+  pidió (12/11) que Claude lo pruebe en SW y haga lo mismo. **Probado en SW 2018 con el mouse
+  (12/11, 20:45):** taladro nuevo con el punto fuera de la pieza, Tipo -> Posiciones -> Cancelar:
+  no queda nada (ni el taladro ni su croquis). FreeWorks tiene que hacer lo mismo: el taladro
+  NUEVO se borra al cancelar aunque se haya pasado por "Editar posiciones" (sin programar todavía;
+  se hace sin ventanas).
 - **Quedan sin tocar:** #15, #25 (rendimiento), #40 (visto una vez), #44 (es FreeCAD: recalcula un hijo suprimido),
   #59, #62, #64 (resolvedor de ensamblaje), #76, #78, #57 (capturas: el usuario).
 - **Terminé a las 05:55 del 12/11. Todo subido a GitHub (último commit de la noche: el de #26).** PC libre salvo el proceso huérfano de abajo.
