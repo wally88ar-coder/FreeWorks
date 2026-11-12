@@ -84,7 +84,7 @@ Neueste Version oben. / Newest version first.
   chapa sin desarrollo ya no deja uno oculto en el árbol (como SW, exportar no cambia la pieza).
   "Guardar también STEP" de un ensamblaje exporta sus componentes con sólido (entero, el
   exportador llenaba el informe de errores por las relaciones y los planos). Encontrados por el
-  mono: #80 y #81 (abiertos).
+  mono: #80 (abierto) y #81 (arreglado: un Redondeo sobre una arista que el Chaflán acortó es hijo del Chaflán; suprimirlo lo suprime también, como SW).
 - **Decisiones del 11/11:** Ecuaciones como SW: una ecuación que se calcula bien pero con la que
   una operación no se puede construir se acepta, la operación queda con error en el árbol y el
   aviso dice cuál (antes se rechazaba); una fórmula mal escrita se sigue rechazando.

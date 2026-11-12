@@ -14,11 +14,13 @@
   de taladro al elegir la pieza).
 - **Nuevo:** #79 (un ensamblaje guardado y abierto queda como "modificado", también sin
   taladro; conocido en las pruebas); #80 (ensamblaje: tras un corte, una relación avisa "Broken
-  link" antes de repararse sola); #81 (configuraciones: suprimir un Chaflán no suprime el
-  Redondeo hecho sobre su arista). Los encontró el mono esta noche en código que no se tocó (la
+  link" antes de repararse sola); #81 (suprimir un Chaflán no suprimía el Redondeo hecho sobre
+  una arista que el chaflán acortó: ARREGLADO a las 5, `feature_tree._creators` exige la arista
+  entera). Los encontró el mono esta noche en código que no se tocó (la
   variante de #74 que sigue abierta: probado que falla igual sin el arreglo de esta noche). #75 no se reproduce con una prueba directa (queda
   la prueba). La copia STEP al guardar un ensamblaje ahora exporta sus componentes con sólido
   (entero, el exportador llenaba el informe de errores por las relaciones y los planos).
+- **Pruebas:** batería completa (03:43) 81 bien, 2 conocidas, 3 fallas; las 3 arregladas y vueltas a correr en verde, igual que todas las mono y las reglas de pieza después de #81. Una corrida del mono de ensamblaje falló una vez (05:30) y no se repitió en la siguiente; el detalle se perdió: si vuelve, investigar.
 - **Probado y descartado:** Congelar (`Std_ToggleFreeze`) para el desarrollo oculto: sin función
   de Python en 1.1.4 y cuelga FreeCAD al guardar (anotado en NOTAS_TECNICAS).
 - **Pregunta para el usuario (de la revisión):** Taladro con la vista previa en error +

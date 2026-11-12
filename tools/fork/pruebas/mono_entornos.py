@@ -342,9 +342,7 @@ class Configuraciones(Entorno):
              ("#44", "Failed to recompute suppressed feature", None, "suprimir"),
              # configuración nueva: un Chaflán pierde su arista (#74; el caso del padre suprimido ya
              # está arreglado, este camino no: Chaflán, Agregar configuración, Redondeo, Chaflán...)
-             ("#74", "Invalid edge link", "Chamfer", "config_nueva"),
-             # suprimir un Chaflán no suprime el Redondeo hecho sobre su arista (#81)
-             ("#81", "Invalid edge link", "Fillet", "suprimir"))
+             ("#74", "Invalid edge link", "Chamfer", "config_nueva"))
 
     def armar(self):
         from casos_otros import anotar

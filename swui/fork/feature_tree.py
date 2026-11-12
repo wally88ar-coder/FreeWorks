@@ -427,6 +427,15 @@ def remap(old, shape):
     return names
 
 
+def _same_extent(a, b, tol=1e-6):
+    """Mismo tamaño: largo en aristas, área en caras (relativo)."""
+    if a.ShapeType == "Edge":
+        x, y = a.Length, b.Length
+    else:
+        x, y = a.Area, b.Area
+    return abs(x - y) <= tol * max(1.0, abs(x))
+
+
 def dress_up_creators(dress_up):
     """Operaciones que crearon las aristas/caras elegidas en un redondeo, chaflán..."""
     try:
@@ -470,7 +479,10 @@ def _creators(feature, base, picked):
                 hit = remap([(None, geo)], f.Shape)
             except Exception:
                 hit = []
-            if not hit:
+            # tiene que estar ENTERA (mismo largo o área): una arista que una operación acortó (un
+            # chaflán recorta las de al lado) es de esa operación; si no, suprimirla dejaba con
+            # error al redondeo hecho sobre la arista acortada (#81)
+            if not any(_same_extent(geo, f.Shape.getElement(n)) for n in hit):
                 break
             found = f
         if found not in out:
