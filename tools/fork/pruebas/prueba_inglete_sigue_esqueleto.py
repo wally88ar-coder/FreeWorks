@@ -4,8 +4,6 @@
 QUE = """Marco de 4 caños 40x40 con esquinas a inglete sobre un esqueleto de 600 x 400. Si el
 ancho del esqueleto pasa a 800 y se recalcula, el marco entero ocupa -20..820 x -20..420: los
 caños horizontales llegan a la esquina nueva y ningún caño sobresale ni deja hueco."""
-CONOCIDO = "#2"
-ESPERA = "sobresale"  # el caño vertical pasa la esquina nueva
 
 import FreeCAD  # noqa: E402
 

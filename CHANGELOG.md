@@ -26,6 +26,13 @@ Neueste Version oben. / Newest version first.
   vale solo para el corte pedido; Cancelar ya no deja nada armado que cambie el próximo corte,
   ni uno que traiga FreeCAD al abrir un archivo o deshacer); #22, chapa: copiar y pegar una chapa
   con su desarrollo deja una copia independiente (el desarrollo se reconoce por su vínculo nativo).
+- **#2 (soldadas, grave):** las esquinas a inglete y a tope siguen al esqueleto: la caja que corta
+  cada punta se ubica con una fórmula nativa de FreeCAD sobre las dos líneas (también sin
+  FreeWorks) y el caño se alarga de más para que la caja corte al ras (antes: números fijos y el
+  marco quedaba con huecos o caños sobresalidos al cambiar una medida). #22, soldadas: las marcas
+  de esquina y de recorte son vínculos a la Ruta del otro caño y los alargues van en cada operación
+  (antes, nombres: una copia pegada apuntaba al original); los archivos anteriores se siguen
+  entendiendo. Las esquinas de archivos anteriores siguen fijas hasta que se vuelvan a tratar.
 - **Decisiones del 11/11:** Ecuaciones como SW: una ecuación que se calcula bien pero con la que
   una operación no se puede construir se acepta, la operación queda con error en el árbol y el
   aviso dice cuál (antes se rechazaba); una fórmula mal escrita se sigue rechazando.

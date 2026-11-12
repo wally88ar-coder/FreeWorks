@@ -485,12 +485,63 @@ def _away(body, end):
     return d if end == 0 else d * -1
 
 
-def _corner_id(a, b):
-    return "%s|%s" % tuple(sorted((a.Name, b.Name)))
+# Cada operación de una esquina o de un recorte lleva (11/11, #2 y #22):
+# - SWUI_WeldCorner: su papel, "esquina" o "trim". Los archivos anteriores guardaban ahí NOMBRES
+#   ("Miembro|Miembro001", "trim|miembro|otro"): se siguen leyendo (`_with`).
+# - SWUI_WeldWith: vínculo a la Ruta del otro miembro (o al objeto de la cara, en un recorte contra
+#   cara). Al copiar y pegar, FreeCAD lo lleva a la copia: con nombres, la copia seguía apuntando al
+#   original (#22). Va a la Ruta y no al Cuerpo: la Ruta no depende de nadie (sin ciclos).
+# - SWUI_WeldExt (en una de ellas): "punta@alargue" que pide esa esquina para su miembro. Antes iba
+#   en el Cuerpo (SWUI_WeldExtTags), por nombre de esquina: se pasa al tocar el miembro.
+ROLE_CORNER, ROLE_TRIM = "esquina", "trim"
 
 
-def _tag(obj, cid):
-    _add_prop(obj, "SWUI_WeldCorner", "App::PropertyString", cid)
+def _role(o):
+    cid = getattr(o, "SWUI_WeldCorner", "") or ""
+    if not cid:
+        return None
+    return ROLE_TRIM if cid.startswith(ROLE_TRIM) else ROLE_CORNER
+
+
+def _member_of(o):
+    try:
+        parent = o.getParentGeoFeatureGroup()
+    except Exception:
+        return None
+    return parent if parent is not None and is_member(parent) else None
+
+
+def _with(o):
+    """Con qué es la operación: la Ruta del otro miembro, o el objeto de la cara (recorte contra cara)."""
+    target = getattr(o, "SWUI_WeldWith", None)
+    if target is not None:
+        return target
+    cid = getattr(o, "SWUI_WeldCorner", "") or ""
+    doc = o.Document
+    if cid.startswith("trim|"):  # archivo anterior: "trim|miembro|otro" o "trim|miembro|obj.FaceN"
+        parts = cid.split("|")
+        ref = parts[2] if len(parts) > 2 else ""
+        if "." in ref:
+            return doc.getObject(ref.split(".")[0])
+        other = doc.getObject(ref)
+        return _route_of(other) if other is not None and is_member(other) else None
+    if "|" in cid:  # archivo anterior: "MiembroA|MiembroB"
+        mine = _member_of(o)
+        others = [n for n in cid.split("|") if mine is None or n != mine.Name]
+        other = doc.getObject(others[0]) if others else None
+        return _route_of(other) if other is not None and is_member(other) else None
+    return None
+
+
+def _tag(obj, ref, role=ROLE_CORNER):
+    _add_prop(obj, "SWUI_WeldCorner", "App::PropertyString", role)
+    _add_prop(obj, "SWUI_WeldWith", "App::PropertyLinkHidden", ref)
+
+
+def _ops_with(body, ref, role=None):
+    """Operaciones de esquina o recorte de `body` que son con `ref` (Ruta de otro miembro o cara)."""
+    return [o for o in body.Group if _role(o) is not None and (role is None or _role(o) == role)
+            and _with(o) is ref]
 
 
 def _drop(body, o):
@@ -519,23 +570,23 @@ def _show_tip(body):
 
 def remove_corner(a, b):
     """Sacar el tratamiento de esquina entre dos miembros (operaciones y alargues)."""
-    cid = _corner_id(a, b)
     doc = a.Document
-    for body in (a, b):
-        for o in list(body.Group):
-            if getattr(o, "SWUI_WeldCorner", "") == cid:
-                _drop(body, o)
-        tags = _ext_tags(body)
-        if cid in tags:
-            end = tags.pop(cid)[0]
-            _set_ext_tags(body, tags)
-            _apply_ext(body, end, tags)
+    for body, other in ((a, b), (b, a)):
+        _migrate_ext(body)
+        ends = _drop_legacy_ext(body, (a.Name, b.Name))
+        for o in _ops_with(body, _route_of(other), ROLE_CORNER):
+            ext = _ext_of(o)
+            if ext is not None:
+                ends.add(ext[0])
+            _drop(body, o)
+        _refresh_ext(body, ends)
     doc.recompute()
 
 
 def _ext_tags(body):
-    """{esquina: (punta, alargue)} de SWUI_WeldExtTags ("esquina=punta@alargue;..."). Los archivos
-    anteriores al 07/11 guardaban solo "esquina=punta": alargue None (desconocido)."""
+    """{esquina: (punta, alargue)} de SWUI_WeldExtTags ("esquina=punta@alargue;..."), la marca de
+    los archivos anteriores al 11/11 (ver `_migrate_ext`). Los anteriores al 07/11 guardaban solo
+    "esquina=punta": alargue None (desconocido)."""
     raw = getattr(body, "SWUI_WeldExtTags", "") or ""
     out = {}
     for item in raw.split(";"):
@@ -550,42 +601,77 @@ def _ext_tags(body):
     return out
 
 
+def _ext_of(o):
+    """(punta, alargue) que pide la operación `o` para su miembro, o None."""
+    raw = getattr(o, "SWUI_WeldExt", "") or ""
+    end, _sep, val = raw.partition("@")
+    try:
+        return int(end), float(val)
+    except ValueError:
+        return None
+
+
+def _set_ext_on(op, end, value):
+    _add_prop(op, "SWUI_WeldExt", "App::PropertyString", "%d@%s" % (end, repr(round(float(value), 6))))
+
+
 def _set_ext_tags(body, tags):
+    """Reescribe la marca anterior SWUI_WeldExtTags con lo que queda (la saca si no queda nada)."""
+    if not tags:
+        if "SWUI_WeldExtTags" in body.PropertiesList:
+            body.removeProperty("SWUI_WeldExtTags")
+        return
     items = []
     for k, (end, val) in tags.items():
         items.append("%s=%d" % (k, end) if val is None else "%s=%d@%s" % (k, end, repr(round(val, 6))))
     _add_prop(body, "SWUI_WeldExtTags", "App::PropertyString", ";".join(items))
 
 
-def _apply_ext(body, end, tags):
-    """Alargue de una punta = el MAYOR de los que piden sus esquinas: en una esquina de tres caños
-    (dos largueros y la pata) la misma punta la usan dos esquinas, y cambiar una no debe acortar la
-    otra (arreglado 07/11). Con alargues viejos sin valor guardado, la punta queda como está."""
-    vals = [v for e, v in tags.values() if e == end]
-    if any(v is None for v in vals):
+def _migrate_ext(body):
+    """Archivo anterior al 11/11: los alargues del Cuerpo (por nombre de esquina) pasan a una
+    operación de esa esquina en el mismo Cuerpo. Los de una esquina sin operaciones propias (el que
+    pasa en un tope a 90°: solo se alargaba) quedan en la marca vieja hasta que se saque esa esquina
+    (`_drop_legacy_ext`). Si no se sabía cuánto pedía una esquina, el alargue de hoy (nunca acortar)."""
+    if "SWUI_WeldExtTags" not in body.PropertiesList:
         return
-    value = max(vals) if vals else 0.0
-    if end == 0:
-        set_extension(body, start=value)
-    else:
-        set_extension(body, end=value)
+    keep = {}
+    for cid, (end, val) in _ext_tags(body).items():
+        if val is None:
+            val = extension(body)[0 if end == 0 else 1]
+        ops = [o for o in body.Group if getattr(o, "SWUI_WeldCorner", "") == cid]
+        if ops:
+            _set_ext_on(ops[-1], end, val)
+        else:
+            keep[cid] = (end, val)
+    _set_ext_tags(body, keep)
 
 
-def _extend_for(body, end, value, cid):
+def _drop_legacy_ext(body, names):
+    """Saca de la marca vieja los alargues de la esquina entre los miembros `names` (sus Name, como
+    los guardaba). Devuelve las puntas tocadas."""
     tags = _ext_tags(body)
-    tags[cid] = (end, float(value))
-    _set_ext_tags(body, tags)
-    vals = [v for e, v in tags.values() if e == end]
-    if any(v is None for v in vals):
-        # archivo viejo: no se sabe cuánto pedía la otra esquina; nunca acortar
-        current = extension(body)[0 if end == 0 else 1]
-        value = max(float(value), current)
+    gone = [k for k in tags if set(k.split("|")) == set(names)]
+    ends = set(tags[k][0] for k in gone)
+    for k in gone:
+        del tags[k]
+    if gone:
+        _set_ext_tags(body, tags)
+    return ends
+
+
+def _refresh_ext(body, ends):
+    """Alargue de cada punta de `ends` = el MAYOR de los que piden sus operaciones (y lo que quede de
+    la marca vieja): en una esquina de tres caños (dos largueros y la pata) la misma punta la usan
+    dos esquinas, y sacar una no debe acortar la otra (07/11). Sin ninguna, 0."""
+    legacy = _ext_tags(body)
+    for end in ends:
+        vals = [e[1] for e in (_ext_of(o) for o in body.Group) if e is not None and e[0] == end]
+        vals += [v for e, v in legacy.values() if e == end and v is not None]
+        value = max(vals) if vals else 0.0
         if end == 0:
             set_extension(body, start=value)
         else:
             set_extension(body, end=value)
-        return
-    _apply_ext(body, end, tags)
 
 
 def _envelope_loops(kind, dims, planar=True):
@@ -598,7 +684,7 @@ def _envelope_loops(kind, dims, planar=True):
     return profile_loops(kind, dims, outer_only=True)
 
 
-def _envelope_cut(target, tool, cid, planar=True):
+def _envelope_cut(target, tool, role=ROLE_CORNER, planar=True):
     """En `target`, sacar la envolvente llena del miembro `tool` (barrida por su Ruta, con sus largos).
     planar: corte plano a ras de la cara (esquinas); si no, contra el sólido (ajuste a otro miembro)."""
     doc = target.Document
@@ -627,7 +713,7 @@ def _envelope_cut(target, tool, cid, planar=True):
     pk.setExpression("Length", "%s.Length" % tpad.Name)
     pk.setExpression("Length2", "%s.Length2" % tpad.Name)
     for o in (b, sk, pk):
-        _tag(o, cid)
+        _tag(o, troute, role)
     try:
         sk.ViewObject.Visibility = False
     except Exception:
@@ -635,24 +721,64 @@ def _envelope_cut(target, tool, cid, planar=True):
     return pk
 
 
-def _box_cut(target, vertex_end, normal_out, size, cid, label, offset=0.0, name="Inglete"):
-    """En `target`, una caja que saca todo lo que está del lado `normal_out` del plano que pasa por
-    la punta `vertex_end` de su Ruta (inglete), corrido `offset` mm hacia `normal_out` (punta a tope)."""
-    # ubicada al crearla (en modo "Translate" FreeCAD descarta el giro de la caja, medido 07/11)
-    a0, a1, _d = axis(target)
-    corner = (a0 if vertex_end == 0 else a1) + normal_out * offset
-    box = target.newObject("PartDesign::SubtractiveBox", name)
+def _pt(obj, i):
+    """Fórmula: el punto i (0 o 1) de la línea de `obj` (una Ruta o un SubShapeBinder de una línea)."""
+    return "%s.Shape.Edges[0].Vertexes[%d].Point" % (obj.Name, i)
+
+
+def _num(x):
+    return repr(round(float(x), 6))
+
+
+def _corner_binder(body, other):
+    """La Ruta del otro miembro, copiada adentro de `body` (como la de la envolvente): las fórmulas
+    de la esquina leen las dos líneas desde el mismo Cuerpo, en sus coordenadas."""
+    b = body.newObject("PartDesign::SubShapeBinder", "RutaEsquina")
+    b.Label = "Ruta de " + other.Label
+    b.Support = [(_route_of(other), ("Edge1",))]
+    try:
+        b.ViewObject.Visibility = False
+    except Exception:
+        pass
+    _tag(b, _route_of(other))
+    return b
+
+
+def _corner_box(body, end, binder, kind, size, offset, label, name):
+    """
+    Caja que saca lo que sobra en la punta `end` de `body`, con su ubicación como FÓRMULA de FreeCAD
+    sobre las dos líneas del esqueleto (#2: antes eran números calculados al crearla y la esquina
+    quedaba donde estaba si cambiaba el esqueleto). FreeCAD la recalcula solo, también sin FreeWorks.
+    kind "inglete": el plano de la bisectriz; "tope": el plano de la cara de afuera del otro miembro
+    (perpendicular al otro, corrido `offset` = su media medida). Ejes de la caja: Z = hacia afuera
+    (lo que se saca), Y = normal al plano de la esquina, X = Y x Z.
+    """
+    route = _route_of(body)
+    body.Document.recompute()
+    corner = route.Shape.Edges[0].Vertexes[end].Point
+    pts = [v.Point for v in binder.Shape.Edges[0].Vertexes]
+    end_o = 0 if (pts[0] - corner).Length <= (pts[-1] - corner).Length else 1
+    u = "vnormalize(%s - %s)" % (_pt(route, 1 - end), _pt(route, end))  # desde la esquina, por el propio
+    v = "vnormalize(%s - %s)" % (_pt(binder, 1 - end_o), _pt(binder, end_o))  # y por el otro
+    if kind == "inglete":
+        n = "vnormalize(%s - %s)" % (v, u)
+    else:
+        n = "vnormalize(vcross(vcross(%s; %s); %s))" % (u, v, v)  # perpendicular al otro, hacia afuera
+    y = "vnormalize(vcross(%s; %s))" % (u, v)
+    x = "vcross(%s; %s)" % (y, n)
+    half = _num(size / 2)
+    base = "%s + %s * %s - %s * %s - %s * %s" % (_pt(route, end), n, _num(offset), x, half, y, half)
+    box = body.newObject("PartDesign::SubtractiveBox", name)
     box.Label = label
     box.Length = box.Width = box.Height = size
-    rot = FreeCAD.Rotation(V(0, 0, 1), normal_out)
-    inv = target.getGlobalPlacement().inverse() if hasattr(target, "getGlobalPlacement") else FreeCAD.Placement()
-    box.Placement = inv.multiply(FreeCAD.Placement(corner + rot.multVec(V(-size / 2, -size / 2, 0)), rot))
-    _tag(box, cid)
+    box.setExpression("Placement", "placement(%s; rotation(%s; %s; %s))" % (base, x, y, n))
     return box
 
 
 def butt_extension(passing, end_p, other, end_o=None):
-    """Alargue del miembro que pasa para llegar a la cara de afuera del otro (a tope)."""
+    """Alargue justo del miembro que pasa para llegar a la cara de afuera del otro (a tope). Las
+    esquinas ya no lo usan (alargan de más y la caja corta al ras, con fórmula: #2); queda para
+    medir."""
     u = _away(passing, end_p)
     if end_o is None:
         a, b, v = axis(other)
@@ -670,51 +796,41 @@ def butt_extension(passing, end_p, other, end_o=None):
     return half_o / s + half_p * abs(cos) / s
 
 
-def _butt_tip_cut(passing, end_p, other, end_o, cid):
-    """Esquina a tope en ángulo (no a 90°): la punta del que pasa se corta en ángulo al ras de la
-    cara de afuera del otro, como SW 2018 (comparado 07/11: L a 60° con 40 x 40 x 2, corte de 30°).
-    Sin esto la punta quedaba recta y una esquina sobresalía. A 90° no hace falta (ya queda al ras)."""
-    u = _away(passing, end_p)
-    v = _away(other, end_o)
-    cos = u.dot(v)
-    if abs(cos) < 1e-6 or abs(abs(cos) - 1) < 1e-6:
-        return None
-    n = (u - v * cos) * -1  # perpendicular al otro, hacia afuera de la esquina
-    n.normalize()
-    half_o = half_extent(other, n)
-    w1, h1 = extent(passing.SWUI_WeldKind, list(passing.SWUI_WeldDims))
-    w2, h2 = extent(other.SWUI_WeldKind, list(other.SWUI_WeldDims))
-    size = 4 * (max(w1, h1, w2, h2) + 100)
-    return _box_cut(passing, end_p, n, size, cid, "Punta a tope con " + other.Label, half_o, "PuntaTope")
+def _corner_cut(body, other, end, kind, ext, size, offset=0.0):
+    """La punta `end` de `body` en su esquina con `other`: se alarga de más (`ext`, alcanza para
+    cualquier ángulo de 23° en adelante) y la caja con fórmula corta lo que sobra."""
+    binder = _corner_binder(body, other)
+    if kind == "inglete":
+        label, name = "Inglete con " + other.Label, "Inglete"
+    else:
+        label, name = "Punta a tope con " + other.Label, "PuntaTope"
+    box = _corner_box(body, end, binder, kind, size, offset, label, name)
+    _tag(box, _route_of(other))
+    _set_ext_on(box, end, ext)
+    _refresh_ext(body, {end})
+    return box
 
 
 def apply_corner(corner, treatment="tope", passing=None):
-    """Tratamiento de una esquina (como SW): "tope" (el que pasa se alarga hasta la cara de afuera
-    y el otro se corta contra él), "inglete" (los dos a 45° o a la bisectriz) o "ninguno".
-    En una T siempre es a tope con el que pasa por el medio."""
+    """Tratamiento de una esquina (como SW): "tope" (el que pasa llega hasta la cara de afuera del
+    otro y el otro se corta contra él), "inglete" (los dos a la bisectriz) o "ninguno".
+    En una T siempre es a tope con el que pasa por el medio. Todo sigue al esqueleto (#2): las
+    cajas de corte se ubican con fórmulas sobre las líneas y las envolventes se apoyan en ellas."""
     a, b = corner["a"], corner["b"]
     remove_corner(a, b)
-    cid = _corner_id(a, b)
     doc = a.Document
     if treatment == "ninguno":
         return
     if corner["kind"] == "T":
-        _envelope_cut(b, a, cid)
+        _envelope_cut(b, a)
         doc.recompute()
         return
+    dims = extent(a.SWUI_WeldKind, list(a.SWUI_WeldDims)) + extent(b.SWUI_WeldKind, list(b.SWUI_WeldDims))
+    ext = 10 * max(dims)  # de más: lo que sobra lo saca la caja (antes: justo, con el ángulo de hoy)
+    size = 4 * ext + 200
     if treatment == "inglete":
-        ua, ub = _away(a, corner["end_a"]), _away(b, corner["end_b"])
-        big = 2 * max(extent(a.SWUI_WeldKind, list(a.SWUI_WeldDims)) + extent(b.SWUI_WeldKind,
-                                                                              list(b.SWUI_WeldDims)))
-        theta = math.acos(max(-1.0, min(1.0, ua.dot(ub))))
-        ext = big / max(0.2, math.sin(theta / 2))
-        m = ua - ub
-        m.normalize()
-        _extend_for(a, corner["end_a"], ext, cid)
-        _extend_for(b, corner["end_b"], ext, cid)
-        size = 4 * ext + 200
-        _box_cut(a, corner["end_a"], m * -1, size, cid, "Inglete con " + b.Label)
-        _box_cut(b, corner["end_b"], m, size, cid, "Inglete con " + a.Label)
+        _corner_cut(a, b, corner["end_a"], "inglete", ext, size)
+        _corner_cut(b, a, corner["end_b"], "inglete", ext, size)
         doc.recompute()
         return
     # a tope: pasa el más largo salvo que se diga otro
@@ -725,10 +841,11 @@ def apply_corner(corner, treatment="tope", passing=None):
     other = b if passing == a else a
     end_p = corner["end_a"] if passing == a else corner["end_b"]
     end_o = corner["end_b"] if passing == a else corner["end_a"]
-    _extend_for(passing, end_p, butt_extension(passing, end_p, other, end_o), cid)
-    doc.recompute()
-    _butt_tip_cut(passing, end_p, other, end_o, cid)
-    _envelope_cut(other, passing, cid)
+    u, v = _away(passing, end_p), _away(other, end_o)
+    out = v * u.dot(v) - u  # perpendicular al otro, hacia afuera de la esquina
+    half_o = half_extent(other, out) if out.Length > 1e-9 else 0.0
+    _corner_cut(passing, other, end_p, "tope", ext, size, half_o)
+    _envelope_cut(other, passing)
     doc.recompute()
 
 
@@ -736,8 +853,8 @@ def corner_state(corner):
     """(tratamiento, el que pasa) que tiene hoy una esquina, leído de sus operaciones; None si no
     tiene ninguno."""
     a, b = corner["a"], corner["b"]
-    cid = _corner_id(a, b)
-    feats = [(body, o) for body in (a, b) for o in body.Group if getattr(o, "SWUI_WeldCorner", "") == cid]
+    feats = [(body, o) for body, other in ((a, b), (b, a))
+             for o in _ops_with(body, _route_of(other), ROLE_CORNER)]
     if not feats:
         return None
     if any(o.TypeId == "PartDesign::SubtractiveBox" and not o.Name.startswith("PuntaTope") for _b, o in feats):
@@ -798,7 +915,7 @@ def _reshape(body, kind=None, size=None, rotation=None, anchor=None, mirror=None
     if (kind, size, new_mirror) != (old_kind, old_size, old_mirror) or dims != old_dims or redraw:
         _refill(sk, loops, new_mirror)
         for env in envelopes:
-            planar = not getattr(env, "SWUI_WeldCorner", "").startswith("trim|")
+            planar = _role(env) != ROLE_TRIM
             _refill(env, _envelope_loops(kind, dims, planar), new_mirror)
         old_name = profile_text(old_kind, old_size)
         if not body.Label.startswith(old_name):
@@ -874,19 +991,19 @@ def _forget(body):
     for c in find_corners(members(doc)):
         if body in (c["a"], c["b"]):
             remove_corner(c["a"], c["b"])
+    refs = (_route_of(body), body)  # recorte contra el miembro o contra una cara suya
     for other in members(doc):
         if other is body:
             continue
+        _migrate_ext(other)
+        ends = set()
         for o in list(other.Group):
-            cid = getattr(o, "SWUI_WeldCorner", "")
-            if cid.startswith("trim|") and body.Name in cid.split("|"):
+            if _role(o) == ROLE_TRIM and _with(o) in refs:
+                ext = _ext_of(o)
+                if ext is not None:
+                    ends.add(ext[0])
                 _drop(other, o)
-        tags = _ext_tags(other)
-        gone = [k for k in tags if k.startswith("trim|") and body.Name in k.split("|")]
-        for k in gone:
-            end = tags.pop(k)[0]
-            _set_ext_tags(other, tags)
-            _apply_ext(other, end, tags)
+        _refresh_ext(other, ends)
     doc.recompute()
 
 
@@ -961,18 +1078,20 @@ def trim_to_member(member, tool, extend=True):
     aa, bb, cc = da.dot(da), da.dot(db), db.dot(db)
     dd, ee = da.dot(w0), db.dot(w0)
     den = aa * cc - bb * bb
-    cid = "trim|%s|%s" % (member.Name, tool.Name)
+    _migrate_ext(member)
+    end = need = None
     if abs(den) > 1e-9:
         s = (bb * ee - cc * dd) / den
         hit = a0 + da * s
         length = (a1 - a0).Length
         end = 0 if s < length / 2 else 1
         need = -s if end == 0 else s - length
-        # solo si no llega: hasta el eje del otro (la envolvente saca lo que sobra). Más allá dejaba un
-        # pedacito suelto del otro lado del caño (visto con guion, 07/11)
-        if extend and need > 1e-6:
-            _extend_for(member, end, need, cid)
-    _envelope_cut(member, tool, cid, planar=False)
+    pk = _envelope_cut(member, tool, ROLE_TRIM, planar=False)
+    # solo si no llega: hasta el eje del otro (la envolvente saca lo que sobra). Más allá dejaba un
+    # pedacito suelto del otro lado del caño (visto con guion, 07/11)
+    if extend and need is not None and need > 1e-6:
+        _set_ext_on(pk, end, need)
+        _refresh_ext(member, {end})
     member.Document.recompute()
 
 
@@ -989,9 +1108,10 @@ def trim_to_face(member, face, extend=True):
     obj, sub = face
     p, n = _face_plane(obj, sub)
     a0, a1, d = axis(member)
-    cid = "trim|%s|%s.%s" % (member.Name, obj.Name, sub)
+    _migrate_ext(member)
     den = d.dot(n)
     end = None
+    ext = None
     if abs(den) > 1e-9:
         t = (p - a0).dot(n) / den
         length = (a1 - a0).Length
@@ -1000,7 +1120,7 @@ def trim_to_face(member, face, extend=True):
         if extend and need > 0:
             # más el pedazo del perfil inclinado que todavía no llega al plano
             w, h = extent(member.SWUI_WeldKind, list(member.SWUI_WeldDims))
-            _extend_for(member, end, need + max(w, h) * 2, cid)
+            ext = need + max(w, h) * 2
     # lado a sacar: el que no tiene el medio del miembro
     mid = (a0 + a1) * 0.5
     out = n if (mid - p).dot(n) < 0 else n * -1
@@ -1024,7 +1144,10 @@ def trim_to_face(member, face, extend=True):
     flip = FreeCAD.Rotation(V(1, 0, 0), 180) if z.dot(out) < 0 else FreeCAD.Rotation()
     box.AttachmentOffset = FreeCAD.Placement(flip.multVec(V(-size / 2, -size / 2, 0)), flip)
     for o in (b, box):
-        _tag(o, cid)
+        _tag(o, obj, ROLE_TRIM)
+    if ext is not None:
+        _set_ext_on(box, end, ext)
+        _refresh_ext(member, {end})
     member.Document.recompute()
 
 

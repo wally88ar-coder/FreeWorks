@@ -204,11 +204,9 @@ class Soldada(Entorno):
     nombre = "soldadas"
     vinculos = ("esqueleto", "cuerpos")
     acciones = ("esqueleto", "esqueleto")
-    # errores ya registrados: #2 (el corte de la esquina no sigue al esqueleto), #40 (el reabierto
-    # se cierra solo)
+    # error ya registrado: #40 (el reabierto se cierra solo)
     deuda = ()
-    deuda_pasos = (("#2", "no siguen al esqueleto", "esqueleto"),
-                   ("~#40", "se cerró solo", "guardar"))
+    deuda_pasos = (("~#40", "se cerró solo", "guardar"),)
 
     def armar(self):
         from casos_soldadas import _anotar_paneles

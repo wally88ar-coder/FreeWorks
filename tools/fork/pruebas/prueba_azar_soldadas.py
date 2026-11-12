@@ -11,8 +11,8 @@ catálogo que entre, esquinas a tope o a inglete:
 - la lista de cortes da, para cada caño, su largo real (de punta a punta sobre su eje);
 - guardar y abrir deja los mismos volúmenes;
 - mover un vértice del esqueleto y recalcular: todo lo anterior se sigue cumpliendo, y cada caño
-  queda igual que armando el marco de cero con el esqueleto nuevo (error conocido #2, a tope y a
-  inglete).
+  queda igual que armando el marco de cero con el esqueleto nuevo y las mismas esquinas (#2,
+  arreglado el 11/11: cajas de corte con fórmula).
 Casos por regla: FW_CASOS_AZAR (6 por omisión)."""
 TIPO = "azar"
 
@@ -178,6 +178,20 @@ def _sigue(esquina):
             pts2 = list(pts)
             pts2[i] = nuevo
             doc2, _sk2, cuerpos2 = armar(pts2, tipo, medida, esquina)
+            if esquina == "tope":
+                # el marco editado conserva en cada esquina el caño que pasa (como SW, que mantiene
+                # el orden de recorte); armado de cero, el que pasa es el más largo, que puede ser
+                # otro si el vértice movido cambió los largos: el de cero, con las mismas elecciones
+                w = _w()
+                idx = {b.Name: k for k, b in enumerate(cuerpos)}
+                for c2 in w.find_corners(cuerpos2):
+                    k2 = [cuerpos2.index(c2["a"]), cuerpos2.index(c2["b"])]
+                    c1 = [c for c in w.find_corners(cuerpos)
+                          if sorted([idx[c["a"].Name], idx[c["b"].Name]]) == sorted(k2)]
+                    estado = w.corner_state(c1[0]) if c1 else None
+                    if estado and estado[1] is not None:
+                        w.apply_corner(c2, "tope", cuerpos2[idx[estado[1].Name]])
+                doc2.recompute()
             try:
                 for a, b in zip(cuerpos, cuerpos2):
                     va, vb = a.Shape.Volume, b.Shape.Volume
@@ -217,8 +231,8 @@ def prueba():
     fallas = Fallas()
     solo = os.environ.get("FW_CASO", "")
     reglas = [("marco", marco, ""), ("guardar y abrir", guardar, ""),
-              ("sigue al esqueleto (tope)", _sigue("tope"), "#2"),
-              ("sigue al esqueleto (inglete)", _sigue("inglete"), "#2")]
+              ("sigue al esqueleto (tope)", _sigue("tope"), ""),
+              ("sigue al esqueleto (inglete)", _sigue("inglete"), "")]
     for nombre, fn, conocido in reglas:
         if not solo or solo.lower() in nombre:
             fallas.correr(nombre, fn, conocido)
