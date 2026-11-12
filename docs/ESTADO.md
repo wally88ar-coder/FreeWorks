@@ -1,5 +1,22 @@
 # Estado del fork
 
+**12/11 de día (el usuario usando la PC: solo pruebas SIN ventana; commits locales, NO subidos
+hasta correr la batería con ventana).**
+- Cerradas 13 fichas que estaban arregladas y subidas pero habían quedado abiertas (#4, #5, #7,
+  #19, #23, #36, #45, #46, #48, #49, #54, #55, #56).
+- #74 (variante que quedaba): era la prueba. El mono achicaba la caja hasta que la pared cortaba
+  el agujero; la pieza se rompe igual sin configuraciones (300 casos). Largos desde 40 y
+  `prueba_config_largo_redondeos`. Falta: correr el mono de configuraciones con ventana.
+- #75: cerrada, no se reproduce (120 secuencias al azar sin ventana).
+- #43: arreglado (el desarrollo busca la cara fija antes de cada recálculo),
+  `prueba_chapa_desarrollo_sigue`. Falta: mono de chapa con ventana y sacarle la deuda #43.
+- #15: arreglado (caja envolvente en el Alcance automático; `assembly_features.operations`),
+  `prueba_rendimiento_alcance_ensamblaje`.
+- #59: sin ventana no se reproduce; queda para con ventana. #44: es de FreeCAD (solo el aviso).
+  #25: el detalle de la auditoría se perdió y hay que medir con ventana. #78: es de ventana.
+- **Para la próxima noche (con ventana):** batería completa, mono de chapa y de configuraciones
+  (confirmar #43/#74 y sacar deudas), #59, #79, #80, #76, #60, #68, #40, #25, #78; después subir.
+
 **Noche del 11 al 12/11 (el usuario durmiendo: "corregí todos los de la lista", hasta las 7:30).**
 - **Arreglados con su prueba** (fichas cerradas en GitHub): #38 (copia congelada del croquis en
   las piezas, con "->" / "->?" y "(desactualizada)", como se decidió), #17, #18, #20, #21, #24,
