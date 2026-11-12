@@ -525,10 +525,28 @@ def detect_radius(shape, thick):
     return max(count, key=lambda r: (count[r], r))
 
 
+def flat_body(flat):
+    """
+    El Cuerpo de chapa de un desarrollo de FreeWorks (None si no es uno). Por el vínculo
+    `baseObject` de SheetMetal, que FreeCAD lleva a la copia al copiar y pegar (#22): la marca
+    FLAT_PROP guarda el nombre, y en una copia seguía diciendo el del original. La marca queda
+    para reconocer los desarrollos de FreeWorks y para archivos sin vínculo.
+    """
+    if kind(flat) != "flat" or FLAT_PROP not in flat.PropertiesList:
+        return None
+    try:
+        source = flat.baseObject[0] if flat.baseObject else None
+    except Exception:
+        source = None
+    if source is not None:
+        # archivos viejos: el desarrollo apuntaba a la punta del Cuerpo (ensure_flat los pasa)
+        return source if source.TypeId == "PartDesign::Body" else body_of(source)
+    return flat.Document.getObject(getattr(flat, FLAT_PROP, "") or "")
+
+
 def flat_of(body):
-    doc = body.Document
-    for obj in doc.Objects:
-        if kind(obj) == "flat" and getattr(obj, FLAT_PROP, "") == body.Name:
+    for obj in body.Document.Objects:
+        if kind(obj) == "flat" and flat_body(obj) is body:
             return obj
     return None
 
@@ -633,6 +651,8 @@ def ensure_flat(body, sketches=True):
         flat.Visibility = False
     elif flat.baseObject != (source, [face]):
         flat.baseObject = (source, [face])  # también pasa los desarrollos viejos (apuntaban a la punta)
+    if getattr(flat, FLAT_PROP) != body.Name:
+        setattr(flat, FLAT_PROP, body.Name)  # copia pegada: que la marca diga su Cuerpo (#22)
     if base is not None:
         expr = "%s.%s" % (base.Name, K_PROP)
         if dict(flat.ExpressionEngine).get("KFactor") != expr:

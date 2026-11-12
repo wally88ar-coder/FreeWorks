@@ -24,7 +24,8 @@ Neueste Version oben. / Newest version first.
   configuración anotados en el guardia; las escuchas de soldadas ya no tocan un panel cerrado).
 - **Tercera tanda (11/11):** #9 (Extruir corte de la pestaña Chapa: lo de "hasta el espesor"
   vale solo para el corte pedido; Cancelar ya no deja nada armado que cambie el próximo corte,
-  ni uno que traiga FreeCAD al abrir un archivo o deshacer).
+  ni uno que traiga FreeCAD al abrir un archivo o deshacer); #22, chapa: copiar y pegar una chapa
+  con su desarrollo deja una copia independiente (el desarrollo se reconoce por su vínculo nativo).
 - **Decisiones del 11/11:** Ecuaciones como SW: una ecuación que se calcula bien pero con la que
   una operación no se puede construir se acepta, la operación queda con error en el árbol y el
   aviso dice cuál (antes se rechazaba); una fórmula mal escrita se sigue rechazando.

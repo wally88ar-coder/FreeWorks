@@ -918,7 +918,7 @@ def target_body(doc=None, quiet=False):
     for sel in FreeCADGui.Selection.getSelectionEx(doc.Name):
         obj = sel.Object
         if sm.kind(obj) == "flat":
-            body = doc.getObject(getattr(obj, sm.FLAT_PROP, ""))
+            body = sm.flat_body(obj)
         else:
             body = obj if obj.TypeId == "PartDesign::Body" else sm.body_of(obj)
         if sm.is_sheet_body(body):
