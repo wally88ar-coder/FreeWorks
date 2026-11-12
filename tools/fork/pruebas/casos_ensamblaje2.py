@@ -106,5 +106,14 @@ class CorteEnsamblaje(_AsmCorte):
     def elegir(self, rng):
         yield 1200
 
+    # inválido: sin ninguna pieza afectada, Aceptar avisa y no cierra (#10: antes guardaba igual)
+    reglas = _AsmCorte.reglas + ("invalido",)
+
+    def invalido(self):
+        def gen():
+            self.panel()._clear_parts()
+            yield 600
+        return gen()
+
 
 CASOS = [TaladroEnsamblaje, CorteEnsamblaje]

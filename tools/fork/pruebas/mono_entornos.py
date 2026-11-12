@@ -131,8 +131,7 @@ class Ensamblaje(Entorno):
              ("#38", "The graph must be a DAG", None),
              # el resolvedor de FreeCAD con Matriz + Taladro/Corte + Relaciones (también sin Ecuaciones)
              ("#76", "Solve failed: invalid vector subscript", None))
-    deuda_pasos = (("#37", "Ctrl+Z no volvió", "aceptar Taladro de ensamblaje"),
-                   ("#38", "al abrir quedó modificado", "guardar"),
+    deuda_pasos = (("#38", "al abrir quedó modificado", "guardar"),
                    ("#68", "abrió el panel sin medida de taladro", "Taladro de ensamblaje"))
 
     def armar(self):

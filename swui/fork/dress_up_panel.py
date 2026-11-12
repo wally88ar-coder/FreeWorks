@@ -871,6 +871,11 @@ class SwPanel:
         body = ft.body_of(self.obj)
         return body is None or body.Tip == self.obj
 
+    def _abort_step(self):
+        """Deshace el paso del panel. Un panel que trabaja en varios documentos (taladro de
+        ensamblaje) deshace el paso de toda la aplicación."""
+        self.doc.abortTransaction()
+
     def reject(self):
         from swui.fork import feature_tree as ft
 
@@ -882,7 +887,7 @@ class SwPanel:
         self._restore_visibility()
         self._show_tip()
         # Primero deshacer: resetEdit confirma la transacción abierta (probado en 1.1.4)
-        self.doc.abortTransaction()
+        self._abort_step()
         if self.gdoc.getInEdit() is not None:
             self.gdoc.resetEdit()
         self.doc.recompute()

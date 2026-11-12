@@ -243,11 +243,24 @@ def make_sketch(asm, comp, sub):
     return sk
 
 
+def begin_operation(label):
+    """
+    Un solo paso de deshacer para toda la operación, en el ensamblaje y en todas las piezas (#37):
+    el paso de la APLICACIÓN (FreeCAD.setActiveTransaction), no uno por documento. Con pasos por
+    documento, Ctrl+Z en el ensamblaje sacaba la operación y dejaba el taladro en las piezas
+    (probado con la ventana el 11/11: el paso de la aplicación se deshace entero en todos los
+    documentos; los pasos sueltos, solo en el activo). Ojo: salir de edición CIERRA este paso
+    (también probado): lo que va en el ensamblaje se anota antes (`_Scope._record`).
+    """
+    if not FreeCAD.getActiveTransaction():
+        FreeCAD.setActiveTransaction(label)
+
+
 def add_to_part(link, sk, kind, title):
     """Binder del croquis + taladro / vaciado nativo en el Cuerpo de la pieza."""
     body = part_of(link)
     pdoc = body.Document
-    if not pdoc.HasPendingTransaction:
+    if not pdoc.HasPendingTransaction and not FreeCAD.getActiveTransaction():
         pdoc.openTransaction(LABELS[kind])
     binder = body.newObject("PartDesign::SubShapeBinder", "CroquisEnsamblaje")
     # No relativo y con la posición puesta a mano: el modo relativo de FreeCAD recalcula la
@@ -713,6 +726,7 @@ def open_panel_new(asm, kind, sk):
     hits = hit_by_holes(asm, sk) if kind == "hole" else hit_by_cut(asm, sk, depth=CUT_DEPTH)
     parts, repeated = unique_parts(hits)
     title = next_title({o.Label for o in asm.Document.Objects}, kind)
+    begin_operation(LABELS[kind])
     entries = []
     for link in parts:
         binder, feat = add_to_part(link, sk, kind, title)
@@ -726,9 +740,7 @@ def open_panel(v):
     asm = next((p for p in v.InList if p.TypeId == "Assembly::AssemblyObject"), None)
     if asm is None:
         return None
-    for _l, b, _f in entries_of(v):
-        if not b.Document.HasPendingTransaction:
-            b.Document.openTransaction("Editar " + v.Label)
+    begin_operation("Editar " + v.Label)
     return _show(asm, getattr(v, KIND), getattr(v, SKETCH), entries_of(v), v, v.Label, [])
 
 
@@ -831,22 +843,31 @@ class _Scope:
                 return link
         return None
 
-    def _save(self):
+    def _record(self):
+        """Anota la operación en el ensamblaje, dentro del paso de la operación (antes de que una
+        pieza salga de edición: eso cierra el paso)."""
         doc = self.asm.Document
-        if not doc.HasPendingTransaction:
-            doc.openTransaction(LABELS[self.op_kind])
         if not self.entries:
             if self.data is not None:
                 doc.removeObject(self.data.Name)
             doc.removeObject(self.sketch.Name)
         else:
             self.data = record(self.asm, self.op_kind, self.sketch, self.entries, self.data, self.title)
-        doc.commitTransaction()
-        for d in self.part_docs.values():
+
+    def _finish(self):
+        """Cierra el paso de la operación (si una pieza al salir de edición ya lo cerró, no queda
+        nada abierto) y vuelve al ensamblaje."""
+        FreeCAD.closeActiveTransaction()
+        doc = self.asm.Document
+        for d in list(self.part_docs.values()) + [doc]:
             if d.HasPendingTransaction:
                 d.commitTransaction()
         _recompute_later(list(self.part_docs.values()) + [doc])
         self._back()
+
+    def _save(self):
+        self._record()
+        self._finish()
 
     def _back(self):
         from swui.fork import component_patterns
@@ -854,6 +875,7 @@ class _Scope:
         QtCore.QTimer.singleShot(0, lambda: component_patterns._back_to(self.asm))
 
     def _cancel(self):
+        FreeCAD.closeActiveTransaction(True)  # todo el paso, en todos los documentos
         for d in self.part_docs.values():
             if d.HasPendingTransaction:
                 d.abortTransaction()
@@ -951,13 +973,21 @@ def make_hole_panel():
 
         def accept(self):
             self._copy_to_others()
+            if self.timer.isActive():
+                self.preview()
+            if self._nothing() or not self.valid:
+                return super().accept()  # avisa por qué y no cierra
+            self._record()  # dentro del paso: el Aceptar de la pieza sale de edición y lo cierra
             done = super().accept()
             if done:
-                self._save()
+                self._finish()
             return done
 
+        def _abort_step(self):
+            FreeCAD.closeActiveTransaction(True)  # el paso entero, en todos los documentos
+
         def reject(self):
-            super().reject()
+            super().reject()  # vuelve lo visible, deshace el paso entero y recién sale de edición
             self._cancel()
             return True
 
@@ -1094,6 +1124,9 @@ class CutPanel(_Scope):
         return QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel
 
     def accept(self):
+        self._changed()
+        if self.message.isVisible():
+            return False  # el aviso dice por qué (no cortó, o no toca ninguna pieza): #10
         self._close()
         self._save()
         FreeCADGui.Control.closeDialog()

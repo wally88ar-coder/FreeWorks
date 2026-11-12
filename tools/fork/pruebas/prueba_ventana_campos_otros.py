@@ -14,7 +14,7 @@ from campos_comun import correr_campos  # noqa: E402
 DEUDA = {"Taladro de ensamblaje": (("#38", "The graph must be a DAG", None),),
          "Matriz de componentes": (("#32", "deleted object", None),)}
 # los mismos errores cuando aparecen como una comprobación que falla (no en el informe)
-DEUDA_PASOS = {"Taladro de ensamblaje": (("#37", "Ctrl+Z no volvió"), ("#37", "Ctrl+Y no lo trajo"))}
+DEUDA_PASOS = {}
 
 
 def prueba():

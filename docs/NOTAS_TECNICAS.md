@@ -405,6 +405,12 @@
 - Un primitivo de PartDesign (AdditiveBox, SubtractiveCylinder) suelto (sin apoyo) ignora
   `AttachmentOffset`: ubicarlo con `Placement` (en las pruebas).
 
+- Deshacer en varios documentos (FreeCAD 1.1.4, con la ventana, 11/11): con el paso de la
+  APLICACIÓN (`FreeCAD.setActiveTransaction` ... `closeActiveTransaction`), Std_Undo en un documento
+  deshace el paso en todos; con pasos por documento (`doc.openTransaction`), solo en el activo.
+  Mezclarlos (confirmar un documento en el medio) deja todo mal. Salir de edición (`resetEdit`)
+  CIERRA el paso de la aplicación (lo confirma). Lo usa `assembly_features.begin_operation` (#37).
+
 ## Errores de FreeCAD encontrados (para reportar)
 Los reporta el usuario si quiere (política de IA de FreeCAD: Claude no publica issues ni PR allá).
 Cada uno con lo que hace el fork mientras tanto. Buscado en los issues de FreeCAD/FreeCAD el

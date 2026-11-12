@@ -35,6 +35,10 @@ Neueste Version oben. / Newest version first.
   entendiendo. Las esquinas de archivos anteriores siguen fijas hasta que se vuelvan a tratar.
   Tapas de extremo y cartelas nuevas también siguen a sus miembros (ancladas a la línea, con
   fórmula); las de archivos anteriores quedan fijas.
+- **#37 y #10 (ensamblaje):** el Taladro y el Extruir corte de ensamblaje son UN paso de deshacer en
+  el ensamblaje y en todas las piezas (paso de la aplicación): Ctrl+Z saca la operación y su
+  agujero en cada pieza; Cancelar deshace todo. El corte de ensamblaje no se acepta si no toca
+  ninguna pieza o FreeCAD no pudo cortar (antes se guardaba igual).
 - **Decisiones del 11/11:** Ecuaciones como SW: una ecuación que se calcula bien pero con la que
   una operación no se puede construir se acepta, la operación queda con error en el árbol y el
   aviso dice cuál (antes se rechazaba); una fórmula mal escrita se sigue rechazando.
