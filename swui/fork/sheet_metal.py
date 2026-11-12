@@ -589,6 +589,22 @@ def patch_sketch_names():
     return True
 
 
+def _refresh_face(flat):
+    """
+    Antes de que se recalcule un desarrollo de FreeWorks: la cara fija, buscada de nuevo en la
+    pieza (como SW: el desarrollo sigue siempre a la pieza). El desarrollo guarda la cara por su
+    número y FreeCAD la pierde ("?Face6") cuando una brida o un dobladillo nuevo rehace las caras;
+    antes solo se ponía al día al Aplanar o exportar, y el desarrollo oculto quedaba con error
+    después de Aplanar ida y vuelta (#43; reproducido sin ventana: 8 de 10 secuencias al azar).
+    """
+    body = flat_body(flat)
+    if body is None or body.TypeId != "PartDesign::Body":
+        return
+    face = fixed_face(body)
+    if face is not None and flat.baseObject != (body, [face]):
+        flat.baseObject = (body, [face])
+
+
 def patch_unfold_document():
     """
     SheetMetal arma los croquis del desarrollo en FreeCAD.ActiveDocument: si el desarrollo se
@@ -607,6 +623,7 @@ def patch_unfold_document():
         return True
 
     def execute(self, fp):
+        _refresh_face(fp)
         doc = getattr(fp, "Document", None)
         if doc is None or FreeCAD.ActiveDocument is doc:
             return orig(self, fp)
