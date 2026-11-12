@@ -39,6 +39,10 @@ Neueste Version oben. / Newest version first.
   el ensamblaje y en todas las piezas (paso de la aplicación): Ctrl+Z saca la operación y su
   agujero en cada pieza; Cancelar deshace todo. El corte de ensamblaje no se acepta si no toca
   ninguna pieza o FreeCAD no pudo cortar (antes se guardaba igual).
+- **#12, #14, #11:** si FreeCAD cierra por su cuenta un panel SW ("Sí" a "ya hay un diálogo
+  abierto"), los paneles siguientes ya no salen nativos en inglés y no quedan restos; un croquis
+  desactivado a propósito sigue desactivado al suprimir su operación por configuración; borrar
+  una Tangente y Ctrl+Z la trae con su eje (se borran en el mismo paso).
 - **Decisiones del 11/11:** Ecuaciones como SW: una ecuación que se calcula bien pero con la que
   una operación no se puede construir se acepta, la operación queda con error en el árbol y el
   aviso dice cuál (antes se rechazaba); una fórmula mal escrita se sigue rechazando.

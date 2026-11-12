@@ -695,7 +695,9 @@ def sync_attachments(doc):
                 m = re.search(r":\s*<<([^>]+)>>\s*$", ours[0])
                 mode = m.group(1) if m else mode
             elif mode == OFF:
-                mode = getattr(obj, ft.MAPMODE_PROP, None) or "FlatFace"
+                mode = getattr(obj, ft.MAPMODE_PROP, None)
+                if not mode:
+                    continue  # desactivado a propósito (no por Suprimir de FreeWorks): queda así (#14)
             want = _attach_expr(sheet, aliases, mode)
             if not ours or ours[0].replace(" ", "") != want.replace(" ", ""):
                 obj.setExpression("MapMode", want)

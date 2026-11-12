@@ -343,6 +343,7 @@ def _tangent_axis(asm, joint, refs, connectors):
     if "plane" not in kinds or not kinds & {"cylinder", "cone"}:
         return None
     jo, ua = _assembly_modules()
+    _hook_joint_delete()  # por si al arrancar no estaba el banco Ensamblaje
     jg = ua.getJointGroup(asm)
     axis = jg.newObject("App::FeaturePython", "Joint")
     jo.Joint(axis, jo.JointTypes.index("Perpendicular"))
@@ -462,8 +463,8 @@ class _CompanionObserver:
         if prop not in ("Suppressed", PROP) or not hasattr(obj, "JointType") or hasattr(obj, TANGENT_OF):
             return
         try:
-            if obj.Document.Restoring:
-                return
+            if obj.Document.Restoring or obj.Document.Transacting:
+                return  # al deshacer / rehacer, FreeCAD vuelve las dos juntas (mismo paso)
             for c in companions(obj):
                 if prop == "Suppressed" and c.Suppressed != obj.Suppressed:
                     c.Suppressed = obj.Suppressed
@@ -473,10 +474,14 @@ class _CompanionObserver:
             FreeCAD.Console.PrintLog("[SWUI fork] Eje de la tangente:\n%s\n" % traceback.format_exc())
 
     def slotDeletedObject(self, obj):
+        """Red de seguridad para lo que se borra sin la vista (guiones, sin interfaz). Con la vista,
+        el eje se borra en `_joint_on_delete`, dentro del mismo paso de deshacer (#11)."""
         try:
             if not hasattr(obj, "JointType") or hasattr(obj, TANGENT_OF):
                 return
             doc, name = obj.Document, obj.Name
+            if doc.Transacting or doc.Restoring:
+                return  # deshacer / rehacer: FreeCAD saca y trae las dos juntas
         except Exception:
             return
 
@@ -489,6 +494,38 @@ class _CompanionObserver:
             QtCore.QTimer.singleShot(0, later)  # no borrar dentro del aviso de borrado
         else:
             later()
+
+
+def _joint_on_delete(self, vobj, subelements, _original=None):
+    """
+    Borrar una relación con la vista (Supr, Eliminar): se lleva también sus uniones acompañantes
+    (el eje de una Tangente) EN EL MISMO paso de deshacer (#11). Antes el eje se borraba un
+    momento después, con el paso ya cerrado: Ctrl+Z traía la Tangente sin su eje.
+    """
+    try:
+        obj = vobj.Object
+        if hasattr(obj, "JointType") and not hasattr(obj, TANGENT_OF):
+            for c in companions(obj):
+                obj.Document.removeObject(c.Name)
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Borrar la relación:\n%s\n" % traceback.format_exc())
+    return _original(self, vobj, subelements) if _original is not None else True
+
+
+def _hook_joint_delete():
+    """La vista de las uniones de FreeCAD (JointObject.ViewProviderJoint) no tiene onDelete en
+    1.1.4: se le agrega uno (si un día lo trae, se lo llama después)."""
+    jo, _ua = _assembly_modules()
+    cls = jo.ViewProviderJoint
+    if getattr(cls, "_swui_on_delete", False):
+        return
+    original = getattr(cls, "onDelete", None)
+
+    def onDelete(self, vobj, subelements):
+        return _joint_on_delete(self, vobj, subelements, original)
+
+    cls.onDelete = onDelete
+    cls._swui_on_delete = True
 
 
 def _keep_position(joint, connectors):
@@ -1316,6 +1353,14 @@ def install():
         FreeCAD.Console.PrintError("[SWUI fork] Panel de relaciones del original:\n%s\n" % traceback.format_exc())
     _wrap_double_click()
     FreeCAD.addDocumentObserver(_CompanionObserver())
+    try:
+        _hook_joint_delete()
+    except ImportError:
+        # sin el banco Ensamblaje cargado todavía (o en la prueba de carga): se engancha al crear
+        # la primera Tangente (`_tangent_axis`)
+        FreeCAD.Console.PrintLog("[SWUI fork] Borrar relaciones: Ensamblaje no disponible todavía.\n")
+    except Exception:
+        FreeCAD.Console.PrintError("[SWUI fork] Borrar relaciones:\n%s\n" % traceback.format_exc())
     if hasattr(FreeCADGui, "addWorkbenchManipulator"):
         FreeCADGui.addWorkbenchManipulator(_Manipulator())
     _installed = True

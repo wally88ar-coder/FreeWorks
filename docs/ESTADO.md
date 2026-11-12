@@ -1743,20 +1743,7 @@ Pendiente:
 - Pedido a FreeCAD (planos en ángulo / punto medio): el usuario lo dejó por ahora.
 - Las preguntas del 11/11 (#2, #34, #47, #22, densidad "7.850", ecuación que deja una
   operación imposible) ya tienen respuesta: ver Decisiones (11/11).
-- **#38 (11/11, noche 2): Taladro / corte de ensamblaje y la dependencia circular entre archivos.**
-  Hoy el agujero se hace DENTRO de cada pieza, con una copia que apunta al croquis del ensamblaje;
-  como el ensamblaje ya apunta a la pieza, queda un círculo (ensamblaje -> pieza -> ensamblaje).
-  SW lo permite; FreeCAD no: al abrir avisa "The graph must be a DAG" y el ensamblaje queda
-  "modificado" sin tocar nada. Opciones:
-  (a) **la copia en la pieza queda congelada** (sin vínculo al ensamblaje): sin círculo; al
-      editar el taladro desde el ensamblaje, FreeWorks vuelve a copiar el croquis a las piezas.
-      Contra: si se cambia el croquis a mano sin el panel, las piezas no se enteran.
-  (b) **el croquis del taladro vive en un archivo aparte** (p. ej. "Conjunto_operaciones.FCStd")
-      que leen el ensamblaje y las piezas: sin círculo y todo sigue solo. Contra: un archivo más.
-  (c) **como SW por defecto: el agujero solo en el ensamblaje** (no en la pieza). Contra: no sale
-      en el plano ni en el DXF de la pieza (hoy sí sale), y FreeCAD no corta componentes
-      vinculados sin copiarlos.
-  Recomiendo (a): es lo que más se parece al uso real y no agrega archivos.
+- #38 ya tiene respuesta (11/11): ver Decisiones.
 - Bajo, sin tocar (revisión del 11/11): después de una fórmula rechazada el documento puede
   quedar "modificado" aunque nada cambió; taladro/corte de ensamblaje con un componente
   reemplazado por otra pieza que tenga una operación con el mismo nombre (sin probar).
@@ -2709,6 +2696,18 @@ Etapas:
   FreeCAD, no acepta caras). Resuelto con el panel propio.
 
 ## Decisiones
+- **#38, taladro / corte de ensamblaje (usuario, 11/11): opción (a) + avisos 1, 2 y 3.** La copia del
+  croquis en cada pieza queda CONGELADA (sin vínculo al ensamblaje: se corta el círculo de
+  dependencias que FreeCAD no admite); editar la operación desde el ensamblaje la vuelve a copiar.
+  Qué tiene que pasar:
+  1. En el árbol de la pieza la operación se llama "Taladro1 -> Conjunto" (la flecha de SW para lo
+     que viene de afuera); desactualizada, "Taladro1 ->? Conjunto".
+  2. En sus propiedades: de qué operación y archivo viene y cuándo se copió.
+  3. Con el ensamblaje abierto, FreeWorks compara la huella del croquis del ensamblaje con la de
+     cada pieza (al abrir y al cambiar el croquis): si no coincide, "->?" en la pieza, marca en el
+     árbol del ensamblaje y aviso en la barra de estado ("edítelo desde el ensamblaje para
+     actualizar"). Sin el ensamblaje abierto solo se ve "->" y la fecha (como SW fuera de contexto).
+  Sin botón "Actualizar piezas" por ahora (editar desde el ensamblaje ya actualiza).
 - **Respuestas del usuario (11/11) a las preguntas de la noche:**
   - #2 esquinas de soldadas: **fórmulas nativas** de FreeCAD atadas al esqueleto (ubicación y
     giro de las cajas de corte y los alargues), para que sigan solas también sin FreeWorks.

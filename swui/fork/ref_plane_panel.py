@@ -350,7 +350,7 @@ def resync(doc):
 
 
 def _after_recompute(doc_name):
-    if _resync["busy"] or dp._state.get("panel") is not None:
+    if _resync["busy"] or dp.busy_panel() is not None:
         return
     try:
         doc = FreeCAD.getDocument(doc_name)

@@ -638,6 +638,11 @@ class ConvertPanel:
             pass
         dp._state["panel"] = None
 
+    def _orphaned(self):
+        """FreeCAD cerró el panel sin Cancelar (#12): apagar la escucha y sacar lo dibujado. Sin
+        tocar pasos de deshacer: el comando que lo cerró ya abrió el suyo."""
+        self._close()
+
     def accept(self):
         if not self.face:
             self._say("Elija la cara fija: una cara grande y plana de la chapa.")

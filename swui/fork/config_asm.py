@@ -866,8 +866,10 @@ class _DocObserver:
         if prop != "LinkedObject" or _state["busy"]:
             return
         try:
-            if not is_component(obj) or obj.Document.Restoring:
-                return
+            from swui.fork import safe_ops
+
+            if not is_component(obj) or safe_ops.doc_busy(obj.Document):
+                return  # al abrir o al deshacer / rehacer, no (#11: volvía a aplicar lo deshecho)
         except Exception:
             return
         name, doc_name = obj.Name, obj.Document.Name

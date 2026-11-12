@@ -752,6 +752,11 @@ class MoveBodiesPanel:
             pass
         dp._state["panel"] = None
 
+    def _orphaned(self):
+        """FreeCAD cerró el panel sin Cancelar (#12): apagar la escucha y sacar lo dibujado. Sin
+        tocar pasos de deshacer: el comando que lo cerró ya abrió el suyo."""
+        self._close()
+
     def accept(self):
         if not self.preview():
             return False

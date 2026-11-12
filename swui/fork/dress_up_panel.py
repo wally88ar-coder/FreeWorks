@@ -1438,13 +1438,38 @@ def _in_workbench():
         return False
 
 
+def busy_panel():
+    """
+    El panel SW abierto según la marca `_state["panel"]`, solo si de verdad sigue abierto (#12).
+    Cada panel pone la marca y la saca al cerrarse; si FreeCAD lo cerró por su cuenta ("Sí" a "ya
+    hay un diálogo abierto") y el panel no la sacó, la marca quedaba puesta y todos los paneles SW
+    que siguen salían nativos (en inglés). Acá se comprueba con panel_guard y, si ya no está, se
+    limpia lo que dejó (`_orphaned`, si lo tiene) y la marca vuelve a None.
+    """
+    panel = _state["panel"]
+    if panel is None:
+        return None
+    from swui.fork import panel_guard
+
+    if panel_guard.alive(panel):
+        return panel
+    _state["panel"] = None
+    cleanup = getattr(panel, "_orphaned", None)
+    if cleanup is not None:
+        try:
+            cleanup()
+        except Exception:
+            FreeCAD.Console.PrintLog("[SWUI fork] Panel cerrado por FreeCAD:\n%s\n" % traceback.format_exc())
+    return None
+
+
 def _take_over(doc_name, obj_name):
     """Cambiar el diálogo nativo por el panel SW (ya fuera del slotInEdit)."""
     try:
         doc = FreeCAD.getDocument(doc_name)
         obj = doc.getObject(obj_name)
         vp = FreeCADGui.getDocument(doc_name).getInEdit()
-        if obj is None or vp is None or vp.Object != obj or _state["panel"] is not None:
+        if obj is None or vp is None or vp.Object != obj or busy_panel() is not None:
             return
         old_preview = _hide_native_preview()
         FreeCADGui.Control.closeDialog()
@@ -1520,7 +1545,7 @@ class _EditObserver:
                 if action is not None:
                     QtCore.QTimer.singleShot(0, action)
                     return
-        if panel_class(obj) is not None and _state["panel"] is None and not _state["native"] and _in_workbench():
+        if panel_class(obj) is not None and busy_panel() is None and not _state["native"] and _in_workbench():
             QtCore.QTimer.singleShot(0, lambda: _take_over(obj.Document.Name, obj.Name))
 
 
