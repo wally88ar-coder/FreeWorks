@@ -30,7 +30,7 @@
   Cancela, el taladro roto queda (el panel lo trata como existente). ¿En SW se borra?
 - **Quedan sin tocar:** #15, #25 (rendimiento), #40 (visto una vez), #44 (es FreeCAD: recalcula un hijo suprimido),
   #59, #62, #64 (resolvedor de ensamblaje), #76, #78, #57 (capturas: el usuario).
-- **Terminé a las 06:10 del 12/11. Todo subido a GitHub (último commit de la noche: el de #26).** PC libre salvo el proceso huérfano de abajo.
+- **Terminé a las 05:55 del 12/11. Todo subido a GitHub (último commit de la noche: el de #26).** PC libre salvo el proceso huérfano de abajo.
 - Proceso huérfano: un FreeCAD de prueba (PID 7620, desde las ~21 h del 11/11) no se pudo cerrar;
   hay que cerrarlo desde el Administrador de tareas o reiniciar. Un descuido: un rato corrí un
   FreeCADCmd mientras había una prueba con ventana.
