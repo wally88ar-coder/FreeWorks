@@ -1315,24 +1315,33 @@ def cut_list_sheet(doc, rows, name="ListaDeCortes"):
 
 def end_cap(member, end, thickness=3.0, inset=0.0):
     """Tapa de extremo (como SW): chapa con el contorno de afuera del perfil (menos `inset` por lado),
-    apoyada en la punta del miembro, hacia afuera. Un Cuerpo aparte, ubicado al crearla."""
+    apoyada en la punta del miembro, hacia afuera. Un Cuerpo aparte que SIGUE al miembro (#2): su
+    croquis se ancla a la línea del miembro como el perfil del caño (misma ubicación y giro, con
+    fórmula) y se corre lo que el caño se alarga en esa punta; también sin FreeWorks."""
     doc = member.Document
-    a0, a1, d = axis(member)
-    sh = member.Shape
-    ts = [(v.Point - a0).dot(d) for v in sh.Vertexes]
-    t_end = min(ts) if end == 0 else max(ts)
-    out = d * (-1 if end == 0 else 1)
-    p = a0 + d * t_end
-    sk_pl = _profile_of(member).getGlobalPlacement()
-    rot = sk_pl.Rotation
-    if rot.multVec(V(0, 0, 1)).dot(out) < 0:
-        rot = rot.multiply(FreeCAD.Rotation(V(1, 0, 0), 180))
-    center = sk_pl.Base + d * (t_end - (sk_pl.Base - a0).dot(d))
+    route, prof, mpad = _route_of(member), _profile_of(member), _pad_of(member)
     body = doc.addObject("PartDesign::Body", "Tapa")
     body.Label = "Tapa de extremo"
+    binder = body.newObject("PartDesign::SubShapeBinder", "RutaTapa")
+    binder.Label = "Ruta de " + member.Label
+    binder.Support = [(route, ("Edge1",))]
+    try:
+        binder.ViewObject.Visibility = False
+    except Exception:
+        pass
     sk = body.newObject("Sketcher::SketchObject", "PerfilTapa")
     sk.Label = "Perfil de la tapa"
-    sk.Placement = FreeCAD.Placement(center, rot)
+    sk.AttachmentSupport = [(binder, "Edge1")]
+    sk.MapMode = "NormalToEdge"
+    sk.MapPathParameter = 0.0 if end == 0 else 1.0
+    # en este anclaje el Z del croquis va de la punta final a la inicial (medido 11/11): la punta
+    # inicial está corrida +alargue inicial y la final, -alargue final
+    if end == 0:
+        shift = "%s.Length2 / 1 mm" % mpad.Name
+    else:
+        shift = "-(%s.Length / 1 mm - %s.Shape.Length)" % (mpad.Name, route.Name)
+    sk.setExpression("AttachmentOffset", "placement(%s.AttachmentOffset.Base + vector(0; 0; %s); %s.AttachmentOffset.Rotation)"
+                     % (prof.Name, shift, prof.Name))
     kind, dims = member.SWUI_WeldKind, list(member.SWUI_WeldDims)
     loops = profile_loops(kind, dims, outer_only=True)
     if inset:
@@ -1354,12 +1363,50 @@ def end_cap(member, end, thickness=3.0, inset=0.0):
     pad = body.newObject("PartDesign::Pad", "Tapa")
     pad.Profile = sk
     pad.Length = float(thickness)
+    pad.Reversed = end == 1  # hacia afuera del caño (el Z del croquis mira hacia adentro en la final)
     _add_prop(body, "SWUI_WeldPart", "App::PropertyString", "tapa")
     w_, h_ = extent(kind, dims)
     _add_prop(body, "SWUI_WeldPlate", "App::PropertyString", "Tapa de extremo %sx%s e=%s" % (
         _fmt(w_ - 2 * inset), _fmt(h_ - 2 * inset), _fmt(thickness)))
     doc.recompute()
     return body
+
+
+def _follow_gusset(body, sk, a, b, p, off_a, off_b, tol=0.01):
+    """Que la cartela siga a los dos miembros (#2): si la esquina es la punta de las dos líneas (lo
+    común), la ubicación del croquis pasa a ser una fórmula sobre ellas (copiadas en el Cuerpo de la
+    cartela); si los ejes se cruzan en otro lado (un miembro recortado o alargado), queda fija."""
+    ra, rb = _route_of(a), _route_of(b)
+    ends = []
+    for r in (ra, rb):
+        pts = [v.Point for v in r.Shape.Edges[0].Vertexes]
+        hits = [i for i, q in enumerate(pts) if (q - p).Length < tol]
+        if not hits:
+            return
+        ends.append(hits[0])
+    binders = []
+    for r, m in ((ra, a), (rb, b)):
+        bd = body.newObject("PartDesign::SubShapeBinder", "RutaCartela")
+        bd.Label = "Ruta de " + m.Label
+        bd.Support = [(r, ("Edge1",))]
+        try:
+            bd.ViewObject.Visibility = False
+        except Exception:
+            pass
+        binders.append(bd)
+    body.Document.recompute()
+    # las copias pueden tener la línea al revés: la punta de la esquina se busca de nuevo en ellas
+    ends = []
+    for bd in binders:
+        pts = [v.Point for v in bd.Shape.Edges[0].Vertexes]
+        ends.append(0 if (pts[0] - p).Length <= (pts[-1] - p).Length else 1)
+    (ba, bb), (ea, eb) = binders, ends
+    ua = "vnormalize(%s - %s)" % (_pt(ba, 1 - ea), _pt(ba, ea))
+    ub = "vnormalize(%s - %s)" % (_pt(bb, 1 - eb), _pt(bb, eb))
+    n = "vnormalize(vcross(%s; %s))" % (ua, ub)
+    y = "vcross(%s; %s)" % (n, ua)
+    base = "%s + %s * %s + %s * %s" % (_pt(ba, ea), ua, _num(off_a), ub, _num(off_b))
+    sk.setExpression("Placement", "placement(%s; rotation(%s; %s; %s))" % (base, ua, y, n))
 
 
 def gusset(a, b, size=80.0, thickness=6.0):
@@ -1404,6 +1451,7 @@ def gusset(a, b, size=80.0, thickness=6.0):
     sk = body.newObject("Sketcher::SketchObject", "PerfilCartela")
     sk.Label = "Perfil de la cartela"
     sk.Placement = pl
+    _follow_gusset(body, sk, a, b, p, off_a, off_b)
     pts = [inv.multVec(q) for q in (q0, q1, q2)]
     pts = [V(q.x, q.y, 0) for q in pts]
     _fill_sketch(sk, [("poly", pts)])

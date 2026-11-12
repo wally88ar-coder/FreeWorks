@@ -33,6 +33,8 @@ Neueste Version oben. / Newest version first.
   de esquina y de recorte son vínculos a la Ruta del otro caño y los alargues van en cada operación
   (antes, nombres: una copia pegada apuntaba al original); los archivos anteriores se siguen
   entendiendo. Las esquinas de archivos anteriores siguen fijas hasta que se vuelvan a tratar.
+  Tapas de extremo y cartelas nuevas también siguen a sus miembros (ancladas a la línea, con
+  fórmula); las de archivos anteriores quedan fijas.
 - **Decisiones del 11/11:** Ecuaciones como SW: una ecuación que se calcula bien pero con la que
   una operación no se puede construir se acepta, la operación queda con error en el árbol y el
   aviso dice cuál (antes se rechazaba); una fórmula mal escrita se sigue rechazando.
