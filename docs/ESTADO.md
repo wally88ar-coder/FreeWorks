@@ -21,14 +21,16 @@
   la prueba). La copia STEP al guardar un ensamblaje ahora exporta sus componentes con sólido
   (entero, el exportador llenaba el informe de errores por las relaciones y los planos).
 - **Pruebas:** batería completa (03:43) 81 bien, 2 conocidas, 3 fallas; las 3 arregladas y vueltas a correr en verde, igual que todas las mono y las reglas de pieza después de #81. Una corrida del mono de ensamblaje falló una vez (05:30) y no se repitió en la siguiente; el detalle se perdió: si vuelve, investigar.
+- #26 no se reproduce (abrir Matriz lineal y circular vacías, sin aviso en inglés): cerrada, con
+  `prueba_ventana_matriz_vacia_sin_ingles` de guardia.
 - **Probado y descartado:** Congelar (`Std_ToggleFreeze`) para el desarrollo oculto: sin función
   de Python en 1.1.4 y cuelga FreeCAD al guardar (anotado en NOTAS_TECNICAS).
 - **Pregunta para el usuario (de la revisión):** Taladro con la vista previa en error +
   "Editar posiciones": ahora no se borra (va al croquis y el panel vuelve), pero si después se
   Cancela, el taladro roto queda (el panel lo trata como existente). ¿En SW se borra?
-- **Quedan sin tocar:** #15, #25 (rendimiento), #26 (aviso en inglés de una matriz vacía:
-  necesita ver de dónde sale), #40 (visto una vez), #44 (es FreeCAD: recalcula un hijo suprimido),
+- **Quedan sin tocar:** #15, #25 (rendimiento), #40 (visto una vez), #44 (es FreeCAD: recalcula un hijo suprimido),
   #59, #62, #64 (resolvedor de ensamblaje), #76, #78, #57 (capturas: el usuario).
+- **Terminé a las 06:10 del 12/11. Todo subido a GitHub (último commit de la noche: el de #26).** PC libre salvo el proceso huérfano de abajo.
 - Proceso huérfano: un FreeCAD de prueba (PID 7620, desde las ~21 h del 11/11) no se pudo cerrar;
   hay que cerrarlo desde el Administrador de tareas o reiniciar. Un descuido: un rato corrí un
   FreeCADCmd mientras había una prueba con ventana.
