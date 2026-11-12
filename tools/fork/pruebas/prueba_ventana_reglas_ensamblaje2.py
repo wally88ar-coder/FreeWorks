@@ -13,8 +13,9 @@ from casos_ensamblaje2 import CASOS  # noqa: E402
 from reglas_paneles import correr  # noqa: E402
 
 DEUDA = {
-    ("Taladro de ensamblaje", "guardar"): ("#38", "DAG", "modificado", "Failed to get subshape"),
-    ("Extruir corte de ensamblaje", "guardar"): ("#38", "DAG", "modificado", "Failed to get subshape"),
+    # guardar y abrir deja el ensamblaje como modificado (pasa también sin taladro: #79)
+    ("Taladro de ensamblaje", "guardar"): ("#79", "al abrir quedó modificado"),
+    ("Extruir corte de ensamblaje", "guardar"): ("#79", "al abrir quedó modificado"),
 }
 
 

@@ -23,10 +23,18 @@ _state = {}
 
 
 def relink(obj):
-    """Vuelve a poner las fórmulas de obj tal cual (rearma su dependencia)."""
+    """Vuelve a poner las fórmulas de obj tal cual (rearma su dependencia). Si una no se puede volver
+    a poner (lee algo que ya no está), se intenta dejarla como estaba: nunca se pierde una fórmula."""
     for path, expr in list(getattr(obj, "ExpressionEngine", []) or []):
         obj.setExpression(path, None)
-        obj.setExpression(path, expr)
+        try:
+            obj.setExpression(path, expr)
+        except Exception:
+            try:
+                obj.setExpression(path, expr)
+            except Exception:
+                FreeCAD.Console.PrintWarning("[SWUI fork] No se pudo volver a poner la fórmula %s.%s = %s\n"
+                                             % (obj.Label, path, expr))
 
 
 class _Relink:
@@ -57,6 +65,9 @@ class _Relink:
 
     def slotRedoDocument(self, doc):
         self._done(doc)
+
+    def slotAbortTransaction(self, doc):
+        self._done(doc)  # Cancelar de un panel: lo que vuelve también se repara
 
     def slotDeletedDocument(self, doc):
         self.pending.pop(doc.Name, None)

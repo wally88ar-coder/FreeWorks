@@ -531,11 +531,13 @@ class HolePanel(dp.SwPanel):
         if self.valid:
             if not self.accept():
                 return
-            FreeCADGui.Control.closeDialog()
-            FreeCADGui.addDocumentObserver(_BackToHole(sk, hole))  # al salir del croquis, de vuelta acá
         else:
-            self.reject()
-            FreeCADGui.Control.closeDialog()
+            # con la vista previa en error (p. ej. posiciones que no tocan la pieza) se va igual al
+            # croquis a corregirlas, como SW: el taladro queda como está y el panel vuelve al salir.
+            # Antes se cancelaba: un taladro nuevo se borraba y el panel no volvía (#17)
+            self._finish_accept()
+        FreeCADGui.Control.closeDialog()
+        FreeCADGui.addDocumentObserver(_BackToHole(sk, hole))  # al salir del croquis, de vuelta acá
         QtCore.QTimer.singleShot(100, lambda: _edit_sketch(sk))
 
 

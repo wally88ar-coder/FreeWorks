@@ -12,12 +12,7 @@ TIPO = "completa"
 from casos_ensamblaje import CASOS  # noqa: E402
 from reglas_paneles import correr  # noqa: E402
 
-DEUDA = {
-    ("Relación de posición", "otro_comando"): ("~#33", "QListWidget"),
-    ("Matriz de componentes", "cancelar"): ("#32", "deleted object"),
-    ("Matriz de componentes", "otro_comando"): ("#32", "deleted object"),
-    ("Matriz de componentes", "aceptar"): ("#32", "deleted object"),
-}
+DEUDA = {}
 
 
 def prueba():

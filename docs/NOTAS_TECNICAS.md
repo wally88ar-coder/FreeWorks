@@ -525,6 +525,20 @@ Cada uno con lo que hace el fork mientras tanto. Buscado en los issues de FreeCA
      en `slotUndoDocument` / `slotRedoDocument`, les saca y vuelve a poner las fórmulas (rearma la
      dependencia; sin pasos de deshacer nuevos). `prueba_formulas_tras_rehacer` avisa el día que
      FreeCAD lo arregle.
+9. **`makeOffset2D` no anda sobre una recta** (FreeCAD 1.1.4, 2026-11-12, #63): una línea sola (o
+   varias alineadas) da `makeOffset2D: wires are nonplanar or noncoplanar` (el plano no queda
+   definido y la función no deja darlo). El fork arma esa equidistancia a mano en el plano del
+   croquis (`sketch_offset._offset2d`); prueba `prueba_croquis_equidistanciar_recta`.
+
+Otros hallazgos del 12/11 (no son errores para reportar):
+- Congelar (`Std_ToggleFreeze`) no tiene función de Python en 1.1.4 (`freeze`/`isFreezed` no
+  existen en el objeto) y, como ya decía `feature_tree.py`, cuelga FreeCAD al guardar: probado de
+  nuevo (la prueba se colgó en `saveAs`). No sirve para dejar quieto el desarrollo oculto (#43).
+- La edición nativa de SheetMetal (`setEdit` de su proveedor de vista) muestra el croquis ANTES
+  de abrir su paso de deshacer (`openTransaction(<nombre de la operación>)`); salir de la edición
+  confirmaba ese paso. El fork lo descarta al pasar al panel SW (#39, #31).
+- El volumen (`Shape.Volume`) de un compuesto que tiene caras sueltas (un ensamblaje con un plano)
+  da números sin sentido (~1e101) que cambian con el ruido de la cuenta: sumar `Solids`.
 
 ## Chapa (fase 1): hallazgos con SheetMetal 0.8.26 en FreeCAD 1.1.4
 - SheetMetal se importa por módulos (`SheetMetalBaseCmd`, `SheetMetalCmd`, `SheetMetalUnfoldCmd`):

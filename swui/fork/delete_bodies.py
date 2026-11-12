@@ -301,9 +301,10 @@ def build(doc, group, spec):
         chosen.add(idx)
         pieces[body.Name] = (chosen, len(body.Shape.Solids))
     gone, keep = plan(spec["mode"], names, whole, pieces)
-    import CompoundTools.CompoundFilter as CF
-
-    used = set(o.Label for o in doc.Objects)
+    # todo o nada (#18): primero se ubica cada pedazo y recién después se crea algo; si algo falla
+    # al crear, se borra lo creado. Antes un pedazo que fallaba a mitad dejaba los anteriores y
+    # reintentar los duplicaba.
+    todo = []
     for name, rest in keep.items():
         body = doc.getObject(name)
         solids = body.Shape.Solids
@@ -311,11 +312,20 @@ def build(doc, group, spec):
             p = inner_point(solids[i])
             if p is None:
                 return "No pude ubicar un pedazo de %s." % body.Label
+            todo.append((body, i, p))
+    import CompoundTools.CompoundFilter as CF
+
+    used = set(o.Label for o in doc.Objects)
+    created = []
+    try:
+        for body, i, p in todo:
             pt = doc.addObject("Part::Vertex", "Punto")
+            created.append(pt)
             pt.X, pt.Y, pt.Z = p.x, p.y, p.z
             pt.Visibility = False
             multibody._keep_label(pt, "Punto (%s, pedazo<%d>)" % (body.Label, i + 1))
             filt = CF.makeCompoundFilter("Filtro")
+            created.append(filt)
             filt.Base = body
             filt.FilterType = "collision-pass"
             filt.Stencil = pt
@@ -324,11 +334,22 @@ def build(doc, group, spec):
             group.addObject(pt)
             group.addObject(filt)
             new = doc.addObject(BODY, "Body")
+            created.append(new)
             new.BaseFeature = filt
             label = multibody.next_body_label(used)
             used.add(label)
             multibody._keep_label(new, label)
-        body.Visibility = False
+    except Exception:
+        for o in reversed(created):
+            try:
+                if o.getParentGroup() is not None:
+                    o.getParentGroup().removeObject(o)
+                doc.removeObject(o.Name)
+            except Exception:
+                pass
+        raise
+    for name in keep:
+        doc.getObject(name).Visibility = False
     for name in gone:
         body = doc.getObject(name)
         group.addObject(body)

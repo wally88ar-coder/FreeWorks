@@ -12,14 +12,7 @@ TIPO = "completa"
 from casos_grupo3 import CASOS  # noqa: E402
 from reglas_paneles import correr  # noqa: E402
 
-DEUDA = {
-    ("Brida base", "editar_cancelar"): ("#31 #39", "Croquis cambió (visible)", "pasos de deshacer"),
-    ("Brida base", "editar_cambiar"): ("#39", "pasos de deshacer"),
-    ("Brida de arista", "editar_cancelar"): ("#39", "pasos de deshacer"),
-    ("Brida de arista", "editar_cambiar"): ("#39", "pasos de deshacer"),
-    ("Dobladillo", "editar_cancelar"): ("#39", "pasos de deshacer"),
-    ("Dobladillo", "editar_cambiar"): ("#39", "pasos de deshacer"),
-}
+DEUDA = {}
 
 
 def prueba():

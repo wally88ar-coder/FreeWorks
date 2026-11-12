@@ -5538,6 +5538,9 @@ def check_ia():
         dirs[:] = [d for d in dirs if d != "__pycache__" and not d.startswith(".")]
         if os.path.abspath(base).startswith(os.path.abspath(ia_dir)):
             continue
+        # las pruebas de la IA (batería) la usan a propósito; FreeWorks en sí no
+        if os.path.abspath(base).startswith(os.path.abspath(os.path.join(ADDON, "tools", "fork", "pruebas"))):
+            continue
         for f in files:
             p = os.path.join(base, f)
             if not f.endswith(".py") or os.path.abspath(p) in (os.path.abspath(hook), os.path.abspath(__file__)):

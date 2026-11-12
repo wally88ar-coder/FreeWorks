@@ -125,14 +125,13 @@ class Ensamblaje(Entorno):
     nombre = "ensamblaje"
     vinculos = ("asm", "comps")
     acciones = ("suprimir_componente", "cambiar_pieza")
-    # al guardar con Taladro/Corte de ensamblaje, junto con el aviso de #38 sale el de la exportación
-    # (mismo caso; solo se perdona si salen los dos en el mismo paso)
-    deuda = (("#38", ("The graph must be a DAG", "ExportOCAF2.cpp(320): Failed to get subshape"), None),
-             ("#38", "The graph must be a DAG", None),
-             # el resolvedor de FreeCAD con Matriz + Taladro/Corte + Relaciones (también sin Ecuaciones)
-             ("#76", "Solve failed: invalid vector subscript", None))
-    deuda_pasos = (("#38", "al abrir quedó modificado", "guardar"),
-                   ("#68", "abrió el panel sin medida de taladro", "Taladro de ensamblaje"))
+    # el resolvedor de FreeCAD con Matriz + Taladro/Corte + Relaciones (también sin Ecuaciones)
+    deuda = (("#76", "Solve failed: invalid vector subscript", None),
+             # la relación pierde su cara tras un corte: FreeCAD avisa antes de que se repare (#80)
+             ("#80", ("Broken link in: Reference", 'errStr + "Reference'), None),
+             # el resolvedor no converge al aceptar una relación tras guardar y abrir (#76, otro aviso)
+             ("#76", "Solve failed: iterNo > iterMax", None))
+    deuda_pasos = ()
 
     def armar(self):
         from casos_ensamblaje import Relacion
@@ -282,7 +281,7 @@ class Soldada(Entorno):
 class Croquis(Entorno):
     nombre = "croquis"
     vinculos = ("body", "croquis")
-    deuda = (("#63", "makeOffset2D: wires are nonplanar", None),)
+    deuda = ()
 
     def armar(self):
         from casos_croquis import Simetria
@@ -333,14 +332,19 @@ class Configuraciones(Entorno):
     nombre = "configuraciones"
     vinculos = ("body", "hueco")
     acciones = ("config_nueva", "config_ir", "config_ir")
-    deuda_pasos = (("#75", "No hay una configuración", "config_nueva"),)
+    # configuración nueva: el primer Chaflán queda con error sin aviso en el informe (#74, camino que
+    # sigue abierto: Chaflán, Agregar configuración, Redondeo, Chaflán, Agregar configuración, nueva;
+    # pasa igual sin el arreglo del padre suprimido: probado 12/11)
+    deuda_pasos = (("#74", "quedaron con error: ['Chamfer", "config_nueva"),)
     # suprimir el Agujero con un Redondeo sobre su arista: el redondeo se suprime con él (como SW)
     # pero FreeCAD igual lo recalcula y avisa (#44; reproducido sin ventana el 10/11)
     deuda = (("#44", ("Failed to recompute suppressed feature", "Invalid edge link"), None, "suprimir"),
              ("#44", "Failed to recompute suppressed feature", None, "suprimir"),
-             # configuración nueva con el Agujero suprimido y su Redondeo no: el Chaflán de encima
-             # pierde su arista (#74)
-             ("#74", "Invalid edge link", "Chamfer", "config_nueva"))
+             # configuración nueva: un Chaflán pierde su arista (#74; el caso del padre suprimido ya
+             # está arreglado, este camino no: Chaflán, Agregar configuración, Redondeo, Chaflán...)
+             ("#74", "Invalid edge link", "Chamfer", "config_nueva"),
+             # suprimir un Chaflán no suprime el Redondeo hecho sobre su arista (#81)
+             ("#81", "Invalid edge link", "Fillet", "suprimir"))
 
     def armar(self):
         from casos_otros import anotar

@@ -11,8 +11,7 @@ TIEMPO_MAXIMO = 2400  # ~25 paneles: no entra en los 10 min de las demás
 from campos_comun import correr_campos  # noqa: E402
 
 # errores ya registrados que no frenan la búsqueda (como en las reglas de paneles)
-DEUDA = {"Taladro de ensamblaje": (("#38", "The graph must be a DAG", None),),
-         "Matriz de componentes": (("#32", "deleted object", None),)}
+DEUDA = {}
 # los mismos errores cuando aparecen como una comprobación que falla (no en el informe)
 DEUDA_PASOS = {}
 

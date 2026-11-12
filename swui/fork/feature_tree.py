@@ -738,7 +738,10 @@ class _Observer:
     """Cuerpos nuevos (abrir en el árbol) y documentos guardados (aviso de retroceso)."""
 
     def slotCreatedObject(self, obj):
-        if getattr(obj, "TypeId", "") != BODY or not _in_workbench():
+        from swui.fork import safe_ops
+
+        # al abrir un archivo (o deshacer) no: se abrían todos los Cuerpos del árbol (#24)
+        if getattr(obj, "TypeId", "") != BODY or not _in_workbench() or safe_ops.doc_busy(obj.Document):
             return
         from swui.compat import QtCore
 

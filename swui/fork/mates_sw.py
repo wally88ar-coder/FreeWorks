@@ -505,8 +505,10 @@ def _joint_on_delete(self, vobj, subelements, _original=None):
     try:
         obj = vobj.Object
         if hasattr(obj, "JointType") and not hasattr(obj, TANGENT_OF):
+            picked = set(o.Name for o in FreeCADGui.Selection.getSelection(obj.Document.Name))
             for c in companions(obj):
-                obj.Document.removeObject(c.Name)
+                if c.Name not in picked:  # si también está elegido, lo borra el mismo Eliminar
+                    obj.Document.removeObject(c.Name)
     except Exception:
         FreeCAD.Console.PrintLog("[SWUI fork] Borrar la relación:\n%s\n" % traceback.format_exc())
     return _original(self, vobj, subelements) if _original is not None else True
@@ -898,7 +900,11 @@ class MatePanel:
             self.timer.start()
 
     def _selection_changed(self):
-        if self.busy or not self.follow:
+        from swui.fork import panel_guard
+
+        # el aviso diferido puede llegar con el panel ya cerrado por otro comando: refrescaba una
+        # lista borrada (RuntimeError en el informe, #33)
+        if self.busy or not self.follow or panel_guard.orphaned(self.observer):
             return
         entities = entities_from_selection(self.asm)
         same = [(e[0].Name, e[1]) for e in entities] == [(e[0].Name, e[1]) for e in self.entities]

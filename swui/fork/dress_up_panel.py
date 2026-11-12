@@ -583,8 +583,7 @@ class SwPanel:
         self.timer.setSingleShot(True)
         self.timer.timeout.connect(self.preview)
         self._build()
-        if not self.doc.HasPendingTransaction:
-            self.doc.openTransaction(self.TRANSACTION)
+        self._open_step()
         self.observer = _PickObserver(self)
         FreeCADGui.Selection.addObserver(self.observer)
         FreeCADGui.Selection.clearSelection()
@@ -839,13 +838,19 @@ class SwPanel:
             return False
         if not self.valid:
             return False  # el mensaje ya dice por qué
+        return self._finish_accept()
+
+    def _finish_accept(self):
+        """Cerrar el panel dejando la operación como está (Aceptar, ya comprobado)."""
         self._close()
         self._restore_visibility()
         self.obj.Visibility = self._tip_or_self()
         self._show_tip()
         self.doc.recompute()
         self.gdoc.resetEdit()
-        self.doc.commitTransaction()
+        from swui.fork import safe_ops
+
+        safe_ops.end_step(self.doc)  # también cierra el paso de la aplicación si quedó (#60)
         return True
 
     def _show_tip(self):
@@ -871,10 +876,18 @@ class SwPanel:
         body = ft.body_of(self.obj)
         return body is None or body.Tip == self.obj
 
+    def _open_step(self):
+        """Abre el paso de deshacer del panel (después de volver a la vista normal, #36). Un panel
+        que trabaja en varios documentos (taladro de ensamblaje) abre el de la aplicación."""
+        if not self.doc.HasPendingTransaction:
+            self.doc.openTransaction(self.TRANSACTION)
+
     def _abort_step(self):
         """Deshace el paso del panel. Un panel que trabaja en varios documentos (taladro de
         ensamblaje) deshace el paso de toda la aplicación."""
-        self.doc.abortTransaction()
+        from swui.fork import safe_ops
+
+        safe_ops.end_step(self.doc, abort=True)  # sin cambios, el de la aplicación quedaba abierto (#60)
 
     def reject(self):
         from swui.fork import feature_tree as ft

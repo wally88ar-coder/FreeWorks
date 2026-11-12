@@ -42,13 +42,22 @@ def _missing(obj, subs):
     try:
         shape = obj.Shape
     except Exception:
-        return list(subs)
+        shape = None  # sin forma (el Origen): solo valen sus objetos de adentro ("XZ_Plane.")
     for sub in subs:
         if not sub:
             continue
+        if sub.endswith("."):
+            # un objeto de adentro, no una cara: "XZ_Plane." en el Origen (así lo anota FreeCAD 1.1
+            # al apoyar en un plano del origen). Buscado como cara daba "perdió la cara" (#73)
+            try:
+                if obj.getSubObject(sub, retType=1) is None:
+                    out.append(sub)
+            except Exception:
+                out.append(sub)
+            continue
         try:
             shape.getElement(sub)
-        except Exception:
+        except Exception:  # sin forma, o la cara ya no está
             out.append(sub)
     return out
 

@@ -77,10 +77,23 @@ def _choice(options, current, on_pick):
 
 
 def _leave_native_edit(obj):
-    """SheetMetal pone la operación en edición (y abre su transacción): salir sin cerrar la transacción."""
+    """
+    Editar una operación de SheetMetal: su edición nativa ya abrió un paso de deshacer propio (con
+    el nombre de la operación) y mostró el croquis. Ese paso se descarta antes de salir de la
+    edición nativa (salir la confirmaba: quedaba un paso de deshacer de más al Cancelar o al
+    Aceptar, #39); el panel SW abre el suyo. Una operación nueva no pasa por acá con edición nativa
+    (la arma FreeWorks en su propio paso), y por las dudas solo se descarta el paso de la edición.
+    """
     gdoc = FreeCADGui.getDocument(obj.Document.Name)
-    if gdoc.getInEdit() is not None:
-        gdoc.resetEdit()
+    if gdoc.getInEdit() is None:
+        return
+    doc = obj.Document
+    active = FreeCAD.getActiveTransaction()
+    if active and active[0] == obj.Name:  # (sin cambios todavía, solo queda el de la aplicación)
+        from swui.fork import safe_ops
+
+        safe_ops.end_step(doc, abort=True)
+    gdoc.resetEdit()
 
 
 def _is_closed(sketch):
@@ -101,6 +114,11 @@ class BaseFlangePanel(dp.SwPanel):
 
     def __init__(self, obj):
         _leave_native_edit(obj)
+        # el panel nativo de SheetMetal muestra el croquis al abrirse (fuera de todo paso de
+        # deshacer): como SW, queda oculto (#31)
+        sk = getattr(obj, "BendSketch", None)
+        if sk is not None and sk.Visibility:
+            sk.Visibility = False
         sm.ensure_k(obj)
         super().__init__(obj)
 
@@ -765,15 +783,33 @@ class WrapCutPanel(dp.SwPanel):
         QtCore.QTimer.singleShot(0, lambda: edit_cut_sketch(FreeCAD.getDocument(doc_name).getObject(name)))
 
 
+class _RestoreSketchView:
+    """Al salir del croquis abierto sobre el desarrollo, sus opciones de vista como estaban (#20)."""
+
+    def __init__(self, sketch, old):
+        self.doc, self.sketch, self.old = sketch.Document.Name, sketch.Name, dict(old)
+
+    def slotResetEdit(self, vp):
+        obj = getattr(vp, "Object", None)
+        if obj is None or obj.Name != self.sketch or obj.Document.Name != self.doc:
+            return
+        for prop, value in self.old.items():
+            if getattr(vp, prop) != value:
+                setattr(vp, prop, value)
+        QtCore.QTimer.singleShot(0, lambda: FreeCADGui.removeDocumentObserver(self))
+
+
 def _open_sketch_on_flat(body, sketch, flat, hide):
     """Abrir el croquis con el desarrollo a la vista (y lo plegado oculto); al salir, Doblar."""
     from swui import pick_plane
 
+    old = {}
     for prop, value in (("ShowSupport", False), ("HideDependent", False)):
-        try:  # el croquis, al abrirse, muestra su apoyo (la chapa plegada) y oculta lo demás
+        if hasattr(sketch.ViewObject, prop):  # el croquis, al abrirse, muestra su apoyo (la chapa
+            old[prop] = getattr(sketch.ViewObject, prop)  # plegada) y oculta lo demás
             setattr(sketch.ViewObject, prop, value)
-        except Exception:
-            pass
+    if old:  # al salir del croquis vuelven a como estaban (antes quedaban así para siempre, #20)
+        FreeCADGui.addDocumentObserver(_RestoreSketchView(sketch, old))
     FreeCADGui.Selection.clearSelection()
     FreeCADGui.getDocument(body.Document.Name).setEdit(sketch)
 
@@ -1380,14 +1416,30 @@ def export_dxf():
         if not path:
             return None
         params.SetString("DxfFolder", os.path.dirname(path))
+    # Como SW, exportar no cambia la pieza: si no había desarrollo, se arma solo para el DXF y se
+    # deshace (antes quedaba oculto en el árbol, se recalculaba con cada cambio de la pieza y su
+    # cara fija se perdía: "?Face6", #43)
+    from swui.fork import safe_ops
+
+    new = sm.flat_of(body) is None
+    if new:
+        doc.openTransaction("Exportar DXF")
     try:
-        flat = _flat(body, sm.FLAT_LABEL)
-        sm.write_dxf(body, path)
-        _sketches_follow(flat)
+        if new:
+            with sm._active(doc):
+                sm.write_dxf(body, path)
+        else:
+            flat = _flat(body, sm.FLAT_LABEL)
+            sm.write_dxf(body, path)
+            _sketches_follow(flat)
     except Exception as exc:
         FreeCAD.Console.PrintError("[SWUI fork] Exportar DXF:\n%s\n" % traceback.format_exc())
         _info("No se pudo exportar el DXF: %s" % exc)
         return None
+    finally:
+        if new:
+            safe_ops.end_step(doc, abort=True)
+            doc.recompute()
     FreeCAD.Console.PrintMessage("[SWUI fork] DXF guardado: %s\n" % path)
     try:
         _mw().statusBar().showMessage("DXF guardado: %s" % path, 15000)

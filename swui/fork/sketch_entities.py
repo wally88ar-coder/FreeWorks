@@ -110,6 +110,35 @@ def _issues(sketch):
     return out
 
 
+def delete_constraints(sketch, indices):
+    """
+    Borrar relaciones / cotas del croquis sin dejar fórmulas colgadas (#66): las que leen una cota
+    con nombre que se borra (en el croquis o en otro objeto, como Ecuaciones) se quedan con su valor
+    de ahora, sin la fórmula. Antes quedaban apuntando a una cota que ya no existe y el croquis se
+    rompía.
+    """
+    import re
+
+    names = [sketch.Constraints[i].Name for i in set(indices)
+             if 0 <= i < len(sketch.Constraints) and sketch.Constraints[i].Name]
+    if names:
+        # quién nombra al croquis: su nombre interno o <<etiqueta>> (o la etiqueta si es un nombre
+        # válido); sin nada adelante solo vale dentro del mismo croquis. El "no pegado a" de adelante
+        # evita tomar Sketch001.Constraints.X por Sketch.Constraints.X (revisión del 12/11)
+        refs = [re.escape(sketch.Name), "<<%s>>" % re.escape(sketch.Label)]
+        if re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", sketch.Label or ""):
+            refs.append(re.escape(sketch.Label))
+        pattern = re.compile(r"(?<![A-Za-z0-9_.<>])(?:(%s)\.|\.)?Constraints\.(?:%s)(?![A-Za-z0-9_])"
+                             % ("|".join(refs), "|".join(re.escape(n) for n in names)))
+        for obj in [o for o in sketch.Document.Objects if getattr(o, "ExpressionEngine", None)]:
+            for path, expr in list(obj.ExpressionEngine):
+                hit = any(m.group(1) or obj is sketch for m in pattern.finditer(expr))
+                if hit:
+                    obj.setExpression(path, None)  # queda el valor de ahora
+    for index in sorted(set(indices), reverse=True):
+        sketch.delConstraint(index)
+
+
 def _try_add(sketch, constraint):
     """Agregar la relación si no deja el croquis redundante ni en conflicto. True si quedó."""
     before = _issues(sketch)

@@ -102,6 +102,17 @@ DIALOGS = {
         },
         "combos": {},
     },
+    # Extruir / Extruir corte: los botones de "Hasta la superficie" y "Hasta el sólido" quedan en
+    # inglés en FreeCAD 1.1.4 (#27); el resto del panel lo traduce swui/feature_terms.py
+    "PartDesignGui::TaskPadPocketParameters": {
+        "labels": {
+            "buttonFace": "Elegir cara",
+            "buttonFace2": "Elegir cara",
+            "buttonShape": "Elegir sólido",
+            "buttonShape2": "Elegir sólido",
+        },
+        "combos": {},
+    },
     "PartDesignGui::TaskPreviewParameters": {
         "labels": {
             "showFinalCheckBox": "Mostrar el resultado final",

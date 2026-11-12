@@ -337,6 +337,97 @@ def _full_circle(shape):
     return _vec(c.Center), _vec(c.Axis), c.Radius
 
 
+def _point_on_circle(center, normal, radius, t):
+    u = _any_perp(_unit(normal))
+    n = _unit(normal)
+    v = (n[1] * u[2] - n[2] * u[1], n[2] * u[0] - n[0] * u[2], n[0] * u[1] - n[1] * u[0])
+    return _add(center, _add(_mul(u, radius * math.cos(t)), _mul(v, radius * math.sin(t))))
+
+
+def max_circle_circle(c1, n1, r1, c2, n2, r2, samples=720):
+    """Dos círculos completos cualesquiera: (d, punto1, punto2). Una sola variable (el ángulo en
+    el primero; el otro lado con la fórmula exacta), barrido + sección áurea: sin los máximos
+    locales del afinado general (#52)."""
+
+    def f(t):
+        p = _point_on_circle(c1, n1, r1, t)
+        d, q = max_point_circle(p, c2, n2, r2)
+        return d, p, q
+
+    step = 2 * math.pi / samples
+    best_t = max((i * step for i in range(samples)), key=lambda t: f(t)[0])
+    lo, hi = best_t - step, best_t + step
+    g = (math.sqrt(5) - 1) / 2
+    x1, x2 = hi - g * (hi - lo), lo + g * (hi - lo)
+    f1, f2 = f(x1)[0], f(x2)[0]
+    while hi - lo > 1e-13:
+        if f1 < f2:
+            lo, x1, f1 = x1, x2, f2
+            x2 = lo + g * (hi - lo)
+            f2 = f(x2)[0]
+        else:
+            hi, x2, f2 = x2, x1, f1
+            x1 = hi - g * (hi - lo)
+            f1 = f(x1)[0]
+    return max((f(best_t), f((lo + hi) / 2)), key=lambda r: r[0])
+
+
+def _full_spheres(shape):
+    """[(centro, radio)] de las caras esféricas completas de la forma."""
+    out = []
+    for face in shape.Faces:
+        s = face.Surface
+        if type(s).__name__ != "Sphere":
+            continue
+        if abs(face.Area - 4 * math.pi * s.Radius ** 2) <= 1e-7 * face.Area:
+            out.append((_vec(s.Center), s.Radius))
+    return out
+
+
+def _full_circles(shape):
+    # sin las aristas degeneradas (los polos de una esfera no tienen curva)
+    return [c for c in (_full_circle(e) for e in shape.Edges if not e.Degenerated) if c]
+
+
+MAX_CIRCLE_PAIRS = 400  # piezas con muchos agujeros: no más pares que esto (el resto, el método general)
+
+
+def _exact_candidates(a, b):
+    """Distancias exactas entre partes conocidas de las formas (esferas y círculos completos): cada
+    una es una distancia real entre dos puntos de las formas, así que la mayor de todas nunca se
+    pasa del máximo verdadero, y corrige al método general donde se queda corto (#52)."""
+    out = []
+    for flip, (x, y) in ((False, (a, b)), (True, (b, a))):
+        for c, r in _full_spheres(x):
+            far = max_between([Item.point(c)], items_of(y))
+            if far is None:
+                continue
+            d, _c, q = far
+            u = _unit(_sub(q, c)) or (1.0, 0.0, 0.0)
+            p = _sub(c, _mul(u, r))
+            out.append((d + r, q, p) if flip else (d + r, p, q))
+            # contra una esfera o un vértice del otro lado, la cuenta exacta (el afinado general
+            # se traba en los polos de la esfera)
+            for c2, r2 in _full_spheres(y):
+                u = _unit(_sub(c2, c)) or (1.0, 0.0, 0.0)
+                p, q = _sub(c, _mul(u, r)), _add(c2, _mul(u, r2))
+                out.append((dist(p, q), q, p) if flip else (dist(p, q), p, q))
+            for v in y.Vertexes:
+                q = _vec(v.Point)
+                u = _unit(_sub(q, c)) or (1.0, 0.0, 0.0)
+                p = _sub(c, _mul(u, r))
+                out.append((dist(p, q), q, p) if flip else (dist(p, q), p, q))
+    pairs =[(ca, cb) for ca in _full_circles(a) for cb in _full_circles(b)]
+    for ca, cb in pairs[:MAX_CIRCLE_PAIRS]:
+        out.append(max_circle_circle(ca[0], ca[1], ca[2], cb[0], cb[1], cb[2]))
+    for x, y, flip in ((a, b, False), (b, a, True)):
+        for v in x.Vertexes:
+            for c in _full_circles(y):
+                d, q = max_point_circle(_vec(v.Point), *c)
+                out.append((d, q, _vec(v.Point)) if flip else (d, _vec(v.Point), q))
+    return out
+
+
 def max_distance(a, b):
     """Distancia máxima entre dos formas de FreeCAD (en su posición real): (d, punto a, punto b)."""
     ca, cb = _full_circle(a), _full_circle(b)
@@ -351,4 +442,8 @@ def max_distance(a, b):
         same_plane = abs(abs(_dot(n1, n2)) - 1) < 1e-9 and abs(_dot(_sub(cb[0], ca[0]), n1)) < 1e-7
         if same_plane:
             return max_coplanar_circles(ca[0], ca[2], cb[0], cb[2], n1)
-    return max_between(items_of(a), items_of(b))
+    best = max_between(items_of(a), items_of(b))
+    for cand in _exact_candidates(a, b):
+        if best is None or cand[0] > best[0]:
+            best = cand
+    return best

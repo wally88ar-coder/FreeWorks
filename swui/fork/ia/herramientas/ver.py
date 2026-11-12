@@ -79,7 +79,10 @@ def estado():
     if gdoc is not None:
         editing = gdoc.getInEdit()
         if editing is not None:
-            data["editando"] = editing.Object.Name
+            obj = getattr(editing, "Object", None)
+            if obj is None:  # la vista de un ensamblaje no tiene .Object (#72): el objeto en edición
+                obj = next((o for o in gdoc.Document.Objects if getattr(o, "ViewObject", None) is editing), None)
+            data["editando"] = obj.Name if obj is not None else type(editing).__name__
     if active is not None:
         data["arbol"] = _tree(active)
         if len(active.Objects) > MAX_OBJECTS:

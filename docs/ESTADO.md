@@ -1,5 +1,36 @@
 # Estado del fork
 
+**Noche del 11 al 12/11 (el usuario durmiendo: "corregí todos los de la lista", hasta las 7:30).**
+- **Arreglados con su prueba** (fichas cerradas en GitHub): #38 (copia congelada del croquis en
+  las piezas, con "->" / "->?" y "(desactualizada)", como se decidió), #17, #18, #20, #21, #24,
+  #27, #31, #32, #33, #39, #52 (esferas y círculos exactos), #63, #66 (también lo que encontró
+  la revisión), #71, #72, #73. Antes, en la misma noche: #2, #9, #10, #11 (parte de la Tangente),
+  #12, #14, #22, #34, #37, #47, #77 y Ecuaciones como SW.
+- **Arreglados en parte** (fichas abiertas, con comentario): #74 (padre suprimido ⇒ hijos
+  suprimidos en cada configuración, como SW; el mono todavía encuentra otro camino donde un
+  Chaflán pierde su arista al crear una configuración); #43 (Exportar DXF ya no deja el
+  desarrollo oculto en el árbol; después de Aplanar queda igual que antes); #60 (el panel común
+  SW cierra también el paso de la aplicación; faltan los demás lugares); #68 (el panel pasa al
+  de taladro al elegir la pieza).
+- **Nuevo:** #79 (un ensamblaje guardado y abierto queda como "modificado", también sin
+  taladro; conocido en las pruebas); #80 (ensamblaje: tras un corte, una relación avisa "Broken
+  link" antes de repararse sola); #81 (configuraciones: suprimir un Chaflán no suprime el
+  Redondeo hecho sobre su arista). Los encontró el mono esta noche en código que no se tocó (la
+  variante de #74 que sigue abierta: probado que falla igual sin el arreglo de esta noche). #75 no se reproduce con una prueba directa (queda
+  la prueba). La copia STEP al guardar un ensamblaje ahora exporta sus componentes con sólido
+  (entero, el exportador llenaba el informe de errores por las relaciones y los planos).
+- **Probado y descartado:** Congelar (`Std_ToggleFreeze`) para el desarrollo oculto: sin función
+  de Python en 1.1.4 y cuelga FreeCAD al guardar (anotado en NOTAS_TECNICAS).
+- **Pregunta para el usuario (de la revisión):** Taladro con la vista previa en error +
+  "Editar posiciones": ahora no se borra (va al croquis y el panel vuelve), pero si después se
+  Cancela, el taladro roto queda (el panel lo trata como existente). ¿En SW se borra?
+- **Quedan sin tocar:** #15, #25 (rendimiento), #26 (aviso en inglés de una matriz vacía:
+  necesita ver de dónde sale), #40 (visto una vez), #44 (es FreeCAD: recalcula un hijo suprimido),
+  #59, #62, #64 (resolvedor de ensamblaje), #76, #78, #57 (capturas: el usuario).
+- Proceso huérfano: un FreeCAD de prueba (PID 7620, desde las ~21 h del 11/11) no se pudo cerrar;
+  hay que cerrarlo desde el Administrador de tareas o reiniciar. Un descuido: un rato corrí un
+  FreeCADCmd mientras había una prueba con ventana.
+
 **Noche del 10 al 11/11 (el usuario durmiendo, "corregí todos los bugs, de los más críticos a los
 más inofensivos", con causa raíz).** Resumen por tandas (detalle en CHANGELOG y en cada Issue):
 - Tanda 1 (batería completa + subida): #1, #3 + #13 (todas las herramientas que se abren con un

@@ -206,6 +206,12 @@ def _invalid(doc):
             if "Invalid" in (getattr(o, "State", None) or [])]
 
 
+def _others_pending(doc, docs_before):
+    """¿Otro documento que ya estaba abierto tiene un paso de deshacer en curso (un panel)?"""
+    return any(d is not doc and name in docs_before and d.HasPendingTransaction
+               for name, d in FreeCAD.listDocuments().items())
+
+
 def _run(code, title, doc_name, read_only=False):
     doc = FreeCAD.getDocument(doc_name) if doc_name else None
     before = {o.Name for o in doc.Objects} if doc else set()
@@ -222,6 +228,7 @@ def _run(code, title, doc_name, read_only=False):
     if not read_only:
         log(code, title)
     own = bool(doc) and not pending
+    docs_before = set(FreeCAD.listDocuments())
     if own:
         doc.openTransaction(step)
     try:
@@ -232,6 +239,13 @@ def _run(code, title, doc_name, read_only=False):
                 d.recompute()
         if own:
             doc.commitTransaction()
+            # en 1.1.4 openTransaction abre también el paso de la APLICACIÓN: lo que el script hizo
+            # en un documento nuevo quedaba ahí, pendiente, y trababa el script siguiente (#71)
+            if not _others_pending(doc, docs_before):  # un panel abierto en otro documento: su paso
+                FreeCAD.closeActiveTransaction()        # es suyo (revisión del 12/11)
+            for name, d in FreeCAD.listDocuments().items():
+                if name not in docs_before and d.HasPendingTransaction:
+                    d.commitTransaction()
         # FreeCAD descarta las transacciones vacías: si apareció un paso nuevo, el script cambió algo
         changed = own and new_steps(list(doc.UndoNames), undo_before) not in (0, None)
         if read_only and changed:
@@ -243,6 +257,8 @@ def _run(code, title, doc_name, read_only=False):
         if own:
             try:
                 doc.abortTransaction()
+                if not _others_pending(doc, docs_before):
+                    FreeCAD.closeActiveTransaction(True)
                 doc.recompute()
             except Exception:
                 pass

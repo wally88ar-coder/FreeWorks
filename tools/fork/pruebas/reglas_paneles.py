@@ -49,8 +49,10 @@ def _vol(o):
         s = o.Shape
         if s.isNull() or not s.Solids:
             return None
-        # al mm³: barridos y hélices dan centésimas distintas en cada recálculo
-        return round(float(s.Volume))
+        # al mm³: barridos y hélices dan centésimas distintas en cada recálculo. Solo los sólidos:
+        # el volumen de un compuesto con caras sueltas (el plano de un ensamblaje) da un número sin
+        # sentido (~1e101) que cambia con el ruido de la cuenta (falsa falla del mono, 12/11)
+        return round(float(sum(x.Volume for x in s.Solids)))
     except Exception:
         return None
 

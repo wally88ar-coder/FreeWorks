@@ -339,7 +339,10 @@ def _make_arrays(asm, v, seeds, cells, expression):
         for el, ij in zip(arr.ElementList, cells):
             el.setExpression("Placement", expression(seed.Name, ij))
         copies.append(arr)
-    QtCore.QTimer.singleShot(0, lambda: _label_arrays(asm.Document.Name, v.Name))
+    # los nombres se leen YA: si la vista previa se borra antes (Cancelar), el aviso diferido leía
+    # v.Name de un objeto borrado (ReferenceError en el informe, #32)
+    doc_name, data_name = asm.Document.Name, v.Name
+    QtCore.QTimer.singleShot(0, lambda: _label_arrays(doc_name, data_name))
     setattr(v, SEEDS, list(seeds))
     setattr(v, COPIES, [c.Name for c in copies])
 
@@ -353,6 +356,8 @@ def _label_arrays(doc_name, data_name):
     """Después del nombre de componente que pone el original: 'MatrizLineal1 Tornillo'."""
     try:
         v = FreeCAD.getDocument(doc_name).getObject(data_name)
+        if v is None:  # se borró antes del aviso (Cancelar)
+            return
         from swui import naming
 
         for seed, arr in zip(getattr(v, SEEDS), copies_of(v)):

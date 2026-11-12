@@ -12,10 +12,7 @@ TIPO = "completa"
 from casos_chapa2 import CASOS  # noqa: E402
 from reglas_paneles import correr  # noqa: E402
 
-DEUDA = {
-    ("Corte desdoblado", "editar_cancelar"): ("#39", "pasos de deshacer"),
-    ("Corte desdoblado", "editar_cambiar"): ("#39", "pasos de deshacer"),
-}
+DEUDA = {}
 
 
 def prueba():

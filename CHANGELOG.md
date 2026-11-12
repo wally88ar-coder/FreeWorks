@@ -43,6 +43,48 @@ Neueste Version oben. / Newest version first.
   abierto"), los paneles siguientes ya no salen nativos en inglés y no quedan restos; un croquis
   desactivado a propósito sigue desactivado al suprimir su operación por configuración; borrar
   una Tangente y Ctrl+Z la trae con su eje (se borran en el mismo paso).
+- **#38 (decisión del usuario 11/11):** el Taladro y el Extruir corte de ensamblaje dejan en cada
+  pieza una COPIA CONGELADA del croquis (sin vínculo al ensamblaje: se acabó el aviso "The graph must
+  be a DAG"). En la pieza la operación se llama "Taladro1 ->
+  Conjunto" y dice de dónde viene y cuándo se copió; si el croquis del ensamblaje cambia por otro
+  camino pasa a "->?" y la operación del ensamblaje dice "(desactualizada)". Editarla desde el
+  ensamblaje (o su croquis) vuelve a copiar. Los archivos anteriores se pasan al guardar.
+- **#21, #18, #17:** un material sacado con la herramienta nativa deja de contar para la masa;
+  Eliminar/Conservar sólidos arma todo o nada (reintentar ya no duplica); Editar posiciones del
+  Taladro con la vista previa en error va al croquis sin borrar el taladro y el panel vuelve.
+- **Revisión del 11/11:** cambiar el perfil de un miembro ya no rompe el croquis de su tapa; sacar
+  un miembro se lleva sus tapas y cartelas; la tapa en una punta con esquina queda en la punta
+  real; un taladro de ensamblaje que no tocaba ninguna pieza pasa al panel del taladro al elegir
+  la primera (#68, parte); si algo falla al abrir un taladro/corte de ensamblaje no queda nada a
+  medias; editar un taladro de ensamblaje vuelve a la vista normal antes de abrir el paso (#36);
+  las fórmulas reparadas tras deshacer nunca se pierden y también se reparan al Cancelar.
+- **Noche del 12/11:** #27 (los botones "Select Face" / "Select Shape" de Extruir y Extruir corte,
+  en "Hasta la superficie" y "Hasta el sólido", ahora dicen "Elegir cara" / "Elegir sólido");
+  #72 (el puente IA reconoce el ensamblaje en edición); #74 (configuraciones como SW: una
+  operación suprimida en una configuración suprime ahí a las que dependen de ella, también en la
+  configuración nueva copiada de esa; antes un Redondeo sobre un Agujero suprimido quedaba en
+  error); la tapa en una punta con esquina a tope se detecta por la punta real del caño (antes
+  solo por el alargue y quedaba flotando). Encontrado: #79 (un ensamblaje guardado y abierto
+  queda como modificado, también sin taladro; conocido).
+  También: #24 (al abrir un archivo ya no se despliegan todos los Cuerpos del árbol); #20
+  ("Editar croquis sobre el desarrollo" y Desdoblar devuelven al salir las opciones de vista del
+  croquis que apagan); #31 y #39 (editar una Brida base, Brida de arista, Dobladillo o Corte
+  desdoblado: el paso de deshacer que abre la edición nativa de SheetMetal se descarta, así
+  Cancelar no deja pasos y Aceptar deja uno; el croquis de la Brida base queda oculto); #32
+  (Matriz de componentes: sin "ReferenceError" al Cancelar); #33 (Relación de posición: otro
+  comando con el panel abierto ya no deja un error en el informe); #52 (distancia máxima exacta
+  entre esferas y entre círculos completos, p. ej. bordes de cilindros: antes se quedaba corta);
+  #63 (Equidistanciar una recta: FreeCAD no puede equidistanciar una línea sola porque no sabe en
+  qué plano; se arma en el plano del croquis); #60, en parte (el panel común SW cierra también el
+  paso de deshacer de la aplicación al Aceptar y Cancelar). Revisión: borrar una cota con nombre
+  suelta solo las fórmulas que la leen (por nombre, por etiqueta o dentro del croquis; antes podía
+  soltar las de otro croquis de nombre parecido); el puente IA ya no cierra el paso de un panel
+  abierto en otro documento. La prueba "mono" medía el volumen de un ensamblaje con su plano
+  incluido (número sin sentido): ahora suma solo los sólidos. #43, en parte: Exportar DXF de una
+  chapa sin desarrollo ya no deja uno oculto en el árbol (como SW, exportar no cambia la pieza).
+  "Guardar también STEP" de un ensamblaje exporta sus componentes con sólido (entero, el
+  exportador llenaba el informe de errores por las relaciones y los planos). Encontrados por el
+  mono: #80 y #81 (abiertos).
 - **Decisiones del 11/11:** Ecuaciones como SW: una ecuación que se calcula bien pero con la que
   una operación no se puede construir se acepta, la operación queda con error en el árbol y el
   aviso dice cuál (antes se rechazaba); una fórmula mal escrita se sigue rechazando.

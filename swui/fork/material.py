@@ -398,7 +398,9 @@ def material_info(obj):
         except Exception:
             pass
     copy = read_copy(getattr(obj, COPY_PROP, ""))
-    if copy:
+    if copy and get_material(copy["uuid"]) is None:
+        # la copia es para cuando el material FALTA en la biblioteca. Si está y la pieza tiene
+        # "Default", el material se sacó (p. ej. con la herramienta nativa): sin material (#21)
         return copy, "copia"
     return None, None
 

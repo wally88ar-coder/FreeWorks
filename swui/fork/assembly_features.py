@@ -11,9 +11,14 @@ mismo de la fase 2) o la profundidad del corte, y la lista "Piezas afectadas" (a
 piezas que el agujero o el corte atraviesan; un clic en una pieza la suma o la saca).
 
 Por debajo, como "Propagar operación a piezas" de SW: en cada pieza afectada, dentro de su
-Cuerpo, un SubShapeBinder del croquis del ensamblaje (posición = inversa de la del componente)
-y un Taladro (PartDesign::Hole) o Vaciado (PartDesign::Pocket) nativo con ese perfil. El agujero
-queda en la pieza (planos, DXF) y sigue al croquis. El croquis del ensamblaje queda suelto
+Cuerpo, una COPIA CONGELADA del croquis del ensamblaje (SubShapeBinder suelto, posición = inversa
+de la del componente) y un Taladro (PartDesign::Hole) o Vaciado (PartDesign::Pocket) nativo con
+ese perfil. El agujero queda en la pieza (planos, DXF). Congelada (#38, decisión del usuario
+11/11): con el vínculo al croquis, ensamblaje -> pieza -> ensamblaje era un círculo que FreeCAD no
+admite ("The graph must be a DAG", el ensamblaje quedaba modificado al abrirlo). FreeWorks vuelve
+a copiar al editar la operación o su croquis desde el ensamblaje; si el croquis cambió por otro
+camino, la operación de la pieza pasa de "Taladro1 -> Conjunto" a "Taladro1 ->? Conjunto" (como
+la flecha de referencia externa de SW) y se avisa. El croquis del ensamblaje queda suelto
 (apoyado en la cara de una pieza que se agujerea sería un ciclo). Si la pieza se mueve en el
 ensamblaje, un observador pone al día la posición del binder (decisión del usuario, 2026-10-27).
 Los datos de cada operación van en un App::VarSet del ensamblaje (SWUI_AsmFeature).
@@ -32,6 +37,12 @@ KIND = "SWUI_AsmFeature"  # "hole" / "cut" en el VarSet (nombre estable)
 SKETCH = "SWUI_Sketch"
 ENTRIES = "SWUI_Entries"  # "componente|documento|binder|operación" por pieza
 BINDER_MARK = "SWUI_AsmBinder"  # en el binder dentro de la pieza: "<documento del ensamblaje>"
+# en la copia dentro de la pieza (#38; nombres estables): de dónde viene, cuándo se copió y la huella
+# del croquis copiado (para saber si quedó desactualizada)
+ORIGIN = "SWUI_AsmOrigin"
+COPIED = "SWUI_AsmCopied"
+PRINT = "SWUI_AsmPrint"
+ARROW, STALE = " -> ", " ->? "
 TITLES = {"hole": "TaladroEnsamblaje", "cut": "CorteEnsamblaje"}
 LABELS = {"hole": "Asistente para taladro (ensamblaje)", "cut": "Extruir corte (ensamblaje)"}
 MARKER_RADIUS = 0.5  # círculo chico en cada punto de posición (el taladro toma círculos del binder)
@@ -256,6 +267,125 @@ def begin_operation(label):
         FreeCAD.setActiveTransaction(label)
 
 
+def sketch_print(sk):
+    """Huella del croquis: su geometría y si cada elemento es constructivo (sin su ubicación, que la
+    sigue el observador de siempre). Igual huella = misma copia."""
+    import hashlib
+
+    items = []
+    for i, g in enumerate(sk.Geometry):
+        try:
+            constr = sk.getConstruction(i)
+        except Exception:
+            constr = False
+        items.append("%s%s" % ("c" if constr else "", g))
+    return hashlib.sha1("|".join(items).encode("utf-8")).hexdigest()[:16]
+
+
+def feature_label(title, asm_label, stale=False):
+    """'Taladro1 -> Conjunto' (o '->?' si la copia quedó desactualizada), como SW."""
+    return "%s%s%s" % (title, STALE if stale else ARROW, asm_label)
+
+
+def _str_prop(obj, name, value, doc):
+    if name not in obj.PropertiesList:
+        obj.addProperty("App::PropertyString", name, "SW", doc)
+        obj.setEditorMode(name, 1)  # se ve en propiedades, no se edita
+    if getattr(obj, name) != value:
+        setattr(obj, name, value)
+
+
+def copy_sketch(binder, sk, title):
+    """
+    Copia CONGELADA de `sk` (croquis del ensamblaje) en `binder` (dentro de la pieza): se enlaza un
+    momento para tomar la forma y se suelta (BindMode "Detached"), así la pieza no apunta al
+    ensamblaje (#38). Guarda de dónde viene, cuándo y la huella.
+    """
+    import datetime
+
+    binder.BindMode = "Synchronized"
+    binder.Support = [(sk, ("",))]
+    binder.recompute()
+    binder.BindMode = "Detached"
+    if binder.Support:  # por si FreeCAD no lo suelta solo al pasar a "Detached"
+        binder.Support = []
+    asm_doc = sk.Document
+    archivo = (asm_doc.FileName.replace("\\", "/").split("/")[-1] if asm_doc.FileName else asm_doc.Label)
+    _str_prop(binder, ORIGIN, "%s en %s" % (title, archivo), "De qué operación de ensamblaje viene esta copia")
+    _str_prop(binder, COPIED, datetime.datetime.now().strftime("%d/%m/%Y %H:%M"), "Cuándo se copió del ensamblaje")
+    _str_prop(binder, PRINT, sketch_print(sk), "Huella del croquis copiado (FreeWorks)")
+
+
+def refresh_copies(v, entries=None):
+    """Vuelve a copiar el croquis de la operación `v` en las piezas cuya copia no coincide, y les
+    pone el nombre sin '?'. Devuelve los documentos tocados."""
+    sk = getattr(v, SKETCH, None)
+    if sk is None:
+        return []
+    want = sketch_print(sk)
+    touched = []
+    for link, binder, feat in (entries if entries is not None else entries_of(v)):
+        if getattr(binder, PRINT, None) != want or binder.Support:
+            copy_sketch(binder, sk, _title(v))
+            touched.append(binder.Document)
+        label = feature_label(_title(v), sk.Document.Label)
+        if feat.Label != label:
+            feat.Label = label
+            if binder.Document not in touched:
+                touched.append(binder.Document)
+    _mark_operation(v, False)
+    return touched
+
+
+def stale_entries(v):
+    """[(componente, binder, operación)] cuya copia ya no coincide con el croquis del ensamblaje."""
+    sk = getattr(v, SKETCH, None)
+    if sk is None:
+        return []
+    want = sketch_print(sk)
+    return [e for e in entries_of(v) if not e[1].Support and getattr(e[1], PRINT, None) not in (None, want)]
+
+
+def _title(v):
+    return v.Label.replace(" (desactualizada)", "")
+
+
+def _mark_operation(v, stale):
+    """En el árbol del ensamblaje: la operación con ' (desactualizada)' si alguna copia no coincide."""
+    base = v.Label.replace(" (desactualizada)", "")
+    want = base + (" (desactualizada)" if stale else "")
+    if v.Label != want:
+        v.Label = want
+
+
+def check_copies(asm_doc, tell=True):
+    """Compara la huella del croquis de cada operación con la de sus copias: marca '->?' en las
+    piezas desactualizadas y en la operación, y avisa en la barra de estado (#38)."""
+    stale_ops = []
+    for v in [o for o in asm_doc.Objects if hasattr(o, KIND)]:
+        stale = stale_entries(v)
+        title = _title(v)
+        for _l, _b, feat in entries_of(v):
+            if ARROW.strip() not in feat.Label:
+                continue  # archivo anterior ("Taladro1 (Conjunto)"): se pasa al editar o al guardar
+            want = feature_label(title, asm_doc.Label, any(feat is e[2] for e in stale))
+            if feat.Label != want:
+                feat.Label = want
+        if stale or v.Label != title:
+            _mark_operation(v, bool(stale))
+        if stale:
+            stale_ops.append((title, [e[0].Label for e in stale]))
+    if stale_ops and tell:
+        text = "; ".join("%s está desactualizado en %s" % (t, ", ".join(ps)) for t, ps in stale_ops)
+        text += ": edítelo desde el ensamblaje (clic derecho > Editar operación) para actualizar."
+        FreeCAD.Console.PrintWarning("[SWUI] %s\n" % text)
+        try:
+            FreeCADGui.getMainWindow().statusBar().showMessage(text, 15000)
+        except Exception:
+            pass
+    return stale_ops
+
+
 def add_to_part(link, sk, kind, title):
     """Binder del croquis + taladro / vaciado nativo en el Cuerpo de la pieza."""
     body = part_of(link)
@@ -266,10 +396,10 @@ def add_to_part(link, sk, kind, title):
     # No relativo y con la posición puesta a mano: el modo relativo de FreeCAD recalcula la
     # posición según el contexto y en un ensamblaje llegó a aplicarla dos veces (probado en 1.1.4)
     binder.Relative = False
-    binder.Support = [(sk, ("",))]
     binder.Placement = binder_placement(link, sk)
     binder.addProperty("App::PropertyString", BINDER_MARK, "SW", "Operación de ensamblaje de LikeSolidWorks UI")
     setattr(binder, BINDER_MARK, sk.Document.Name)
+    copy_sketch(binder, sk, title)
     binder.Label = "Croquis de %s (%s)" % (title, sk.Document.Label)
     binder.Visibility = False
     if kind == "hole":
@@ -284,7 +414,7 @@ def add_to_part(link, sk, kind, title):
         feat.Profile = binder
         feat.Type = "Length"  # como SW: arranca en "Hasta profundidad especificada", 10 mm
         feat.Length = CUT_DEPTH
-    label = "%s (%s)" % (title, sk.Document.Label)
+    label = feature_label(title, sk.Document.Label)
     feat.Label = label
     if FreeCAD.GuiUp:  # después del nombre SW que pone el original (naming.py, también con QTimer 0)
         QtCore.QTimer.singleShot(0, lambda d=pdoc.Name, n=feat.Name: _relabel(d, n, label))
@@ -433,7 +563,51 @@ class _Observer:
 
     def slotFinishSaveDocument(self, doc, _filename):
         if any(o.TypeId == "Assembly::AssemblyObject" for o in doc.Objects):
-            QtCore.QTimer.singleShot(0, lambda n=doc.Name: save_modified_parts(n))
+            QtCore.QTimer.singleShot(0, lambda n=doc.Name: _after_save(n))
+
+    def slotRecomputedDocument(self, doc):
+        """Con el ensamblaje abierto, ¿alguna copia quedó desactualizada? (p. ej. una ecuación que
+        cambió una cota del croquis): '->?' y aviso (#38). Nunca al abrir ni al deshacer."""
+        from swui.fork import safe_ops
+
+        if safe_ops.doc_busy(doc) or not any(hasattr(o, KIND) for o in doc.Objects):
+            return
+        name = doc.Name
+        QtCore.QTimer.singleShot(0, lambda: _check_later(name))
+
+
+_told = set()  # operaciones ya avisadas como desactualizadas (no repetir en cada recálculo)
+
+
+def _check_later(doc_name):
+    try:
+        doc = FreeCAD.getDocument(doc_name)
+    except Exception:
+        return
+    try:
+        stale = check_copies(doc, tell=False)
+        new = [(t, ps) for t, ps in stale if (doc_name, t) not in _told]
+        for t, _ps in stale:
+            _told.add((doc_name, t))
+        for t in [t for (d, t) in list(_told) if d == doc_name and t not in [x for x, _ in stale]]:
+            _told.discard((doc_name, t))
+        if new:
+            check_copies(doc, tell=True)
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Copias del ensamblaje:\n%s\n" % traceback.format_exc())
+
+
+def _after_save(doc_name):
+    """Archivos anteriores al 11/11: las copias todavía enlazadas al croquis (el círculo de #38) se
+    pasan a congeladas al guardar el ensamblaje; save_modified_parts guarda las piezas."""
+    try:
+        doc = FreeCAD.getDocument(doc_name)
+        for v in [o for o in doc.Objects if hasattr(o, KIND)]:
+            if any(e[1].Support for e in entries_of(v)):
+                refresh_copies(v)
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Copias del ensamblaje:\n%s\n" % traceback.format_exc())
+    save_modified_parts(doc_name)
 
 
 def modified_parts(asm_doc):
@@ -557,11 +731,16 @@ def _tell_if_from_assembly(doc_name):
         # pieza); la marca guarda el nombre interno de entonces ("Unnamed" si no estaba guardado)
         asms = []
         for o in binders:
-            for obj, _subs in (getattr(o, "Support", None) or []):
+            for obj, _subs in (getattr(o, "Support", None) or []):  # archivos anteriores (enlazados)
                 d = getattr(obj, "Document", None)
                 if d is not None and d not in asms:
                     asms.append(d)
-        names = [d.Label for d in asms] or sorted({getattr(o, BINDER_MARK) for o in binders})
+            mark = getattr(o, BINDER_MARK, "")
+            d = FreeCAD.listDocuments().get(mark)
+            if d is not None and d not in asms and any(hasattr(v, KIND) for v in d.Objects):
+                asms.append(d)
+        origins = sorted({getattr(o, ORIGIN, "").split(" en ")[-1] for o in binders if getattr(o, ORIGIN, "")})
+        names = [d.Label for d in asms] or origins or sorted({getattr(o, BINDER_MARK) for o in binders})
         text = ("%s tiene agujeros o cortes hechos desde el ensamblaje %s: se editan desde ahí "
                 "(clic derecho > Editar operación en el ensamblaje).\n" % (doc.Label, ", ".join(names)))
         if any(_shown(d) for d in asms):
@@ -590,10 +769,20 @@ class _GuiObserver:
 
 
 def _sketch_edited(v):
+    """Salir del croquis de la operación en el ensamblaje = editarla desde el ensamblaje: las copias
+    de las piezas se ponen al día (#38), en un paso de deshacer propio."""
     try:
         sk = getattr(v, SKETCH)
         if getattr(v, KIND) == "hole" and add_markers(sk):
             sk.Document.recompute()
+        if stale_entries(v) or any(e[1].Support for e in entries_of(v)):
+            mine = not FreeCAD.getActiveTransaction()  # cerrar solo el paso que se abre acá
+            begin_operation("Actualizar " + _title(v))
+            try:
+                refresh_copies(v)
+            finally:
+                if mine:
+                    FreeCAD.closeActiveTransaction()
         _recompute_later([b.Document for _l, b, _f in entries_of(v)] + [v.Document])
     except Exception:
         FreeCAD.Console.PrintLog("[SWUI fork] Croquis de ensamblaje:\n%s\n" % traceback.format_exc())
@@ -727,21 +916,32 @@ def open_panel_new(asm, kind, sk):
     parts, repeated = unique_parts(hits)
     title = next_title({o.Label for o in asm.Document.Objects}, kind)
     begin_operation(LABELS[kind])
-    entries = []
-    for link in parts:
-        binder, feat = add_to_part(link, sk, kind, title)
-        entries.append((link, binder, feat))
-    if kind == "hole" and not entries:
-        FreeCAD.Console.PrintWarning("[SWUI] El taladro no atraviesa ninguna pieza: elija las piezas en el panel.\n")
-    _show(asm, kind, sk, entries, None, title, repeated)
+    try:
+        entries = []
+        for link in parts:
+            binder, feat = add_to_part(link, sk, kind, title)
+            entries.append((link, binder, feat))
+        if kind == "hole" and not entries:
+            FreeCAD.Console.PrintWarning("[SWUI] El taladro no atraviesa ninguna pieza: elija las piezas en el panel.\n")
+        _show(asm, kind, sk, entries, None, title, repeated)
+    except Exception:
+        FreeCAD.closeActiveTransaction(True)  # nada a medias en las piezas (revisión del 11/11)
+        raise
 
 
 def open_panel(v):
     asm = next((p for p in v.InList if p.TypeId == "Assembly::AssemblyObject"), None)
     if asm is None:
         return None
-    begin_operation("Editar " + v.Label)
-    return _show(asm, getattr(v, KIND), getattr(v, SKETCH), entries_of(v), v, v.Label, [])
+    kind, entries = getattr(v, KIND), entries_of(v)
+    if not (kind == "hole" and entries):
+        # el panel del taladro abre el paso él mismo, después de volver a la vista normal (#36)
+        begin_operation("Editar " + _title(v))
+    try:
+        return _show(asm, kind, getattr(v, SKETCH), entries, v, _title(v), [])  # sin "(desactualizada)"
+    except Exception:
+        FreeCAD.closeActiveTransaction(True)
+        raise
 
 
 def _show(asm, kind, sk, entries, data, title, repeated):
@@ -853,6 +1053,7 @@ class _Scope:
             doc.removeObject(self.sketch.Name)
         else:
             self.data = record(self.asm, self.op_kind, self.sketch, self.entries, self.data, self.title)
+            refresh_copies(self.data, self.entries)  # editar desde el ensamblaje vuelve a copiar (#38)
 
     def _finish(self):
         """Cierra el paso de la operación (si una pieza al salir de edición ya lo cerró, no queda
@@ -983,6 +1184,9 @@ def make_hole_panel():
                 self._finish()
             return done
 
+        def _open_step(self):
+            begin_operation(self.TRANSACTION)  # el de la aplicación: ensamblaje y piezas (#37)
+
         def _abort_step(self):
             FreeCAD.closeActiveTransaction(True)  # el paso entero, en todos los documentos
 
@@ -1089,6 +1293,13 @@ class CutPanel(_Scope):
                 changed = self._toggle_part(link) or changed
         if changed:
             self._fill_parts()
+            if self.op_kind == "hole" and self.entries:
+                # taladro que no tocaba ninguna pieza (#68): con la primera elegida, el panel del
+                # taladro (medida, tipo...), en el mismo paso de la operación
+                self._close()
+                QtCore.QTimer.singleShot(0, lambda: _show(self.asm, "hole", self.sketch, self.entries,
+                                                          self.data, self.title, self.repeated))
+                return
             self._changed()
 
     def _copy_to_others(self):
@@ -1097,6 +1308,8 @@ class CutPanel(_Scope):
     def _apply_all(self):
         end = self.end.currentData()
         for _l, _b, feat in self.entries:
+            if feat.TypeId != "PartDesign::Pocket":
+                continue  # un taladro (panel abierto para elegir piezas): lo maneja su panel
             feat.Type = "ThroughAll" if end == "TwoSides" else end
             _set_both_sides(feat, end == "TwoSides")
             feat.Length = self.depth.value()
@@ -1113,7 +1326,9 @@ class CutPanel(_Scope):
             if bad:
                 problem = "FreeCAD no pudo cortar: %s." % ", ".join(bad)
             elif not self.entries:
-                problem = "El corte no toca ninguna pieza: elija las piezas (clic en la vista)."
+                problem = ("El taladro no toca ninguna pieza: elija las piezas (clic en la vista)."
+                           if self.op_kind == "hole" else
+                           "El corte no toca ninguna pieza: elija las piezas (clic en la vista).")
         except Exception:
             problem = "No se pudo calcular el corte."
             FreeCAD.Console.PrintError("[SWUI fork] Corte de ensamblaje:\n%s\n" % traceback.format_exc())
@@ -1125,7 +1340,7 @@ class CutPanel(_Scope):
 
     def accept(self):
         self._changed()
-        if self.message.isVisible():
+        if self.message.text():
             return False  # el aviso dice por qué (no cortó, o no toca ninguna pieza): #10
         self._close()
         self._save()

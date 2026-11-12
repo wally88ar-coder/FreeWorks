@@ -830,7 +830,7 @@ def show_cut_list(doc=None):
     total = sum(r["total_kg"] for r in rows)
     note = "Peso total: %s kg." % w._fmt(round(total, 2))
     if any(r["assumed_steel"] for r in rows):
-        note += "  Los miembros sin material se pesaron como acero (7850 kg/m³); asígnele material en Evaluar."
+        note += "  Los miembros sin material se pesaron como acero (7850 kg/m³); asígneles material en Evaluar."
     if not rows:
         note = "No hay miembros estructurales en este documento."
     lab = QtWidgets.QLabel(note)

@@ -369,10 +369,41 @@ def before_activate(doc, name):
                                      % traceback.format_exc())
 
 
+def children_follow(doc):
+    """
+    Como SW: en cada configuración, una operación suprimida suprime a las que dependen de ella
+    (hijos, nietos). Sin esto, un Redondeo sobre una arista de un Agujero suprimido en esa
+    configuración quedaba activo y en error (#74; pasaba según el orden de agregar configuraciones,
+    suprimir y hacer operaciones nuevas). Devuelve las operaciones que suprimió en alguna.
+    """
+    from swui.fork import feature_tree as ft
+
+    sheet, body = table(doc), owner(doc)
+    if sheet is None or body is None or getattr(body, "TypeId", "") == ASSEMBLY:
+        return []
+    confs = names(doc)
+    changed = []
+    for feat in _features(ft.features(body)):
+        if bound_alias(feat, "Suppressed") is None:
+            continue
+        off = [n for n in confs if value_in(doc, ("sup", feat), n) >= 0.5]
+        if not off:
+            continue
+        for child in _features(ft.dependents(feat)):
+            need = {n: 1 for n in off if value_in(doc, ("sup", child), n) < 0.5}
+            if need:
+                set_values(doc, ("sup", child), need)
+                changed.append(child)
+    if changed:
+        sync_attachments(doc)
+    return changed
+
+
 def activate(doc, name):
     body = owner(doc)
     if body is None or name not in names(doc):
         raise ValueError("No hay una configuración \"%s\"." % name)
+    children_follow(doc)
     before_activate(doc, name)
     if getattr(body, PROP) != name:
         setattr(body, PROP, name)

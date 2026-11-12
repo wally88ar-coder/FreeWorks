@@ -47,12 +47,25 @@ def step_path(fcstd):
     return os.path.splitext(fcstd)[0] + ".step"
 
 
+def _has_solid(obj):
+    import Part
+
+    shape = Part.getShape(obj)
+    return not shape.isNull() and bool(shape.Solids)
+
+
 def exportable(objs):
-    """Objetos de primer nivel con forma, sin croquis ni hojas."""
+    """Objetos de primer nivel con forma, sin croquis ni hojas. Un ensamblaje se exporta por sus
+    componentes con sólido: entero, el exportador de FreeCAD recorría también las relaciones, la
+    tabla de variables y los planos (sin sólido) y llenaba el informe de errores ("has null shape",
+    "Failed to get subshape Face1"; mono de ensamblaje, 12/11)."""
     out = []
     for obj in objs:
         kind = getattr(obj, "TypeId", "")
         if kind in NOT_SHAPES:
+            continue
+        if kind == "Assembly::AssemblyObject":
+            out += [c for c in exportable(obj.Group) if c.TypeId != kind and _has_solid(c)]
             continue
         if kind in SHAPED or (hasattr(obj, "isDerivedFrom") and obj.isDerivedFrom("Part::Feature")
                               and not obj.isDerivedFrom("Part::Part2DObject")):

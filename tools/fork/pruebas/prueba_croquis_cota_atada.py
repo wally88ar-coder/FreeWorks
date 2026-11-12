@@ -6,8 +6,6 @@ fórmula. Si después Mover o Girar (sin conservar relaciones) borra esa cota, l
 quedar apuntando a una cota que ya no existe: el croquis no queda con error (Issue #66, lo encontró
 el mono de croquis la noche del 10/11). Se prueba con un rectángulo equidistanciado y moviendo, o
 girando, la línea nueva que tiene la cota con nombre."""
-CONOCIDO = "#66"
-ESPERA = "fórmulas a una cota borrada"
 
 import re  # noqa: E402
 

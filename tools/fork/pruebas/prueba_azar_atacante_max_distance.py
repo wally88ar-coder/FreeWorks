@@ -119,7 +119,7 @@ def prueba():
         tam = ra + rb + 400
         _revisar(md, a, b, esperado, tam, "esferas (%s) c1=%r r=%r c2=%r r=%r" % (que, c1, ra, c2, rb))
         comprobado()
-    f.correr("esferas", esferas, "#52")  # error registrado: Issue #52
+    f.correr("esferas", esferas)
 
     @cfg
     @given(c=_pos(st), n=_dir(st), r=med, h=med, p=_pos(st, 300))
@@ -177,7 +177,7 @@ def prueba():
                                          "máximo local)" % (d, mejor))
         assert d <= mejor + holgura + 1e-3, "cilindros: dio %r, más que lo posible %r" % (d, mejor + holgura)
         comprobado()
-    f.correr("dos_cilindros", dos_cilindros, "#52")  # error registrado: Issue #52
+    f.correr("dos_cilindros", dos_cilindros)
 
     @cfg
     @given(c1=_pos(st), c2=_pos(st), r1=med, r2=med, n=_dir(st))

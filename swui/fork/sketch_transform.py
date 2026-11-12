@@ -64,8 +64,7 @@ def _external(c, chosen):
 
 
 def _delete(sketch, indices):
-    for index in sorted(set(indices), reverse=True):
-        sketch.delConstraint(index)
+    se.delete_constraints(sketch, indices)  # sin dejar fórmulas a una cota borrada (#66)
 
 
 def _transform(sketch, geo_ids, change, keep=False, angle=None, factor=None):

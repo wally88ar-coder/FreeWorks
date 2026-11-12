@@ -122,6 +122,49 @@ def _wires(sketch, geo_ids):
     return [Part.Wire(group) for group in Part.sortEdges(edges)]
 
 
+def _straight(wire):
+    """Dirección (unitaria) si la cadena es una recta (una línea o varias alineadas); si no, None.
+    En una recta el plano no queda definido y makeOffset2D falla con 'wires are nonplanar or
+    noncoplanar' (#63): la equidistancia se arma a mano en el plano del croquis."""
+    pts = [v.Point for v in wire.Vertexes]
+    if any(type(e.Curve).__name__ != "Line" for e in wire.Edges) or len(pts) < 2:
+        return None
+    d = max((p - pts[0] for p in pts), key=lambda v: v.Length)
+    if d.Length < TOL:
+        return None
+    d.normalize()
+    if any(abs((p - pts[0]).cross(d).Length) > TOL for p in pts):
+        return None
+    return d
+
+
+def _offset2d(wire, distance, closed_caps=False):
+    """wire.makeOffset2D en el plano del croquis (Z = 0), también para una recta (#63). Cadena
+    abierta: el resultado es la cadena corrida (o, con closed_caps, el contorno cerrado con arcos
+    en las puntas)."""
+    import Part
+
+    d = _straight(wire)
+    if d is None:
+        if closed_caps:
+            return wire.makeOffset2D(distance, 2, False, False)
+        return wire.makeOffset2D(distance, 2, False, not wire.isClosed())
+    n = V(-d.y, d.x, 0) * distance
+    # las puntas de la recta: el menor y el mayor a lo largo de d (el orden de Vertexes no es el
+    # de la cadena si una línea se dibujó al revés; revisión del 12/11)
+    pts = sorted((v.Point for v in wire.Vertexes), key=lambda p: p.dot(d))
+    a, b = pts[0], pts[-1]
+    if not closed_caps:
+        return Part.Wire(Part.LineSegment(a + n, b + n).toShape())
+    r = abs(distance)
+    m = V(-d.y, d.x, 0) * r
+    edges = [Part.LineSegment(a + m, b + m).toShape(),
+             Part.Arc(b + m, b + d * r, b - m).toShape(),
+             Part.LineSegment(b - m, a - m).toShape(),
+             Part.Arc(a - m, a - d * r, a + m).toShape()]
+    return Part.Wire(edges)
+
+
 def offset_shapes(sketch, geo_ids, distance, side=None, reverse=False, both=False, caps=None):
     """
     Resultado de la equidistancia (formas del plano del croquis, sin tocarlo): lista de
@@ -134,9 +177,9 @@ def offset_shapes(sketch, geo_ids, distance, side=None, reverse=False, both=Fals
     for wire in _wires(sketch, geo_ids):
         closed = wire.isClosed()
         if both and not closed and caps == "arcs":
-            out.append(wire.makeOffset2D(distance, 2, False, False))
+            out.append(_offset2d(wire, distance, closed_caps=True))
             continue
-        options = [wire.makeOffset2D(sign * distance, 2, False, not closed) for sign in (1, -1)]
+        options = [_offset2d(wire, sign * distance) for sign in (1, -1)]
         if both:
             out += options
             if not closed and caps == "lines":

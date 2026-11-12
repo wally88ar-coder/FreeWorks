@@ -876,7 +876,8 @@ def _envelopes_of(body):
         if o is sk or o.TypeId != "Sketcher::SketchObject" or not o.AttachmentSupport:
             continue
         binder = o.AttachmentSupport[0][0]
-        if binder.TypeId == "PartDesign::SubShapeBinder" and binder.Support and binder.Support[0][0] == route:
+        if (binder.TypeId == "PartDesign::SubShapeBinder" and binder.Support and binder.Support[0][0] == route
+                and _role(o) is not None):  # no la tapa de extremo (también cuelga de la Ruta)
             out.append(o)
     return out
 
@@ -985,12 +986,29 @@ def route_edge(body):
     return obj, (subs[0] if isinstance(subs, (tuple, list)) else subs)
 
 
+def _plates_of(body):
+    """Tapas de extremo y cartelas que siguen a `body` (sus binders copian la Ruta del miembro)."""
+    route = _route_of(body)
+    out = []
+    for o in body.Document.Objects:
+        if getattr(o, "SWUI_WeldPart", "") not in ("tapa", "cartela"):
+            continue
+        for b in o.Group:
+            if b.TypeId == "PartDesign::SubShapeBinder" and b.Support and b.Support[0][0] == route:
+                out.append(o)
+                break
+    return out
+
+
 def _forget(body):
     """Sacar de los otros miembros todo lo que depende de `body` (esquinas, recortes contra él)."""
     doc = body.Document
     for c in find_corners(members(doc)):
         if body in (c["a"], c["b"]):
             remove_corner(c["a"], c["b"])
+    for part in _plates_of(body):  # tapas y cartelas apoyadas en él: se van con él (como SW)
+        part.removeObjectsFromDocument()
+        doc.removeObject(part.Name)
     refs = (_route_of(body), body)  # recorte contra el miembro o contra una cara suya
     for other in members(doc):
         if other is body:
@@ -1320,6 +1338,13 @@ def end_cap(member, end, thickness=3.0, inset=0.0):
     fórmula) y se corre lo que el caño se alarga en esa punta; también sin FreeWorks."""
     doc = member.Document
     route, prof, mpad = _route_of(member), _profile_of(member), _pad_of(member)
+    # la tapa sigue al caño solo si su punta real es la que da el alargue de la extrusión; si una
+    # esquina o un recorte la corta (a tope, inglete, caja), queda fija en la punta medida
+    a0, a1, d = axis(member)
+    ts = [(v.Point - a0).dot(d) for v in member.Shape.Vertexes]
+    t_tip = min(ts) if end == 0 else max(ts) - (a1 - a0).Length
+    t_pad = -float(mpad.Length2) if end == 0 else float(mpad.Length) - route.Shape.Length
+    follow = abs(t_tip - t_pad) < 1e-6
     body = doc.addObject("PartDesign::Body", "Tapa")
     body.Label = "Tapa de extremo"
     binder = body.newObject("PartDesign::SubShapeBinder", "RutaTapa")
@@ -1336,7 +1361,11 @@ def end_cap(member, end, thickness=3.0, inset=0.0):
     sk.MapPathParameter = 0.0 if end == 0 else 1.0
     # en este anclaje el Z del croquis va de la punta final a la inicial (medido 11/11): la punta
     # inicial está corrida +alargue inicial y la final, -alargue final
-    if end == 0:
+    if not follow:
+        # punta con esquina o recorte: el caño se alarga de más y una caja corta lo que sobra, así
+        # que el alargue no es la punta real: se mide la punta (como antes) y queda ahí, fija
+        shift = repr(round(-t_tip, 6))
+    elif end == 0:
         shift = "%s.Length2 / 1 mm" % mpad.Name
     else:
         shift = "-(%s.Length / 1 mm - %s.Shape.Length)" % (mpad.Name, route.Name)
