@@ -334,6 +334,13 @@ def install(workbench=None):
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] IA (puente):\n%s\n" % traceback.format_exc())
     try:
+        # orden de pestañas como SW (Operaciones, Croquis, Evaluar...): después de Chapa y Soldadas
+        from swui.fork import evaluate_tab
+
+        evaluate_tab.install_order()
+    except Exception:
+        FreeCAD.Console.PrintError("[SWUI fork] Orden de las pestañas:\n%s\n" % traceback.format_exc())
+    try:
         # al final: reparte en menús estilo SW lo que todos agregaron al menú del banco
         from swui.fork import menus_sw
 

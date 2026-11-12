@@ -42,9 +42,8 @@ hasta correr la batería con ventana).**
   `prueba_ventana_matriz_vacia_sin_ingles` de guardia.
 - **Probado y descartado:** Congelar (`Std_ToggleFreeze`) para el desarrollo oculto: sin función
   de Python en 1.1.4 y cuelga FreeCAD al guardar (anotado en NOTAS_TECNICAS).
-- **Pregunta para el usuario (de la revisión):** Taladro con la vista previa en error +
-  "Editar posiciones": ahora no se borra (va al croquis y el panel vuelve), pero si después se
-  Cancela, el taladro roto queda (el panel lo trata como existente). ¿En SW se borra?
+- **Taladro en error + "Editar posiciones" + Cancelar** (hoy el taladro roto queda): el usuario
+  pidió (12/11) que Claude lo pruebe en SW y haga lo mismo. **Pendiente: necesita la PC libre.**
 - **Quedan sin tocar:** #15, #25 (rendimiento), #40 (visto una vez), #44 (es FreeCAD: recalcula un hijo suprimido),
   #59, #62, #64 (resolvedor de ensamblaje), #76, #78, #57 (capturas: el usuario).
 - **Terminé a las 05:55 del 12/11. Todo subido a GitHub (último commit de la noche: el de #26).** PC libre salvo el proceso huérfano de abajo.
@@ -82,8 +81,10 @@ más inofensivos", con causa raíz).** Resumen por tandas (detalle en CHANGELOG 
 - Capturas de referencia (`prueba_ventana_capturas.py`): estables (dos corridas, 0,00 %) sin
   comparar la vista 3D; detectan un texto cambiado (0,11 %, tolerancia 0,02 %). **Falta que el
   usuario apruebe las 14 imágenes** de `tools/fork/pruebas/capturas/nuevas/` (copiarlas a
-  `aprobadas/`). Visto en las capturas: la primera pestaña de la cinta es Evaluar (en SW 2018
-  la primera es Operaciones): preguntar al usuario si la quiere así.
+  `aprobadas/`). Visto en las capturas: la primera pestaña de la cinta era Evaluar; **12/11: el
+  usuario pidió el orden de SW** (Operaciones, Croquis, Evaluar, Chapa, Piezas soldadas...,
+  `evaluate_tab.install_order`): las 8 capturas de la cinta se rehacen con la ventana antes de
+  que las apruebe (las 6 de paneles no cambian).
 - Fuzzing de campos en ~40 paneles (`prueba_ventana_campos_pieza.py` y `_otros.py`): bien, y
   atrapa un error metido a propósito. Arreglos de la prueba: 2 casos por panel en cada entrega
   (6 de noche) y tiempo propio (TIEMPO_MAXIMO), paneles sin campos, croquis que queda abierto.

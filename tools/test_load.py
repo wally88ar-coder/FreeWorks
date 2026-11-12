@@ -1281,7 +1281,7 @@ def _check_feature_tree(commands, mw, layout, hooked):
                                        ("LINE", "C", 0.0, 30.7, 50.0, 30.7), ("LINE", "P", 0.0, 28.0, 9.0, 28.0)]))
             != [("LINE", "C", 0.0, 30.7, 0.0, 0.0), ("LINE", "C", 0.0, 30.7, 50.0, 30.7),
                 ("LINE", "P", 0.0, 28.0, 9.0, 28.0)]
-            or "Chapa" not in titles_ or titles_.index("Chapa") != titles_.index(lay_.SKIZZE[0]) + 1
+            or "Chapa" not in titles_ or titles_.index("Chapa") != titles_.index(lay_.SKIZZE[0]) + 2  # fork: Croquis, Evaluar, Chapa
             or smp is None or smp.BASE_COMMAND not in pick_.FEATURE_COMMANDS
             or smp.BASE_COMMAND not in fsk_.PROFILE_FEATURES or smp._choose not in dup.CHOOSERS
             or smp.FOLD_COMMAND not in fsk_.PROFILE_FEATURES
@@ -1915,8 +1915,9 @@ def run(split_namespace):
     # --- Reiter Baugruppe -------------------------------------------------
     titles = list(ribbon._tab_titles)
     # Evaluieren ganz links (Knopf "Language" sofort sichtbar), Start trotzdem auf Features
-    if titles[:2] != ["Evaluieren", "Features"]:
-        print("  FEHLER: Evaluieren steht nicht ganz links vor Features", titles)
+    # fork: como SW 2018, Operaciones, Croquis, Evaluar (swui/fork/evaluate_tab.install_order)
+    if titles[:3] != ["Features", "Skizze", "Evaluieren"]:
+        print("  FEHLER: fork: orden SW de las pestañas (Operaciones, Croquis, Evaluar)", titles)
         return False
     start_calls = [c_[0][0] for c_ in ribbon._tabs.setCurrentIndex.call_args_list]
     if not start_calls or start_calls[0] != titles.index("Features"):
@@ -4959,7 +4960,8 @@ def run(split_namespace):
     lang_btn = "Language" if "Language" in texts_en and "Language" in texts_de else texts_en[:3]
     fly_tip = next((x_ for x_ in tips_en if "variants" in x_), "")
     tabs_en = [t_ for t_ in tabs_en if t_ not in FORK_TABS]  # fork: pestaña Chapa (en castellano)
-    if tabs_en[:6] != ["Evaluate", "Features", "Sketch", "View", "Assembly", "Drawing"] or titles_en[2] != "Skizze":
+    # fork: orden SW (Operaciones, Croquis, Evaluar)
+    if tabs_en[:6] != ["Features", "Sketch", "Evaluate", "View", "Assembly", "Drawing"] or titles_en[1] != "Skizze":
         print("  FEHLER: Reiter auf Englisch / interne Namen", tabs_en, titles_en)
         return False
     if [k for _c, _x, k in menu_en] != [False, False, True, False] or menu_en[0][1] != "Automatic (Deutsch)" or lang_btn != "Language":

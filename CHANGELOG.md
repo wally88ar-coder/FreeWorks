@@ -5,6 +5,8 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Cinta en el orden de SW 2018** (pedido del usuario, 12/11): Operaciones, Croquis, Evaluar y
+  después Chapa, Piezas soldadas, Ver, Ensamblaje, Dibujo (el original pone Evaluar primera).
 - **12/11 de día (sin ventanas):** #43 (chapa: el desarrollo que queda oculto después de Aplanar
   perdía la cara fija, "?Face6", al agregar una brida o un dobladillo; ahora la vuelve a buscar
   cada vez que se recalcula, como SW). #74, la variante que quedaba, era de la prueba (el mono

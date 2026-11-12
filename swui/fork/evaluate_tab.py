@@ -69,6 +69,22 @@ def install():
     groups.insert(0, list(GROUP))  # sin Medir en la tabla: al principio
 
 
+def install_order():
+    """Orden de las pestañas como SW 2018: Operaciones, Croquis, Evaluar y después las demás
+    (decidido por el usuario, 12/11). El original pone Evaluar primera para que se vea su botón
+    Idioma; la cinta igual arranca en Operaciones. Se llama al final de la instalación del fork,
+    cuando Chapa y Piezas soldadas ya sumaron sus pestañas después de Croquis."""
+    from swui import ribbon_layout
+
+    tabs = ribbon_layout.TABS
+    titles = [title for title, _g in tabs]
+    if ribbon_layout.EVALUIEREN[0] not in titles or ribbon_layout.SKIZZE[0] not in titles:
+        return
+    evaluar = tabs.pop(titles.index(ribbon_layout.EVALUIEREN[0]))
+    after = [title for title, _g in tabs].index(ribbon_layout.SKIZZE[0])
+    tabs.insert(after + 1, evaluar)
+
+
 # Botón "Language" del original: en inglés en todos los idiomas (para encontrarlo en uno ajeno).
 # Con la interfaz en castellano dice "Idioma" (hallazgo con el mouse, 2026-10-30); "Language" queda
 # en el globo de ayuda.
