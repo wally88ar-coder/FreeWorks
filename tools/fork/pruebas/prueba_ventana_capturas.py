@@ -13,7 +13,7 @@ mire y la apruebe (copiándola a `aprobadas/`); mientras falte alguna, la prueba
 Lo que esto controla: que un cambio no desarme sin querer el aspecto SW (cinta cortada, textos en
 inglés, paneles corridos). Lo que no: si el aspecto es parecido a SW (eso lo juzga el usuario)."""
 TIPO = "completa"
-CONOCIDO = "#57"  # sacarlo cuando el usuario apruebe las capturas
+# #57: el usuario aprobó las 14 capturas el 12/11 (con la cinta en el orden de SW)
 ESPERA = "falta que el usuario apruebe"
 
 import os  # noqa: E402

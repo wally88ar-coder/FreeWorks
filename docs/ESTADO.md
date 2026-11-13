@@ -95,8 +95,9 @@ más inofensivos", con causa raíz).** Resumen por tandas (detalle en CHANGELOG 
   usuario apruebe las 14 imágenes** de `tools/fork/pruebas/capturas/nuevas/` (copiarlas a
   `aprobadas/`). Visto en las capturas: la primera pestaña de la cinta era Evaluar; **12/11: el
   usuario pidió el orden de SW** (Operaciones, Croquis, Evaluar, Chapa, Piezas soldadas...,
-  `evaluate_tab.install_order`): las 8 capturas de la cinta se rehacen con la ventana antes de
-  que las apruebe (las 6 de paneles no cambian).
+  `evaluate_tab.install_order`): rehechas el 12/11 y **las 14 aprobadas por el usuario el 12/11**
+  (copiadas a `aprobadas/`, sin la marca #57 en la prueba; #57 se cierra cuando dé BIEN con ventana).
+  **#44 cerrada por decisión del usuario (12/11):** es un aviso de FreeCAD, no se toca más.
 - Fuzzing de campos en ~40 paneles (`prueba_ventana_campos_pieza.py` y `_otros.py`): bien, y
   atrapa un error metido a propósito. Arreglos de la prueba: 2 casos por panel en cada entrega
   (6 de noche) y tiempo propio (TIEMPO_MAXIMO), paneles sin campos, croquis que queda abierto.
