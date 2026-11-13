@@ -27,13 +27,23 @@
   "modificado" al abrirlo. Sigue abierta con CONOCIDO.
   **Pregunta para el usuario:** ¿disimularlo al abrir (borrar la marca si solo se tocaron los
   componentes)? Eso taparía también un cambio real de una pieza hecho con el ensamblaje cerrado.
-- Sin tocar esta noche:
-  - #68: ya arreglado en parte. Falta abrir siempre el panel de taladro; es un cambio de interfaz
-    chico, de gravedad baja.
-  - #80: aviso en el informe; la relación se repara sola.
+- **Batería completa con ventana (03:13): 96 bien y 1 conocido (#79).** Después de los ajustes de
+  la revisión de #60, se corrieron otra vez las de ensamblaje, chapa y reglas_otros (Croquis 3D):
+  bien. Todo subido (último commit 49539e5).
+  Cerradas: #43, #74, #15, #57, #59, #64, #62, #60, #82.
+- **#84 (nueva, conocida, de antes):** el solver de FreeCAD no converge desde ciertos giros de
+  arranque (Ángulo a 87/90/135°, una Tangente). Con el código del 12/11 da lo mismo.
+- **Pruebas al azar largas (04:00-04:47):** todo bien salvo:
+  - Mover cara/girar: era la prueba (una cara que de verdad atraviesa la pieza se rechaza bien).
+  - Tangente: #84.
+  - Soldadas con 100 casos: se pasa de los 600 s. Es solo volumen, no una falla.
+- Sin arreglar esta noche (decidido):
+  - #68: el panel de taladro de ensamblaje se arma sobre un taladro real; abrirlo sin pieza pide
+    rediseñarlo. Anotado en la ficha, a hablar con el usuario.
+  - #80: aviso en el informe; la relación se repara sola. Moverlo antes del recálculo es delicado.
   - #76: errores internos del solver de FreeCAD.
   - #40: visto una sola vez.
-  - #25: hay que medir.
+  - #25: sin un caso concreto (salió de leer el código); hay que medir.
   - #78: no se repitió.
 
 **12/11 de día (el usuario usando la PC: solo pruebas SIN ventana; commits locales, NO subidos
