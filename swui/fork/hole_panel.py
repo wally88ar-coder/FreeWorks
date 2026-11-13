@@ -156,15 +156,21 @@ class HolePanel(dp.SwPanel):
     def __init__(self, obj):
         self.cut_kinds = read_cut_kinds()
         self.filling = False
-        # recién creado por el comando: transacción abierta Y todavía con los valores de FreeCAD (sin
-        # norma). Solo eso cuenta como nuevo para borrarlo al Cancelar tras "Editar posiciones": una
-        # transacción que quedó abierta por otra cosa no puede hacer borrar un taladro que ya existía
+        # recién creado por un comando (escucha de creación + transacción abierta): solo eso cuenta
+        # como nuevo (valores de arranque, y borrarlo al Cancelar después de "Editar posiciones")
         self.created = just_created(obj)
-        if self.created:
+        if self.created and obj.ThreadType == "None":
             _defaults(obj)  # taladro nuevo: como SW (ISO, M6, agujero pasante normal)
         # ¿vuelve de "Editar posiciones" de un taladro que todavía no se aceptó? (como SW: Cancelar
         # lo borra igual, aunque al ir al croquis FreeCAD ya lo haya guardado en el documento)
-        self.unconfirmed = _take_reopen_mark(obj)
+        self.unconfirmed, wizard = _take_reopen_mark(obj)
+        try:
+            sketch = obj.Profile[0]
+        except Exception:
+            sketch = None
+        # ¿el croquis de posiciones lo armó el asistente para este taladro? (se va con él al cancelar)
+        made = sketch is not None and take_hole_sketch(sketch)  # la marca se consume siempre acá
+        self.wizard = bool((self.created and made) or (self.unconfirmed and wizard))
         super().__init__(obj)
 
     def _sketch(self):
@@ -525,10 +531,17 @@ class HolePanel(dp.SwPanel):
         return done
 
     def reject(self):
-        hole = self.obj
+        # Como SW 2018 (probado con el mouse el 12/11): Cancelar un taladro nuevo no deja nada. El
+        # Cancelar del panel ya deshace el taladro recién creado; si pasó por "Editar posiciones" ya
+        # quedó en el documento y se borra acá. El croquis de posiciones se va si lo armó el
+        # asistente. Los nombres se toman antes: deshacer el paso borra los objetos.
+        doc = self.doc
+        hole_name = self.obj.Name if self.unconfirmed else None
+        sketch = self._sketch() if self.wizard else None
+        sketch_name = sketch.Name if sketch is not None and sketch.Document is doc else None
         done = super().reject()
-        if self.unconfirmed:
-            drop_unconfirmed(hole)
+        if hole_name or sketch_name:
+            drop_new_hole(doc, hole_name, sketch_name)
         return done
 
     def _pick(self, obj, sub):
@@ -553,7 +566,7 @@ class HolePanel(dp.SwPanel):
             self._finish_accept()
         FreeCADGui.Control.closeDialog()
         unconfirmed = self.created or self.unconfirmed  # nuevo, o ya volvió de otro "Editar posiciones"
-        FreeCADGui.addDocumentObserver(_BackToHole(sk, hole, unconfirmed))  # al salir del croquis, de vuelta acá
+        FreeCADGui.addDocumentObserver(_BackToHole(sk, hole, unconfirmed, self.wizard))  # al salir del croquis, de vuelta acá
         QtCore.QTimer.singleShot(100, lambda: _edit_sketch(sk))
 
 
@@ -610,9 +623,9 @@ def _defaults(obj):
 class _BackToHole:
     """Al salir del croquis de "Editar posiciones", volver al panel del taladro (pestaña Posiciones de SW)."""
 
-    def __init__(self, sketch, hole, unconfirmed=False):
+    def __init__(self, sketch, hole, unconfirmed=False, wizard=False):
         self.doc, self.sketch, self.hole = sketch.Document.Name, sketch.Name, hole.Name
-        self.unconfirmed = unconfirmed
+        self.unconfirmed, self.wizard = unconfirmed, wizard
         self.done = False
 
     def slotResetEdit(self, vp):
@@ -633,80 +646,161 @@ class _BackToHole:
             hole = FreeCAD.getDocument(self.doc).getObject(self.hole)
             if hole is not None and not FreeCADGui.Control.activeDialog():
                 if self.unconfirmed:
-                    set_reopen_mark(hole)
+                    set_reopen_mark(hole, self.wizard)
                 FreeCADGui.getDocument(self.doc).setEdit(hole)
         except Exception:
             FreeCAD.Console.PrintError("[SWUI fork] Volver al taladro:\n%s\n" % traceback.format_exc())
 
 
-# Taladro nuevo que pasó por "Editar posiciones": el panel que vuelve (FreeCAD lo arma un momento
-# después de setEdit) lo trata como no aceptado. La marca dura poco: si el panel no llega a abrirse,
-# no puede quedar colgada y hacer que Cancelar en una edición común borre un taladro existente.
-REOPEN_MARK_S = 5.0
-_reopen_mark = {"key": None, "until": 0.0}
+# --- Cancelar un taladro nuevo: que no quede nada (como SW 2018, probado con el mouse el 12/11) ---
+#
+# Todo se recuerda por el objeto mismo (`is`), nunca por el nombre: FreeCAD vuelve a usar el nombre
+# de un objeto borrado y el de un documento cerrado ("Croquis001", "Sin nombre"), y una marca por
+# nombre terminaba borrando un croquis del usuario (revisión del 12/11). Nada se guarda en el archivo.
+
+NEW_HOLE_S = 30.0  # un taladro cuenta como recién creado si su panel se abre antes de esto
+REOPEN_MARK_S = 5.0  # la marca de "vuelve de Editar posiciones" vence sola
+# el croquis del asistente es del taladro mientras el asistente espera que se cierre y un rato
+# después (el comando arranca enseguida); si el asistente lo soltó sin taladro (Extruir desde el
+# croquis, otro comando...), deja de serlo: un taladro mucho después sobre él no se lo lleva
+WIZARD_RELEASE_S = 10.0
+_new_holes = []  # (taladro, momento): los que creó un comando (escucha de creación)
+_wizard_sketches = []  # [croquis, soltado_en o None]: los que armó el asistente, todavía sin panel
+_reopen_mark = {"hole": None, "wizard": False, "until": 0.0}
+
+
+def _alive(obj):
+    try:
+        return obj.Document is not None and obj.Document.getObject(obj.Name) is obj
+    except Exception:
+        return False
+
+
+class _CreatedObserver:
+    """Anota cada taladro que se crea (el comando lo crea y enseguida abre su panel)."""
+
+    def slotCreatedObject(self, obj):
+        try:
+            doc = obj.Document
+            if doc.Restoring or getattr(doc, "Transacting", False):
+                return  # abrir un archivo, deshacer o rehacer no es crear
+        except Exception:
+            return
+        note_created(obj)
+
+
+def note_created(obj):
+    try:
+        if obj.TypeId != HOLE:
+            return
+    except Exception:
+        return
+    now = time.monotonic()
+    _new_holes[:] = [(o, t) for o, t in _new_holes if now - t <= NEW_HOLE_S and _alive(o)]
+    _new_holes.append((obj, now))
 
 
 def just_created(hole):
-    """¿El taladro recién lo creó el comando? Transacción abierta y todavía sin norma (FreeCAD lo
-    crea con ThreadType "None"; el panel le pone la norma enseguida)."""
+    """¿Este taladro lo acaba de crear un comando? Lo anotó el escucha de creación hace poco y su
+    transacción sigue abierta. (Antes: "transacción abierta y sin norma", y un taladro "Sin norma"
+    ya aceptado, editado con una transacción ajena abierta, contaba como nuevo: revisión del 12/11.)"""
     try:
-        return bool(hole.Document.HasPendingTransaction) and hole.ThreadType == "None"
+        pending = bool(hole.Document.HasPendingTransaction)
     except Exception:
         return False
+    now = time.monotonic()
+    return pending and any(o is hole and now - t <= NEW_HOLE_S for o, t in _new_holes)
 
 
-def set_reopen_mark(hole):
-    _reopen_mark["key"] = (hole.Document.Name, hole.Name)
-    _reopen_mark["until"] = time.monotonic() + REOPEN_MARK_S
+def mark_hole_sketch(sketch):
+    """El asistente armó este croquis para un taladro: es del taladro, como en SW."""
+    _wizard_sketches[:] = [e for e in _wizard_sketches if _alive(e[0]) and e[0] is not sketch]
+    _wizard_sketches.append([sketch, None])
+
+
+def release_hole_sketch(sketch):
+    """El asistente dejó de esperar este croquis (arrancó el taladro, o lo soltó sin taladro)."""
+    for entry in _wizard_sketches:
+        if entry[0] is sketch and entry[1] is None:
+            entry[1] = time.monotonic()
+
+
+def is_hole_sketch(sketch):
+    now = time.monotonic()
+    return any(e[0] is sketch and (e[1] is None or now - e[1] <= WIZARD_RELEASE_S) for e in _wizard_sketches)
+
+
+def take_hole_sketch(sketch):
+    """True si el asistente armó este croquis; la marca se consume (la usa el primer panel de
+    taladro sobre él, el de su creación: después es un croquis más)."""
+    found = is_hole_sketch(sketch)
+    _wizard_sketches[:] = [e for e in _wizard_sketches if e[0] is not sketch and _alive(e[0])]
+    return found
+
+
+def set_reopen_mark(hole, wizard=False):
+    _reopen_mark.update(hole=hole, wizard=bool(wizard), until=time.monotonic() + REOPEN_MARK_S)
 
 
 def _take_reopen_mark(hole):
-    """True (y se consume la marca) si este taladro vuelve de "Editar posiciones" sin aceptar."""
-    key, until = _reopen_mark["key"], _reopen_mark["until"]
-    _reopen_mark["key"] = None
-    try:
-        return key == (hole.Document.Name, hole.Name) and time.monotonic() <= until
-    except Exception:
-        return False
+    """(sin aceptar, croquis del asistente) del taladro que vuelve de "Editar posiciones"; la marca
+    se consume. (False, False) para cualquier otro panel."""
+    mark = dict(_reopen_mark)
+    _reopen_mark.update(hole=None, wizard=False)
+    if mark["hole"] is hole and hole is not None and time.monotonic() <= mark["until"]:
+        return True, mark["wizard"]
+    return False, False
 
 
-def drop_unconfirmed(hole):
+def _sketch_users(sketch):
+    return [o for o in sketch.InList if o.TypeId != "PartDesign::Body"]
+
+
+def drop_new_hole(doc, hole_name=None, sketch_name=None):
     """
-    Cancelar un taladro nuevo después de "Editar posiciones" (como SW 2018, probado con el mouse
-    el 12/11: Tipo -> Posiciones -> Cancelar no deja nada). Al ir al croquis el taladro ya quedó en
-    el documento, así que se borra en su propio paso de deshacer, con sus copias en otros sólidos
-    (Alcance, con su vínculo al croquis). El croquis de los centros queda, y a la vista, igual que al
-    cancelar sin pasar por Posiciones.
-    Devuelve True si borró algo.
+    Lo que queda de un taladro nuevo cancelado, en un paso de deshacer propio (Ctrl+Z lo devuelve):
+    - hole_name: el taladro que pasó por "Editar posiciones" (ahí ya quedó en el documento), con sus
+      copias en otros sólidos (Alcance, con su vínculo al croquis);
+    - sketch_name: el croquis de posiciones que armó el asistente, si ya nada lo usa.
+    Si el taladro se borra y el croquis queda, el croquis queda a la vista. Sin nada que borrar no
+    hace nada (ni un paso vacío). Devuelve True si borró algo.
     """
     from swui.fork import multibody, safe_ops
 
     try:
-        doc = hole.Document
-        if doc is None or doc.getObject(hole.Name) is not hole:
+        if doc is None or FreeCAD.listDocuments().get(doc.Name) is not doc:
             return False
+        hole = doc.getObject(hole_name) if hole_name else None
+        sketch = doc.getObject(sketch_name) if sketch_name else None
     except Exception:
         return False
     try:
-        copies = list(multibody.copies_of(hole))
+        copies = list(multibody.copies_of(hole)) if hole is not None else []
     except Exception:
         copies = []
-    try:
-        sketch = hole.Profile[0]
-    except Exception:
-        sketch = None
+    if sketch is not None and hole is None and _sketch_users(sketch):
+        sketch = None  # lo usa otra operación: queda (y no hay nada más que borrar)
+    if hole is None and sketch is None:
+        return False
+    kept = None
+    if hole is not None:
+        try:
+            kept = hole.Profile[0]
+        except Exception:
+            kept = None
     safe_ops.end_step(doc)  # nada abierto: el borrado va en un paso propio
     doc.openTransaction("Cancelar taladro")
     try:
         for copy in copies:  # antes que el taladro: si no, el escucha de multibody abre su propio paso
             if doc.getObject(copy.Name) is copy:
                 multibody._remove_copy(copy)
-        safe_ops.remove_feature(hole)
-        if sketch is not None and doc.getObject(sketch.Name) is sketch:
-            try:
-                sketch.Visibility = True
-            except Exception:
-                pass
+        if hole is not None:
+            safe_ops.remove_feature(hole)
+        # el croquis, recién ahora: los vínculos de las copias también lo usaban
+        if sketch is not None and _alive(sketch) and not _sketch_users(sketch):
+            safe_ops.remove_feature(sketch)
+        elif kept is not None and _alive(kept):
+            kept.Visibility = True  # queda: PartDesign lo había ocultado al usarlo el taladro
         doc.recompute()
     except Exception:
         safe_ops.end_step(doc, abort=True)
@@ -743,10 +837,17 @@ def _point_tool(sketch):
         pass
 
 
+_created_observer = None
+
+
 def install():
     from swui import pick_plane
 
     dp.PANELS[HOLE] = HolePanel
+    global _created_observer
+    if _created_observer is None:
+        _created_observer = _CreatedObserver()
+        FreeCAD.addDocumentObserver(_created_observer)
     if HOLE_COMMAND not in pick_plane.FEATURE_COMMANDS:
         pick_plane.FEATURE_COMMANDS = tuple(pick_plane.FEATURE_COMMANDS) + (HOLE_COMMAND,)
     arm = pick_plane.arm
@@ -754,6 +855,16 @@ def install():
         def wrapped(command, sketch):
             arm(command, sketch)
             if command == HOLE_COMMAND:
+                mark_hole_sketch(sketch)  # croquis del asistente: se va con el taladro al cancelar
                 QtCore.QTimer.singleShot(POINT_TOOL_DELAY_MS, lambda: _point_tool(sketch))
         wrapped._swui_hole = True
         pick_plane.arm = wrapped
+    disarm = pick_plane._disarm
+    if not getattr(disarm, "_swui_hole", False):
+        def wrapped_disarm():
+            armed = pick_plane.armed()
+            if armed and armed.get("command") == HOLE_COMMAND:
+                release_hole_sketch(armed.get("sketch"))
+            disarm()
+        wrapped_disarm._swui_hole = True
+        pick_plane._disarm = wrapped_disarm

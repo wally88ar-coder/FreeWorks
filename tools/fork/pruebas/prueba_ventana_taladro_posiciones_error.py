@@ -5,8 +5,10 @@ QUE = """Con la ventana (#17): Taladro nuevo cuya posición queda fuera de la pi
 error) y "Editar posiciones": el taladro NO se borra, se abre el croquis de las posiciones y al
 salir del croquis vuelve el panel del taladro (antes se cancelaba: el taladro se borraba y el
 panel no volvía). Y como SW 2018 (probado con el mouse el 12/11): si después se Cancela, el
-taladro nuevo no queda (el croquis de los centros sí, como al cancelar sin pasar por Posiciones);
-un taladro que ya estaba aceptado, editado, pasado por "Editar posiciones" y cancelado, queda."""
+taladro nuevo no queda (acá el croquis de los centros queda: es del usuario, elegido antes; el que
+arma el asistente se va con el taladro, ver prueba_taladro_cancelar_sin_aceptar); un taladro que ya
+estaba aceptado, editado, pasado por "Editar posiciones" y cancelado, queda. Y el croquis que arma
+el asistente ("Asistente para taladro" sin nada elegido) queda marcado como del taladro."""
 TIPO = "completa"
 
 import FreeCAD  # noqa: E402
@@ -32,6 +34,7 @@ def prueba():
     yield 800
     p = panel_guard.open_panel()
     assert isinstance(p, hole_panel.HolePanel), "no se abrió el panel SW del taladro: %s" % type(p).__name__
+    assert p.created and not p.wizard, "el taladro nuevo no cuenta como recién creado (o el croquis del usuario como del asistente)"
     # vista previa en error: profundidad 0 ("Invalid hole depth"; el campo no la deja escribir, se
     # fuerza para armar el caso: un taladro lejos de la pieza NO queda en error en FreeCAD 1.1.4)
     p.depth.setMinimum(0.0)
@@ -85,6 +88,19 @@ def prueba():
     FreeCADGui.Control.closeDialog()
     yield 500
     assert doc.getObject(hole) is not None, "Cancelar borró un taladro que ya estaba aceptado"
+
+    # el croquis que arma el asistente (pick_plane lo arma para el comando del taladro) es del taladro
+    from swui import pick_plane
+    sk2 = _croquis(body, "XY_Plane", 20, [])
+    doc.recompute()
+    assert not hole_panel.is_hole_sketch(sk2), "un croquis cualquiera quedó como del taladro"
+    pick_plane.arm("PartDesign_Hole", sk2)
+    pick_plane._disarm()
+    assert hole_panel.is_hole_sketch(sk2), "el croquis del asistente no quedó marcado como del taladro"
+    assert not hole_panel.is_hole_sketch(sk), "el croquis elegido por el usuario quedó como del taladro"
+    hole_panel.take_hole_sketch(sk2)
+    # el escucha de creación anota los taladros que crea el comando (el primero de esta prueba)
+    assert hole_panel._created_observer is not None, "no está el escucha de creación de taladros"
 
 
 from _base import ejecutar  # noqa: E402
