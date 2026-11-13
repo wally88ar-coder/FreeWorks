@@ -5,6 +5,10 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **La pieza fija no se mueve nunca (#62):** con dos piezas iguales encimadas y apenas giradas,
+  un Coincidente hacía que el solver de FreeCAD girara también la pieza fija. Ahora, si el solver
+  la mueve, vuelve a su lugar y se resuelve de nuevo; si igual no se puede, avisa "no se puede
+  resolver" en vez de dejarla corrida.
 - **Tangente con el perno parado (#64):** Tangente entre la cara de arriba de una placa y un perno
   metido en su agujero (eje a 90° de la cara): FreeCAD decía "resuelto" sin mover nada y el perno
   quedaba atravesando la placa. Ahora queda acostado sobre la cara, a la distancia de su radio,

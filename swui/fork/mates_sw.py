@@ -297,7 +297,9 @@ def create_joint(asm, key, refs, value=None, label=None):
     connectors = [mate_refs.plain_ref([comp, [sub, sub]]) for comp, sub in refs]
     if key == "lock":
         _keep_position(joint, connectors)
-    joint.Proxy.setJointConnectors(joint, connectors)
+    fixed = _grounded_placements(asm)
+    joint.Proxy.setJointConnectors(joint, connectors)  # FreeCAD resuelve acá (sin pasar por `solve`)
+    keep_grounded(asm, fixed)  # antes de los destrabes: que miren lo que de verdad quedó
     if key in PLANE_PARALLEL:
         unstick_perpendicular(asm, joint, refs)
     if key == "tangent":
@@ -306,6 +308,52 @@ def create_joint(asm, key, refs, value=None, label=None):
             unstick_tangent(asm, joint, axis_joint)
     hide_markers([joint] + companions(joint))
     return joint
+
+
+def _grounded_placements(asm):
+    """{pieza fija: su ubicación} de las piezas fijas de ESTE ensamblaje (no las de otro del mismo
+    archivo ni las de un subensamblaje: esas sí las puede mover el solver)."""
+    out = {}
+    try:
+        _jo, ua = _assembly_modules()
+        group = ua.getJointGroup(asm).Group
+    except Exception:
+        return out
+    for o in group:
+        try:
+            part = getattr(o, "ObjectToGround", None)
+            if part is not None:
+                out[part] = part.Placement
+        except Exception:
+            pass
+    return out
+
+
+def _moved(fixed):
+    return [p for p, plc in fixed.items() if not p.Placement.isSame(plc, 1e-7)]
+
+
+def keep_grounded(asm, fixed):
+    """
+    Una pieza fija no se mueve nunca (como en SW). Con dos piezas iguales encimadas y apenas
+    giradas (1°), Coincidente entre dos caras de costado: el solver de FreeCAD 1.1 giraba también
+    la pieza FIJA (#62, probado 13/11). Si pasó, vuelve a su lugar y se resuelve de nuevo desde ahí
+    (así el solver mueve solo la otra). True si quedó bien; False si el solver insiste en moverla:
+    la fija queda en su lugar y el que llama lo informa como "no se puede resolver".
+    """
+    moved = _moved(fixed)
+    if not moved:
+        return True
+    for p in moved:
+        p.Placement = fixed[p]
+    try:
+        result = asm.solve()
+    except Exception:
+        result = -1
+    again = _moved(fixed)
+    for p in again:
+        p.Placement = fixed[p]
+    return result == 0 and not again
 
 
 def hide_markers(joints):
@@ -728,10 +776,16 @@ def unstick_tangent(asm, joint, axis_joint):
 
 
 def solve(asm):
+    """Resolver el ensamblaje sin que se mueva ninguna pieza fija (#62): si el solver la movió y no
+    se puede resolver de otra forma, devuelve -1 (como un error del solver)."""
+    fixed = _grounded_placements(asm)
     try:
-        return asm.solve()
+        result = asm.solve()
     except Exception:
+        result = -1
+    if not keep_grounded(asm, fixed):
         return -1
+    return result
 
 
 # --- Panel ---------------------------------------------------------------
