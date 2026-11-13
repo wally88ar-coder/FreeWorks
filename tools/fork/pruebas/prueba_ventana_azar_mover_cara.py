@@ -118,7 +118,17 @@ def girar(L, A, H, lado, ang):
     p.angle.setValue(ang)
     p.preview()
     bombear(1000)
-    assert aceptar(), "Mover cara (girar) no aceptó: %s" % (p.message.text() if p.message.isVisible() else "")
+    if not aceptar():
+        aviso = p.message.text() if p.message.isVisible() else ""
+        # girada hacia adentro, la arista de arriba se corre H·tan(ángulo): si eso pasa el ancho
+        # de la pieza, la cara la atraviesa y el panel lo rechaza con su aviso (bien; 13/11)
+        ancho = L if abs(n0.x) > 0.5 else A
+        assert "atraviesa" in aviso and H * math.tan(math.radians(ang)) >= ancho - 1e-6,             "Mover cara (girar) no aceptó: %s" % aviso
+        from reglas_paneles import tocar
+        tocar(rechazar=True)
+        bombear(500)
+        comprobado()
+        return
     doc.recompute()
     comprobado()
     inclinadas = []
