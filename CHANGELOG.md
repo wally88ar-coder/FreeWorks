@@ -5,6 +5,11 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Tangente con el perno parado (#64):** Tangente entre la cara de arriba de una placa y un perno
+  metido en su agujero (eje a 90° de la cara): FreeCAD decía "resuelto" sin mover nada y el perno
+  quedaba atravesando la placa. Ahora queda acostado sobre la cara, a la distancia de su radio,
+  como en SW; también después del botón Alineación. #59 (chapa: Ctrl+Z después de suprimir una
+  brida con un Aplanar antes) no aparece más con el arreglo de #43 (50 seguidillas del mono).
 - **Ecuaciones (#82, resto de #45 y #46, hallado por el fuzzing la noche del 12/11):** '=2^1000'
   avisaba con el texto de FreeCAD en inglés; una ecuación sobre una cota aceptaba fórmulas que no
   dan un número ('=sqrt(-1)', '=acos(2)', '=1e308*10') y la cota quedaba en "nan" (con '=acos(2)',

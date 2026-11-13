@@ -301,7 +301,9 @@ def create_joint(asm, key, refs, value=None, label=None):
     if key in PLANE_PARALLEL:
         unstick_perpendicular(asm, joint, refs)
     if key == "tangent":
-        _tangent_axis(asm, joint, refs, connectors)
+        axis_joint = _tangent_axis(asm, joint, refs, connectors)
+        if axis_joint is not None:
+            unstick_tangent(asm, joint, axis_joint)
     hide_markers([joint] + companions(joint))
     return joint
 
@@ -643,6 +645,88 @@ def unstick_perpendicular(asm, joint, refs):
         return False
 
 
+def flip_one_part(asm, joint):
+    """Antialineada (botón Alineación): la vuelta nativa de una pieza. En una Tangente, esa vuelta
+    deja el eje del cilindro parado sobre la cara (la pieza se lleva al marco de la cara) y el
+    solver vuelve a quedar trabado (#64, revisión del 13/11): se acuesta como al crearla."""
+    joint.Proxy.flipOnePart(joint)
+    if getattr(joint, PROP, "") == "tangent":
+        for axis_joint in companions(joint):
+            unstick_tangent(asm, joint, axis_joint)
+            break
+
+
+def unstick_tangent(asm, joint, axis_joint):
+    """
+    Tangente entre una cara plana y un cilindro cuyo eje está justo a 90° de la cara (un perno
+    parado en el agujero de una placa, Tangente con la cara de arriba: lo más común): la unión
+    Perpendicular acompañante arranca en su punto muerto, el solver de FreeCAD 1.1 no mueve nada y
+    dice que resolvió (#64, probado 13/11). SW acuesta el cilindro sobre la cara. Acá, si el eje
+    quedó a 90° de la cara, la pieza libre se gira 90° (acostada) y se resuelve de nuevo; si eso no
+    alcanza, vuelve a donde estaba. Devuelve True si tuvo que girarla.
+    """
+    _jo, ua = _assembly_modules()
+    before = {}
+    try:
+        o1, z1 = _global_z(joint, 1)
+        o2, z2 = _global_z(joint, 2)
+        if abs(z1.dot(z2)) < 1 - 1e-6:
+            return False  # el eje no está parado sobre la cara: el solver lo acuesta solo
+        part1 = ua.getMovingPart(joint.Reference1)
+        part2 = ua.getMovingPart(joint.Reference2)
+        joint.Suppressed = axis_joint.Suppressed = True
+        try:
+            libre1 = part1 is not None and not asm.isPartConnected(part1)
+            libre2 = part2 is not None and not asm.isPartConnected(part2)
+        finally:
+            joint.Suppressed = axis_joint.Suppressed = False
+        # se gira la pieza que no tienen otras relaciones (como en `unstick_perpendicular`)
+        if libre2:
+            moving, origin = part2, o2
+        elif libre1:
+            moving, origin = part1, o1
+        else:
+            return False
+        turn_axis = z1.cross(FreeCAD.Vector(1, 0, 0))
+        if turn_axis.Length < 1e-6:
+            turn_axis = z1.cross(FreeCAD.Vector(0, 1, 0))
+        # la otra pieza de la Tangente no gira con ella: si las dos están libres, la unión del eje
+        # las ata y aparecería "abajo" de la que se mueve (revisión del 13/11)
+        other = part1 if moving is part2 else part2
+        parts = [moving]
+        axis_joint.Suppressed = True
+        try:
+            parts += [p for p in asm.getDownstreamParts(moving, joint) if p is not other and p is not moving]
+        except Exception:
+            pass
+        finally:
+            axis_joint.Suppressed = False
+        before = {p: p.Placement for p in parts}
+        turn = FreeCAD.Placement(FreeCAD.Vector(), FreeCAD.Rotation(turn_axis, 90), origin)
+        for p in parts:
+            p.Placement = turn.multiply(p.Placement)
+        ok = solve(asm) == 0
+        if ok:
+            o1, z1 = _global_z(joint, 1)
+            o2, z2 = _global_z(joint, 2)
+            ok = abs(z1.dot(z2)) < 1e-6
+        if not ok:
+            for p, plc in before.items():
+                p.Placement = plc
+            solve(asm)
+        return ok
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Tangente con el eje parado: %s\n" % traceback.format_exc())
+        try:
+            for p, plc in before.items():
+                p.Placement = plc
+            if before:
+                solve(asm)
+        except Exception:
+            pass
+        return False
+
+
 def solve(asm):
     try:
         return asm.solve()
@@ -947,7 +1031,7 @@ class MatePanel:
             self.joint = create_joint(self.asm, key, [(e[0], e[1]) for e in self.entities],
                                       self.value.get(key), label)
             if self.flipped and key in FLIPPABLE:
-                self.joint.Proxy.flipOnePart(self.joint)
+                flip_one_part(self.asm, self.joint)
             if solve(self.asm) != 0:
                 problem = "FreeCAD no puede resolver esta relación (choca con otra o la pieza está fija)."
             self.doc.recompute()
@@ -991,7 +1075,7 @@ class MatePanel:
             return
         self.flipped = flipped
         try:
-            self.joint.Proxy.flipOnePart(self.joint)
+            flip_one_part(self.asm, self.joint)
             solve(self.asm)
             self.doc.recompute()
         except Exception:

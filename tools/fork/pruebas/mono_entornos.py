@@ -70,9 +70,6 @@ class Chapa(Entorno):
     acciones = ("aplanar", "dxf")
     # "Invalid shape name ?Face" al desplegar era la Issue 43 (arreglada el 12/11): ya no se tolera
     deuda = ((ACEPTADO_44, "Failed to recompute suppressed feature", None),)
-    # el DXF también despliega por dentro: mismo #59 (noche/batería del 10/11)
-    deuda_pasos = (("#59", "Ctrl+Z después de suprimir no volvió", "suprimir", "aplanar"),
-                   ("#59", "Ctrl+Z después de suprimir no volvió", "suprimir", "dxf"))
 
     def armar(self):
         from casos_grupo3 import BridaArista, BridaBase

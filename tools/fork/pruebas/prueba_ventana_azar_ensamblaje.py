@@ -496,8 +496,7 @@ def configuraciones(data):
 def prueba():
     fallas = Fallas()
     solo = os.environ.get("FW_CASO", "")
-    conocidos = {"relaciones entre caras": "#62", "cambiar una pieza": "#62", "guardar y abrir": "#62",
-                 "tangente": "#64"}
+    conocidos = {"relaciones entre caras": "#62", "cambiar una pieza": "#62", "guardar y abrir": "#62"}
     for nombre, fn in (("relaciones entre caras", caras), ("concéntrica", concentrica),
                        ("cambiar una pieza", cambiar_pieza), ("guardar y abrir", guardar),
                        ("matriz de componentes", matriz_componentes), ("taladro en pieza girada", taladro_girado),
