@@ -24,6 +24,7 @@ paso, refrentados ISO 4762, etc.). Mismo enganche que el redondeo
 
 import json
 import os
+import time
 import traceback
 
 import FreeCAD
@@ -155,8 +156,15 @@ class HolePanel(dp.SwPanel):
     def __init__(self, obj):
         self.cut_kinds = read_cut_kinds()
         self.filling = False
-        if obj.Document.HasPendingTransaction and obj.ThreadType == "None":
+        # recién creado por el comando: transacción abierta Y todavía con los valores de FreeCAD (sin
+        # norma). Solo eso cuenta como nuevo para borrarlo al Cancelar tras "Editar posiciones": una
+        # transacción que quedó abierta por otra cosa no puede hacer borrar un taladro que ya existía
+        self.created = just_created(obj)
+        if self.created:
             _defaults(obj)  # taladro nuevo: como SW (ISO, M6, agujero pasante normal)
+        # ¿vuelve de "Editar posiciones" de un taladro que todavía no se aceptó? (como SW: Cancelar
+        # lo borra igual, aunque al ir al croquis FreeCAD ya lo haya guardado en el documento)
+        self.unconfirmed = _take_reopen_mark(obj)
         super().__init__(obj)
 
     def _sketch(self):
@@ -516,6 +524,13 @@ class HolePanel(dp.SwPanel):
             multibody._tell("\n".join(problems))
         return done
 
+    def reject(self):
+        hole = self.obj
+        done = super().reject()
+        if self.unconfirmed:
+            drop_unconfirmed(hole)
+        return done
+
     def _pick(self, obj, sub):
         return False  # las posiciones van en el croquis
 
@@ -537,7 +552,8 @@ class HolePanel(dp.SwPanel):
             # Antes se cancelaba: un taladro nuevo se borraba y el panel no volvía (#17)
             self._finish_accept()
         FreeCADGui.Control.closeDialog()
-        FreeCADGui.addDocumentObserver(_BackToHole(sk, hole))  # al salir del croquis, de vuelta acá
+        unconfirmed = self.created or self.unconfirmed  # nuevo, o ya volvió de otro "Editar posiciones"
+        FreeCADGui.addDocumentObserver(_BackToHole(sk, hole, unconfirmed))  # al salir del croquis, de vuelta acá
         QtCore.QTimer.singleShot(100, lambda: _edit_sketch(sk))
 
 
@@ -594,8 +610,9 @@ def _defaults(obj):
 class _BackToHole:
     """Al salir del croquis de "Editar posiciones", volver al panel del taladro (pestaña Posiciones de SW)."""
 
-    def __init__(self, sketch, hole):
+    def __init__(self, sketch, hole, unconfirmed=False):
         self.doc, self.sketch, self.hole = sketch.Document.Name, sketch.Name, hole.Name
+        self.unconfirmed = unconfirmed
         self.done = False
 
     def slotResetEdit(self, vp):
@@ -615,9 +632,88 @@ class _BackToHole:
         try:
             hole = FreeCAD.getDocument(self.doc).getObject(self.hole)
             if hole is not None and not FreeCADGui.Control.activeDialog():
+                if self.unconfirmed:
+                    set_reopen_mark(hole)
                 FreeCADGui.getDocument(self.doc).setEdit(hole)
         except Exception:
             FreeCAD.Console.PrintError("[SWUI fork] Volver al taladro:\n%s\n" % traceback.format_exc())
+
+
+# Taladro nuevo que pasó por "Editar posiciones": el panel que vuelve (FreeCAD lo arma un momento
+# después de setEdit) lo trata como no aceptado. La marca dura poco: si el panel no llega a abrirse,
+# no puede quedar colgada y hacer que Cancelar en una edición común borre un taladro existente.
+REOPEN_MARK_S = 5.0
+_reopen_mark = {"key": None, "until": 0.0}
+
+
+def just_created(hole):
+    """¿El taladro recién lo creó el comando? Transacción abierta y todavía sin norma (FreeCAD lo
+    crea con ThreadType "None"; el panel le pone la norma enseguida)."""
+    try:
+        return bool(hole.Document.HasPendingTransaction) and hole.ThreadType == "None"
+    except Exception:
+        return False
+
+
+def set_reopen_mark(hole):
+    _reopen_mark["key"] = (hole.Document.Name, hole.Name)
+    _reopen_mark["until"] = time.monotonic() + REOPEN_MARK_S
+
+
+def _take_reopen_mark(hole):
+    """True (y se consume la marca) si este taladro vuelve de "Editar posiciones" sin aceptar."""
+    key, until = _reopen_mark["key"], _reopen_mark["until"]
+    _reopen_mark["key"] = None
+    try:
+        return key == (hole.Document.Name, hole.Name) and time.monotonic() <= until
+    except Exception:
+        return False
+
+
+def drop_unconfirmed(hole):
+    """
+    Cancelar un taladro nuevo después de "Editar posiciones" (como SW 2018, probado con el mouse
+    el 12/11: Tipo -> Posiciones -> Cancelar no deja nada). Al ir al croquis el taladro ya quedó en
+    el documento, así que se borra en su propio paso de deshacer, con sus copias en otros sólidos
+    (Alcance, con su vínculo al croquis). El croquis de los centros queda, y a la vista, igual que al
+    cancelar sin pasar por Posiciones.
+    Devuelve True si borró algo.
+    """
+    from swui.fork import multibody, safe_ops
+
+    try:
+        doc = hole.Document
+        if doc is None or doc.getObject(hole.Name) is not hole:
+            return False
+    except Exception:
+        return False
+    try:
+        copies = list(multibody.copies_of(hole))
+    except Exception:
+        copies = []
+    try:
+        sketch = hole.Profile[0]
+    except Exception:
+        sketch = None
+    safe_ops.end_step(doc)  # nada abierto: el borrado va en un paso propio
+    doc.openTransaction("Cancelar taladro")
+    try:
+        for copy in copies:  # antes que el taladro: si no, el escucha de multibody abre su propio paso
+            if doc.getObject(copy.Name) is copy:
+                multibody._remove_copy(copy)
+        safe_ops.remove_feature(hole)
+        if sketch is not None and doc.getObject(sketch.Name) is sketch:
+            try:
+                sketch.Visibility = True
+            except Exception:
+                pass
+        doc.recompute()
+    except Exception:
+        safe_ops.end_step(doc, abort=True)
+        FreeCAD.Console.PrintError("[SWUI fork] Cancelar taladro:\n%s\n" % traceback.format_exc())
+        return False
+    safe_ops.end_step(doc)
+    return True
 
 
 def dp_fmt(value):

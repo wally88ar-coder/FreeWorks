@@ -46,8 +46,16 @@ hasta correr la batería con ventana).**
   pidió (12/11) que Claude lo pruebe en SW y haga lo mismo. **Probado en SW 2018 con el mouse
   (12/11, 20:45):** taladro nuevo con el punto fuera de la pieza, Tipo -> Posiciones -> Cancelar:
   no queda nada (ni el taladro ni su croquis). FreeWorks tiene que hacer lo mismo: el taladro
-  NUEVO se borra al cancelar aunque se haya pasado por "Editar posiciones" (sin programar todavía;
-  se hace sin ventanas).
+  NUEVO se borra al cancelar aunque se haya pasado por "Editar posiciones". **Programado el 12/11**
+  (`hole_panel.drop_unconfirmed` + marca de vuelta), prueba sin ventana en verde
+  (`prueba_taladro_cancelar_sin_aceptar`); la de ventana (`prueba_ventana_taladro_posiciones_error`,
+  ampliada) **sin correr todavía**: va con la batería completa. El croquis de los centros queda
+  (como al cancelar sin pasar por Posiciones, y a la vista); en SW tampoco queda: ver si se quiere
+  igual. Revisión (otro agente): arreglado que las copias del Alcance dejaban su vínculo suelto y que
+  una transacción ajena abierta hiciera contar como nuevo un taladro existente (`just_created`).
+  Queda sin tocar: un taladro con vista previa buena que pasa por Posiciones y se cancela igual
+  queda recordado como "último usado" (SW: sin probar); si FreeCAD tarda más de 5 s en reabrir el
+  panel, el taladro nuevo queda al cancelar (falla del lado seguro).
 - **Quedan sin tocar:** #15, #25 (rendimiento), #40 (visto una vez), #44 (es FreeCAD: recalcula un hijo suprimido),
   #59, #62, #64 (resolvedor de ensamblaje), #76, #78, #57 (capturas: el usuario).
 - **Terminé a las 05:55 del 12/11. Todo subido a GitHub (último commit de la noche: el de #26).** PC libre salvo el proceso huérfano de abajo.

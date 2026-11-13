@@ -4,7 +4,9 @@
 QUE = """Con la ventana (#17): Taladro nuevo cuya posición queda fuera de la pieza (vista previa en
 error) y "Editar posiciones": el taladro NO se borra, se abre el croquis de las posiciones y al
 salir del croquis vuelve el panel del taladro (antes se cancelaba: el taladro se borraba y el
-panel no volvía)."""
+panel no volvía). Y como SW 2018 (probado con el mouse el 12/11): si después se Cancela, el
+taladro nuevo no queda (el croquis de los centros sí, como al cancelar sin pasar por Posiciones);
+un taladro que ya estaba aceptado, editado, pasado por "Editar posiciones" y cancelado, queda."""
 TIPO = "completa"
 
 import FreeCAD  # noqa: E402
@@ -51,6 +53,38 @@ def prueba():
     p2.reject()
     FreeCADGui.Control.closeDialog()
     yield 500
+    assert doc.getObject(hole) is None, "Cancelar dejó el taladro nuevo después de Editar posiciones (SW lo borra)"
+    assert doc.getObject(sk.Name) is not None, "Cancelar se llevó el croquis de los centros"
+    assert not FreeCADGui.Control.activeDialog(), "quedó un panel abierto"
+
+    # taladro ya aceptado: editarlo, Editar posiciones, volver y Cancelar -> queda
+    FreeCADGui.Selection.clearSelection()
+    FreeCADGui.Selection.addSelection(sk)
+    ribbon._run("PartDesign_Hole")
+    yield from esperar_panel()
+    yield 800
+    p = panel_guard.open_panel()
+    assert isinstance(p, hole_panel.HolePanel), "no se abrió el panel del segundo taladro"
+    assert p.accept(), "no se pudo aceptar el taladro bueno"
+    FreeCADGui.Control.closeDialog()
+    yield 800
+    hole = p.obj.Name
+    FreeCADGui.ActiveDocument.setEdit(doc.getObject(hole))
+    yield from esperar_panel()
+    yield 800
+    p = panel_guard.open_panel()
+    assert isinstance(p, hole_panel.HolePanel) and not p.is_new, "editar el taladro no abrió su panel"
+    p.edit_positions()
+    yield 1500
+    FreeCADGui.ActiveDocument.resetEdit()
+    yield 1500
+    p2 = panel_guard.open_panel()
+    assert p2 is not None and p2.obj.Name == hole, "no volvió el panel del taladro existente"
+    assert not p2.unconfirmed, "un taladro ya aceptado quedó como sin aceptar"
+    p2.reject()
+    FreeCADGui.Control.closeDialog()
+    yield 500
+    assert doc.getObject(hole) is not None, "Cancelar borró un taladro que ya estaba aceptado"
 
 
 from _base import ejecutar  # noqa: E402

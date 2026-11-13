@@ -5,6 +5,8 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Taladro: Cancelar después de "Editar posiciones"** borra el taladro nuevo (y sus copias en
+  otros sólidos), como SW 2018 (probado con el mouse el 12/11); uno ya aceptado queda.
 - **Cinta en el orden de SW 2018** (pedido del usuario, 12/11): Operaciones, Croquis, Evaluar y
   después Chapa, Piezas soldadas, Ver, Ensamblaje, Dibujo (el original pone Evaluar primera).
 - **12/11 de día (sin ventanas):** #43 (chapa: el desarrollo que queda oculto después de Aplanar
