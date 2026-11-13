@@ -5,6 +5,11 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Ecuaciones (#82, resto de #45 y #46, hallado por el fuzzing la noche del 12/11):** '=2^1000'
+  avisaba con el texto de FreeCAD en inglés; una ecuación sobre una cota aceptaba fórmulas que no
+  dan un número ('=sqrt(-1)', '=acos(2)', '=1e308*10') y la cota quedaba en "nan" (con '=acos(2)',
+  hasta en grados). Ahora se rechazan en castellano y la cota queda como estaba. Las pruebas ya no
+  toleran errores cerrados (#43, #45, #46, #55, #56; la 44 queda como aviso aceptado de FreeCAD).
 - **Taladro: Cancelar un taladro nuevo no deja nada**, como SW 2018 (probado con el mouse el
   12/11): ni el taladro, aunque haya pasado por "Editar posiciones" (con sus copias en otros
   sólidos), ni el croquis de posiciones que armó el asistente. Un croquis que el usuario ya tenía,

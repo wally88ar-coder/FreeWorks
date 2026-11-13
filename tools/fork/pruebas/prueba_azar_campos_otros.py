@@ -61,11 +61,6 @@ def _pieza():
     return doc, body, caja
 
 
-def _rotos(doc):
-    """Los objetos con error del documento ([] = todo sano)."""
-    return [o.Name for o in doc.Objects if "Invalid" in o.State or "Error" in o.State]
-
-
 def _valor_en(cf, doc, caja, nombre):
     try:
         v = cf.value_in(doc, ("prop", caja, "Length"), nombre)
@@ -102,18 +97,13 @@ def configuraciones(acciones):
             que = "paso %d %r" % (i, a)
             traza("    " + que)
             nombres = cf.names(doc)
-            antes_nombres, rotos_antes = list(nombres), _rotos(doc)
+            antes_nombres = list(nombres)
             aviso = None
             if a[0] == "agregar":
                 aviso = _aviso(lambda: cf.add(doc, a[1]), a[1])
             elif a[0] == "renombrar" and nombres:
                 viejo = nombres[a[1] % len(nombres)]
                 aviso = _aviso(lambda: cf.rename(doc, viejo, a[2]), a[2])
-                if aviso and "No hay una configuración" in aviso and rotos_antes:
-                    # registrado: #55 (renombrar con la pieza YA en error falla a medias y deja la
-                    # tabla rota); la seguidilla ya no sirve para buscar otra cosa
-                    DEUDA_VISTA.add("#55")
-                    return
             elif a[0] == "valor":
                 if not math.isfinite(a[1]):
                     # con infinito o NaN: aviso en castellano y nada tocado (antes reventaba o lo
@@ -139,7 +129,7 @@ def configuraciones(acciones):
                         raise AssertionError("%s: escribir %r en %s hizo reventar el recálculo: %s: %s"
                                              % (que, a[2], celda, type(exc).__name__, exc))
                     if a[2] in ("1e400", "∞") or a[2].startswith("="):
-                        # lo que escriba el usuario en la tabla puede dar infinito (#46) o una fórmula
+                        # lo que escriba el usuario en la tabla puede dar infinito o una fórmula
                         # circular/rota: FreeCAD marca la celda con error y la pieza no se toca; se
                         # vuelve a un número para que la seguidilla siga
                         sh.set(celda, "40")
@@ -175,23 +165,20 @@ TEXTOS_ROTOS = st.one_of(st.sampled_from([
 def datos_guardados_rotos(texto):
     """La copia del material y el dato de chapa guardados en el archivo pueden venir rotos (un
     archivo editado, otra versión): leerlos (y usarlos: densidad, espesor, radio) da un valor sano,
-    None o un aviso, nunca un error de Python. Hoy revientan: #56 (deuda, anotada)."""
+    None o un aviso, nunca un error de Python (antes reventaban: Issue 56, arreglada el 12/11)."""
     from swui.fork import material as mt
     from swui.fork import sheet_metal as sm
     try:
         copia = mt.read_copy(texto)
-    except Exception:
-        DEUDA_VISTA.add("#56 (material)")
-        copia = None
+    except Exception as exc:
+        raise AssertionError("material.read_copy(%r) reventó con %s: %s" % (texto, type(exc).__name__, exc))
     assert copia is None or isinstance(copia, dict), "read_copy(%r) devolvió %r" % (texto, copia)
     if isinstance(copia, dict):
         try:
             d = mt.density_from(copia)
-        except Exception:
-            DEUDA_VISTA.add("#56 (densidad)")
-            d = None
-        if d is not None and not math.isfinite(d):
-            DEUDA_VISTA.add("#46 (densidad)")
+        except Exception as exc:
+            raise AssertionError("material.density_from(%r) reventó con %s: %s" % (copia, type(exc).__name__, exc))
+        assert d is None or math.isfinite(d), "la densidad de %r quedó en %r" % (copia, d)
     try:
         spec = sm.read_spec(texto)
     except Exception as exc:
@@ -208,9 +195,8 @@ def datos_guardados_rotos(texto):
             for fn in (sm.thickness, sm.radius):
                 try:
                     v = fn(b)
-                except Exception:
-                    DEUDA_VISTA.add("#56 (chapa)")
-                    continue
+                except Exception as exc:
+                    raise AssertionError("%s con %r reventó con %s: %s" % (fn.__name__, spec, type(exc).__name__, exc))
                 assert v is None or isinstance(v, (int, float)), "%s con %r dio %r" % (fn.__name__, spec, v)
         finally:
             FreeCAD.closeDocument(doc.Name)

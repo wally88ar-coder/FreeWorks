@@ -3,7 +3,8 @@
 # SPDX-FileCopyrightText: 2026 wally88ar-coder
 QUE = """Los errores que las pruebas toleran ("conocidos" y "deudas") siguen abiertos en GitHub. Las pruebas
 dejan pasar un error ya registrado para seguir buscando otros (CONOCIDO = "#N", conocido="#N" en
-Fallas.correr, DEUDA de las reglas de paneles, deuda / deuda_pasos del mono...). Si esa Issue se
+Fallas.correr, DEUDA de las reglas de paneles, deuda / deuda_pasos del mono...; no los mensajes de
+un assert, que cuentan qué se rompió). Si esa Issue se
 cerró (se arregló, o se descartó) y la prueba la sigue tolerando, la prueba quedó tapando algo que
 ya no debería pasar: esta prueba lo avisa, con el archivo y el número.
 También avisa si un número no existe en el repositorio.
@@ -42,9 +43,18 @@ def referencias():
         except (tokenize.TokenError, SyntaxError):
             continue
         previas = []  # las fichas significativas anteriores
+        primera = None  # la primera ficha del renglón lógico
         saltear = {tokenize.NL, tokenize.COMMENT, tokenize.ENCODING}
         for f in fichas:
             if f.type in saltear:
+                continue
+            if f.type in (tokenize.NEWLINE, tokenize.INDENT, tokenize.DEDENT):
+                primera = None
+            elif primera is None:
+                primera = f
+            # el mensaje de un assert o de un raise cuenta qué se rompió ("borró el taladro (#17)"): no tolera
+            if f.type == tokenize.STRING and primera is not None and primera.string in ("assert", "raise"):
+                previas.append(f)
                 continue
             if f.type == tokenize.STRING:
                 anterior = previas[-1] if previas else None

@@ -228,8 +228,21 @@ def spanish_error(exc):
     Los rechazos propios (Rejected) pasan tal cual."""
     if isinstance(exc, Rejected):
         return str(exc)
+    # el error de verdad puede venir "debajo": '=2^1000' hace que recompute() devuelva un SystemError
+    # ("returned a result with an exception set") con el OverflowError como causa (hallado 12/11)
+    chain, seen = [], exc
+    while seen is not None and len(chain) < 5:
+        chain.append(seen)
+        seen = seen.__cause__ or seen.__context__
+    if any(isinstance(e, OverflowError) for e in chain):
+        return "El resultado es demasiado grande (o no es un número)."
+    inner = [e for e in chain[1:] if not isinstance(e, SystemError)]
+    if isinstance(exc, SystemError) and inner:
+        exc = inner[0]
     text = str(exc)
     low = text.lower()
+    if "exception set" in low:
+        return "FreeCAD no pudo calcular la fórmula."
     if "parse" in low or "syntax" in low or "unexpected" in low:
         return "La fórmula está mal escrita (revise paréntesis, signos y comas)."
     if "overflow" in low or "infinit" in low or "too large" in low:
@@ -281,6 +294,21 @@ def check_result(obj, prop=None, was_invalid=False):
             raise OverflowError("not finite (infinite or nan)")
 
 
+def check_finite(obj, expr):
+    """La fórmula de una cota tiene que dar un número: '=sqrt(-1)', '=acos(2)' o '=1e308*10' dan
+    "no es un número" o infinito y FreeCAD los acepta sin error (hallado por el fuzzing el 12/11,
+    después de cerrar la Issue 46). Si FreeCAD no la puede evaluar sola, decide el recálculo."""
+    import math
+
+    try:
+        value = obj.evalExpression(expr)
+        value = float(getattr(value, "Value", value))
+    except Exception:
+        return
+    if not math.isfinite(value):
+        raise OverflowError("not finite (infinite or nan)")
+
+
 def invalid_names(doc):
     """Nombres de los objetos del documento que hoy están con error."""
     return {o.Name for o in doc.Objects if is_invalid(o)}
@@ -324,7 +352,12 @@ def restore(obj, path, expr, value=None):
             if isinstance(value, tuple) and value and value[0] == "datum":
                 obj.setDatum(value[1], value[2])
             elif isinstance(value, tuple) and value and value[0] == "prop":
-                setattr(obj, value[1], value[2])
+                try:
+                    setattr(obj, value[1], value[2])
+                except Exception:
+                    # '=acos(2)' en un largo dejó "nan deg": FreeCAD no acepta volver a "40 mm" sobre
+                    # esas unidades, sí el número solo (fuzzing del 12/11)
+                    setattr(obj, value[1], float(getattr(value[2], "Value", value[2])))
             else:
                 setattr(obj, path.lstrip("."), value)
         obj.recompute()
@@ -644,8 +677,10 @@ class Model:
         self.warning = ""
         broken_before = invalid_names(self.doc)
         try:
+            check_finite(obj, expr)  # antes de ponerla: un "nan" escrito cambia hasta la unidad de la cota
             obj.setExpression(path, expr)
-            check_result(obj, was_invalid=was_invalid)
+            plain = path.lstrip(".")  # una propiedad simple (no la cota de un croquis): también su resultado
+            check_result(obj, plain if plain in obj.PropertiesList else None, was_invalid=was_invalid)
         except Exception as exc:
             restore(obj, path, before, old_value)
             raise ValueError(spanish_error(exc)) from exc

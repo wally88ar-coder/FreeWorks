@@ -36,10 +36,8 @@ MENSAJE_INGLES = re.compile(r"\b(Invalid|invalid|error|Error|Expression|expressi
                             r"Failed|syntax|Syntax|cyclic|Cyclic|property|Property|object|Object)\b")
 
 
-# Issue #45: FreeCAD rechaza la fórmula con su propio error en inglés (el diálogo lo muestra tal cual).
-# Se tolera (anotado en la traza) para que la prueba siga buscando otras cosas; al arreglar #45, sacar.
-DEUDA_TIPOS = ("ParserError", "OverflowError", "FreeCADError")
-DEUDA_VISTA = set()
+# Las Issues 45 (error de FreeCAD en inglés) y 46 (números infinitos) se arreglaron el 12/11: ya no se
+# toleran, cualquiera de las dos vuelve a ser falla.
 
 
 def _pieza():
@@ -72,8 +70,9 @@ def _sano(doc):
 
 
 def _evaluable(obj, prop):
-    """False si la expresión puesta en obj.prop da un número no finito o absurdo (> 1e9 mm): error
-    ya registrado #46; recalcular así cuelga FreeCAD (visto 09/11), así que la prueba no recalcula."""
+    """Falla si la fórmula aceptada en obj.prop no da un número (infinito o "no es un número"), que
+    FreeWorks no debería aceptar (Issue 46 y fuzzing del 12/11). Un número grande pero real
+    (99999999999) se acepta: FreeCAD lo calcula sin colgarse (probado el 12/11)."""
     expr = dict(obj.ExpressionEngine).get(prop)
     if expr is None:
         return True
@@ -82,21 +81,14 @@ def _evaluable(obj, prop):
         v = float(getattr(v, "Value", v))
     except Exception:
         return True  # que lo diga el recálculo
-    if not math.isfinite(v) or abs(v) > 1e9:
-        DEUDA_VISTA.add("#46 (cuelga)")
-        return False
+    assert math.isfinite(v), "aceptó una fórmula que da %r en %s" % (v, prop)
     return True
 
 
 def _recalcular(doc):
-    """Recalcula; False si revienta con el desborde ya registrado (#46: '=2^1000' se acepta y el
-    recálculo da OverflowError). Cualquier otro error del recálculo es falla."""
-    try:
-        doc.recompute()
-        return True
-    except OverflowError:
-        DEUDA_VISTA.add("#46 (recálculo)")
-        return False
+    """Recalcula; cualquier error del recálculo es falla (un desborde era la Issue 46, arreglada)."""
+    doc.recompute()
+    return True
 
 
 def _intento(fn, entrada=""):
@@ -107,9 +99,6 @@ def _intento(fn, entrada=""):
         return None
     except Exception as exc:
         texto = str(exc)
-        if type(exc).__name__ in DEUDA_TIPOS or "cyclic" in texto:  # registrado (#45): rechaza, en inglés
-            DEUDA_VISTA.add("#45 (%s)" % type(exc).__name__)
-            return texto
         if not isinstance(exc, ValueError):
             raise AssertionError("rechazó con %s (no un aviso claro): %s" % (type(exc).__name__, exc))
         propio = texto
@@ -137,10 +126,6 @@ def variables(textos):
             if aviso is None:
                 for vs, prop in m.variables():
                     v = getattr(vs, prop)
-                    if not math.isfinite(v):
-                        DEUDA_VISTA.add("#46")  # registrado: acepta números infinitos
-                        setattr(vs, prop, 40.0)
-                        continue
                     assert isinstance(v, float) and math.isfinite(v), \
                         "%s: aceptó y la variable %s quedó en %r" % (que, prop, v)
             assert not [n for n in _sano(doc) if n != "Caja" and n != "Agujero" and n != "Cuerpo"
@@ -165,17 +150,14 @@ def ecuacion(texto, cual):
         if os.environ.get("FW_DETALLE_CAMPOS"):
             traza("    " + que)
         aviso = _intento(lambda: m.set_equation(cota, texto), texto)
-        if aviso is None and not _evaluable(caja, cual):
-            return  # #46: con un resultado infinito, recalcular cuelga FreeCAD; no se recalcula
+        if aviso is None:
+            _evaluable(caja, cual)
         if not _recalcular(doc):
             return
         comprobado()
         if aviso is None:
             v = getattr(caja, cual).Value
-            if not math.isfinite(v):  # registrado: #46 (acepta un resultado infinito o NaN)
-                DEUDA_VISTA.add("#46 (cota)")
-            else:
-                assert math.isfinite(v), "%s: aceptó y la cota quedó en %r" % (que, v)
+            assert math.isfinite(v), "%s: aceptó y la cota quedó en %r" % (que, v)
             # borrar la ecuación (celda vacía) deja la pieza sana; con el valor de antes, como estaba
             _intento(lambda: m.set_equation(cota, ""))
             setattr(caja, cual, {"Length": 40, "Width": 30, "Height": 20}[cual])
@@ -192,8 +174,6 @@ def prueba():
     for nombre, fn in (("variables", variables), ("ecuación sobre una cota", ecuacion)):
         if not solo or solo.lower() in nombre:
             fallas.correr(nombre, fn)
-    if DEUDA_VISTA:
-        traza("  deuda: %s" % ", ".join(sorted(DEUDA_VISTA)))
     fallas.terminar()
 
 

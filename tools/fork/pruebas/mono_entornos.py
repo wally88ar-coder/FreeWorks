@@ -14,6 +14,11 @@ import FreeCAD
 from azar_comun import bombear
 from mono_comun import Entorno, correr, diferencias, solo_lo_de_antes
 
+# un aviso de FreeCAD al recalcular una operación suprimida (Issue 44, descartada por el usuario el 12/11):
+# no es falla de FreeWorks; se sigue aceptando, sin número de Issue abierta
+ACEPTADO_44 = "aviso de FreeCAD aceptado (Issue 44 descartada 12/11)"
+
+
 def _centro(shape):
     """Centro de masa de los sólidos (un Compound no tiene CenterOfMass en 1.1.4: Issue #67, era de
     la prueba); sin sólidos, el centro de la caja."""
@@ -63,8 +68,8 @@ class Chapa(Entorno):
     nombre = "chapa"
     vinculos = ("body", "croquis")
     acciones = ("aplanar", "dxf")
-    deuda = (("#43", "Invalid shape name ?Face", "Unfold"),
-             ("#44", "Failed to recompute suppressed feature", None))
+    # "Invalid shape name ?Face" al desplegar era la Issue 43 (arreglada el 12/11): ya no se tolera
+    deuda = ((ACEPTADO_44, "Failed to recompute suppressed feature", None),)
     # el DXF también despliega por dentro: mismo #59 (noche/batería del 10/11)
     deuda_pasos = (("#59", "Ctrl+Z después de suprimir no volvió", "suprimir", "aplanar"),
                    ("#59", "Ctrl+Z después de suprimir no volvió", "suprimir", "dxf"))
@@ -302,9 +307,10 @@ class Multicuerpo(Entorno):
     vinculos = ("body", "hueco", "otro_body")
     acciones = ("medida_base",)
     # suprimir Combinar con un Redondeo encima: el hijo suprimido igual se recalcula y avisa que su
-    # arista ya no existe (#44); "Invalid edge link" solo se perdona si viene con ese aviso
-    deuda = (("#44", ("Failed to recompute suppressed feature", "Invalid edge link"), None),
-             ("#44", "Failed to recompute suppressed feature", None))
+    # arista ya no existe (Issue 44, descartada por el usuario el 12/11); "Invalid edge link" solo se
+    # perdona si viene con ese aviso
+    deuda = ((ACEPTADO_44, ("Failed to recompute suppressed feature", "Invalid edge link"), None),
+             (ACEPTADO_44, "Failed to recompute suppressed feature", None))
     # editar Combinar le cambia el tipo (sumar / restar / común): el sólido es otro y la arista de
     # un Redondeo de encima puede dejar de existir; en SW también queda con error (no es falla, #65)
     deuda = deuda + (("esperado, como SW (no es falla)", "Invalid edge link", "Fillet", "editar Combinar"),)
@@ -333,9 +339,9 @@ class Configuraciones(Entorno):
     vinculos = ("body", "hueco")
     acciones = ("config_nueva", "config_ir", "config_ir")
     # suprimir el Agujero con un Redondeo sobre su arista: el redondeo se suprime con él (como SW)
-    # pero FreeCAD igual lo recalcula y avisa (#44; reproducido sin ventana el 10/11)
-    deuda = (("#44", ("Failed to recompute suppressed feature", "Invalid edge link"), None, "suprimir"),
-             ("#44", "Failed to recompute suppressed feature", None, "suprimir"))
+    # pero FreeCAD igual lo recalcula y avisa (Issue 44, descartada por el usuario el 12/11: no es falla)
+    deuda = ((ACEPTADO_44, ("Failed to recompute suppressed feature", "Invalid edge link"), None, "suprimir"),
+             (ACEPTADO_44, "Failed to recompute suppressed feature", None, "suprimir"))
 
     def armar(self):
         from casos_otros import anotar
