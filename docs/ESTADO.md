@@ -1,5 +1,41 @@
 # Estado del fork
 
+**Noche del 12 al 13/11 (el usuario: "dale nomás con todo esto", PC libre hasta las 7:30).**
+- Batería completa del 12/11 21:38: 90 bien, 2 fallas, 1 conocido (#79).
+  - `prueba_azar_conocidos` reclamaba Issues cerradas que las pruebas seguían tolerando. Ya no
+    cuenta los mensajes de un assert. Se sacaron las tolerancias de #43, #45, #46, #55 y #56.
+    La 44 queda como "aviso aceptado de FreeCAD".
+  - `prueba_ventana_reglas_ensamblaje` falló una vez y después pasó: ficha #83 (intermitente).
+- **#43 confirmado con ventana:** el mono de chapa pasa sin tolerarlo.
+- **#59: arreglado por #43.** 50 seguidillas del mono de chapa sin tolerarlo, 10 de ellas con
+  Aplanar o DXF y después Suprimir.
+- **#82 (nueva, arreglada):** el fuzzing, ya sin tolerar #45 y #46, encontró lo que faltaba.
+  - `=2^1000` avisaba en inglés.
+  - Una ecuación sobre una cota aceptaba `=sqrt(-1)` / `=acos(2)` / `=1e308*10`, y la cota quedaba
+    en nan, hasta en grados.
+  - Queda anotado en la ficha un caso chico, de antes: cambiar una variable puede dejar en nan una
+    cota que depende de ella.
+- **#64 (Tangente con el perno parado): arreglado.** La unión Perpendicular acompañante arranca en
+  su punto muerto. Ahora la pieza libre se acuesta 90° y se resuelve de nuevo; también después
+  del botón Alineación.
+- **#62 (Coincidente movía la pieza fija): arreglado.** Lo hace el solver de FreeCAD. `solve()` y
+  `create_joint` devuelven la fija a su lugar y resuelven de nuevo; si no se puede, avisan "no se
+  puede resolver".
+- **#60: arreglado.** 66 transacciones crudas pasadas a `safe_ops.end_step`, con una prueba que
+  avisa si vuelve una.
+- **#79: es de FreeCAD.** Sin FreeWorks, con solo activar el banco Ensamblaje, el ensamblaje queda
+  "modificado" al abrirlo. Sigue abierta con CONOCIDO.
+  **Pregunta para el usuario:** ¿disimularlo al abrir (borrar la marca si solo se tocaron los
+  componentes)? Eso taparía también un cambio real de una pieza hecho con el ensamblaje cerrado.
+- Sin tocar esta noche:
+  - #68: ya arreglado en parte. Falta abrir siempre el panel de taladro; es un cambio de interfaz
+    chico, de gravedad baja.
+  - #80: aviso en el informe; la relación se repara sola.
+  - #76: errores internos del solver de FreeCAD.
+  - #40: visto una sola vez.
+  - #25: hay que medir.
+  - #78: no se repitió.
+
 **12/11 de día (el usuario usando la PC: solo pruebas SIN ventana; commits locales, NO subidos
 hasta correr la batería con ventana).**
 - Cerradas 13 fichas que estaban arregladas y subidas pero habían quedado abiertas (#4, #5, #7,

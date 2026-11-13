@@ -988,7 +988,11 @@ class Sketch3DPanel:
         self._finish()
         if not was_done:
             try:
-                safe_ops.end_step(self.doc)
+                # solo si el paso abierto sigue siendo el nuestro: si ya es el del comando que
+                # cerró el panel, cerrarlo le rompería su Cancelar (revisión de #60, 13/11)
+                active = FreeCAD.getActiveTransaction()
+                if active and active[0] == TITLE:
+                    safe_ops.end_step(self.doc)
                 s3.update_colors(self.sk)
             except Exception:
                 pass

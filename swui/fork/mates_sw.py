@@ -1104,7 +1104,7 @@ class MatePanel:
             if self.editing:
                 if self.joint is not None and self.doc.getObject(self.joint.Name) is not None:
                     self.doc.removeObject(self.joint.Name)
-            elif self.doc.HasPendingTransaction:
+            else:  # aunque no haya cambios: si no, el paso queda abierto (#60)
                 safe_ops.end_step(self.doc, abort=True)
         finally:
             self.joint = None
@@ -1213,8 +1213,7 @@ class MatePanel:
         self.busy = True
         if self.joint is not None and not self._ready():
             self._discard()
-        if self.doc.HasPendingTransaction:
-            safe_ops.end_step(self.doc)
+        safe_ops.end_step(self.doc)  # aunque no haya cambios (#60)
         self._close()
         return True
 

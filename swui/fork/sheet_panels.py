@@ -1244,7 +1244,7 @@ def _flat(body, label):
             flat = sm.ensure_flat(body, sketches=True)
             doc.recompute()
     except Exception:
-        if new and doc.HasPendingTransaction:
+        if new:
             safe_ops.end_step(doc, abort=True)
         raise
     if new:
