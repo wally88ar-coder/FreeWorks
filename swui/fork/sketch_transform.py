@@ -29,6 +29,7 @@ import FreeCAD
 
 from swui.compat import QtCore, QtWidgets
 from swui.fork import sketch_entities as se
+from swui.fork import safe_ops  # noqa: E402  (#60: cerrar pasos con end_step)
 
 V = FreeCAD.Vector
 ORIENTATION = ("Horizontal", "Vertical", "Angle", "DistanceX", "DistanceY")
@@ -140,10 +141,10 @@ def _transaction(sketch, name, work):
         out = work()
     except Exception:
         if own:
-            doc.abortTransaction()
+            safe_ops.end_step(doc, abort=True)
         raise
     if own:
-        doc.commitTransaction()
+        safe_ops.end_step(doc)
     return out
 
 

@@ -54,6 +54,7 @@ import FreeCADGui
 
 from swui.compat import QtCore, QtWidgets
 from swui.fork import dress_up_panel as dp
+from swui.fork import safe_ops  # noqa: E402  (#60: cerrar pasos con end_step)
 
 COMMAND = "SWUI_MoveFace"
 MARK = "SWUI_MoveFace"
@@ -2040,7 +2041,7 @@ def start(doc=None, preset=None):
     try:
         body = _body_for(doc, sels[0].Object) if sels else _active_body(doc)
         if body is None or (body.Tip is None and body.BaseFeature is None):
-            doc.abortTransaction()
+            safe_ops.end_step(doc, abort=True)
             QtWidgets.QMessageBox.information(FreeCADGui.getMainWindow(), LABEL,
                                               "Elija una cara plana de la pieza (o active un Cuerpo con sólido).")
             return None
@@ -2074,8 +2075,7 @@ def start(doc=None, preset=None):
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] Mover cara:\n%s\n" % traceback.format_exc())
         dp._state["panel"] = None
-        if doc.HasPendingTransaction:
-            doc.abortTransaction()
+        safe_ops.end_step(doc, abort=True)
         return None
 
 

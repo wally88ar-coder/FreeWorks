@@ -30,6 +30,7 @@ import FreeCAD
 import FreeCADGui
 
 from swui.compat import QtCore, QtWidgets
+from swui.fork import safe_ops  # noqa: E402  (#60: cerrar pasos con end_step)
 
 HOLE_CMD = "SWUI_AssemblyHole"
 CUT_CMD = "SWUI_AssemblyCut"
@@ -882,7 +883,7 @@ def _open_sketch(asm, kind, comp, sub):
         doc = asm.Document
         doc.openTransaction(LABELS[kind])
         sk = make_sketch(asm, comp, sub)
-        doc.commitTransaction()
+        safe_ops.end_step(doc)
         _state["pending"] = {"kind": kind, "asm": asm, "sketch": sk}
         FreeCADGui.ActiveDocument.setEdit(sk)
         if kind == "hole":
@@ -1065,7 +1066,7 @@ class _Scope:
         doc = self.asm.Document
         for d in list(self.part_docs.values()) + [doc]:
             if d.HasPendingTransaction:
-                d.commitTransaction()
+                safe_ops.end_step(d)
         _recompute_later(list(self.part_docs.values()) + [doc])
         self._back()
 
@@ -1081,15 +1082,14 @@ class _Scope:
     def _cancel(self):
         FreeCAD.closeActiveTransaction(True)  # todo el paso, en todos los documentos
         for d in self.part_docs.values():
-            if d.HasPendingTransaction:
-                d.abortTransaction()
+            safe_ops.end_step(d, abort=True)
             d.recompute()
         if self.data is None:  # operación nueva: se va también el croquis
             doc = self.asm.Document
             if doc.getObject(self.sketch.Name) is not None:
                 doc.openTransaction(LABELS[self.op_kind])
                 doc.removeObject(self.sketch.Name)
-                doc.commitTransaction()
+                safe_ops.end_step(doc)
         self._back()
 
 

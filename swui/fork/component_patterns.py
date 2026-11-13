@@ -30,6 +30,7 @@ import FreeCAD
 import FreeCADGui
 
 from swui.compat import QtCore, QtWidgets
+from swui.fork import safe_ops  # noqa: E402  (#60: cerrar pasos con end_step)
 
 LINEAR = "SWUI_ComponentLinearPattern"
 CIRCULAR = "SWUI_ComponentCircularPattern"
@@ -956,10 +957,10 @@ class PatternPanel:
                 self.doc.removeObject(self.data.Name)
                 self.data, _w = make_mirror(self.asm, self.seeds, plane, self.opposite, label, paths=paths)
             self.doc.recompute()
-            self.doc.commitTransaction()
+            safe_ops.end_step(self.doc)
         except Exception:
             FreeCAD.Console.PrintError("[SWUI fork] %s:\n%s\n" % (LABELS[self.kind], traceback.format_exc()))
-            self.doc.abortTransaction()
+            safe_ops.end_step(self.doc, abort=True)
         self._close()
         return True
 
@@ -983,8 +984,7 @@ class PatternPanel:
 
     def reject(self):
         self.busy = True
-        if self.doc.HasPendingTransaction:
-            self.doc.abortTransaction()
+        safe_ops.end_step(self.doc, abort=True)
         self._close()
         return True
 

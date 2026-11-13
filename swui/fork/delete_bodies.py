@@ -30,6 +30,7 @@ import FreeCADGui
 
 from swui.compat import QtCore, QtWidgets
 from swui.fork import dress_up_panel as dp
+from swui.fork import safe_ops  # noqa: E402  (#60: cerrar pasos con end_step)
 
 COMMAND = "SWUI_DeleteBodies"
 MARK = "SWUI_DeleteBodies"
@@ -194,13 +195,13 @@ def delete_operation(group):
     try:
         problem = _teardown(doc, group)
         if problem:
-            doc.abortTransaction()
+            safe_ops.end_step(doc, abort=True)
             return problem
         doc.removeObject(group.Name)
-        doc.commitTransaction()
+        safe_ops.end_step(doc)
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] Borrar %s:\n%s\n" % (label, traceback.format_exc()))
-        doc.abortTransaction()
+        safe_ops.end_step(doc, abort=True)
         return "No se pudo borrar la operación."
     finally:
         _deleting["busy"] = False
@@ -268,9 +269,9 @@ def _restore_later(doc_name, bodies, built, keep):
     doc.openTransaction("Devolver sólidos")
     try:
         _restore(doc, bodies, built, keep)
-        doc.commitTransaction()
+        safe_ops.end_step(doc)
     except Exception:
-        doc.abortTransaction()
+        safe_ops.end_step(doc, abort=True)
         FreeCAD.Console.PrintError("[SWUI fork] Devolver sólidos:\n%s\n" % traceback.format_exc())
     doc.recompute()
     if keep:
@@ -613,12 +614,12 @@ class DeleteBodiesPanel:
                 return False
         self._close()
         self.doc.recompute()
-        self.doc.commitTransaction()
+        safe_ops.end_step(self.doc)
         return True
 
     def reject(self):
         self._close()
-        self.doc.abortTransaction()
+        safe_ops.end_step(self.doc, abort=True)
         self.doc.recompute()
         return True
 
@@ -672,8 +673,7 @@ def start(doc=None):
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] %s:\n%s\n" % (LABEL, traceback.format_exc()))
         dp._state["panel"] = None
-        if doc.HasPendingTransaction:
-            doc.abortTransaction()
+        safe_ops.end_step(doc, abort=True)
         return None
 
 

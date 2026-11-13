@@ -130,7 +130,7 @@ class _AsmMixin:
                 obj.MapMode = "Deactivated"
                 obj.AttachmentSupport = None
                 obj.Placement = plc
-                doc.commitTransaction()
+                safe_ops.end_step(doc)
         except Exception:
             FreeCAD.Console.PrintLog("[SWUI fork] Referencia fija:\n%s\n" % traceback.format_exc())
 
@@ -224,7 +224,7 @@ def start(kind):
         return panel
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] %s de referencia:\n%s\n" % (LABELS[kind], traceback.format_exc()))
-        doc.abortTransaction()
+        safe_ops.end_step(doc, abort=True)
         return None
 
 

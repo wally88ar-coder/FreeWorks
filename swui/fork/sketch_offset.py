@@ -23,6 +23,7 @@ import FreeCAD
 
 from swui.compat import QtWidgets
 from swui.fork import sketch_entities as se
+from swui.fork import safe_ops  # noqa: E402  (#60: cerrar pasos con end_step)
 
 V = FreeCAD.Vector
 TOL = 1e-5
@@ -244,10 +245,10 @@ def offset_entities(sketch, geo_ids, distance=10.0, side=None, reverse=False, ch
         new = _add(sketch, geos, new_geos, distance, add_dims, base_construction, offset_construction)
     except Exception:
         if own:
-            doc.abortTransaction()
+            safe_ops.end_step(doc, abort=True)
         raise
     if own:
-        doc.commitTransaction()
+        safe_ops.end_step(doc)
     return new
 
 

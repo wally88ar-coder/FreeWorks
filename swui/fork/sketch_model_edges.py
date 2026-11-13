@@ -41,6 +41,7 @@ import FreeCAD
 import FreeCADGui
 
 from swui.compat import QtCore, QtGui, QtWidgets
+from swui.fork import safe_ops  # noqa: E402  (#60: cerrar pasos con end_step)
 
 VIEW_CLASS = "Gui::View3DInventor"
 WB_NAME = "LikeSolidWorksUIWorkbench"
@@ -315,10 +316,10 @@ def bring(sketch, obj_name, sub):
         sketch.addExternal(obj_name, sub)
         sketch.recompute()
     except Exception:
-        doc.abortTransaction()
+        safe_ops.end_step(doc, abort=True)
         FreeCAD.Console.PrintLog("[SWUI fork] Arista del modelo:\n%s\n" % traceback.format_exc())
         return False
-    doc.commitTransaction()
+    safe_ops.end_step(doc)
     _state["sketch"] = None  # el croquis cambió: recalcular candidatas
     return True
 

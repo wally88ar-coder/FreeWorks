@@ -26,6 +26,7 @@ import FreeCAD
 import FreeCADGui
 
 from swui.compat import QtCore, QtWidgets
+from swui.fork import safe_ops  # noqa: E402  (#60: cerrar pasos con end_step)
 
 COMMAND = "SWUI_Mate"
 FIX = "SWUI_FixComponent"
@@ -1104,7 +1105,7 @@ class MatePanel:
                 if self.joint is not None and self.doc.getObject(self.joint.Name) is not None:
                     self.doc.removeObject(self.joint.Name)
             elif self.doc.HasPendingTransaction:
-                self.doc.abortTransaction()
+                safe_ops.end_step(self.doc, abort=True)
         finally:
             self.joint = None
             self.busy = False
@@ -1191,7 +1192,7 @@ class MatePanel:
             return
         self.busy = True
         try:
-            self.doc.commitTransaction()
+            safe_ops.end_step(self.doc)
             self.added.append(self.joint.Label)
             self.joint = None
             self.entities = []
@@ -1213,15 +1214,14 @@ class MatePanel:
         if self.joint is not None and not self._ready():
             self._discard()
         if self.doc.HasPendingTransaction:
-            self.doc.commitTransaction()
+            safe_ops.end_step(self.doc)
         self._close()
         return True
 
     def reject(self):
         self.busy = True
         if self.editing:
-            if self.doc.HasPendingTransaction:
-                self.doc.abortTransaction()
+            safe_ops.end_step(self.doc, abort=True)
         else:
             self._discard()
         self._close()

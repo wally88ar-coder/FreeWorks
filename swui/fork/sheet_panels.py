@@ -26,6 +26,7 @@ import FreeCADGui
 from swui.compat import QtCore, QtGui, QtWidgets
 from swui.fork import dress_up_panel as dp
 from swui.fork import sheet_metal as sm
+from swui.fork import safe_ops  # noqa: E402  (#60: cerrar pasos con end_step)
 
 BASE_COMMAND = "SWUI_SMBaseFlange"
 EDGE_COMMAND = "SWUI_SMEdgeFlange"
@@ -673,13 +674,13 @@ class ConvertPanel:
             sm.ensure_flat(self.body)
         self._close()
         self.doc.recompute()
-        self.doc.commitTransaction()
+        safe_ops.end_step(self.doc)
         return True
 
     def reject(self):
         self._close()
         hidden = list(getattr(self, "hidden", []))
-        self.doc.abortTransaction()
+        safe_ops.end_step(self.doc, abort=True)
         for obj in hidden:
             try:
                 obj.Visibility = True
@@ -941,8 +942,7 @@ def start_base_flange():
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] Brida base:\n%s\n" % traceback.format_exc())
         dp._state["panel"] = None
-        if doc.HasPendingTransaction:
-            doc.abortTransaction()
+        safe_ops.end_step(doc, abort=True)
         return None
 
 
@@ -1055,8 +1055,7 @@ def _start_on_edges(kind):
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] %s:\n%s\n" % (label, traceback.format_exc()))
         dp._state["panel"] = None
-        if doc.HasPendingTransaction:
-            doc.abortTransaction()
+        safe_ops.end_step(doc, abort=True)
         return None
 
 
@@ -1094,7 +1093,7 @@ def start_convert():
         hidden = [obj] if created else []
         body = body or move_face._body_for(doc, obj)
         if body is None or body.Tip is None:
-            doc.abortTransaction()
+            safe_ops.end_step(doc, abort=True)
             _info("Elija una cara de un sólido.")
             return None
         face = None
@@ -1113,8 +1112,7 @@ def start_convert():
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] Convertir en chapa:\n%s\n" % traceback.format_exc())
         dp._state["panel"] = None
-        if doc.HasPendingTransaction:
-            doc.abortTransaction()
+        safe_ops.end_step(doc, abort=True)
         return None
 
 
@@ -1247,10 +1245,10 @@ def _flat(body, label):
             doc.recompute()
     except Exception:
         if new and doc.HasPendingTransaction:
-            doc.abortTransaction()
+            safe_ops.end_step(doc, abort=True)
         raise
     if new:
-        doc.commitTransaction()
+        safe_ops.end_step(doc)
     return flat
 
 
@@ -1486,11 +1484,10 @@ def start_unfold():
             multibody._keep_label(sketch, sm.next_label("Croquis-Desdoblar", _labels(doc)))
             body.Tip = tip  # el croquis no es la punta
             doc.recompute()
-            doc.commitTransaction()
+            safe_ops.end_step(doc)
         except Exception:
             FreeCAD.Console.PrintError("[SWUI fork] Desdoblar:\n%s\n" % traceback.format_exc())
-            if doc.HasPendingTransaction:
-                doc.abortTransaction()
+            safe_ops.end_step(doc, abort=True)
             return None
     _open_sketch_on_flat(body, sketch, flat, [tip])
     return sketch
@@ -1525,7 +1522,7 @@ def start_fold():
     if sketch is not None and len(sketch.Geometry) == 0:
         doc.openTransaction("Doblar")
         doc.removeObject(sketch.Name)  # no se dibujó nada: solo volver a plegar
-        doc.commitTransaction()
+        safe_ops.end_step(doc)
         sketch = None
     if sketch is not None:
         import SketchOnSheetMetalCmd
@@ -1558,16 +1555,15 @@ def start_fold():
                 problem = ("Ese corte no toca la cara fija ni cruza un pliegue (queda entero sobre una "
                            "brida): hágalo con Extruir corte sobre la cara de la brida.")
             if problem:
-                doc.abortTransaction()
+                safe_ops.end_step(doc, abort=True)
                 doc.recompute()
                 _refold_view(body)
                 _info(problem + "\nEl croquis quedó guardado: con Desdoblar se sigue editando.")
                 return None
-            doc.commitTransaction()
+            safe_ops.end_step(doc)
         except Exception:
             FreeCAD.Console.PrintError("[SWUI fork] Doblar:\n%s\n" % traceback.format_exc())
-            if doc.HasPendingTransaction:
-                doc.abortTransaction()
+            safe_ops.end_step(doc, abort=True)
             return None
     else:
         _check_edited_cuts(doc)

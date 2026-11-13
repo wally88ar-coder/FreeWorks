@@ -43,6 +43,7 @@ import FreeCAD
 import FreeCADGui
 
 from swui.compat import QtCore, QtGui, QtWidgets
+from swui.fork import safe_ops  # noqa: E402  (#60: cerrar pasos con end_step)
 
 QAction = getattr(QtGui, "QAction", None) or QtWidgets.QAction  # Qt6 / Qt5
 
@@ -1590,7 +1591,7 @@ def _cancel_native_edit():
     body = ft.body_of(obj)
     try:
         if doc.HasPendingTransaction:
-            doc.abortTransaction()  # antes de resetEdit, que la confirmaría
+            safe_ops.end_step(doc, abort=True)  # antes de resetEdit, que la confirmaría
         gdoc.resetEdit()
         if FreeCADGui.Control.activeDialog():
             FreeCADGui.Control.closeDialog()
@@ -1629,7 +1630,7 @@ def start_empty(command):
             obj.Base = (obj.BaseFeature, [])
         gdoc.setEdit(obj)
     except Exception:
-        doc.abortTransaction()
+        safe_ops.end_step(doc, abort=True)
         FreeCAD.Console.PrintError("[SWUI fork] %s sin selección:\n%s\n" % (transaction, traceback.format_exc()))
         return False
     return True

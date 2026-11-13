@@ -33,6 +33,7 @@ import FreeCADGui
 
 from swui.compat import QtCore, QtGui, QtWidgets
 from swui.fork import sketch3d as s3
+from swui.fork import safe_ops  # noqa: E402  (#60: cerrar pasos con end_step)
 
 V = FreeCAD.Vector
 TITLE = "Croquis 3D"
@@ -987,7 +988,7 @@ class Sketch3DPanel:
         self._finish()
         if not was_done:
             try:
-                self.doc.commitTransaction()
+                safe_ops.end_step(self.doc)
                 s3.update_colors(self.sk)
             except Exception:
                 pass
@@ -1002,9 +1003,9 @@ class Sketch3DPanel:
                     self.doc.removeObject(vs.Name)
             else:
                 s3.update_colors(self.sk)
-            self.doc.commitTransaction()
+            safe_ops.end_step(self.doc)
         except Exception:
-            self.doc.abortTransaction()
+            safe_ops.end_step(self.doc, abort=True)
             FreeCAD.Console.PrintError("[SWUI fork] %s:\n%s\n" % (TITLE, traceback.format_exc()))
         FreeCADGui.Control.closeDialog()
         self.doc.recompute()
@@ -1012,7 +1013,7 @@ class Sketch3DPanel:
 
     def reject(self):
         self._finish()
-        self.doc.abortTransaction()
+        safe_ops.end_step(self.doc, abort=True)
         FreeCADGui.Control.closeDialog()
         self.doc.recompute()
         return True

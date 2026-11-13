@@ -19,6 +19,7 @@ import FreeCAD
 import FreeCADGui
 
 from swui.compat import QtCore
+from swui.fork import safe_ops  # noqa: E402  (#60: cerrar pasos con end_step)
 
 WB_NAME = "LikeSolidWorksUIWorkbench"
 SKETCH_TYPE = "Sketcher::SketchObject"
@@ -110,10 +111,10 @@ def _closed(key):
     doc.openTransaction("Croquis vacío")
     try:
         doc.removeObject(sketch.Name)
-        doc.commitTransaction()
+        safe_ops.end_step(doc)
         doc.recompute()
     except Exception:
-        doc.abortTransaction()
+        safe_ops.end_step(doc, abort=True)
         FreeCAD.Console.PrintLog("[SWUI fork] Croquis vacío:\n%s\n" % traceback.format_exc())
 
 

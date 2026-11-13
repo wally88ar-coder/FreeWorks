@@ -35,6 +35,7 @@ import FreeCADGui
 
 from swui.compat import QtCore, QtWidgets
 from swui.fork import dress_up_panel as dp
+from swui.fork import safe_ops  # noqa: E402  (#60: cerrar pasos con end_step)
 
 COMMAND = "SWUI_MoveBodies"
 MARK = "SWUI_MoveBody"
@@ -766,12 +767,12 @@ class MoveBodiesPanel:
         self.doc.recompute()
         if self.gdoc.getInEdit() is not None:
             self.gdoc.resetEdit()
-        self.doc.commitTransaction()
+        safe_ops.end_step(self.doc)
         return True
 
     def reject(self):
         self._close()
-        self.doc.abortTransaction()
+        safe_ops.end_step(self.doc, abort=True)
         if self.gdoc.getInEdit() is not None:
             self.gdoc.resetEdit()
         self.doc.recompute()
@@ -849,8 +850,7 @@ def start(doc=None):
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] %s:\n%s\n" % (LABEL, traceback.format_exc()))
         dp._state["panel"] = None
-        if doc.HasPendingTransaction:
-            doc.abortTransaction()
+        safe_ops.end_step(doc, abort=True)
         return None
 
 

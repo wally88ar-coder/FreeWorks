@@ -674,7 +674,7 @@ class MirrorPanel(TransformedPanel):
         self._close()
         self._restore_visibility()
         # la simetría de Part Design no queda: deshacer lo del diálogo (resetEdit confirmaría)
-        doc.abortTransaction()
+        safe_ops.end_step(doc, abort=True)
         if self.gdoc.getInEdit() is not None:
             self.gdoc.resetEdit()
         doc.openTransaction("Simetría de sólidos")
@@ -684,9 +684,9 @@ class MirrorPanel(TransformedPanel):
                 safe_ops.remove_feature(feature)  # sin dejar a la siguiente sin base (Issue #1)
             for body in bodies:
                 mirror_bodies.make_mirror_body(body, ref)
-            doc.commitTransaction()
+            safe_ops.end_step(doc)
         except Exception as exc:
-            doc.abortTransaction()
+            safe_ops.end_step(doc, abort=True)
             QtWidgets.QMessageBox.warning(FreeCADGui.getMainWindow(), "Simetría", "No se pudo: %s" % exc)
         doc.recompute()
         return True

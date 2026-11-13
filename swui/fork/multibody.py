@@ -33,6 +33,7 @@ import FreeCAD
 import FreeCADGui
 
 from swui.compat import QtCore, QtWidgets
+from swui.fork import safe_ops  # noqa: E402  (#60: cerrar pasos con end_step)
 
 ADDITIVE = ("PartDesign::Pad", "PartDesign::Revolution")
 SUBTRACTIVE = ("PartDesign::Pocket", "PartDesign::Groove")
@@ -862,7 +863,7 @@ def _apply_decision(decision, doc_name, name):
                 rejoin(feature)
             else:
                 separate(feature)
-            doc.commitTransaction()
+            safe_ops.end_step(doc)
         else:
             bodies = [doc.getObject(n) for n in decision[1] if doc.getObject(n) is not None]
             current = sorted([body_of(feature).Name] + [body_of(c).Name for c in copies_of(feature)])
@@ -871,15 +872,15 @@ def _apply_decision(decision, doc_name, name):
                 return
             doc.openTransaction("Alcance de la operación")
             problems = apply_scope_decision(feature, decision)
-            doc.commitTransaction()
+            safe_ops.end_step(doc)
             if problems:
                 _tell("\n".join(problems))
         doc.recompute()
     except ValueError as exc:
-        doc.abortTransaction()
+        safe_ops.end_step(doc, abort=True)
         _tell("No se pudo: %s." % exc)
     except Exception:
-        doc.abortTransaction()
+        safe_ops.end_step(doc, abort=True)
         FreeCAD.Console.PrintError("[SWUI fork] Multicuerpo:\n%s\n" % traceback.format_exc())
         _tell("No se pudo armar los sólidos (detalle en la Vista de informe).")
 
@@ -1035,7 +1036,7 @@ def _drop_orphans(doc_name, names):
             _remove_copy(copy)
         except Exception:
             pass
-    doc.commitTransaction()
+    safe_ops.end_step(doc)
     doc.recompute()
 
 
@@ -1083,12 +1084,12 @@ def _check_auto(doc_name):
             current = [body_of(feature)] + [body_of(c) for c in copies_of(feature)]
             wanted = [b for b in current if b not in drop] + add
             _c, _r, problems = apply_scope(feature, wanted)
-            doc.commitTransaction()
+            safe_ops.end_step(doc)
             doc.recompute()
             if problems:
                 _tell("\n".join(problems))
         except Exception:
-            doc.abortTransaction()
+            safe_ops.end_step(doc, abort=True)
             FreeCAD.Console.PrintError("[SWUI fork] Alcance automático:\n%s\n" % traceback.format_exc())
         finally:
             _check["busy"] = False

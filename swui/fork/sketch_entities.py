@@ -29,6 +29,7 @@ import FreeCAD
 import FreeCADGui
 
 from swui.compat import QtCore, QtGui, QtWidgets
+from swui.fork import safe_ops  # noqa: E402  (#60: cerrar pasos con end_step)
 
 WB_NAME = "LikeSolidWorksUIWorkbench"
 SKETCH = "Sketcher::SketchObject"
@@ -196,10 +197,10 @@ def mirror_entities(sketch, geo_ids, axis_geo, copy=True):
         new = _mirror(sketch, geo_ids, axis_geo, axis, copy)
     except Exception:
         if own:
-            doc.abortTransaction()
+            safe_ops.end_step(doc, abort=True)
         raise
     if own:
-        doc.commitTransaction()
+        safe_ops.end_step(doc)
     return new
 
 

@@ -5,6 +5,9 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Deshacer: ningún paso queda abierto (#60):** todo el código propio cierra sus pasos de deshacer
+  con `safe_ops.end_step` (66 lugares en 15 archivos). Antes, un panel o comando que se cancelaba
+  o aceptaba sin cambios dejaba abierto el paso, y lo siguiente que hacía el usuario se sumaba a él.
 - **La pieza fija no se mueve nunca (#62):** con dos piezas iguales encimadas y apenas giradas,
   un Coincidente hacía que el solver de FreeCAD girara también la pieza fija. Ahora, si el solver
   la mueve, vuelve a su lugar y se resuelve de nuevo; si igual no se puede, avisa "no se puede
