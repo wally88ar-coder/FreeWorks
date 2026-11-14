@@ -2665,8 +2665,13 @@ Etapas:
   vertical. FreeCAD "Trackball" (el del usuario): se tuerce hasta 110° en los bordes. "Trackball
   clásico": no se tuerce, pero va al revés que SW en velocidad (0,49°/px horizontal, 0,98°/px
   vertical), algo más lento lejos del centro y no proporcional. Ninguna opción nativa iguala a SW.
-  Pendiente: plan para aprobar (FreeWorks hace el giro con la ley de SW, con opción para apagarlo);
-  medir también el centro de giro y el giro sobre una arista/cara. Área sin estándares de calidad.
+  Centro de giro (medido el mismo día): SW gira alrededor del centro de la pieza (con zoom grande,
+  de un punto cerca del centro de la pantalla) sin importar dónde empieza el arrastre; FreeCAD con
+  la opción del usuario gira alrededor del punto bajo el cursor. Clic con el medio sobre arista /
+  cara / vértice: SW gira el arrastre siguiente alrededor de eso (eje de la arista, normal de la
+  cara); FreeCAD solo centra la vista en el punto. Detalle en NOTAS_TECNICAS.
+  Pendiente: plan para aprobar (FreeWorks hace el giro con la regla de SW, con opción para
+  apagarlo). Área sin estándares de calidad.
 - **Pulido final: comparar con el mouse contra SW los arreglos de la primera gran revisión de
   errores** (decidido por el usuario el 14/11: queda para las etapas finales de corrección, no ahora).
   La revisión (8/11 al 14/11, fichas #1 a #91 de GitHub) cerró 90 de 91; casi todo está probado con

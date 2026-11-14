@@ -1164,3 +1164,24 @@ que usan está en `tools/test_load.py` (`check_ia`): si una cambia de firma, el 
   mediciones con eventos de Qt simulados dan lo mismo que con el mouse real.
 - No hay opción nativa con la ley de SW. Falta medir el centro de giro y el giro sobre una
   arista/cara (clic con el medio sobre una entidad en SW).
+- **Centro de giro (medido 14/11, cubo de 50 mm, mouse real).** SW por `ModelView.Transform`
+  (modelo -> píxel: `px = 79,5 + v.x`, `py = 116,5 + v.y`, con `v = escala·(p·R) + t`, ventana
+  maximizada); FreeCAD por cuántos píxeles se mueve cada punto (el que queda en 0 es el centro).
+  - SW, pieza entera o con poco zoom: gira alrededor del centro de la caja de la pieza, empiece
+    el arrastre sobre la pieza, en el vacío o sobre una arista, y aunque la pieza esté corrida a un
+    costado. Con zoom grande (x3 o más, pieza más grande que la pantalla): gira alrededor de un
+    punto fijo en pantalla cerca del centro (874, 394 con centro 843, 389), dentro de la pieza
+    cerca de la superficie; no depende de dónde empieza el arrastre. Después de girar sobre una
+    arista también giró cerca del centro de pantalla (regla exacta sin aclarar).
+  - SW, clic con el medio (apretar y soltar sin mover) sobre una entidad: el arrastre SIGUIENTE
+    gira alrededor de ella. Arista: eje = la arista (horizontal o vertical dan el mismo eje y la
+    velocidad de cada sentido). Cara plana: eje = normal de la cara por su centro. Vértice: giro
+    libre alrededor del vértice. Dura un solo arrastre. La vista no salta. Clic en el vacío: nada.
+  - FreeCAD `RotationMode` 2 (el del usuario) y 1: gira alrededor del punto de la pieza que está
+    bajo el cursor al empezar el arrastre (0 px en todos los casos sobre la pieza); empezando en el
+    vacío, el 2 usa el centro de la caja y el 1 otro punto. `RotationMode` 0: alrededor del centro
+    de la pantalla a la profundidad del foco (ajustada y con zoom en el vértice coincide con el
+    centro de la pieza; desplazada, ningún punto de la pieza queda quieto).
+  - FreeCAD, clic con el medio: CENTRA la vista en el punto clicado (la vista salta) y con el modo 0
+    ese punto pasa a ser el centro de giro; con 1 y 2 sigue mandando el punto bajo el cursor. No
+    hay giro alrededor de una arista ni de la normal de una cara.
