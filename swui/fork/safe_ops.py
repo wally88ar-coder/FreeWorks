@@ -307,3 +307,28 @@ def later_once(key, fn, *args):
     from swui.compat import QtCore
 
     QtCore.QTimer.singleShot(0, run)
+
+
+@contextlib.contextmanager
+def quiet_console(kinds=("Wrn", "Err")):
+    """
+    Sin los avisos en inglés de FreeCAD en el informe mientras FreeWorks calcula algo que después
+    explica él en castellano (en el panel). Solo alrededor de ese cálculo; todo vuelve como estaba.
+    """
+    changed = []
+    try:
+        for name in FreeCAD.Console.GetObservers():
+            for kind in kinds:
+                try:
+                    if FreeCAD.Console.GetStatus(name, kind):
+                        FreeCAD.Console.SetStatus(name, kind, False)
+                        changed.append((name, kind))
+                except Exception:
+                    pass
+        yield
+    finally:
+        for name, kind in changed:
+            try:
+                FreeCAD.Console.SetStatus(name, kind, True)
+            except Exception:
+                pass

@@ -737,6 +737,8 @@ class SwPanel:
         """Resultado válido para FreeCAD pero que no hizo lo pedido: texto del aviso, o ""."""
         return ""
 
+    QUIET = False  # True: el recálculo de la vista previa sin avisos en inglés (los explica el panel)
+
     def _new_faces(self):
         return new_faces(self.obj.Shape, self.base.Shape)
 
@@ -750,7 +752,11 @@ class SwPanel:
             problem = self._apply()
             obj = self.obj  # _apply puede cambiar la operación por otra (Mover cara: Pad <-> Pocket)
             if not problem and self._ready():
-                obj.recompute()
+                if self.QUIET:
+                    with safe_ops.quiet_console():
+                        obj.recompute()
+                else:
+                    obj.recompute()
                 self.valid = obj.isValid() and not obj.Shape.isNull()
                 if not self.valid:
                     problem = self.FAIL
@@ -1400,6 +1406,37 @@ class DraftPanel(DressUpPanel):
             self.obj.NeutralPlane = self.neutral_ref
 
     NO_NEUTRAL = "Elija el plano neutro: toque una cara plana o un plano."
+    # una cara junto a un redondeo (o a una cara curva) OpenCASCADE no la inclina: la saltea y
+    # FreeCAD lo dice en inglés en el informe ("Failed to add some face for drafting, skip"). Como
+    # SW: el panel avisa en castellano y no deja aceptar (mono de piezas, 14/11)
+    QUIET = True
+    SKIPPED = ("FreeCAD no pudo dar salida a %s (suele pasar junto a un redondeo o una cara curva): "
+               "quedó sin ángulo. Saque esa cara o elija otra.")
+
+    def _result_problem(self):
+        from swui.fork import feature_tree as ft
+
+        skipped = []
+        for sub in self.subs:
+            face = _element(self.base.Shape, sub)
+            if face is None or type(face.Surface).__name__ != "Plane":
+                continue
+            same = [g for g in self.obj.Shape.Faces if ft.same_surface(face, g)]
+            if same and any(abs(g.Area - face.Area) < 1e-6 * max(face.Area, 1.0) for g in same):
+                skipped.append(sub)
+        if not skipped:
+            return ""
+        keep = [x for x in self.subs if x not in skipped]
+        # la operación queda solo con las que sí se inclinan (sin ninguna, FreeCAD deja el sólido
+        # igual y no se queja): si no, cada recálculo (Ecuaciones, otro comando con el panel
+        # abierto) vuelve a quejarse en inglés. La lista del panel no cambia y el aviso sigue (no
+        # deja aceptar)
+        with safe_ops.quiet_console():
+            self.obj.Base = (self.base, keep)
+            self.obj.recompute()
+        names = sw_names(skipped)
+        what = "la cara %s" % names[0] if len(names) == 1 else "las caras %s" % ", ".join(names)
+        return self.SKIPPED % what
 
     def _ready(self):
         return super()._ready() and bool(self.neutral_ref)  # SW: sin plano neutro, sin vista previa ni aviso
@@ -1656,9 +1693,43 @@ def _hook_ribbon():
     pick_plane.handle = wrapped
 
 
+class _DraftBirth:
+    """
+    El comando de FreeCAD crea el Ángulo de salida con la cara elegida y lo calcula en el acto,
+    antes de abrir el panel: si esa cara no se puede inclinar (junto a un redondeo), la queja en
+    inglés ("Failed to add some face for drafting, skip") salía al informe (#89). Desde que se crea
+    hasta que la interfaz queda libre (lo que dura el comando) no van los avisos al informe; el
+    panel lo explica en castellano.
+    """
+
+    def __init__(self):
+        self.quiet = None
+
+    def slotCreatedObject(self, obj):
+        try:
+            if obj.TypeId != "PartDesign::Draft" or self.quiet is not None or safe_ops.doc_busy(obj.Document):
+                return
+        except Exception:
+            return
+        self.quiet = safe_ops.quiet_console()
+        self.quiet.__enter__()
+        QtCore.QTimer.singleShot(0, self._done)
+
+    def _done(self):
+        quiet, self.quiet = self.quiet, None
+        if quiet is not None:
+            quiet.__exit__(None, None, None)
+
+
+_draft_birth = None
+
+
 def install():
-    global _observer
+    global _observer, _draft_birth
     if _observer is None:
         _observer = _EditObserver()
         FreeCADGui.addDocumentObserver(_observer)
+    if _draft_birth is None:
+        _draft_birth = _DraftBirth()
+        FreeCAD.addDocumentObserver(_draft_birth)
     _hook_ribbon()

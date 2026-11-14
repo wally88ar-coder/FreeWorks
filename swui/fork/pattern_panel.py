@@ -245,7 +245,17 @@ class TransformedPanel(dp.SwPanel):
 
     # --- vista previa
 
+    MAX_INSTANCES = 1000  # más: OpenCASCADE queda calculando sin fin (la prueba de campos, #90)
+
+    def _instances(self):
+        return 0  # cuántas instancias pide el panel (las matrices lo dicen; la simetría no)
+
     def _apply(self):
+        n = self._instances()
+        if n > self.MAX_INSTANCES:
+            # antes de pasarle nada a la operación: con esa cantidad FreeCAD no termina de calcular
+            return ("Son demasiadas instancias (%d): FreeCAD tardaría muchísimo en calcularlas. Use "
+                    "hasta %d." % (n, self.MAX_INSTANCES))
         whole = self.whole.isChecked()
         self._set("TransformMode", "Whole shape" if whole else "Features")
         if not whole and list(self.obj.Originals) != self.originals:
@@ -409,6 +419,9 @@ class LinearPanel(TransformedPanel):
             problem = "Elija la dirección 2 (una arista, eje o cara plana)."
         return problem
 
+    def _instances(self):
+        return self.count1.value() * (self.count2.value() if self.use2.isChecked() else 1)
+
     def _apply_values(self):
         self._set("Reversed", self.flip1.isChecked())
         if self.extent:
@@ -517,6 +530,9 @@ class PolarPanel(TransformedPanel):
             self._set("Mode", "Spacing")
             self._set("Offset", self.angle.value())
         self._set("Occurrences", self.count.value())
+
+    def _instances(self):
+        return self.count.value()
 
 
 # --- Simetría ----------------------------------------------------------

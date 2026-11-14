@@ -53,6 +53,9 @@ SKETCH = "Sketcher::SketchObject"
 BODY = "PartDesign::Body"
 NOT_PARENTS = ("BaseFeature", "_Body")  # vínculos que no son "padre" en el sentido de SW
 MAPMODE_PROP = "SWUI_SuppressedMapMode"  # NO CAMBIAR: queda en los archivos
+# NO CAMBIAR (queda en los archivos): operaciones suprimidas que se llevaron la arista o cara donde
+# estaba apoyado un punto/plano/croquis ("Agujero,Redondeo1"); con alguna suprimida, sigue sin apoyo
+LOST_WITH_PROP = "SWUI_SuppressedWith"
 OFF = "Deactivated"
 
 EDIT = "SWUI_EditFeature"
@@ -237,6 +240,33 @@ def _suppressed(obj):
     return bool(getattr(obj, "Suppressed", False))
 
 
+def _lost_with_suppressed(obj):
+    """¿Alguna de las operaciones que se llevaron su apoyo sigue suprimida?"""
+    names = getattr(obj, LOST_WITH_PROP, "") if LOST_WITH_PROP in getattr(obj, "PropertiesList", []) else ""
+    if not names:
+        return False
+    doc = obj.Document
+    return any(_suppressed(doc.getObject(n)) for n in names.split(",") if n and doc.getObject(n) is not None)
+
+
+def _detach_lost(obj, gone_with):
+    """Como SW con un hijo de lo suprimido: sin apoyo (queda donde está) hasta que vuelvan."""
+    if not gone_with or MAPMODE_PROP in obj.PropertiesList:
+        return
+    obj.addProperty("App::PropertyString", MAPMODE_PROP, "SWUI",
+                    "Apoyo del croquis antes de suprimir (LikeSolidWorks UI)")
+    obj.addProperty("App::PropertyString", LOST_WITH_PROP, "SWUI",
+                    "Operaciones suprimidas que se llevaron su apoyo (LikeSolidWorks UI)")
+    for prop in (MAPMODE_PROP, LOST_WITH_PROP):
+        try:
+            obj.setPropertyStatus(prop, "Hidden")
+        except Exception:
+            pass
+    setattr(obj, MAPMODE_PROP, obj.MapMode)
+    setattr(obj, LOST_WITH_PROP, ",".join(f.Name for f in gone_with))
+    obj.MapMode = OFF
+
+
 def sync_attachments(objs):
     """
     Croquis/planos apoyados en una operación suprimida: apagar el apoyo (y
@@ -247,7 +277,7 @@ def sync_attachments(objs):
     for obj in objs:
         if is_feature(obj) or not hasattr(obj, "MapMode"):
             continue
-        support_gone = any(_suppressed(t) for t in _attached_to(obj))
+        support_gone = any(_suppressed(t) for t in _attached_to(obj)) or _lost_with_suppressed(obj)
         saved = getattr(obj, MAPMODE_PROP, None) if MAPMODE_PROP in getattr(obj, "PropertiesList", []) else None
         if support_gone and saved is None and obj.MapMode != OFF:
             if MAPMODE_PROP not in obj.PropertiesList:
@@ -263,19 +293,149 @@ def sync_attachments(objs):
         elif not support_gone and saved:
             obj.MapMode = saved
             obj.removeProperty(MAPMODE_PROP)
+            if LOST_WITH_PROP in obj.PropertiesList:
+                obj.removeProperty(LOST_WITH_PROP)
             back.append(obj)
     return off, back
 
 
+_suppressed_picks = {}  # (documento, nombre) -> lo elegido por un redondeo cuando se lo suprimió
+
+
+def _live_picks(body):
+    """{nombre: [(sub, forma)]} de los redondeos/chaflanes del cuerpo: los activos, con lo que
+    eligen hoy; los suprimidos, con lo que elegían cuando se los suprimió (si se sabe: mientras
+    FreeCAD siga abierto). Un redondeo suprimido no se recalcula y sus nombres quedan viejos."""
+    if body is None:
+        return {}
+    out = {}
+    for f in _dress_ups(body):
+        if not _suppressed(f):
+            out[f.Name] = _picked(f)
+        elif (f.Document.Name, f.Name) in _suppressed_picks:
+            out[f.Name] = _suppressed_picks[(f.Document.Name, f.Name)]
+    return out
+
+
+def _attach_picks(body):
+    """{nombre: [(objeto, sub, forma)]} de lo apoyado en aristas/caras de operaciones del cuerpo
+    (puntos, ejes, planos y croquis de referencia), para volver a encontrarlas por su forma."""
+    out = {}
+    if body is None:
+        return out
+    for o in body.Group:
+        if is_feature(o) or not hasattr(o, "AttachmentSupport") or getattr(o, "MapMode", OFF) == OFF:
+            continue
+        refs = []
+        for target, subs in (o.AttachmentSupport or []):
+            for sub in (subs if isinstance(subs, (list, tuple)) else [subs]):
+                plain = sub.split(".")[-1].lstrip("?")
+                if not is_feature(target) or not plain.startswith(("Edge", "Face")):
+                    continue
+                try:
+                    refs.append((target, sub, target.Shape.getElement(plain).copy()))
+                except Exception:
+                    pass
+        if refs:
+            out[o.Name] = refs
+    return out
+
+
+def reattach(body, picks, gone_with=()):
+    """
+    Lo apoyado en una arista o cara de una operación, sobre la MISMA arista o cara aunque FreeCAD
+    la haya renumerado (#87: al suprimir un agujero, un Punto en el centro de una arista de un
+    redondeo quedó sobre una recta, "infinite radius of curvature"). Lo apoyado en algo suprimido
+    lo maneja sync_attachments.
+    """
+    if not picks:
+        return
+    doc = body.Document
+    for name, refs in picks.items():
+        o = doc.getObject(name)
+        if o is None or getattr(o, "MapMode", OFF) == OFF:
+            continue
+        support = list(o.AttachmentSupport or [])
+        changed = False
+        for target, sub, geo in refs:
+            if _suppressed(target):
+                continue
+            target.recompute(True)
+            plain = sub.split(".")[-1].lstrip("?")
+            names = remap([(plain, geo)], target.Shape)
+            if not names:  # la arista o cara ya no está: se la llevó lo suprimido
+                _detach_lost(o, gone_with)
+                changed = False
+                break
+            if len(names) != 1 or names[0] == plain:
+                continue  # igual que antes, o no se sabe cuál (no se toca)
+            new = []
+            for t, subs in support:
+                subs = list(subs) if isinstance(subs, (list, tuple)) else [subs]
+                if t is target:  # FreeCAD pudo haberla marcado ya como perdida ("?Edge16")
+                    subs = [names[0] if x.split(".")[-1].lstrip("?") == plain else x for x in subs]
+                new.append((t, subs))
+            support = new
+            changed = True
+        if changed and getattr(o, "MapMode", OFF) != OFF:
+            o.AttachmentSupport = support
+
+
+def _remember(dress_ups):
+    for f in dress_ups:
+        if f.isDerivedFrom(DRESS_UP):
+            _suppressed_picks[(f.Document.Name, f.Name)] = _picked(f)
+
+
+def repick(body, picked, after=None):
+    """
+    Volver a elegir, por su forma, las aristas/caras de cada redondeo o chaflán activo (en orden,
+    cada uno sobre el sólido ya recalculado). Devuelve [(operación, aristas no encontradas)].
+    Al mover, suprimir o volver a activar una operación, FreeCAD renombra las aristas del sólido y
+    un redondeo puede quedar apuntando a un nombre que ya no existe aunque la arista siga ahí: una
+    arista de la caja que FreeCAD nombra a través del corte de un agujero queda con "Invalid edge
+    link" al suprimir el agujero (mono de piezas, 14/11). SW sigue a la arista.
+    """
+    lost = []
+    feats = features(body)
+    start = feats.index(after) + 1 if after in feats else 0
+    for f in _dress_ups(body):
+        if _suppressed(f) or feats.index(f) < start:
+            continue  # los de antes de la operación tocada no cambian (revisión del 14/11)
+        old = picked.get(f.Name) or []
+        if not old:
+            continue
+        base = f.Base[0]
+        base.recompute(True)
+        names = remap(old, base.Shape)
+        # solo si de verdad cambió (otro orden de los mismos nombres no es un cambio: se dejaba
+        # de lado lo que FreeCAD sabe de esos nombres)
+        if names and set(names) != set(f.Base[1]):
+            f.Base = (base, names)
+        if not names:
+            lost.append((f, [s for s, _g in old]))
+        f.recompute(True)
+    return lost
+
+
 def suppress(obj):
     """Suprimir obj y lo que depende de él, como SW. Devuelve las operaciones suprimidas."""
+    body = body_of(obj)
+    picked = _live_picks(body)
+    attached = _attach_picks(body)
     done = []
     for o in [obj] + dependents(obj):
         if is_feature(o) and not _suppressed(o):
             o.Suppressed = True
             done.append(o)
-    body = body_of(obj)
+    _remember(done)
+    # primero los croquis apoyados en lo suprimido (si no, el recálculo los ubica sobre caras que
+    # ya no están), después los redondeos que quedan, sobre las mismas aristas, y lo apoyado en
+    # aristas o caras que FreeCAD renumeró (#87)
     sync_attachments(body.Group if body is not None else [obj] + dependents(obj))
+    if body is not None:
+        repick(body, picked, after=obj)
+        reattach(body, attached, done)
     return done
 
 
@@ -289,10 +449,15 @@ def unsuppress(obj, with_children=False):
     body = body_of(obj)
     todo = [obj]
     while todo:
+        picked = _live_picks(body)
+        attached = _attach_picks(body)
         for o in todo:
             if is_feature(o) and _suppressed(o):
                 o.Suppressed = False
                 done.append(o)
+        if body is not None:
+            repick(body, picked, after=obj)
+            reattach(body, attached)
         # Recalcular ANTES de devolver el apoyo a los croquis: al cambiar MapMode, FreeCAD
         # los ubica en el acto, y la operación recién devuelta todavía tendría su forma
         # vacía ("subshape not found").
@@ -511,20 +676,7 @@ def move(feature, direction):
         body.insertObject(sketch, feature, False)  # el croquis queda justo antes de su operación
     feats = features(body)
     set_tip(body, feats[-1] if at_end else tip)
-    lost = []
-    for f in _dress_ups(body):  # en orden: cada uno sobre el sólido ya recalculado
-        old = picked.get(f.Name) or []
-        if not old:
-            continue
-        base = f.Base[0]
-        base.recompute(True)
-        names = remap(old, base.Shape)
-        if names and names != list(f.Base[1]):
-            f.Base = (base, names)
-        if not names:
-            lost.append((f, [s for s, _g in old]))
-        f.recompute(True)
-    return lost
+    return repick(body, picked)  # en orden: cada uno sobre el sólido ya recalculado
 
 
 # --- Cara -> operación que la creó --------------------------------------

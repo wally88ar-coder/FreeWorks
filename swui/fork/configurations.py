@@ -639,13 +639,39 @@ def suppress(obj, scope="this"):
     from swui.fork import feature_tree as ft
 
     doc = obj.Document
+    body = ft.body_of(obj)
+    picked = ft._live_picks(body)
+    attached = ft._attach_picks(body)
     done = []
     for o in _features([obj] + ft.dependents(obj)):
         if not o.Suppressed:
             configure(doc, ("sup", o), 1, scope)
             done.append(o)
+    ft._remember(done)
     sync_attachments(doc)
+    # como feature_tree.suppress: los redondeos y lo apoyado, ANTES de recalcular (#87)
+    if body is not None and getattr(body, "TypeId", "") == "PartDesign::Body":
+        try:
+            ft.repick(body, picked, after=obj)
+            ft.reattach(body, attached, done)
+        except Exception:
+            FreeCAD.Console.PrintLog("[SWUI fork] Redondeos después de suprimir:\n%s\n" % traceback.format_exc())
     return done
+
+
+
+def _repick_after(doc, body, picked, after=None):
+    """Los redondeos que siguen activos, sobre las mismas aristas (#87): la supresión de una
+    configuración pasa por la tabla, así que se recalcula primero y después se vuelven a elegir."""
+    from swui.fork import feature_tree as ft
+
+    if body is None or getattr(body, "TypeId", "") != "PartDesign::Body":
+        return
+    try:
+        doc.recompute()
+        ft.repick(body, picked, after=after)
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Redondeos después de suprimir:\n%s\n" % traceback.format_exc())
 
 
 def only_in(doc, feat, name):
@@ -683,6 +709,8 @@ def unsuppress(obj, with_children=False, scope="this"):
     from swui.fork import feature_tree as ft
 
     doc = obj.Document
+    body = ft.body_of(obj)
+    picked = ft._live_picks(body)
     todo = [obj] + (ft.dependents(obj) if with_children else [])
     done = []
     for o in _features(todo):
@@ -690,6 +718,7 @@ def unsuppress(obj, with_children=False, scope="this"):
             configure(doc, ("sup", o), 0, scope)
             done.append(o)
     sync_attachments(doc)
+    _repick_after(doc, body, picked, obj)
     return done
 
 

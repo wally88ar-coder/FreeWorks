@@ -134,15 +134,20 @@ def _export_closed(filename):
         FreeCAD.Console.PrintLog("[SWUI fork] STEP sin copia de trabajo:\n%s\n" % traceback.format_exc())
         source = None
     before = set(FreeCAD.listDocuments())
+    mine = set()
     try:
         doc = FreeCAD.openDocument(source or filename, True)
         doc.recompute()
+        # lo que se abrió para esto (la copia, sus piezas y lo que cargó el recálculo), anotado
+        # ANTES de exportar: la exportación deja correr la interfaz, y lo que se abra mientras
+        # tanto (otro archivo, las piezas de un ensamblaje, ocultas) no es de acá (#40)
+        mine = set(FreeCAD.listDocuments()) - before
         return export(doc, filename)
     finally:
-        # lo que se abrió para esto (también lo que cargó el recálculo), salvo lo que el usuario
-        # tiene en una ventana (revisión del 14/11)
-        for n in set(FreeCAD.listDocuments()) - before:
-            if not _shown(n):
+        if not mine:  # falló antes de anotarlo: lo nuevo desde que se empezó (como antes)
+            mine = set(FreeCAD.listDocuments()) - before
+        for n in mine:
+            if n in FreeCAD.listDocuments() and not _shown(n):
                 try:
                     FreeCAD.closeDocument(n)
                 except Exception:

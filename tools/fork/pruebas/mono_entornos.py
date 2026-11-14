@@ -35,6 +35,11 @@ class Pieza(Entorno):
     nombre = "pieza"
     vinculos = ("body", "hueco")
     acciones = ("medida_base",)
+    # suprimir el Agujero con un Redondeo sobre su arista: el hijo suprimido igual se recalcula y
+    # avisa que su arista ya no existe (Issue 44, descartada por el usuario el 12/11; como en
+    # multicuerpo). Los redondeos que QUEDAN activos no tienen que avisar nada (#87)
+    deuda = ((ACEPTADO_44, ("Failed to recompute suppressed feature", "Invalid edge link"), None),
+             (ACEPTADO_44, "Failed to recompute suppressed feature", None))
 
     def medida_base(self):
         caja = self.doc.getObject("Caja")
@@ -239,14 +244,38 @@ class Soldada(Entorno):
         cuerpos = [b for b in self.cuerpos if b is not None]
         malos = [b.Label for b in cuerpos if b.Shape.isNull() or not b.Shape.isValid()]
         assert not malos, "%s: caños con error al cambiar el esqueleto: %s" % (que, malos)
+        # esquinas sin tratamiento ("Ninguno"): los caños se pisan, como en SW; no se exige nada ahí
+        # y las esquinas donde se mete OTRO miembro (el mono agrega miembros sobre las mismas líneas
+        # del esqueleto: el original se corta contra ese y el "hueco" entre originales lo llena él)
+        import Part
+        otros = [o for o in self.doc.Objects if w.is_member(o) and o not in cuerpos]
+
+        def con_otro(c):
+            # por la LÍNEA del esqueleto de cada miembro (su forma puede estar recortada en la esquina)
+            punto = Part.Vertex(c["point"])
+            for o in otros:
+                try:
+                    p0, p1, _u = w.axis(o)
+                    if Part.LineSegment(p0, p1).toShape().distToShape(punto)[0] < 1.0:
+                        return True
+                except Exception:
+                    return True  # sin eje legible: mejor no exigir nada en esa esquina
+            return False
+        esquinas = [c for c in w.find_corners(cuerpos) if not con_otro(c)]
+        con_otros = {frozenset((c["a"].Name, c["b"].Name)) for c in w.find_corners(cuerpos) if con_otro(c)}
+        estados = [w.corner_state(c) for c in esquinas]
+        sueltas = {frozenset((c["a"].Name, c["b"].Name)) for c, e in zip(esquinas, estados) if e is None}
         for a in range(len(cuerpos)):
             for b in range(a + 1, len(cuerpos)):
+                if frozenset((cuerpos[a].Name, cuerpos[b].Name)) in sueltas | con_otros:
+                    continue
                 comun = cuerpos[a].Shape.common(cuerpos[b].Shape).Volume
                 assert comun < 0.01, "%s: los caños no siguen al esqueleto: %s y %s se superponen %.3f mm³" % (
                     que, cuerpos[a].Label, cuerpos[b].Label, comun)
-        for c in w.find_corners(cuerpos):
+        for c in esquinas:
             d = c["a"].Shape.distToShape(c["b"].Shape)[0]
-            assert d < 1e-3, "%s: los caños no siguen al esqueleto: hueco de %.2f mm" % (que, d)
+            assert d < 1e-3, "%s: los caños no siguen al esqueleto: hueco de %.2f mm entre %s y %s (%s; %s, %d miembros más)" % (
+                que, d, c["a"].Label, c["b"].Label, c["kind"], w.corner_state(c), len(otros))
         largos = {}
         for f in w.cut_list(self.doc):
             for etiqueta in f["members"]:
@@ -260,8 +289,27 @@ class Soldada(Entorno):
         activo = FreeCAD.ActiveDocument
         otro = FreeCAD.newDocument("MonoDeCero")
         try:
-            _sk2, _c2, cuerpos2 = marco(otro, ancho=ancho, alto=alto, esquina="inglete")
+            # con los MISMOS tratamientos que tiene hoy cada esquina (el mono las cambia con el
+            # panel de Esquinas: antes se comparaba siempre contra todo a inglete)
+            _sk2, _c2, cuerpos2 = marco(otro, ancho=ancho, alto=alto, esquina="ninguno")
+            nombres = {b.Name: i for i, b in enumerate(self.cuerpos[:4])}
+            for c in esquinas:
+                if c["a"].Name not in nombres or c["b"].Name not in nombres:
+                    continue  # con un miembro agregado por el mono: no está en el marco de cero
+                estado = w.corner_state(c)
+                if estado is None:
+                    continue
+                trato, pasa = estado
+                a2, b2 = cuerpos2[nombres[c["a"].Name]], cuerpos2[nombres[c["b"].Name]]
+                c2 = [x for x in w.find_corners(cuerpos2) if {x["a"], x["b"]} == {a2, b2}]
+                if c2:
+                    pasa2 = None if pasa is None else cuerpos2[nombres[pasa.Name]]
+                    w.apply_corner(c2[0], trato, pasa2)
+            otro.recompute()
+            tocados = {n for par in con_otros for n in par}
             for a, b in zip(self.cuerpos[:4], cuerpos2):
+                if a.Name in tocados:
+                    continue  # cortado contra un miembro agregado: no se compara con el marco de cero
                 ca, cb = _centro(a.Shape), _centro(b.Shape)
                 assert abs(a.Shape.Volume - b.Shape.Volume) < 0.5 and (ca - cb).Length < 0.01,                     "%s: los caños no siguen al esqueleto: %s no quedó como armado de cero (volumen %.1f vs %.1f)" % (
                         que, a.Label, a.Shape.Volume, b.Shape.Volume)

@@ -206,6 +206,9 @@ def scale_entities(sketch, geo_ids, center, factor, copies=0):
     return _transaction(sketch, "Escalar entidades", work)
 
 
+MAX_PATTERN_GEOS = 1000  # entidades que puede crear una matriz de croquis (más: FreeCAD no termina)
+
+
 def linear_pattern(sketch, geo_ids, count1=2, spacing1=10.0, angle1=0.0, count2=1, spacing2=10.0,
                    angle2=90.0, dim1=False, dim2=False):
     """
@@ -220,6 +223,11 @@ def linear_pattern(sketch, geo_ids, count1=2, spacing1=10.0, angle1=0.0, count2=
     count1, count2 = max(1, int(count1)), max(1, int(count2))
     if count1 * count2 < 2:
         raise ValueError("La matriz necesita al menos dos instancias.")
+    if count1 * count2 * len(geos) > MAX_PATTERN_GEOS:
+        # con miles de copias el croquis queda calculando sin fin (la prueba de campos escribía
+        # 999 en una cantidad y FreeCAD no respondía más, #90)
+        raise ValueError("Son demasiadas copias (%d instancias de %d entidades): el croquis se volvería "
+                         "imposible de resolver. Use menos instancias." % (count1 * count2, len(geos)))
     a1, a2 = math.radians(angle1), math.radians(angle2)
     v1 = V(spacing1 * math.cos(a1), spacing1 * math.sin(a1), 0)
     v2 = V(spacing2 * math.cos(a2), spacing2 * math.sin(a2), 0)
@@ -630,9 +638,13 @@ class PatternPanel(se.EntityPanel):
         s1, s2 = self.spacing1.value(), self.spacing2.value()
         return (V(s1 * math.cos(a1), s1 * math.sin(a1), 0), V(s2 * math.cos(a2), s2 * math.sin(a2), 0))
 
+    def _too_many(self):
+        n = self.count1.value() * self.count2.value()
+        return n * max(1, len(self.geos)) > MAX_PATTERN_GEOS
+
     def _preview_lines(self):
-        if not self.geos:
-            return []
+        if not self.geos or self._too_many():
+            return []  # con miles de copias la vista previa no terminaba (#90)
         v1, v2 = self._vectors()
         out = []
         for i in range(self.count1.value()):
@@ -646,6 +658,9 @@ class PatternPanel(se.EntityPanel):
             return self.NOTHING
         if self.count1.value() * self.count2.value() < 2:
             return "Ponga más de una instancia."
+        if self._too_many():
+            return ("Son demasiadas copias (%d instancias): el croquis se volvería imposible de "
+                    "resolver. Use menos instancias." % (self.count1.value() * self.count2.value()))
         return ""
 
     def _run(self):
