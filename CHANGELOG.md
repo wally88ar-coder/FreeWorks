@@ -5,6 +5,32 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Relaciones que se resuelven desde cualquier arranque (#84):** un Ángulo o una Tangente que tienen
+  solución no se resolvían desde algunos giros de la pieza (el resolvedor de FreeCAD se trababa).
+  Ahora, si falla, la pieza libre se acerca (sus ejes ya en el ángulo pedido) y se prueban otros
+  arranques; la pieza fija no se mueve y, si no hay forma, todo vuelve a donde estaba.
+- **Relación que choca con otra (#76):** como SW, avisa que sobredefine el ensamblaje y no la agrega
+  (antes quedaba y el resolvedor llenaba el informe de "Solve failed: invalid vector subscript" en
+  cada recálculo). Un valor imposible de Distancia o Ángulo no se aplica: queda el anterior.
+- **La relación no salta de cara (#85):** al reparar una relación cuya cara cambió, nunca pasa a una
+  cara o eje girado (la del frente de una placa pasaba a la de arriba al cancelar un corte de
+  ensamblaje con Ecuaciones abierto). Si no queda una parecida, la relación queda como estaba y avisa.
+- **Sin "Broken link" después de un corte (#80):** la relación se repara antes de que FreeCAD la
+  recalcule, no después.
+- **Ensamblaje recién abierto sin "modificado" (#79):** FreeCAD lo marcaba al abrirlo aunque no se
+  tocara nada (pasa también sin FreeWorks), y también al abrir en su ventana una pieza que el
+  ensamblaje usa. Ahora no, salvo que una pieza haya cambiado (con el ensamblaje cerrado, o en su
+  ventana): ahí queda para guardar, como SW. Si el archivo se guardó con algo por recalcular, eso
+  no se tapa.
+- **"Guardar también STEP" ya no cierra el documento que uno abre (#40):** al guardar y cerrar, el
+  STEP se escribe desde una copia del archivo; antes, si se volvía a abrir el archivo mientras se
+  escribía, FreeWorks cerraba ese documento al terminar ("se cerró solo").
+- **Taladro de ensamblaje que no toca ninguna pieza (#68):** el panel muestra solo "Piezas
+  afectadas" y el aviso (no la Dirección y Profundidad de un corte); con la primera pieza elegida
+  pasa al panel del taladro (tipo y medida).
+- **Menos redibujados (#25):** el árbol, el croquis 3D, la selección de entidades del croquis y el
+  resaltado de aristas del modelo hacen un solo redibujado por tanda de cambios o de movimientos
+  del mouse (`safe_ops.later_once`).
 - **Deshacer: ningún paso queda abierto (#60):** todo el código propio cierra sus pasos de deshacer
   con `safe_ops.end_step` (66 lugares en 15 archivos). Antes, un panel o comando que se cancelaba
   o aceptaba sin cambios dejaba abierto el paso, y lo siguiente que hacía el usuario se sumaba a él.

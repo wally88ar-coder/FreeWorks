@@ -1,5 +1,29 @@
 # Estado del fork
 
+**14/11 (objetivo del usuario: "solucionar TODOS los bugs listados en GitHub, procesos lo más
+parecidos a SW").** Hecho, cada uno con su prueba (detalle en CHANGELOG):
+- #84: Ángulo/Tangente se resuelven desde cualquier arranque. Si el solver falla, la pieza libre
+  se acerca o se prueban otros giros.
+- #76: era una relación que contradice a otra (el resolvedor tira "invalid vector subscript"). Ahora
+  es como SW: el panel avisa "sobredefine el ensamblaje" y no la agrega; un valor imposible vuelve al
+  anterior. Los errores en inglés del resolvedor no van al informe mientras resuelve FreeWorks.
+- #85 (nueva, la encontró el mono): al cancelar un corte de ensamblaje con Ecuaciones abierto, la
+  relación quedaba guardada contra otra cara (la de arriba en vez de la del frente). La reparación
+  nunca pasa a una cara o eje girado más de 45°.
+- #80: la relación se repara antes de que FreeCAD la recalcule (enganche a `Joint.execute`, con
+  prueba).
+- #79: el ensamblaje ya no queda "modificado" al abrirlo ni al abrir una pieza en su ventana, salvo
+  que una pieza haya cambiado (como SW).
+- #40: era real: con "Guardar también STEP" (encendido en la configuración del usuario), reabrir el
+  archivo mientras se escribía el STEP al cerrar hacía que FreeWorks cerrara el documento. El STEP
+  sale ahora de una copia.
+- #68: el taladro de ensamblaje sin piezas muestra solo "Piezas afectadas" y el aviso.
+- #25: un solo redibujado por tanda en el árbol, el croquis 3D, la selección del croquis y el
+  resaltado de aristas (`safe_ops.later_once`).
+- Revisor independiente: dos pasadas. Se corrigió lo que encontró, sobre todo que #85 reventaba con
+  caras de otro tipo y lo de las posiciones viejas en #80.
+- Sin probar con el mouse contra SW. Se probó con pruebas de ventana y con el mono.
+
 **Noche del 12 al 13/11 (el usuario: "dale nomás con todo esto", PC libre hasta las 7:30).**
 - Batería completa del 12/11 21:38: 90 bien, 2 fallas, 1 conocido (#79).
   - `prueba_azar_conocidos` reclamaba Issues cerradas que las pruebas seguían tolerando. Ya no
