@@ -29,7 +29,7 @@ import os  # noqa: E402
 
 import FreeCAD  # noqa: E402
 
-from _base import carpeta_temporal  # noqa: E402
+from _base import carpeta_temporal, traza  # noqa: E402
 from azar_comun import Fallas, bombear, comprobado, hypothesis_listo  # noqa: E402
 
 given, cfg, st = hypothesis_listo()
@@ -156,6 +156,12 @@ def _caras(data, key):
         valor = round(data.draw(st.floats(0.5, 80)), 2)
     if key == "angle":
         valor = round(data.draw(st.floats(10, 170)), 1)
+    # el caso ANTES de resolver: si se queda calculando (#91), el registro dice cuál fue
+    def medidas(c):
+        b = c.LinkedObject.Shape.BoundBox
+        return [round(b.XLength, 1), round(b.YLength, 1), round(b.ZLength, 1)]
+    traza("    %s %s-%s valor %s placa %s bloque %s en %s" % (
+        key, c1, c2, valor, medidas(placa), medidas(bloque), bloque.Placement))
     r = _relacionar(doc, asm, key, [(placa, c1), (bloque, c2)], valor)
     assert r in (0, None), "%s: el ensamblaje no se resolvió (%s)" % (key, r)
     comprobado()
@@ -211,11 +217,15 @@ def cambiar_pieza(data, key, nuevo):
     # cambiar la medida del bloque (en su archivo), recalcular y volver a resolver, como el usuario
     pdoc = bloque.LinkedObject.Document
     caja = [o for o in pdoc.Objects if o.TypeId == "PartDesign::AdditiveBox"][0]
+    traza("      cambiar el largo del bloque a %s" % nuevo)
     caja.Length = nuevo
     pdoc.recompute()
+    traza("      pieza recalculada")
     doc.recompute()
+    traza("      conjunto recalculado")
     from swui.fork import mates_sw
     r = mates_sw.solve(asm)
+    traza("      resuelto: %s" % r)
     doc.recompute()
     assert r in (0, None), "después de cambiar la pieza el ensamblaje no se resuelve (%s)" % r
     p1, n1 = _plano(_cara_global(placa, c1))
