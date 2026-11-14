@@ -128,11 +128,9 @@ class Ensamblaje(Entorno):
     vinculos = ("asm", "comps")
     acciones = ("suprimir_componente", "cambiar_pieza")
     # el resolvedor de FreeCAD con Matriz + Taladro/Corte + Relaciones (también sin Ecuaciones)
-    deuda = (("#76", "Solve failed: invalid vector subscript", None),
-             # la relación pierde su cara tras un corte: FreeCAD avisa antes de que se repare (#80)
-             ("#80", ("Broken link in: Reference", 'errStr + "Reference'), None),
-             # el resolvedor no converge al aceptar una relación tras guardar y abrir (#76, otro aviso)
-             ("#76", "Solve failed: iterNo > iterMax", None))
+    # #80 (la relación avisaba que perdió su cara antes de repararse) y #76 (el resolvedor con una
+    # relación que contradice a otra) arreglados el 14/11
+    deuda = ()
     deuda_pasos = ()
 
     def armar(self):
@@ -204,9 +202,9 @@ class Soldada(Entorno):
     nombre = "soldadas"
     vinculos = ("esqueleto", "cuerpos")
     acciones = ("esqueleto", "esqueleto")
-    # error ya registrado: #40 (el reabierto se cierra solo)
+    # #40 (el reabierto se cerraba solo: el STEP al cerrar) arreglado el 14/11
     deuda = ()
-    deuda_pasos = (("~#40", "se cerró solo", "guardar"),)
+    deuda_pasos = ()
 
     def armar(self):
         from casos_soldadas import _anotar_paneles

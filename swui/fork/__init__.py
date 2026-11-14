@@ -231,6 +231,9 @@ def install(workbench=None):
         from swui.fork import mate_refs
 
         mate_refs.install()
+        from swui.fork import open_clean
+
+        open_clean.install()  # sin "modificado" falso en el ensamblaje (#79)
         from swui.fork import asm_tab
 
         asm_tab.install()

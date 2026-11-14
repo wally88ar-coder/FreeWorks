@@ -417,7 +417,12 @@ def paso(m, accion, semilla, historia):
                       and m.doc.getObject(n) is not None and m.doc.getObject(n).TypeId in _tipos(caso)]
             if nuevos and getattr(caso, "cambiar", None) is not None:
                 m.hechos.append((nuevos[-1], caso))
-            deshacer_y_rehacer(m, que, f0, f1, caso)
+            if f1.get("undo") == f0.get("undo") and not diferencias(f0, f1, visibilidad=False):
+                # aceptó sin crear nada (p. ej. una relación que sobredefine el ensamblaje: como
+                # SW, no se agrega, #76): no hay paso que deshacer; Ctrl+Z desharía lo anterior
+                traza("    (aceptar sin cambios: no se prueba deshacer)")
+            else:
+                deshacer_y_rehacer(m, que, f0, f1, caso)
             correr(caso.despues_de_aceptar())  # p. ej. salir del croquis
         else:
             correr(caso.cancelar())

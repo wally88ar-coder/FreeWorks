@@ -64,7 +64,7 @@ def remove_feature(feature, show_tip=True):
 
 def show_body_tip(body):
     """Con ventana: la punta del Cuerpo a la vista y las operaciones anteriores ocultas."""
-    if not FreeCAD.GuiUp:
+    if not getattr(FreeCAD, "GuiUp", False):
         return
     try:
         tip = body.Tip
@@ -87,7 +87,7 @@ def task_open(doc=None):
     Hay un panel abierto en Tareas (del fork o nativo). Con `doc`: y ese documento es el activo
     (los paneles trabajan sobre el documento activo; un panel sobre otro documento no cuenta).
     """
-    if not FreeCAD.GuiUp:
+    if not getattr(FreeCAD, "GuiUp", False):
         return False
     try:
         import FreeCADGui
@@ -231,7 +231,7 @@ def show_panel(panel):
     apaga y se llama a su `panel._orphaned()` (si lo tiene) para limpiar lo que dibujó (Issues #6
     y #12). Todo panel nuevo debe abrirse con esto y tener `_orphaned` si dibuja algo.
     """
-    if not FreeCAD.GuiUp:
+    if not getattr(FreeCAD, "GuiUp", False):
         return False
     import FreeCADGui
     from swui.fork import panel_guard
@@ -301,7 +301,7 @@ def later_once(key, fn, *args):
         once_stats[key] = once_stats.get(key, 0) + 1
         f(*a)
 
-    if not FreeCAD.GuiUp:
+    if not getattr(FreeCAD, "GuiUp", False):
         run()
         return
     from swui.compat import QtCore

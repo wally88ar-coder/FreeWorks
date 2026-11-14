@@ -59,6 +59,13 @@ class _Ensamblaje(Caso):
         doc.recompute()
         yield 800
         FreeCAD.setActiveDocument(doc.Name)
+        # #83 (visto una vez): componentes con error o sin pieza al prepararse. Si vuelve a pasar,
+        # que el registro diga qué documentos había abiertos y a qué apuntaba cada componente
+        malos = [c for c in self.comps if c.LinkedObject is None or not c.isValid()]
+        if malos:
+            traza("  #83 componentes mal: %s; documentos: %s" % (
+                [(c.Name, getattr(c.LinkedObject, "FullName", None), c.isValid()) for c in malos],
+                [(d.Name, d.FileName) for d in FreeCAD.listDocuments().values()]))
 
     def elegir_en(self, comp, sub):
         """Clic en `sub` (FaceN, EdgeN) de un componente, como en la pantalla."""

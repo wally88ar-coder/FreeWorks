@@ -153,6 +153,18 @@ def foto_varios(doc, otros):
     return f
 
 
+_MARCAS = {}
+
+
+def _que_marca(x, y):
+    a, b = dict(_MARCAS.get(x, ())), dict(_MARCAS.get(y, ()))
+    out = []
+    for k in sorted(set(a) | set(b)):
+        if a.get(k) != b.get(k):
+            out.append("%s: %s -> %s" % (k, str(a.get(k))[:300], str(b.get(k))[:300]))
+    return "; ".join(out)
+
+
 def foto(doc):
     """Estado comparable del documento: por objeto, tipo, medida (volumen y caja; en un croquis,
     lo dibujado), ubicación, visibilidad y marcas SWUI_; y los pasos de deshacer."""
@@ -176,8 +188,10 @@ def foto(doc):
             if o.Name == en_edicion:
                 vis = None  # mientras se edita, FreeCAD le cambia la visibilidad
         try:  # las marcas propias de FreeWorks (SWUI_...): chapa, alcance, configuraciones...
-            marcas = hash(tuple(sorted((p, _valor(getattr(o, p))) for p in o.PropertiesList
-                                       if p.startswith("SWUI_"))))
+            crudas = tuple(sorted((p, _valor(getattr(o, p))) for p in o.PropertiesList
+                                  if p.startswith("SWUI_")))
+            marcas = hash(crudas)
+            _MARCAS[marcas] = crudas  # para decir QUÉ marca cambió
         except Exception:
             marcas = None
         extra = None
@@ -204,6 +218,8 @@ def diferencias(a, b, con_undo=True):
                    if x != y and not (k == "visible" and (x is None or y is None))]
             if que:
                 out.append("%s cambió (%s): %s -> %s" % (n, ", ".join(que), a["objs"][n], b["objs"][n]))
+                if "marcas" in que:
+                    out[-1] += " [%s]" % _que_marca(a["objs"][n][4], b["objs"][n][4])
     if con_undo and a["undo"] != b["undo"]:
         out.append("pasos de deshacer: %d -> %d" % (a["undo"], b["undo"]))
     if b.get("abierta") and not a.get("abierta"):
@@ -833,22 +849,28 @@ def correr_caso(caso, inf, semillas=(1,)):
         try:
             reabierto = foto_varios(doc, otros)
         except ReferenceError:
-            # visto una vez (Esquinas, 08/11) y no se repitió: el documento recién abierto dejó de
-            # existir durante la espera. Se anota y se sigue (Issue #40, a investigar)
+            # el documento recién abierto dejó de existir durante la espera (#40: lo cerraba el
+            # STEP al cerrar, arreglado el 14/11). Se anota como falla y se sigue
             inf.falla(caso.nombre, "guardar", "el documento reabierto se cerró solo")
             doc = FreeCAD.openDocument(ruta)
             yield ESPERA_PANEL
             reabierto = foto_varios(doc, otros)
         for d in diferencias(antes, reabierto, con_undo=False):
             inf.falla(caso.nombre, "guardar", d)
+        # "al abrir quedó modificado" se mira ANTES de cerrar las piezas: cerrar una pieza que el
+        # ensamblaje está usando lo cambia de verdad (sus vínculos se quedan sin pieza), no es la
+        # marca de abrir (#79, 14/11). Antes, un momento para que FreeWorks la saque (la tanda de
+        # cambios de abrir las piezas en su ventana termina a los 250 ms)
+        yield ESPERA_CORTA
+        gdoc = FreeCADGui.getDocument(doc.Name)
+        if getattr(gdoc, "Modified", False):
+            from swui.fork import open_clean
+            inf.falla(caso.nombre, "guardar", "al abrir quedó modificado (%s)" % open_clean.last["reason"])
         for o in otros:
             try:
                 FreeCAD.closeDocument(o.Name)
             except Exception:
                 pass
-        gdoc = FreeCADGui.getDocument(doc.Name)
-        if getattr(gdoc, "Modified", False):
-            inf.falla(caso.nombre, "guardar", "al abrir quedó modificado")
         chequear_ventana("guardar", desde)
         for extra in set(FreeCAD.listDocuments()) - abiertos:  # piezas de un ensamblaje (memoria)
             if extra != doc.Name:

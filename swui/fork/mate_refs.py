@@ -105,10 +105,32 @@ def cost(a, b):
     return 10 * _dist(a["p"], b["p"]) + abs(a.get("s", 0) - b.get("s", 0))
 
 
+TURNED = math.radians(45)  # una cara o un eje girado más que esto ya no es "la misma" (#85)
+
+
+def too_turned(a, b):
+    """
+    ¿La candidata está girada demasiado respecto de lo elegido para tomarla como la misma? (#85)
+    Una relación contra la cara del frente de una placa pasó a la cara de arriba (90°) al cancelar
+    un corte de ensamblaje: "la más parecida" siempre encontraba alguna. SW no cambia la relación de
+    cara: la marca con error. Acá queda como estaba (con aviso) y la geometría guardada no se toca.
+    """
+    if not a or not b or a.get("t") != b.get("t") or a.get("g") != b.get("g"):
+        return False  # de otro tipo: `cost` ya la descarta (un cilindro no tiene normal)
+    g = a.get("g")
+    if g == "plane":
+        return _angle(a["n"], b["n"]) > TURNED
+    if g in ("cylinder", "cone", "circle", "line"):
+        return _angle(a["d"], b["d"], True) > TURNED
+    return False
+
+
 def best_match(want, candidates):
     """(nombre, costo) de la candidata más parecida a `want`; (None, None) si no hay del mismo tipo."""
     best, best_cost = None, None
     for name, sig in candidates:
+        if too_turned(want, sig):
+            continue
         c = cost(want, sig)
         if c is not None and (best_cost is None or c < best_cost - 1e-9):
             best, best_cost = name, c
@@ -313,7 +335,10 @@ def snapshot(joint):
         _write(joint, data)
 
 
-def check(joint):
+_deferred_flips = []  # (unión, referencia): dar vuelta al terminar el recálculo (#80, revisión)
+
+
+def check(joint, defer_flip=False):
     """
     Corregir las referencias de una unión si la pieza renumeró. Devuelve True si cambió algo.
     Una referencia sin firma guardada (archivo anterior al arreglo) se toma como buena y se guarda
@@ -345,7 +370,10 @@ def check(joint):
             _refresh_link(new_ref)
             setattr(joint, prop, new_ref)  # FreeCAD vuelve a ubicar la unión en el acto
             if _reversed(stored, sigs):
-                _flip_offset(joint, prop)
+                if defer_flip:  # adentro de un recálculo: el Offset resuelve todo de nuevo (#76)
+                    _deferred_flips.append((joint, prop))
+                else:
+                    _flip_offset(joint, prop)
             changed = True
     fresh = {k: v for k, v in fresh.items() if v}
     if fresh:
@@ -500,8 +528,9 @@ def check_assemblies(docs=None, assembly_doc=None):
     documento `assembly_doc`; volver a resolver el ensamblaje si hizo falta.
     """
     if _state["busy"]:
-        return
+        return None  # no se revisó: quien pregunta "¿se reparó algo?" no puede dar por hecho que no
     _state["busy"] = True
+    any_touched = False
     try:
         for asm in list(_assemblies()):
             if assembly_doc is not None and asm.Document.Name != assembly_doc:
@@ -517,9 +546,11 @@ def check_assemblies(docs=None, assembly_doc=None):
                     FreeCAD.Console.PrintLog("[SWUI fork] Revisar relación %s:\n%s\n"
                                              % (joint.Label, traceback.format_exc()))
             if touched:
+                any_touched = True
                 _solve_later(asm, before)
     finally:
         _state["busy"] = False
+    return any_touched
 
 
 def _components(asm):
@@ -563,7 +594,10 @@ def _solve_later(asm, before=None):
                     joint.Proxy.updateJCSPlacements(joint)
                 except Exception:
                     pass
-            result = a.solve()
+            from swui.fork.mates_sw import quiet_solver
+
+            with quiet_solver():  # sin "Solve failed" en inglés: si falla, se vuelve abajo (#76)
+                result = a.solve()
             fixed = _grounded(a)
             moved = [o for o in _components(a) if o.Name in fixed and o.Name in before
                      and not o.Placement.isSame(before[o.Name], 1e-7)]
@@ -571,7 +605,8 @@ def _solve_later(asm, before=None):
                 for o in _components(a):
                     if o.Name in before:
                         o.Placement = before[o.Name]
-                result = a.solve()
+                with quiet_solver():
+                    result = a.solve()
                 FreeCAD.Console.PrintLog("[SWUI fork] Resolver ensamblaje desde las posiciones de antes: %s\n"
                                          % result)
             a.Document.recompute()
@@ -592,7 +627,40 @@ def _after_open(doc_name):
     except Exception:
         return
     if any(o.TypeId == "Assembly::AssemblyObject" for o in doc.Objects):
-        check_assemblies(assembly_doc=doc_name)
+        from swui.fork import open_clean
+
+        open_clean._opening.add(doc_name)  # lo mira `_settle`, no el escucha de vínculos
+        touched = {o.Name for o in doc.Objects if open_clean.is_touched(o)}  # lo que dejó tocado la carga
+        _repaired_docs.discard(doc_name)
+        checked = check_assemblies(assembly_doc=doc_name)
+        repaired = checked is None or checked or doc_name in _repaired_docs
+        # sin cambios de verdad, que no quede "modificado" (#79): después de resolver (_solve_later)
+        from swui.compat import QtCore
+
+        QtCore.QTimer.singleShot(100, lambda n=doc_name, r=repaired, t=touched: _settle(n, r, t))
+
+
+def _settle(doc_name, repaired, touched):
+    try:
+        from swui.fork import open_clean
+
+        repaired = repaired or doc_name in _repaired_docs
+        try:
+            open_clean.settle_after_open(FreeCAD.getDocument(doc_name), repaired, touched)
+        finally:
+            open_clean._opening.discard(doc_name)
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Marca de modificado al abrir:\n%s\n" % traceback.format_exc())
+
+
+def _stale(ref):
+    """¿La pieza de la referencia tiene algo por recalcular? (su forma no es la de ahora, #85)"""
+    try:
+        obj = _target(ref)  # la pieza (el Cuerpo), no el ensamblaje donde está la unión
+        obj = obj.getLinkedObject(True) or obj
+        return any("Touched" in o.State for o in obj.Document.Objects)
+    except Exception:
+        return False
 
 
 def _recomputing():
@@ -609,8 +677,15 @@ class _Observer:
         try:
             if obj.Document.Restoring or FreeCAD.isRestoring() or _recomputing():
                 return
+            # deshacer / Cancelar (abortar): la referencia vuelve a la de antes junto con su firma
+            # guardada; la pieza todavía tiene la forma vieja (sin recalcular) y la firma tomada
+            # ahora sería de OTRA cara con ese número (#85: la del frente quedaba como la de arriba)
+            if any(getattr(d, "Transacting", False) for d in FreeCAD.listDocuments().values()):
+                return
             ref = getattr(obj, prop, None)
             if ref and any(is_broken(s) for s in ref[1]):
+                return
+            if ref and _stale(ref):
                 return
             snapshot(obj)
         except Exception:
@@ -627,6 +702,20 @@ class _Observer:
             QtCore.QTimer.singleShot(0, lambda n=doc.Name: _after_open(n))
 
     def slotRecomputedDocument(self, doc):
+        # reparadas adentro del recálculo (#80): resolver ahora, con las posiciones de antes por si
+        # ese recálculo las torció (revisión del 14/11)
+        for joint, prop in [f for f in _deferred_flips if _doc_of(f[0]) == doc.Name]:
+            _deferred_flips.remove((joint, prop))
+            from swui.fork.mates_sw import quiet_solver
+
+            with quiet_solver():
+                _flip_offset(joint, prop)
+        for key in [k for k in _repaired_in_recompute if k[0] == doc.Name]:
+            before = _repaired_in_recompute.pop(key)
+            _repaired_docs.add(doc.Name)
+            asm = doc.getObject(key[1])
+            if asm is not None:
+                _solve_later(asm, before)
         # una pieza recalculada: las uniones que la usan; un ensamblaje: todas las suyas
         if any(o.TypeId == "Assembly::AssemblyObject" for o in doc.Objects):
             check_assemblies(assembly_doc=doc.Name)
@@ -634,7 +723,67 @@ class _Observer:
             check_assemblies({doc.Name})
 
 
+def _broken_refs(joint):
+    for prop in REFS:
+        ref = getattr(joint, prop, None)
+        if ref and len(ref) == 2 and any(is_broken(s) for s in ref[1]):
+            return True
+    return False
+
+
+_repaired_in_recompute = {}  # (documento, ensamblaje) -> posiciones de antes (#80)
+
+
+def _doc_of(obj):
+    try:
+        return obj.Document.Name
+    except Exception:
+        return None
+_repaired_docs = set()  # documentos donde se reparó algo al recalcular (para #79)
+
+
+def _hook_joint_execute():
+    """
+    Reparar la referencia ANTES de que la unión nativa se recalcule (#80). Un corte en una pieza le
+    cambia la numeración de caras; en el mismo recálculo FreeCAD marca la cara como perdida ('?') y
+    `Joint.execute` avisa "Broken link in: Reference1" en el informe; recién después (al terminar el
+    recálculo) FreeWorks la reparaba. Como en SW, la relación sigue a su cara sin errores: si la
+    unión llega rota a su recálculo, primero se repara con la geometría guardada (`check`) y
+    después sigue lo nativo (que avisa solo si no se pudo reparar).
+    """
+    try:
+        import JointObject
+    except Exception:
+        return
+    original = JointObject.Joint.execute
+    if getattr(original, "_swui_fork", False):
+        return
+
+    def execute(self, joint, _original=original):
+        if not _state["busy"] and _broken_refs(joint):
+            _state["busy"] = True
+            try:
+                asm = self.getAssembly(joint)
+                key = (asm.Document.Name, asm.Name) if asm is not None else None
+                if key is not None and not getattr(asm.Document, "Recomputing", False):
+                    key = None  # recálculo suelto de la unión: no hay fin de recálculo que lo resuelva
+                if key is not None and key not in _repaired_in_recompute:
+                    # las posiciones de antes de este recálculo, para `_solve_later` al terminar
+                    _repaired_in_recompute[key] = _placements(asm)
+                check(joint, defer_flip=key is not None)
+            except Exception:
+                FreeCAD.Console.PrintLog("[SWUI fork] Reparar antes de recalcular %s:\n%s\n"
+                                         % (joint.Label, traceback.format_exc()))
+            finally:
+                _state["busy"] = False
+        return _original(self, joint)
+
+    execute._swui_fork = True
+    JointObject.Joint.execute = execute
+
+
 def install():
     if not _state["installed"]:
         _state["installed"] = True
         FreeCAD.addDocumentObserver(_Observer())
+    _hook_joint_execute()

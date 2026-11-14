@@ -20,6 +20,7 @@ guarda en la propiedad SWUI_MateType de la unión (nombre estable, ver docs/ESTA
 Los nombres SW de componentes ("(f) Placa<1>") y de relaciones los pone el original (naming.py).
 """
 
+import contextlib
 import traceback
 
 import FreeCAD
@@ -275,8 +276,10 @@ def current_value(key, shapes):
     return 10.0 if key == "distance" else 90.0
 
 
-def create_joint(asm, key, refs, value=None, label=None):
-    """Una unión nativa para la relación SW `key` entre refs = [(comp, sub), (comp, sub)]."""
+def create_joint(asm, key, refs, value=None, label=None, rescue=True):
+    """Una unión nativa para la relación SW `key` entre refs = [(comp, sub), (comp, sub)].
+    `rescue`: si el solver se traba, probar otros arranques (#84); el panel lo hace él después de
+    la Alineación, así no se hace dos veces (revisión del 14/11)."""
     jo, ua = _assembly_modules()
     jg = ua.getJointGroup(asm)
     jtype = MATES[key][2]
@@ -299,7 +302,8 @@ def create_joint(asm, key, refs, value=None, label=None):
     if key == "lock":
         _keep_position(joint, connectors)
     fixed = _grounded_placements(asm)
-    joint.Proxy.setJointConnectors(joint, connectors)  # FreeCAD resuelve acá (sin pasar por `solve`)
+    with quiet_solver():
+        joint.Proxy.setJointConnectors(joint, connectors)  # FreeCAD resuelve acá (sin pasar por `solve`)
     keep_grounded(asm, fixed)  # antes de los destrabes: que miren lo que de verdad quedó
     if key in PLANE_PARALLEL:
         unstick_perpendicular(asm, joint, refs)
@@ -307,6 +311,8 @@ def create_joint(asm, key, refs, value=None, label=None):
         axis_joint = _tangent_axis(asm, joint, refs, connectors)
         if axis_joint is not None:
             unstick_tangent(asm, joint, axis_joint)
+    if rescue:
+        solve_joint(asm, joint)  # si el solver se trabó por el giro de arranque, desde otro (#84)
     hide_markers([joint] + companions(joint))
     return joint
 
@@ -348,7 +354,8 @@ def keep_grounded(asm, fixed):
     for p in moved:
         p.Placement = fixed[p]
     try:
-        result = asm.solve()
+        with quiet_solver():
+            result = asm.solve()
     except Exception:
         result = -1
     again = _moved(fixed)
@@ -776,12 +783,155 @@ def unstick_tangent(asm, joint, axis_joint):
         return False
 
 
+def _target_angle(key, joint, current):
+    """El ángulo (grados) entre los ejes Z de las dos referencias que deja la relación, el más cercano
+    a `current`; None si la relación no fija un ángulo."""
+    if key == "angle":
+        try:
+            a = float(getattr(joint.Angle, "Value", joint.Angle))
+        except Exception:
+            return None
+        options = (a, 180.0 - a)
+    elif key in ("tangent", "perpendicular"):
+        options = (90.0,)
+    elif key in ("coincident", "distance", "parallel", "concentric"):
+        options = (0.0, 180.0)
+    else:
+        return None
+    return min(options, key=lambda t: abs(t - current))
+
+
+def _free_side(asm, joint, extra=()):
+    """(pieza que se mueve, la otra, n de su referencia) para girar sin romper otras relaciones: la
+    que no tiene otras relaciones que la sujeten (como en los destrabes). None si no hay ninguna."""
+    _jo, ua = _assembly_modules()
+    part1 = ua.getMovingPart(joint.Reference1)
+    part2 = ua.getMovingPart(joint.Reference2)
+    quiet = [joint] + list(extra)
+    old = [j.Suppressed for j in quiet]
+    for j in quiet:
+        j.Suppressed = True
+    try:
+        libre1 = part1 is not None and not asm.isPartConnected(part1)
+        libre2 = part2 is not None and not asm.isPartConnected(part2)
+    finally:
+        for j, s in zip(quiet, old):
+            j.Suppressed = s
+    if libre2:
+        return part2, part1, 2
+    if libre1:
+        return part1, part2, 1
+    return None
+
+
+def solve_joint(asm, joint):
+    """
+    Resolver después de crear o cambiar una relación de posición (#84). El solver de FreeCAD 1.1
+    busca la posición en pasos chicos desde donde está la pieza y, desde algunos giros de arranque,
+    se traba y da -1 aunque la relación tenga solución (Ángulo de 87° con un bloque girado 84°,
+    Tangente con un perno girado 121°). SW la resuelve. Acá, si falla: la pieza libre de la relación
+    se acerca (se la gira lo justo para que sus ejes ya formen el ángulo pedido) y se resuelve de
+    nuevo; si tampoco, se prueban arranques girados 90° y 180° alrededor de los ejes de la
+    referencia, del giro más chico al más grande, y queda el primero que resuelve. Si ninguno, todo
+    vuelve a donde estaba y devuelve el error del solver. Las piezas fijas no se mueven nunca.
+    """
+    result = solve(asm)
+    if result == 0:
+        return 0
+    try:
+        return _rescue(asm, joint, result)
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Resolver desde otro arranque: %s\n" % traceback.format_exc())
+        return result
+
+
+def _rescue(asm, joint, result):
+    import math
+
+    extra = companions(joint)
+    side = _free_side(asm, joint, extra)
+    if side is None:
+        return result
+    moving, other, n = side
+    parts = [moving]
+    quiet = [joint] + extra
+    old = [j.Suppressed for j in quiet]
+    for j in quiet:
+        j.Suppressed = True
+    try:
+        parts += [p for p in asm.getDownstreamParts(moving, joint) if p is not other and p is not moving]
+    except Exception:
+        pass
+    finally:
+        for j, s in zip(quiet, old):
+            j.Suppressed = s
+    before = {p: p.Placement for p in parts}
+    origin, zm = _global_z(joint, n)
+    _o, zo = _global_z(joint, 3 - n)
+    plc = _jcs_global(joint, n)
+    turns = []
+    current = math.degrees(zm.getAngle(zo))
+    target = _target_angle(getattr(joint, PROP, ""), joint, current)
+    if target is not None and abs(current - target) > 1e-6:
+        axis = zm.cross(zo)
+        if axis.Length < 1e-9:  # ejes paralelos: cualquier eje de costado sirve
+            axis = plc.Rotation.multVec(FreeCAD.Vector(1, 0, 0))
+        turns.append(FreeCAD.Rotation(axis, current - target))
+    for ang in (90, -90, 180):
+        for local in ((1, 0, 0), (0, 1, 0), (0, 0, 1)):
+            turns.append(FreeCAD.Rotation(plc.Rotation.multVec(FreeCAD.Vector(*local)), ang))
+    for rot in turns:
+        turn = FreeCAD.Placement(FreeCAD.Vector(), rot, origin)
+        for p, plc0 in before.items():
+            p.Placement = turn.multiply(plc0)
+        if solve(asm) == 0:
+            return 0
+    for p, plc0 in before.items():
+        p.Placement = plc0
+    solve(asm)
+    return result
+
+
+def _jcs_global(joint, n):
+    _jo, ua = _assembly_modules()
+    return ua.getJcsGlobalPlc(getattr(joint, "Placement%d" % n), getattr(joint, "Reference%d" % n))
+
+
+@contextlib.contextmanager
+def quiet_solver():
+    """
+    Sin los errores en inglés del resolvedor de FreeCAD en el informe mientras FreeWorks resuelve
+    (#76). Una relación que contradice a otra (la cara +Y del bloque contra la placa y, además, su
+    cara -X paralela a la misma dirección) hace fallar al resolvedor con "Solve failed: invalid
+    vector subscript" (o "iterNo > iterMax"), y la ayuda de #84 lo vuelve a probar desde otros
+    arranques. SW no escribe nada: avisa en el panel que la relación sobredefine el ensamblaje. El
+    que llama decide qué decir (devuelve el resultado del resolvedor).
+    """
+    changed = []
+    try:
+        for name in FreeCAD.Console.GetObservers():
+            try:
+                if FreeCAD.Console.GetStatus(name, "Err"):
+                    FreeCAD.Console.SetStatus(name, "Err", False)
+                    changed.append(name)
+            except Exception:
+                pass
+        yield
+    finally:
+        for name in changed:
+            try:
+                FreeCAD.Console.SetStatus(name, "Err", True)
+            except Exception:
+                pass
+
+
 def solve(asm):
     """Resolver el ensamblaje sin que se mueva ninguna pieza fija (#62): si el solver la movió y no
     se puede resolver de otra forma, devuelve -1 (como un error del solver)."""
     fixed = _grounded_placements(asm)
     try:
-        result = asm.solve()
+        with quiet_solver():
+            result = asm.solve()
     except Exception:
         result = -1
     if not keep_grounded(asm, fixed):
@@ -832,6 +982,7 @@ class MatePanel:
         self.added = []
         self.flipped = False
         self.busy = False
+        self.problem = ""  # aviso del último intento (relación que no se puede resolver)
         self.value = {"distance": None, "angle": None}
         if self.editing:
             for prop in ("Reference1", "Reference2"):
@@ -1012,6 +1163,7 @@ class MatePanel:
         spin.blockSignals(False)
 
     def _hint(self, kinds, problem=""):
+        problem = problem or getattr(self, "problem", "")  # el último aviso sigue hasta que cambie algo
         if problem:
             text = problem
         elif not self.entities:
@@ -1051,6 +1203,7 @@ class MatePanel:
             return
         if self.joint is not None:
             self._discard()
+        self.problem = ""
         self.entities = entities
         self.flipped = False
         self.value = {"distance": None, "angle": None}
@@ -1079,22 +1232,30 @@ class MatePanel:
         if key in ("distance", "angle") and self.value[key] is None:
             self.value[key] = current_value(key, [e[3] for e in self.entities])
         self.busy = True
-        problem = ""
+        problem = self.problem = ""
         try:
             if not self.editing:
                 self.doc.openTransaction(LABEL)
             self.joint = create_joint(self.asm, key, [(e[0], e[1]) for e in self.entities],
-                                      self.value.get(key), label)
+                                      self.value.get(key), label, rescue=False)
             if self.flipped and key in FLIPPABLE:
                 flip_one_part(self.asm, self.joint)
-            if solve(self.asm) != 0:
-                problem = "FreeCAD no puede resolver esta relación (choca con otra o la pieza está fija)."
-            self.doc.recompute()
+            if solve_joint(self.asm, self.joint) != 0:
+                if self.editing:
+                    problem = "FreeCAD no puede resolver esta relación (choca con otra o la pieza está fija)."
+                else:
+                    # como SW: avisa y no la agrega (si quedara, cada recálculo volvería a fallar, #76)
+                    problem = ("Esta relación sobredefine el ensamblaje: choca con otra relación o con una "
+                               "pieza fija. Elija otro tipo de relación u otras entidades.")
+                    self._discard()
+            with quiet_solver():  # el recálculo vuelve a resolver (#76)
+                self.doc.recompute()
         except Exception:
             FreeCAD.Console.PrintError("[SWUI fork] Relación de posición:\n%s\n" % traceback.format_exc())
             problem = "No se pudo crear la relación."
         finally:
             self.busy = False
+        self.problem = problem
         self._hint([e[2] for e in self.entities], problem)
 
     def _discard(self):
@@ -1131,8 +1292,9 @@ class MatePanel:
         self.flipped = flipped
         try:
             flip_one_part(self.asm, self.joint)
-            solve(self.asm)
-            self.doc.recompute()
+            solve_joint(self.asm, self.joint)
+            with quiet_solver():
+                self.doc.recompute()
         except Exception:
             FreeCAD.Console.PrintError("[SWUI fork] Alineación:\n%s\n" % traceback.format_exc())
         self._refresh()
@@ -1142,9 +1304,22 @@ class MatePanel:
         if self.joint is None or self.key != key:
             return
         try:
-            setattr(self.joint, "Distance" if key == "distance" else "Angle", value)
-            problem = "" if solve(self.asm) == 0 else "FreeCAD no puede resolver ese valor."
-            self.doc.recompute()
+            prop = "Distance" if key == "distance" else "Angle"
+            before = getattr(self.joint, prop)
+            with quiet_solver():  # cambiar el valor ya resuelve (lo nativo, #76)
+                setattr(self.joint, prop, value)
+            problem = ""
+            if solve_joint(self.asm, self.joint) != 0:
+                # como SW: un valor imposible no se aplica; vuelve el anterior (#76)
+                problem = "FreeCAD no puede resolver ese valor; quedó el anterior."
+                with quiet_solver():
+                    setattr(self.joint, prop, before)
+                solve_joint(self.asm, self.joint)
+                self.value[key] = float(getattr(before, "Value", before))
+                self._refresh()
+            with quiet_solver():
+                self.doc.recompute()
+            self.problem = problem
             self._hint([e[2] for e in self.entities], problem)
         except Exception:
             FreeCAD.Console.PrintError("[SWUI fork] Valor de la relación:\n%s\n" % traceback.format_exc())

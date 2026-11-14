@@ -19,7 +19,7 @@ from mono_entornos import Ensamblaje  # noqa: E402
 
 
 def prueba():
-    correr_reglas(Ensamblaje)  # #76 (aviso del resolvedor) va como deuda del entorno
+    correr_reglas(Ensamblaje)  # #76 y #80 arreglados el 14/11 (sin deuda)
 
 
 from _base import ejecutar  # noqa: E402

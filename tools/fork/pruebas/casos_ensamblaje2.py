@@ -82,6 +82,10 @@ class TaladroEnsamblaje(_AsmCorte):
         if not hasattr(p, "size"):
             # el punto cayó donde no hay pieza (p. ej. adentro de otro taladro): el panel pide elegir
             # las piezas; con la placa elegida pasa al panel del taladro (#68)
+            assert not p.direction.isVisibleTo(p.form), \
+                "Taladro de ensamblaje sin piezas: muestra Dirección/Profundidad de un corte (#68)"
+            assert p.message.isVisibleTo(p.form) and "ninguna pieza" in p.message.text(), \
+                "Taladro de ensamblaje sin piezas: no avisa que no toca ninguna pieza (#68)"
             self.elegir_en(self.comps[0], self.cara_arriba(self.comps[0]))
             yield 1500
             p = self.panel()

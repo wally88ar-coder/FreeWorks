@@ -12,11 +12,7 @@ TIPO = "completa"
 from casos_ensamblaje2 import CASOS  # noqa: E402
 from reglas_paneles import correr  # noqa: E402
 
-DEUDA = {
-    # guardar y abrir deja el ensamblaje como modificado (pasa también sin taladro: #79)
-    ("Taladro de ensamblaje", "guardar"): ("#79", "al abrir quedó modificado"),
-    ("Extruir corte de ensamblaje", "guardar"): ("#79", "al abrir quedó modificado"),
-}
+DEUDA = {}  # #79 (al abrir quedaba modificado) arreglado el 14/11
 
 
 def prueba():

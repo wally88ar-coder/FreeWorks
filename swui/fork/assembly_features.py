@@ -1256,6 +1256,10 @@ class CutPanel(_Scope):
         self.flip.setChecked(bool(first.Reversed) if first is not None else False)
         gl.addRow(self.flip)
         box.addWidget(g)
+        # taladro que no toca ninguna pieza (#68): solo "Piezas afectadas" y el aviso, como el paso
+        # de Alcance de SW; con la primera pieza elegida pasa al panel del taladro (tipo, medida)
+        self.direction = g
+        g.setVisible(kind != "hole")
         box.addWidget(self._scope_group())
         self.message = QtWidgets.QLabel()
         self.message.setWordWrap(True)
