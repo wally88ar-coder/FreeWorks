@@ -15,9 +15,9 @@ from reglas_paneles import correr  # noqa: E402
 _NO_CANCELA = ("no se canceló", "siguió abierto", "cambió", "pasos de deshacer", "diálogo", "sobra")
 _ESCUCHA = ("already deleted", "deleted object")
 _ERROR = ("ValueError", "No se pudo", "QPushButton")
-DEUDA = {
-    ("Esquinas", "guardar"): ("~#40", "se cerró solo"),
-}
+# #40 ("el documento reabierto se cerró solo"): era el STEP al cerrar, arreglado el 14/11
+# (prueba_ventana_step_al_cerrar_reabrir)
+DEUDA = {}
 
 
 def prueba():

@@ -9,7 +9,7 @@ sobre un esqueleto rectangular. Seguidillas al azar de:
 - mover un vértice del esqueleto: los caños lo siguen sin superponerse ni dejar huecos y la lista
   de cortes da el largo real; al volverlo, todo como estaba;
 - Deshacer / Rehacer, guardar y abrir.
-Errores ya registrados que el mono anota sin frenarse: #2, #6, #40.
+Errores ya registrados que el mono anota sin frenarse: #2, #6 (#40 arreglado el 14/11).
 Seguidillas por regla: FW_CASOS_AZAR (6); largo: 3 a FW_LARGO_MONO (8)."""
 TIPO = "completa"
 

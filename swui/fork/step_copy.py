@@ -73,9 +73,9 @@ def exportable(objs):
     return out
 
 
-def export(doc):
-    """Escribir el .step de doc. Devuelve la ruta o None."""
-    filename = getattr(doc, "FileName", "")
+def export(doc, filename=None):
+    """Escribir el .step de doc (al lado de `filename`, o de su archivo). Devuelve la ruta o None."""
+    filename = filename or getattr(doc, "FileName", "")
     objs = exportable(doc.RootObjects)
     if not filename or not objs:
         return None
@@ -111,22 +111,73 @@ def after_save(name, filename=""):
 def _export_closed(filename):
     """
     Guardar al cerrar ("¿Guardar cambios?" -> Sí, o Cerrar todo): cuando llega el turno del STEP
-    el documento ya se cerró (salía un error rojo, visto con el mouse 2026-10-31). Se abre oculto el
-    archivo recién guardado, se exporta y se cierra todo lo que se abrió para eso.
+    el documento ya se cerró (salía un error rojo, visto con el mouse 2026-10-31). Se abre oculta
+    una COPIA del archivo recién guardado (en la misma carpeta, así sus piezas se encuentran igual),
+    se exporta el STEP con el nombre del original y se cierra solo lo que se abrió para eso.
+
+    Copia y no el archivo mismo (#40): si el usuario abría ese archivo mientras se escribía el STEP,
+    FreeCAD le daba el documento oculto que había abierto FreeWorks, y al terminar se lo cerraba
+    ("el documento se cerró solo"). Con la copia, lo que abre el usuario es siempre suyo.
     """
     if not filename or not os.path.isfile(filename):
         return None
+    import shutil
+
+    folder, base = os.path.split(filename)
+    _sweep(folder)
+    copy = os.path.join(folder, "~fw_step_%d_%s" % (os.getpid(), base))
+    try:
+        shutil.copy2(filename, copy)
+        source = copy
+    except Exception:
+        # carpeta de solo lectura o sin lugar: el archivo mismo, como antes (mejor el STEP que nada)
+        FreeCAD.Console.PrintLog("[SWUI fork] STEP sin copia de trabajo:\n%s\n" % traceback.format_exc())
+        source = None
     before = set(FreeCAD.listDocuments())
     try:
-        doc = FreeCAD.openDocument(filename, True)
+        doc = FreeCAD.openDocument(source or filename, True)
         doc.recompute()
-        return export(doc)
+        return export(doc, filename)
     finally:
+        # lo que se abrió para esto (también lo que cargó el recálculo), salvo lo que el usuario
+        # tiene en una ventana (revisión del 14/11)
         for n in set(FreeCAD.listDocuments()) - before:
-            try:
-                FreeCAD.closeDocument(n)
-            except Exception:
-                pass
+            if not _shown(n):
+                try:
+                    FreeCAD.closeDocument(n)
+                except Exception:
+                    pass
+        if source:
+            for leftover in (copy, os.path.splitext(copy)[0] + ".FCBak", copy + ".FCBak"):
+                try:
+                    if os.path.isfile(leftover):
+                        os.remove(leftover)
+                except Exception:
+                    pass
+
+
+STALE_S = 3600
+
+
+def _sweep(folder):
+    """Borrar copias de trabajo viejas que dejó un cierre a mitad de camino (FreeCAD colgado)."""
+    import time
+
+    try:
+        for name in os.listdir(folder):
+            path = os.path.join(folder, name)
+            if name.startswith("~fw_step_") and time.time() - os.path.getmtime(path) > STALE_S:
+                os.remove(path)
+    except Exception:
+        pass
+
+
+def _shown(name):
+    """¿El usuario tiene ese documento en una ventana? (uno abierto oculto no tiene vista)"""
+    try:
+        return bool(FreeCADGui.getDocument(name).mdiViewsOfType("Gui::View3DInventor"))
+    except Exception:
+        return False
 
 
 class _AlsoSaveStep:
