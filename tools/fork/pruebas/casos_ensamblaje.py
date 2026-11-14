@@ -44,6 +44,7 @@ class _Ensamblaje(Caso):
         from swui import assembly_drop
         carpeta = carpeta_temporal()
         rutas = [_pieza(carpeta, "Placa", 100, 60, 10), _pieza(carpeta, "Bloque", 20, 20, 20)]
+        self.rutas_piezas = [os.path.normcase(r) for r in rutas]
         FreeCAD.setActiveDocument(doc.Name)
         yield 500
         self.doc = doc
@@ -66,6 +67,17 @@ class _Ensamblaje(Caso):
             traza("  #83 componentes mal: %s; documentos: %s" % (
                 [(c.Name, getattr(c.LinkedObject, "FullName", None), c.isValid()) for c in malos],
                 [(d.Name, d.FileName) for d in FreeCAD.listDocuments().values()]))
+
+    def cerrar(self):
+        """Cerrar las piezas del caso (#83): quedaban abiertas (ocultas) y el caso siguiente armaba
+        otra "Placa" y otro "Bloque" con los mismos nombres mientras estaban las anteriores."""
+        rutas = getattr(self, "rutas_piezas", [])
+        for d in list(FreeCAD.listDocuments().values()):
+            try:
+                if d.FileName and os.path.normcase(d.FileName) in rutas:
+                    FreeCAD.closeDocument(d.Name)
+            except Exception:
+                pass
 
     def elegir_en(self, comp, sub):
         """Clic en `sub` (FaceN, EdgeN) de un componente, como en la pantalla."""
