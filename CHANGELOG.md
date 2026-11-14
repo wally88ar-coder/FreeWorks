@@ -9,9 +9,35 @@ Neueste Version oben. / Newest version first.
   solución no se resolvían desde algunos giros de la pieza (el resolvedor de FreeCAD se trababa).
   Ahora, si falla, la pieza libre se acerca (sus ejes ya en el ángulo pedido) y se prueban otros
   arranques; la pieza fija no se mueve y, si no hay forma, todo vuelve a donde estaba.
-- **Relación que choca con otra (#76):** como SW, avisa que sobredefine el ensamblaje y no la agrega
-  (antes quedaba y el resolvedor llenaba el informe de "Solve failed: invalid vector subscript" en
-  cada recálculo). Un valor imposible de Distancia o Ángulo no se aplica: queda el anterior.
+- **Relación que choca con otra (#76), como SW 2018 (comparado con el mouse el 14/11):** mientras se
+  elige, el panel dice "definido en exceso" y nada se mueve; al aceptar pregunta lo mismo que SW:
+  "Agregar esta relación y romper otras relaciones para cumplirla" (se cumple la nueva; las que
+  chocan quedan suprimidas y en rojo con su error), "Agregar esta relación y definir en exceso el
+  ensamblaje" (la nueva queda suprimida y en rojo) o Cancelar (se saca la selección y el panel
+  sigue). Antes quedaba activa y el resolvedor llenaba el informe de "Solve failed: invalid vector
+  subscript" en cada recálculo. Un valor imposible de Distancia o Ángulo no se aplica: queda el
+  anterior. Además, FreeWorks mide si cada relación se cumple de verdad: el resolvedor de FreeCAD a
+  veces dice "resuelto" sin cumplirla.
+- **Suprimir no deja con error a los redondeos ni a lo apoyado (#87):** al suprimir (o volver a
+  activar) una operación, FreeCAD renumera las aristas, y un Redondeo sobre una arista de la caja que
+  FreeCAD nombraba a través del corte de un Agujero quedaba con "Invalid edge link"; un Punto en el
+  centro de una arista de un redondeo quedaba sobre una recta. Como SW, siguen a SU arista: se
+  vuelven a elegir por su forma (también al suprimir en una configuración y al cambiar de
+  configuración). Lo apoyado en algo que se llevó la operación suprimida queda sin apoyo, donde
+  está, y vuelve a apoyarse al quitar la supresión.
+- **Matrices con miles de copias (#90):** la Matriz lineal del croquis aceptaba hasta 1000 por 1000
+  copias y la vista previa intentaba dibujarlas todas (FreeCAD dejaba de responder); las matrices de
+  pieza aceptaban hasta 10.000 por dirección. Ahora avisan en castellano y no calculan cuando son
+  demasiadas (más de 1000 entidades en el croquis, más de 1000 instancias en la pieza).
+- **Ángulo de salida junto a un redondeo (#89):** si OpenCASCADE no puede inclinar una cara (suele
+  pasar junto a un redondeo), el panel lo dice en castellano y no deja aceptar; antes la dejaba sin
+  ángulo y solo avisaba FreeCAD, en inglés, en el informe.
+- **Tangente que giraba la pieza fija (#86):** la unión que acompaña a la Tangente (la del eje)
+  resolvía al crearse, después del control de la pieza fija; con un perno apenas girado contra una
+  cara de costado, la placa fija terminaba girada. Ahora la fija vuelve a su lugar también ahí.
+- **El STEP al cerrar no cierra piezas ajenas (#40, ajuste):** al terminar, se cierran solo los
+  documentos que se abrieron para escribir el STEP (antes, también cualquier pieza oculta que se
+  cargara mientras tanto, por ejemplo la de un ensamblaje que se estaba abriendo).
 - **La relación no salta de cara (#85):** al reparar una relación cuya cara cambió, nunca pasa a una
   cara o eje girado (la del frente de una placa pasaba a la de arriba al cancelar un corte de
   ensamblaje con Ecuaciones abierto). Si no queda una parecida, la relación queda como estaba y avisa.

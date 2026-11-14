@@ -1,7 +1,8 @@
 # Estado del fork
 
 **14/11 (objetivo del usuario: "solucionar TODOS los bugs listados en GitHub, procesos lo más
-parecidos a SW").** Hecho, cada uno con su prueba (detalle en CHANGELOG):
+parecidos a SW").** Acotado por el usuario a las 10:30: se cierra con #86 a #89 y la prueba de campos
+de piezas que se colgó; lo nuevo que encuentre el mono queda en fichas para la noche siguiente. Hecho, cada uno con su prueba (detalle en CHANGELOG):
 - #84: Ángulo/Tangente se resuelven desde cualquier arranque. Si el solver falla, la pieza libre
   se acerca o se prueban otros giros.
 - #76: era una relación que contradice a otra (el resolvedor tira "invalid vector subscript"). Ahora
@@ -22,7 +23,36 @@ parecidos a SW").** Hecho, cada uno con su prueba (detalle en CHANGELOG):
   resaltado de aristas (`safe_ops.later_once`).
 - Revisor independiente: dos pasadas. Se corrigió lo que encontró, sobre todo que #85 reventaba con
   caras de otro tipo y lo de las posiciones viejas en #80.
-- Sin probar con el mouse contra SW. Se probó con pruebas de ventana y con el mono.
+- **Comparado con el mouse contra SW 2018 (14/11, madrugada):** relación que sobredefine (bloque
+  apoyado de costado en una placa + Paralela entre la cara de arriba de la placa y la cara de
+  contacto del bloque).
+  - SW, al aceptar, pregunta: romper otras / definir en exceso / Cancelar.
+  - Con "romper", la nueva se cumple y la vieja queda roja.
+  - Con "en exceso", la nueva queda roja y nada se mueve.
+  - FreeWorks hacía solo lo de Cancelar. Se cambió para que haga lo mismo que SW (pregunta igual, y
+    círculo rojo con cruz en el árbol) y se volvió a comparar con el mouse: igual.
+  - Diferencia que queda: SW elige solo el tipo de relación que se puede cumplir (propuso
+    Perpendicular); FreeWorks propone Coincidente y avisa "definido en exceso".
+- #86 (nueva, la encontró el azar): la Tangente con una cara de costado giraba la pieza fija (la
+  unión del eje). Arreglada.
+- #87 (nueva, mono de piezas): suprimir un Agujero dejaba con error a un Redondeo sobre una arista de
+  la caja (y a un Punto apoyado en una arista de un redondeo). Arreglada: se vuelven a elegir por
+  su forma. Límite: un redondeo que ya estaba suprimido recuerda sus aristas solo mientras FreeCAD
+  siga abierto.
+- #88 (mono de soldadas): era la prueba (daba por hecho todas las esquinas a inglete y no contaba
+  los miembros que el mono agrega sobre las mismas líneas). Se cerró.
+- #89 (nueva, mono de piezas): Ángulo de salida junto a un redondeo: ahora avisa en castellano y no
+  acepta.
+- #90 (arreglada): el cuelgue de las pruebas de campos eran cantidades enormes en las matrices (la
+  del croquis llegaba a 1000 x 1000 copias y la vista previa las dibujaba todas; las de pieza, a
+  10.000 por dirección). Ahora hay tope con aviso. Campos de croquis se colgaba siempre en el mismo
+  lugar en la batería; con el tope, pasa.
+- #91 (abierta, para otra noche): "cambiar una pieza" del azar de ensamblaje se quedó calculando
+  una vez; sola con 20 casos no se repite. La prueba tiene CONOCIDO_TIEMPO (nuevo en correr.py: un
+  corte por tiempo cuenta como conocido; cualquier otra falla se sigue viendo). Próximo paso: anotar
+  las medidas de cada caso ANTES de resolver.
+- Lo demás (#84, #79, #80, #85, #40, #68, #25), sin comparar con el mouse contra SW; probado con
+  pruebas de ventana, el azar (60 casos por regla) y el mono (30 por regla).
 
 **Noche del 12 al 13/11 (el usuario: "dale nomás con todo esto", PC libre hasta las 7:30).**
 - Batería completa del 12/11 21:38: 90 bien, 2 fallas, 1 conocido (#79).
