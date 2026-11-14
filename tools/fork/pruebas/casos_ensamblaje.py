@@ -42,6 +42,11 @@ class _Ensamblaje(Caso):
     def preparar(self, doc):
         import FreeCADGui
         from swui import assembly_drop
+        # una relación que sobredefine pregunta qué hacer (como SW, ventanita): las pruebas
+        # contestan alternando "romper otras" y "definir en exceso" (las dos se prueban así)
+        from swui.fork import mates_sw
+        respuestas = ["break", "error"]
+        mates_sw.ask_overdefined = lambda: respuestas.append(respuestas.pop(0)) or respuestas[-1]
         carpeta = carpeta_temporal()
         rutas = [_pieza(carpeta, "Placa", 100, 60, 10), _pieza(carpeta, "Bloque", 20, 20, 20)]
         self.rutas_piezas = [os.path.normcase(r) for r in rutas]
@@ -60,16 +65,16 @@ class _Ensamblaje(Caso):
         doc.recompute()
         yield 800
         FreeCAD.setActiveDocument(doc.Name)
-        # #83 (visto una vez): componentes con error o sin pieza al prepararse. Si vuelve a pasar,
+        # (ficha 83, cerrada; visto una vez): componentes con error o sin pieza al prepararse. Si vuelve a pasar,
         # que el registro diga qué documentos había abiertos y a qué apuntaba cada componente
         malos = [c for c in self.comps if c.LinkedObject is None or not c.isValid()]
         if malos:
-            traza("  #83 componentes mal: %s; documentos: %s" % (
+            traza("  (ficha 83) componentes mal: %s; documentos: %s" % (
                 [(c.Name, getattr(c.LinkedObject, "FullName", None), c.isValid()) for c in malos],
                 [(d.Name, d.FileName) for d in FreeCAD.listDocuments().values()]))
 
     def cerrar(self):
-        """Cerrar las piezas del caso (#83): quedaban abiertas (ocultas) y el caso siguiente armaba
+        """Cerrar las piezas del caso (ficha 83): quedaban abiertas (ocultas) y el caso siguiente armaba
         otra "Placa" y otro "Bloque" con los mismos nombres mientras estaban las anteriores."""
         rutas = getattr(self, "rutas_piezas", [])
         for d in list(FreeCAD.listDocuments().values()):

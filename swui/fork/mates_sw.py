@@ -308,7 +308,11 @@ def create_joint(asm, key, refs, value=None, label=None, rescue=True):
     if key in PLANE_PARALLEL:
         unstick_perpendicular(asm, joint, refs)
     if key == "tangent":
-        axis_joint = _tangent_axis(asm, joint, refs, connectors)
+        with quiet_solver():
+            axis_joint = _tangent_axis(asm, joint, refs, connectors)
+        # la unión del eje también resuelve al crearse y puede girar la pieza FIJA (caso del azar
+        # del 14/11: perno girado 1°, Tangente con una cara de costado): vuelve a su lugar
+        keep_grounded(asm, fixed)
         if axis_joint is not None:
             unstick_tangent(asm, joint, axis_joint)
     if rescue:
@@ -836,10 +840,11 @@ def solve_joint(asm, joint):
     vuelve a donde estaba y devuelve el error del solver. Las piezas fijas no se mueven nunca.
     """
     result = solve(asm)
-    if result == 0:
+    if result == 0 and joint_satisfied(joint):
         return 0
     try:
-        return _rescue(asm, joint, result)
+        # "resuelto" sin cumplirla (caras justo a 90°) también se trata como trabado
+        return _rescue(asm, joint, result if result != 0 else -1)
     except Exception:
         FreeCAD.Console.PrintLog("[SWUI fork] Resolver desde otro arranque: %s\n" % traceback.format_exc())
         return result
@@ -884,12 +889,256 @@ def _rescue(asm, joint, result):
         turn = FreeCAD.Placement(FreeCAD.Vector(), rot, origin)
         for p, plc0 in before.items():
             p.Placement = turn.multiply(plc0)
-        if solve(asm) == 0:
+        if solve(asm) == 0 and joint_satisfied(joint):
             return 0
     for p, plc0 in before.items():
         p.Placement = plc0
     solve(asm)
     return result
+
+
+MATE_ERROR = "SWUI_MateError"  # nombre estable: no cambiar. Texto del error de la relación ("" = sin error)
+OVERDEFINED = "Definida en exceso: choca con otras relaciones."
+
+
+def mate_error(joint):
+    """El error que SW mostraría en rojo para esta relación ("" si no tiene)."""
+    return getattr(joint, MATE_ERROR, "") or ""
+
+
+def set_mate_error(joint, text):
+    """
+    Marcar (o desmarcar, con "") una relación con error, como SW la muestra en rojo. Con error,
+    la unión de FreeCAD y sus compañeras quedan suprimidas: si quedaran activas, el resolvedor no
+    resuelve NADA del ensamblaje (SW sí resuelve el resto).
+    """
+    if not hasattr(joint, MATE_ERROR) and text:
+        joint.addProperty("App::PropertyString", MATE_ERROR, "Relación SW",
+                          "Error de la relación, como lo muestra SW (LikeSolidWorks UI)")
+        try:
+            joint.setEditorMode(MATE_ERROR, 1)  # solo lectura
+        except Exception:
+            pass
+    if hasattr(joint, MATE_ERROR) and getattr(joint, MATE_ERROR) != text:
+        setattr(joint, MATE_ERROR, text)
+    for j in [joint] + companions(joint):
+        j.Suppressed = bool(text)
+
+
+def _parts_of(joint):
+    _jo, ua = _assembly_modules()
+    out = []
+    for prop in ("Reference1", "Reference2"):
+        try:
+            part = ua.getMovingPart(getattr(joint, prop))
+        except Exception:
+            part = None
+        if part is not None:
+            out.append(part)
+    return out
+
+
+def joint_satisfied(joint, tol=1e-4):
+    """
+    ¿La relación se cumple de verdad? El resolvedor de FreeCAD a veces dice "resuelto" sin
+    cumplirla (caras justo a 90°, relaciones que se contradicen). Se mide con los sistemas de la
+    unión: planos (Coincidente, Distancia, Paralela, Perpendicular, Ángulo) y ejes (Concéntrica).
+    Las demás se dan por cumplidas. Una suprimida no cuenta.
+    """
+    import math
+
+    if getattr(joint, "Suppressed", False):
+        return True
+    key = getattr(joint, PROP, "")
+    kinds = _joint_kinds(joint)
+    planes = kinds == ["plane", "plane"]
+    axes = len(kinds) == 2 and all(k in ("cylinder", "cone", "circle", "line") for k in kinds)
+    # con otras entidades (arista contra cara, cilindro contra cara, vértices...) los sistemas de
+    # la unión no dicen nada simple: se confía en el resolvedor (revisión del 14/11)
+    if not (planes or (key == "concentric" and axes)):
+        return True
+    try:
+        o1, z1 = _global_z(joint, 1)
+        o2, z2 = _global_z(joint, 2)
+    except Exception:
+        return True
+    c = abs(z1.dot(z2))
+    gap = abs((o2 - o1).dot(z1))
+    if key == "coincident":
+        return c > 1 - tol and gap < 1e-3
+    if key == "distance":
+        want = abs(float(getattr(joint.Distance, "Value", joint.Distance)))
+        return c > 1 - tol and abs(gap - want) < 1e-3
+    if key == "parallel":
+        return c > 1 - tol
+    if key == "perpendicular":
+        return c < tol
+    if key == "angle":
+        want = math.radians(float(getattr(joint.Angle, "Value", joint.Angle)))
+        return abs(abs(math.cos(z1.getAngle(z2))) - abs(math.cos(want))) < 1e-3
+    if key == "concentric":
+        d = o2 - o1
+        off = (d - z1 * d.dot(z1)).Length
+        return c > 1 - tol and off < 1e-3
+    return True
+
+
+def _joint_kinds(joint):
+    """Qué es cada referencia de la unión: "plane", "cylinder", "line", "point"... (o nada)."""
+    from swui.fork import mate_refs
+
+    out = []
+    for prop in ("Reference1", "Reference2"):
+        ref = getattr(joint, prop, None)
+        try:
+            obj = mate_refs._target(ref)
+            shape = mate_refs.local_shape(obj)
+            out.append(kind_of(shape.getElement(mate_refs.split_sub(list(ref[1])[0])[1])))
+        except Exception:
+            out.append(None)
+    return out
+
+
+def components_of(asm):
+    """Los componentes del ensamblaje, también los que están en carpetas (para volverlos a su lugar)."""
+    out = []
+    todo = list(getattr(asm, "Group", []))
+    while todo:
+        o = todo.pop(0)
+        if o in out or o.TypeId in ("Assembly::JointGroup", "App::Origin") or hasattr(o, "JointType"):
+            continue
+        if o.TypeId == "App::DocumentObjectGroup":  # carpeta: lo de adentro
+            todo.extend(getattr(o, "Group", []))
+            continue
+        if hasattr(o, "Placement") and (hasattr(o, "Shape") or o.TypeId.startswith("App::Link")
+                                        or o.TypeId == "Assembly::AssemblyLink"):
+            out.append(o)
+    return out
+
+
+def conflicting_mates(asm, joint):
+    """
+    Las relaciones que hay que romper para que se cumpla `joint` (la opción "Agregar esta relación
+    y romper otras" de SW). Se prueban, de la más nueva a la más vieja, las relaciones activas que
+    tocan alguna de sus piezas: primero de a una; si ninguna sola alcanza, se van sumando. Devuelve
+    la lista (vacía si no hace falta romper nada) o None si ni rompiéndolas todas se cumple. No
+    deja nada cambiado: cada relación vuelve a como estaba.
+    """
+    parts = set(_parts_of(joint))
+    own = [joint] + companions(joint)
+    candidates = []
+    for j in reversed(joints_of(asm)):
+        if j in own or getattr(j, PROP, "") == "tangent_axis" or j.Suppressed or hasattr(j, "ObjectToGround"):
+            continue
+        if parts & set(_parts_of(j)):
+            candidates.append(j)
+    placements = {p: p.Placement for p in components_of(asm)}
+
+    def works(group):
+        quiet = [x for j in group for x in [j] + companions(j)]
+        old = [x.Suppressed for x in quiet]
+        for x in quiet:
+            x.Suppressed = True
+        try:
+            if solve_joint(asm, joint) != 0:  # con la ayuda de #84 (caras justo a 90°)
+                return False
+            # "resuelto" no alcanza: que se cumplan de verdad la nueva y las que siguen activas
+            return all(joint_satisfied(j) for j in [joint] + candidates if j not in group)
+        finally:
+            for x, o in zip(quiet, old):
+                x.Suppressed = o
+            for p, plc in placements.items():
+                p.Placement = plc
+
+    try:
+        if works([]):
+            return []
+        for j in candidates:
+            if works([j]):
+                return [j]
+        for n in range(2, len(candidates) + 1):
+            if works(candidates[:n]):
+                return candidates[:n]
+        return None
+    finally:
+        solve(asm)
+
+
+def apply_overdefined(asm, joint, mode):
+    """
+    Lo que SW pregunta al aceptar una relación que sobredefine el ensamblaje:
+    - "break": se cumple la nueva y las que chocan quedan con error (suprimidas, en rojo);
+    - "error": la nueva queda con error ("definida en exceso") y el resto como estaba.
+    Devuelve las relaciones rotas (con "break"). Si ni rompiendo se puede, queda como "error".
+    """
+    broken = []
+    if mode == "break":
+        set_mate_error(joint, "")
+        found = conflicting_mates(asm, joint)
+        if found is None:
+            mode = "error"
+        else:
+            for j in found:
+                set_mate_error(j, "Rota por la relación «%s»." % joint.Label)
+            broken = found
+    if mode == "break":
+        if solve_joint(asm, joint) != 0 or not joint_satisfied(joint):
+            for j in broken:  # no alcanzó: como "definir en exceso" (revisión del 14/11)
+                set_mate_error(j, "")
+            broken = []
+            mode = "error"
+    if mode == "error":
+        set_mate_error(joint, OVERDEFINED)
+        solve(asm)
+    return broken
+
+
+def try_unsuppress(asm, joint):
+    """
+    Quitar la supresión de una relación. Si tenía error (rota o definida en exceso), primero se
+    prueba: si ahora se cumple, pierde el error; si no, queda suprimida y con su error (si quedara
+    activa, el resolvedor no resolvería nada del ensamblaje, #76). True si quedó activa.
+    """
+    if not mate_error(joint):
+        for j in [joint] + companions(joint):
+            j.Suppressed = False
+        return True
+    start = {p: p.Placement for p in components_of(asm)}
+    for j in [joint] + companions(joint):
+        j.Suppressed = False
+    if solve_joint(asm, joint) == 0 and joint_satisfied(joint):
+        set_mate_error(joint, "")
+        return True
+    for j in [joint] + companions(joint):
+        j.Suppressed = True
+    for p, plc in start.items():
+        p.Placement = plc
+    solve(asm)
+    return False
+
+
+def ask_overdefined():
+    """La pregunta de SW 2018 al aceptar una relación que no se puede cumplir. "break", "error" o
+    None (Cancelar). Las pruebas la reemplazan por una respuesta fija."""
+    import os
+
+    auto = os.environ.get("FREEWORKS_SOBREDEFINE", "")
+    if auto:  # corridas automáticas (pruebas de noche, la IA): sin ventanita; "error" o "cancelar"
+        return "error" if auto == "error" else "break" if auto == "break" else None
+    box = QtWidgets.QMessageBox(FreeCADGui.getMainWindow())
+    box.setWindowTitle("Relación de posición")
+    box.setIcon(QtWidgets.QMessageBox.Icon.Warning)
+    box.setText("La relación de posición seleccionada no se ha podido crear correctamente. ¿Qué desea hacer?")
+    brk = box.addButton("Agregar esta relación y romper otras relaciones para cumplirla",
+                        QtWidgets.QMessageBox.ButtonRole.AcceptRole)
+    err = box.addButton("Agregar esta relación y definir en exceso el ensamblaje",
+                        QtWidgets.QMessageBox.ButtonRole.AcceptRole)
+    cancel = box.addButton("Cancelar", QtWidgets.QMessageBox.ButtonRole.RejectRole)
+    box.setDefaultButton(cancel)
+    box.setInformativeText("Romper: las otras quedan con error. Definir en exceso: esta queda con error.")
+    box.exec()
+    clicked = box.clickedButton()
+    return "break" if clicked is brk else "error" if clicked is err else None
 
 
 def _jcs_global(joint, n):
@@ -983,6 +1232,7 @@ class MatePanel:
         self.flipped = False
         self.busy = False
         self.problem = ""  # aviso del último intento (relación que no se puede resolver)
+        self.overdefined = False  # la pendiente sobredefine: al aceptar se pregunta (como SW)
         self.value = {"distance": None, "angle": None}
         if self.editing:
             for prop in ("Reference1", "Reference2"):
@@ -1233,21 +1483,28 @@ class MatePanel:
             self.value[key] = current_value(key, [e[3] for e in self.entities])
         self.busy = True
         problem = self.problem = ""
+        self.overdefined = False
         try:
             if not self.editing:
                 self.doc.openTransaction(LABEL)
+            start = {o: o.Placement for o in components_of(self.asm)}
             self.joint = create_joint(self.asm, key, [(e[0], e[1]) for e in self.entities],
                                       self.value.get(key), label, rescue=False)
             if self.flipped and key in FLIPPABLE:
                 flip_one_part(self.asm, self.joint)
-            if solve_joint(self.asm, self.joint) != 0:
-                if self.editing:
-                    problem = "FreeCAD no puede resolver esta relación (choca con otra o la pieza está fija)."
-                else:
-                    # como SW: avisa y no la agrega (si quedara, cada recálculo volvería a fallar, #76)
-                    problem = ("Esta relación sobredefine el ensamblaje: choca con otra relación o con una "
-                               "pieza fija. Elija otro tipo de relación u otras entidades.")
-                    self._discard()
+            if solve_joint(self.asm, self.joint) != 0 or not joint_satisfied(self.joint):
+                # nueva o editada, como SW: "Definido en exceso" mientras se elige; al aceptar pregunta qué hacer.
+                # Hasta entonces queda suprimida (si quedara activa, el resolvedor no resuelve
+                # nada y cada recálculo vuelve a fallar, #76)
+                problem = ("Esta relación sobredefine el ensamblaje (definido en exceso): choca con "
+                           "otra relación o con una pieza fija. Al aceptar se pregunta qué hacer, "
+                           "como en SW; o elija otro tipo de relación u otras entidades.")
+                for j in [self.joint] + companions(self.joint):
+                    j.Suppressed = True
+                self.overdefined = True
+                for o, plc in start.items():  # como SW: mientras se elige no se mueve nada
+                    o.Placement = plc
+                solve(self.asm)
             with quiet_solver():  # el recálculo vuelve a resolver (#76)
                 self.doc.recompute()
         except Exception:
@@ -1290,6 +1547,9 @@ class MatePanel:
             self._refresh()
             return
         self.flipped = flipped
+        if self.overdefined:  # suprimida: se arma de nuevo con la otra alineación
+            self._rebuild()
+            return
         try:
             flip_one_part(self.asm, self.joint)
             solve_joint(self.asm, self.joint)
@@ -1299,9 +1559,18 @@ class MatePanel:
             FreeCAD.Console.PrintError("[SWUI fork] Alineación:\n%s\n" % traceback.format_exc())
         self._refresh()
 
+    def _rebuild(self):
+        label = self.joint.Label if (self.editing and self.joint is not None) else None
+        self._discard()
+        self._build_joint(label)
+        self._refresh()
+
     def _value(self, key, value):
         self.value[key] = value
         if self.joint is None or self.key != key:
+            return
+        if self.overdefined:  # suprimida: con el valor nuevo quizás ya se cumple
+            self._rebuild()
             return
         try:
             prop = "Distance" if key == "distance" else "Angle"
@@ -1361,9 +1630,38 @@ class MatePanel:
             self._discard()
             self.entities = []
 
+    def _settle_overdefined(self, answer="ask"):
+        """Si la pendiente sobredefine: la pregunta de SW. False si el usuario eligió Cancelar (se
+        saca la pendiente y la selección y el panel sigue, como SW)."""
+        if not (self.overdefined and self.joint is not None):
+            return True
+        if answer == "ask":
+            answer = ask_overdefined()
+        if answer is None:
+            self._discard()
+            self.overdefined = False
+            self.problem = ""
+            self.entities = []
+            self.busy = True
+            try:
+                FreeCADGui.Selection.clearSelection()
+            finally:
+                self.busy = False
+            self._refresh()
+            return False
+        broken = apply_overdefined(self.asm, self.joint, answer)
+        self.overdefined = False
+        self.problem = ""
+        if broken:
+            FreeCAD.Console.PrintWarning("Relación de posición «%s»: quedaron con error %s.\n" % (
+                self.joint.Label, ", ".join("«%s»" % j.Label for j in broken)))
+        return True
+
     def add(self):
         """✓: confirma la pendiente y deja el panel listo para la siguiente."""
         if self.joint is None or self.editing:
+            return
+        if not self._settle_overdefined():
             return
         self.busy = True
         try:
@@ -1385,6 +1683,13 @@ class MatePanel:
         return QtWidgets.QDialogButtonBox.StandardButton.Ok | QtWidgets.QDialogButtonBox.StandardButton.Cancel
 
     def accept(self):
+        answer = "ask"
+        if self.editing and self.overdefined and self.joint is not None and self._ready():
+            answer = ask_overdefined()
+            if answer is None:  # al editar, Cancelar deja la relación como estaba (revisión 14/11)
+                return self.reject()
+        if self.joint is not None and self._ready() and not self._settle_overdefined(answer):
+            return False  # Cancelar en la pregunta de SW: el panel sigue abierto
         self.busy = True
         if self.joint is not None and not self._ready():
             self._discard()

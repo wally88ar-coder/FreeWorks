@@ -53,6 +53,7 @@ OWNER_ROLE = 0x0100 + 29  # componente dueño de la carpeta
 OFF_ROLE = 0x0100 + 30  # relación suprimida
 TITLE = "Relaciones de posición en %s"
 SUPPRESSED_COLOR = (150, 150, 150)
+ERROR_COLOR = (200, 0, 0)  # relación con error (rota o definida en exceso), como SW
 MARK_FILL = "#a6c8e3"  # celeste de lo elegido (como tree_overlay)
 MAX_ERRORS = 3
 QAction = getattr(QtGui, "QAction", None) or QtWidgets.QAction  # Qt6 / Qt5
@@ -232,7 +233,11 @@ def _make_folder(doc, asm, comp, rows, selected):
         except Exception:
             pass
         child.setData(0, OFF_ROLE, bool(off))
-        if off:
+        error = _mates_sw().mate_error(joint) if joint is not None else ""
+        if error:  # como SW: en rojo, con el error en la ayuda
+            child.setForeground(0, QtGui.QBrush(QtGui.QColor(*ERROR_COLOR)))
+            child.setToolTip(0, "%s: %s" % (label, error))
+        elif off:
             child.setForeground(0, grey)
             child.setToolTip(0, "%s (suprimida)" % label)
         _paint_mate(child, doc.Name, selected)
@@ -310,6 +315,39 @@ def grey_rows(tree):
             if rect.isValid() and rect.height() > 0:
                 out.append((rect.top(), rect.bottom() + 1))
         it += 1
+    return out
+
+
+def error_rows(tree):
+    """
+    [(x, y, alto)] de las relaciones con error (rotas o definidas en exceso), en la carpeta general
+    y en la de cada pieza: el árbol les dibuja encima del ícono el círculo rojo con una cruz de SW.
+    """
+    out = []
+    if _state["disabled"]:
+        return out
+    view = tree.viewport().rect()
+
+    def add(item, joint):
+        if joint is None or not _mates_sw().mate_error(joint):
+            return
+        rect = tree.visualItemRect(item)
+        if rect.isValid() and rect.height() > 0 and rect.intersects(view):
+            out.append((rect.x() + 2, rect.y(), rect.height()))
+
+    it = QtWidgets.QTreeWidgetItemIterator(tree)
+    while it.value():
+        item = it.value()
+        if item.type() == MATE_TYPE:
+            try:
+                add(item, FreeCAD.getDocument(item.data(0, DOC_ROLE)).getObject(item.data(0, NAME_ROLE)))
+            except Exception:
+                pass
+        it += 1
+    for item, doc in _object_items(tree):
+        obj = _object_of(item, doc)
+        if _is_mate(obj):
+            add(item, obj)
     return out
 
 
@@ -497,9 +535,26 @@ def toggle_suppressed(joint):
     from swui.fork import safe_ops
 
     doc = joint.Document
+    ms = _mates_sw()
     with safe_ops.undo_step(doc, "Suprimir relación"):  # con un panel abierto, se suma al suyo (#3)
-        joint.Suppressed = not bool(joint.Suppressed)
+        if joint.Suppressed:
+            asm = _assembly_of_joint(joint)
+            if asm is not None and not ms.try_unsuppress(asm, joint):
+                FreeCAD.Console.PrintWarning("Relación de posición «%s»: sigue sin poder cumplirse (%s) y "
+                                             "queda suprimida.\n" % (joint.Label, ms.mate_error(joint)))
+            elif asm is None:
+                joint.Suppressed = False
+        else:
+            for j in [joint] + ms.companions(joint):  # con su compañera (el eje de una Tangente)
+                j.Suppressed = True
     doc.recompute()
+
+
+def _assembly_of_joint(joint):
+    for parent in getattr(joint, "InListRecursive", []) or []:
+        if parent.TypeId == "Assembly::AssemblyObject":
+            return parent
+    return None
 
 
 class _MenuAddition(QtCore.QObject):
@@ -665,6 +720,8 @@ def install():
 
         if grey_rows not in tree_overlay.EXTRA_GREY:
             tree_overlay.EXTRA_GREY.append(grey_rows)
+        if error_rows not in tree_overlay.EXTRA_ERROR:
+            tree_overlay.EXTRA_ERROR.append(error_rows)
         if parts_rows not in tree_overlay.EXTRA_TEXT:
             tree_overlay.EXTRA_TEXT.append(parts_rows)
     except Exception:

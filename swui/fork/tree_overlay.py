@@ -54,6 +54,10 @@ EXTRA_GREY = []
 # ... y escribir texto al lado de un renglón: funciones (árbol) -> [(x, y, alto, texto)]
 # (las piezas que une cada relación, como SW: mates_tree.parts_rows)
 EXTRA_TEXT = []
+# ... y marcar un renglón con error (círculo rojo con una cruz sobre el ícono, como SW):
+# funciones (árbol) -> [(x, y, alto)] (relaciones rotas o definidas en exceso: mates_tree)
+EXTRA_ERROR = []
+ERROR_RED = (200, 30, 30)
 _mark = []  # [objeto] operación que creó la cara elegida
 _sel_observer = None
 _doc_observer = None
@@ -253,6 +257,22 @@ class _Overlay(QtWidgets.QWidget):
             try:
                 for top, bottom in extra(self.tree):
                     p.fillRect(0, top, width, bottom - top, grey)
+            except Exception:
+                pass
+        for extra in EXTRA_ERROR:
+            try:
+                for x, y, h in extra(self.tree):
+                    d = max(min(h - 4, 14), 8)
+                    cx, cy = x + d // 2, y + h // 2
+                    p.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, True)
+                    p.setPen(QtCore.Qt.PenStyle.NoPen)
+                    p.setBrush(QtGui.QColor(*ERROR_RED))
+                    p.drawEllipse(QtCore.QPoint(cx, cy), d // 2, d // 2)
+                    p.setPen(QtGui.QPen(QtGui.QColor(255, 255, 255), 2))
+                    k = d // 4
+                    p.drawLine(cx - k, cy - k, cx + k, cy + k)
+                    p.drawLine(cx - k, cy + k, cx + k, cy - k)
+                    p.setRenderHint(QtGui.QPainter.RenderHint.Antialiasing, False)
             except Exception:
                 pass
         for body, rows in body_rows(self.tree):
