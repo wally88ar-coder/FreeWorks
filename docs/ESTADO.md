@@ -2649,6 +2649,19 @@ Etapas:
   cinta del addon; sin fecha).
 
 ## Falta / ideas pendientes
+- **Pulido final: comparar con el mouse contra SW los arreglos de la primera gran revisión de
+  errores** (decidido por el usuario el 14/11: queda para las etapas finales de corrección, no ahora).
+  La revisión (8/11 al 14/11, fichas #1 a #91 de GitHub) cerró 90 de 91; casi todo está probado con
+  pruebas automáticas (110), el azar, el mono y el fuzzing, pero NO comparado con el mouse contra SW
+  (solo la relación que sobredefine el ensamblaje, el 14/11).
+  - Unas 35 a 45 fichas tienen algo visible para comparar (relaciones de posición, suprimir,
+    redondeo/chaflán/ángulo de salida, taladro, chapa, soldadas, ecuaciones, configuraciones,
+    abrir y guardar); las demás son internas (deshacer, avisos en inglés, pruebas, casos extremos).
+  - Estimado: 20 a 40 min cada una (misma pieza en los dos, pasos con el mouse, anotar diferencias),
+    15 a 25 h en total, más arreglar lo que aparezca (el 14/11, 1 de 1 encontró una diferencia).
+  - Orden propuesto: primero lo de todos los días (chapa, relaciones, suprimir, redondeo y chaflán,
+    soldadas: 12 a 15 comparaciones, 5 a 8 h); el resto de a poco. Antes, armar la lista ordenada
+    (media hora). Necesita la PC libre (SW y FreeCAD con el mouse).
 - **Planos principales como SW** (análisis 04/11; etapa A HECHA el 04/11, ver arriba). **Etapa B
   (dibujo como SW): ANALIZADA el 04/11, sin código, esperando decisiones del usuario.** Relevado en
   SW 2018 con el mouse (bloque 100x60x20 corrido 10 mm del origen, vista Superior, medido en
