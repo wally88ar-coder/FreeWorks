@@ -1156,7 +1156,10 @@ que usan está en `tools/test_load.py` (`check_ia`): si una cambia de firma, el 
   vertical ≈ 377°·dy/(ancho + ~236 px, el árbol cuenta como área gráfica). Comprobado con tres
   tamaños de ventana (1044x544, 662x420, 1028x320 visibles): 0,694 / 0,900 / 1,181 °/px
   horizontal; 0,294 / 0,419 / 0,298 °/px vertical. Pantalla del usuario: 0,69 y 0,29 °/px.
-- FreeCAD (vista 1007x557, la del usuario), 150 px, grados al centro / arriba-abajo / costados:
+- FreeCAD (vista 1007x557, la del usuario), 150 px, grados al centro / arriba-abajo / costados.
+  OJO: medido CON "Velocidad de giro" x2 de FreeWorks (`swui/fork/orbit_speed.py`, la del
+  usuario): el filtro agranda el movimiento desde el punto donde se apretó, así que los ángulos
+  son los de FreeCAD con el doble de recorrido, y con Trackball la torcida aparece antes:
   Trackball (1): horizontal 87 / 74-76 con torcida 64°; vertical 158 / 116-121 con torcida 110°.
   Trackball clásico (3): sin torcida; horizontal 73 / 66, vertical 147 / 115-120; 50 px dan 23° y
   44°, 300 px 166° (no proporcional). Turntable (0) y Turntable libre (2): sin torcida, pero la
