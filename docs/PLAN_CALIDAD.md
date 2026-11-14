@@ -1,5 +1,9 @@
 # Plan para cometer menos errores — aprobado el 08/11/2026
 
+**Primera gran revisión de errores: CERRADA el 14/11** (90 de 91 fichas de GitHub cerradas; abierta
+#91, intermitente). Desde acá el plan se aplica como forma de trabajo de todos los días (CLAUDE.md,
+"Calidad"); la comparación con el mouse contra SW de lo arreglado queda para el pulido final.
+
 Estado: pasos 1 a 6 implementados el 08/11 (reglas en CLAUDE.md, `swui/fork/safe_ops.py`,
 `tools/fork/pruebas/`, `tools/fork/hooks/pre-commit`, Issues, `docs/MAPA_PRUEBAS.md`). Paso 8.1
 (reglas comunes de paneles) hecho el 08/11 para 48 paneles + 4 variantes (`tools/fork/pruebas/reglas_paneles.py`

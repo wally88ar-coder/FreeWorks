@@ -134,6 +134,9 @@ Eliminar/Conservar sólidos; herramientas de entidades del croquis como SW (2026
 `swui/fork/sketch_entities.py` + `sketch_transform.py` + `sketch_offset.py`: Simetría, Mover,
 Copiar, Girar, Escalar, Matriz lineal, Equidistanciar, siempre activas, panel único SW sobre
 funciones nativas del croquis; falta que el usuario pruebe la vista previa que sigue al mouse). Próximo: lo que elija el usuario después de probar. Ver `docs/ESTADO.md`.
+Primera gran revisión de errores (8/11 al 14/11, plan de calidad): CERRADA el 14/11 por el usuario;
+90 de 91 fichas de GitHub cerradas (abierta #91, intermitente). Comparar con el mouse contra SW lo
+arreglado queda para el pulido final (ver `docs/ESTADO.md` > "Falta / ideas pendientes").
 Trabajo de planos (TechDraw, sin número de fase): rosca simplificada automática, rótulo en
 castellano, coma decimal; ver "Falta" en `docs/ESTADO.md`.
 0. Puesta en marcha: remotos (origin = fork, upstream = original), verificar que carga y que el

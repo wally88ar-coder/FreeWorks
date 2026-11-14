@@ -1,5 +1,13 @@
 # Estado del fork
 
+**ETAPA CERRADA (14/11): primera gran revisión de errores (8/11 al 14/11).** Empezó con el plan de
+calidad del 08/11 (auditoría, pruebas, mono, fuzzing, revisor). Resultado en GitHub: 91 fichas, 90
+cerradas; abierta solo #91 (un cuelgue de vez en cuando en la prueba al azar de ensamblaje, sin
+repetirse todavía; la prueba ya anota cada caso). Red de pruebas: 110 (rápida en cada commit,
+completa con ventana en cada entrega, mono y fuzzing de noche); última batería completa 110/110.
+Queda para el pulido final: comparar con el mouse contra SW los arreglos (ver "Falta / ideas
+pendientes"). De acá en adelante se trabaja con las reglas de calidad de CLAUDE.md.
+
 **14/11 (objetivo del usuario: "solucionar TODOS los bugs listados en GitHub, procesos lo más
 parecidos a SW").** Acotado por el usuario a las 10:30: se cierra con #86 a #89 y la prueba de campos
 de piezas que se colgó; lo nuevo que encuentre el mono queda en fichas para la noche siguiente. Hecho, cada uno con su prueba (detalle en CHANGELOG):
