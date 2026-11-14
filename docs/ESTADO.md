@@ -2657,6 +2657,16 @@ Etapas:
   cinta del addon; sin fecha).
 
 ## Falta / ideas pendientes
+- **Giro con el botón del medio como SW** (pedido del usuario 14/11: "según dónde pongo el mouse
+  se tuerce"). Medido el 14/11 con mouse real en los dos (sin código; datos y método en
+  NOTAS_TECNICAS, "Giro de la vista"). SW: nunca se tuerce, velocidad pareja en toda la pantalla y
+  proporcional al recorrido; horizontal ≈ 377° por cada alto del área gráfica, vertical ≈ 377° por
+  cada ancho (contando el árbol): en la pantalla del usuario 0,69°/px horizontal y 0,29°/px
+  vertical. FreeCAD "Trackball" (el del usuario): se tuerce hasta 110° en los bordes. "Trackball
+  clásico": no se tuerce, pero va al revés que SW en velocidad (0,49°/px horizontal, 0,98°/px
+  vertical), algo más lento lejos del centro y no proporcional. Ninguna opción nativa iguala a SW.
+  Pendiente: plan para aprobar (FreeWorks hace el giro con la ley de SW, con opción para apagarlo);
+  medir también el centro de giro y el giro sobre una arista/cara. Área sin estándares de calidad.
 - **Pulido final: comparar con el mouse contra SW los arreglos de la primera gran revisión de
   errores** (decidido por el usuario el 14/11: queda para las etapas finales de corrección, no ahora).
   La revisión (8/11 al 14/11, fichas #1 a #91 de GitHub) cerró 90 de 91; casi todo está probado con

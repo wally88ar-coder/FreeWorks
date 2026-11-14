@@ -1142,3 +1142,25 @@ que usan está en `tools/test_load.py` (`check_ia`): si una cambia de firma, el 
 - El croquis de prueba con cotas y relaciones no se deja mover cambiando `Geometry` (el croquis
   vuelve a su lugar): para cambiar un esqueleto, cambiar sus cotas (`setDatum`).
 
+## Giro de la vista: SW 2018 contra FreeCAD 1.1.4 (medido 14/11)
+
+- Método: arrastre REAL con el botón del medio (`SetCursorPos` + `mouse_event` desde un Python de
+  afuera, 30 pasos de 12 ms), en vista isométrica, a 150 px por el centro, arriba, abajo y a los
+  costados, más 50 y 300 px y en diagonal. Cámara antes y después: SW por COM
+  (`ModelView.Orientation3.ArrayData`, `GetVisibleBox` para el área), FreeCAD con un servidor
+  dentro de FreeCAD que obedece órdenes por archivo (`getCameraOrientation`). "Torcida" = parte
+  del giro alrededor del eje que sale de la pantalla. Los guiones quedaron en el scratchpad de la
+  sesión (pasarlos a `tools/fork/` cuando se programe el giro).
+- SW: el eje es SIEMPRE el horizontal o el vertical de la pantalla (torcida 0 en todos lados), el
+  ángulo no depende de dónde arranca y es proporcional al recorrido. Horizontal ≈ 377°·dx/alto;
+  vertical ≈ 377°·dy/(ancho + ~236 px, el árbol cuenta como área gráfica). Comprobado con tres
+  tamaños de ventana (1044x544, 662x420, 1028x320 visibles): 0,694 / 0,900 / 1,181 °/px
+  horizontal; 0,294 / 0,419 / 0,298 °/px vertical. Pantalla del usuario: 0,69 y 0,29 °/px.
+- FreeCAD (vista 1007x557, la del usuario), 150 px, grados al centro / arriba-abajo / costados:
+  Trackball (1): horizontal 87 / 74-76 con torcida 64°; vertical 158 / 116-121 con torcida 110°.
+  Trackball clásico (3): sin torcida; horizontal 73 / 66, vertical 147 / 115-120; 50 px dan 23° y
+  44°, 300 px 166° (no proporcional). Turntable (0) y Turntable libre (2): sin torcida, pero la
+  horizontal gira alrededor del Z de la pieza. Arcball redondeado (4): torcida hasta 129°. Las
+  mediciones con eventos de Qt simulados dan lo mismo que con el mouse real.
+- No hay opción nativa con la ley de SW. Falta medir el centro de giro y el giro sobre una
+  arista/cara (clic con el medio sobre una entidad en SW).
