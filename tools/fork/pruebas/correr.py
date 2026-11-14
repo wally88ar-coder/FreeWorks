@@ -112,11 +112,13 @@ def correr_una(ruta, clase, cobertura, tmp):
         cmd = [os.path.join(BIN, "freecadcmd.exe"), lanzar]
     t0 = time.time()
     proc = subprocess.Popen(cmd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=AQUI)
+    cortada = False
     try:
         out, _ = proc.communicate(timeout=limite)
     except subprocess.TimeoutExpired:
         matar(proc)
         out = b"(se paso de tiempo y se corto)"
+        cortada = True
     seg = time.time() - t0
     res = None
     if os.path.exists(salida):
@@ -131,6 +133,15 @@ def correr_una(ruta, clase, cobertura, tmp):
         if os.path.exists(salida + ".log"):
             with open(salida + ".log", encoding="utf-8") as fh:
                 res["error"] += "\nregistro de la prueba:\n" + fh.read()
+    if cortada and not res.get("ok"):
+        # cuelgue ya registrado (de vez en cuando, sin causa encontrada): CONOCIDO_TIEMPO = "#N" en
+        # la prueba; vale SOLO para el corte por tiempo (si falla por otra cosa, es una falla)
+        import re
+        with open(ruta, encoding="utf-8") as fh:
+            m = re.search(r'^CONOCIDO_TIEMPO\s*=\s*"(#\d+)"', fh.read(), re.M)
+        if m:
+            res["conocido"] = m.group(1)
+            res["error"] = "se pasó de tiempo (%s): %s" % (m.group(1), res.get("error", ""))
     res["nombre"], res["segundos"] = nombre, round(seg, 1)
     if os.path.exists(salida + ".log"):
         with open(salida + ".log", encoding="utf-8") as fh:

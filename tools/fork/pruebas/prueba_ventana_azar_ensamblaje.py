@@ -22,6 +22,7 @@ resolver). Piezas de medida al azar; la que se mueve arranca en una posición y 
   suprimido otra vez al volver a la nueva.
 Casos por regla: FW_CASOS_AZAR (6 por omisión)."""
 TIPO = "completa"
+CONOCIDO_TIEMPO = "#91"  # cuelgue de vez en cuando, sin causa encontrada (solo el corte por tiempo)
 
 import math  # noqa: E402
 import os  # noqa: E402

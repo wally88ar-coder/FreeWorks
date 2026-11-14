@@ -26,14 +26,14 @@ REPO = "wally88ar-coder/FreeWorks"
 NUMERO = re.compile(r"~?#(\d+)(?![0-9A-Fa-f])")
 
 
-def referencias():
+def referencias(raiz=AQUI):
     """{número: [archivos]} de los números de Issue que aparecen en los TEXTOS del código (no en
     comentarios), leídos con tokenize (textos de varias líneas, comillas escapadas...)."""
     import io
     import tokenize
     out = {}
-    for ruta in sorted(glob.glob(os.path.join(AQUI, "**", "*.py"), recursive=True)):
-        nombre = os.path.relpath(ruta, AQUI)
+    for ruta in sorted(glob.glob(os.path.join(raiz, "**", "*.py"), recursive=True)):
+        nombre = os.path.relpath(ruta, raiz)
         if os.path.basename(ruta) == os.path.basename(__file__):
             continue
         with open(ruta, encoding="utf-8") as fh:
@@ -83,7 +83,16 @@ def estados():
 
 def prueba():
     refs = referencias()
-    assert refs, "no encontré ningún error conocido en las pruebas (¿cambió cómo se escriben?)"
+    if not refs:
+        # ningún error tolerado (bien): que el buscador siga funcionando, con un ejemplo
+        import tempfile
+        carpeta = tempfile.mkdtemp(prefix="fw_conocidos_")
+        with open(os.path.join(carpeta, "prueba_ejemplo.py"), "w", encoding="utf-8") as fh:
+            fh.write('CONOCIDO = "#12"\nDEUDA = {("a", "b"): ("~#40", "texto")}\n')
+        assert set(referencias(carpeta)) == {12, 40}, \
+            "no encontré errores conocidos y el buscador no los ve en un ejemplo (¿cambió cómo se escriben?)"
+        traza("  ningún error conocido en las pruebas")
+        return
     est = estados()
     problemas = []
     for n in sorted(refs):
