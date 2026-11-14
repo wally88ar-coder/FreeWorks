@@ -30,6 +30,7 @@ import FreeCAD
 import FreeCADGui
 
 from swui.compat import QtCore, QtGui, QtWidgets
+from swui.fork import safe_ops
 
 TREE_CLASS = "Gui::TreeWidget"
 GREY = (247, 247, 247, 165)  # fondo del panel (look_sw), semitransparente: atenúa el renglón
@@ -380,7 +381,7 @@ def hide_unlisted(tree):
 
 
 def _later_refresh():
-    QtCore.QTimer.singleShot(0, refresh)
+    safe_ops.later_once("tree_overlay.refresh", refresh)  # una vez por tanda (#25)
 
 
 class _DocObserver:
@@ -404,19 +405,19 @@ class _SelObserver:
 
     def addSelection(self, doc, obj, sub, _pnt):
         if _overlays:
-            QtCore.QTimer.singleShot(0, _update_mark)
+            safe_ops.later_once("tree_overlay.mark", _update_mark)
 
     def removeSelection(self, doc, obj, sub):
         if _overlays:
-            QtCore.QTimer.singleShot(0, _update_mark)
+            safe_ops.later_once("tree_overlay.mark", _update_mark)
 
     def setSelection(self, doc):
         if _overlays:
-            QtCore.QTimer.singleShot(0, _update_mark)
+            safe_ops.later_once("tree_overlay.mark", _update_mark)
 
     def clearSelection(self, doc):
         if _overlays:
-            QtCore.QTimer.singleShot(0, _update_mark)
+            safe_ops.later_once("tree_overlay.mark", _update_mark)
 
 
 def view_marks(selection):

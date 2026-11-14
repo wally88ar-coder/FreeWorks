@@ -272,7 +272,7 @@ class _LengthBox:
 
         m = re.match(r"\s*([0-9]+(?:[.,][0-9]*)?)", text)
         self.panel.draw.typed = m.group(1).replace(".", ",") if m else ""
-        QtCore.QTimer.singleShot(0, self.panel.mouse_moved)
+        safe_ops.later_once("sketch3d.mouse", self.panel.mouse_moved)  # una vez por tanda (#25)
 
     def has_focus(self):
         try:
@@ -662,7 +662,7 @@ class _Filter(QtCore.QObject):
             return False
         if t == QtCore.QEvent.MouseMove:
             if not (event.buttons() & (QtCore.Qt.MiddleButton | QtCore.Qt.RightButton)):
-                QtCore.QTimer.singleShot(0, p.mouse_moved)
+                safe_ops.later_once("sketch3d.mouse", p.mouse_moved)  # una vez por tanda (#25)
             return False
         if t == QtCore.QEvent.ContextMenu and p.draw.right_used:
             p.draw.right_used = False

@@ -436,7 +436,8 @@ class _Filter(QtCore.QObject):
             if t == QtCore.QEvent.Type.MouseMove:
                 # Después de que el croquis vea el movimiento (su preselección queda al día)
                 dragging = event.buttons() != QtCore.Qt.MouseButton.NoButton
-                QtCore.QTimer.singleShot(0, lambda: _hover(viewport, QtCore.QPointF(pos), dragging))
+                # una vez por tanda, con la última posición (#25)
+                safe_ops.later_once("model_edges.hover", _hover, viewport, QtCore.QPointF(pos), dragging)
                 return False
             # Clic
             if event.button() != QtCore.Qt.MouseButton.LeftButton:

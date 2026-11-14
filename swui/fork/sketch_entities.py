@@ -457,7 +457,7 @@ class _Observer:
 
     def addSelection(self, *_a):
         if not self.panel.busy:
-            QtCore.QTimer.singleShot(0, self.panel.take_selection)
+            safe_ops.later_once("sketch_entities.selection", self.panel.take_selection)  # (#25)
 
 
 class _AppKeys(QtCore.QObject):

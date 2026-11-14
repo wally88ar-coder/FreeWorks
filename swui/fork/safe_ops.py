@@ -274,3 +274,36 @@ def find_doc(key):
         if path and os.path.normcase(os.path.abspath(path)) == norm:
             return doc
     return None
+
+
+# --- Un solo llamado por tanda (#25) ---------------------------------------------------------
+
+_once_pending = {}
+once_stats = {}  # clave -> cuántas veces corrió (las pruebas de #25 lo miran)
+
+
+def later_once(key, fn, *args):
+    """
+    Llamar a `fn(*args)` apenas la interfaz quede libre, UNA vez aunque se pida muchas seguidas
+    (#25): un movimiento del mouse, una selección de muchos elementos o una operación que cambia
+    muchas propiedades piden lo mismo decenas de veces y cada pedido recorría todo de nuevo. Si
+    se pide otra vez antes de que corra, corre con los últimos `args`.
+    """
+    pending = key in _once_pending
+    _once_pending[key] = (fn, args)
+    if pending:
+        return
+
+    def run():
+        f, a = _once_pending.pop(key, (None, ()))
+        if f is None:
+            return
+        once_stats[key] = once_stats.get(key, 0) + 1
+        f(*a)
+
+    if not FreeCAD.GuiUp:
+        run()
+        return
+    from swui.compat import QtCore
+
+    QtCore.QTimer.singleShot(0, run)
