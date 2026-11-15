@@ -2715,6 +2715,18 @@ Etapas:
   una fila por opción de SW con columna Vos (Sí / No / Más adelante); cinco tablas: armado general,
   pieza árbol, pieza vista, ensamblaje árbol, ensamblaje vista. Planos: otra tabla más adelante.
   No programar hasta que la complete.
+  **15/11, íconos confirmados en SW 2018 con el mouse** (pasando el mouse por cada uno): bandeja del
+  componente = Abrir pieza, Abrir pieza en posición, Abrir dibujo, Editar pieza, Ocultar
+  componentes, Cambiar transparencia, Suprimir, Relación de posición, Ver relaciones de posición,
+  Propiedades de componente..., Ampliar selección, Ventana de vista preliminar de componente,
+  Apariencias; cara de pieza = Editar operación, Editar croquis, Abrir dibujo, Suprimir,
+  Retroceder, Apariencias, Copiar apariencia / Seleccionar otra, Croquis, Ocultar, Ampliar
+  selección, Normal a, Redondeo, Chaflán (Redondeo y Chaflán también sobre una arista; ahí el
+  menú suma "Seleccionar el punto medio" y "Seleccionar bucle"). El clic derecho en la vista de
+  SW elige la cara de abajo (visto). Tabla corregida sin tocar lo que el usuario ya marcó.
+  Hallazgo de método: el clic derecho de la herramienta de mouse de Claude no abre el menú en la
+  vista 3D de SW (sí en el árbol); con un clic derecho real de Windows desde un guion
+  (SetCursorPos + mouse_event, botón abajo 0,12 s) sí.
 - **Giro con el botón del medio como SW** (pedido del usuario 14/11: "según dónde pongo el mouse
   se tuerce"). Medido el 14/11 con mouse real en los dos (sin código; datos y método en
   NOTAS_TECNICAS, "Giro de la vista"). SW: nunca se tuerce, velocidad pareja en toda la pantalla y
