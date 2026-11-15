@@ -2728,7 +2728,7 @@ Etapas:
   la relación Fijar (Visibility, nativo, queda en el archivo) al Fijar y al insertar el primer
   componente; archivos viejos al abrir (probar que no quede "modificado"); globito como SW al
   arrastrar una fija; pruebas con las 7 preguntas. Visto de paso: FreeWorks no pone "(-)" a las
-  sueltas (FreeCAD mostró "Suelto<1>" sin prefijo).
+  sueltas (FreeCAD mostró "Suelto<1>" sin prefijo). Decidido por el usuario (15/11): se deja así, sin "(-)".
 - **Idea: "modo ensamblaje grande"** (14/11, solo medición, sin código; nada en el roadmap de
   FreeCAD: el LOD por imágenes fue rechazado en FPA-grant-proposals#104, "reference sets" abierto
   en FreeCAD#32932). Ajustes nativos medidos en esta PC con 1500 placas de 12 agujeros, vista
