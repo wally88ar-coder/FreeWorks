@@ -2710,6 +2710,11 @@ Etapas:
   pruebas solo del árbol: antes de programar, acordar la prueba (la del sondeo, convertida en
   prueba de ventana que compara cada menú con su tabla). Pendiente: pasar el mouse por los íconos
   de la bandeja de SW para leer qué es cada uno (algunos no se identifican en la captura).
+  **15/11: tabla para que el usuario elija qué se hace** (pedido suyo): pestaña "Clic derecho como
+  SW" del documento de checklists (https://claude.ai/artifact/URHdbLtcw8n3aXAYoYt6U1#2a8ce3d2-9164),
+  una fila por opción de SW con columna Vos (Sí / No / Más adelante); cinco tablas: armado general,
+  pieza árbol, pieza vista, ensamblaje árbol, ensamblaje vista. Planos: otra tabla más adelante.
+  No programar hasta que la complete.
 - **Giro con el botón del medio como SW** (pedido del usuario 14/11: "según dónde pongo el mouse
   se tuerce"). Medido el 14/11 con mouse real en los dos (sin código; datos y método en
   NOTAS_TECNICAS, "Giro de la vista"). SW: nunca se tuerce, velocidad pareja en toda la pantalla y
