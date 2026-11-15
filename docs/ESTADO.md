@@ -2680,6 +2680,36 @@ Etapas:
   cinta del addon; sin fecha).
 
 ## Falta / ideas pendientes
+- **Clic derecho como SW** (pedido del usuario 15/11, con 4 capturas de su SW 2018: componente en
+  el árbol y en la vista del ensamblaje, operación en el árbol y cara en la vista de la pieza).
+  **Análisis hecho el 15/11, sin código; esperando decisiones del usuario.** Medido en FreeCAD 1.1.4
+  real con FreeWorks (sondeo de un solo uso, ya borrado): árbol de pieza = 7 opciones nuestras
+  arriba + ~35 de FreeCAD (Colocación, Cortar/Copiar/Pegar, Acciones de expresión, Enlazar
+  acciones, Marcar para recalcular, Ajustes del árbol...); vista con cara elegida = lo nuestro +
+  ~40 (Draw Style, Standard Views, Ventana de documento, Estilos de navegación...), mitad en
+  inglés; componente en el árbol = ya corto (lo nuestro + "Más opciones" con ~30); componente en
+  la vista = largo, sin plegar. **FreeCAD NO elige lo que está bajo el cursor con el clic
+  derecho** (SW sí: la cara queda elegida y el menú es de ella): sin nada elegido, el menú de la
+  vista sale sin nada de la pieza. SW: bandeja de íconos arriba del menú (Editar operación,
+  Editar croquis, Suprimir, Retroceder, Ocultar, Zoom a selección, Normal a, Apariencia; en
+  componentes además Abrir pieza, Editar pieza, Relación de posición, Ver relaciones,
+  Propiedades), títulos de sección ("Componente (Taco)", "Operación (Saliente-Extruir1)", "Cara",
+  "Sólido") y "»" al pie que despliega lo menos usado. Cómo hacerlo (todo con lo que FreeWorks ya
+  usa: el filtro que arregla cada menú al mostrarse, `feature_tree._MenuShow`): (1) una tabla
+  por caso en un archivo nuevo (`swui/fork/context_menus.py`, como `ribbon_layout`), que arma el
+  menú con las acciones de FreeCAD y las nuestras, títulos de sección, y todo lo que la tabla no
+  nombra va detrás de "»" (nada se pierde; si 26.3 agrega algo, aparece ahí); (2) el clic derecho
+  en la vista elige lo que está bajo el cursor (lo preseleccionado) antes de armar el menú; (3)
+  bandeja de íconos como una fila dentro del menú (QWidgetAction), con íconos de FreeCAD o
+  propios hechos con `make_icons.py` (nada de Dassault); (4) comandos chicos nuevos solo si el
+  usuario los quiere (Invertir la selección, Aislar, Contraer operaciones, Ir a...). Lo de SW sin
+  equivalente (Comentario, Favoritos, Guardar selección, Carpetas, Hacer virtual, FeatureWorks,
+  Bloquear, Peines de curvatura, Fijar/agrupar temporalmente...): no. Propuesta en 3 etapas:
+  (A) motor + los 4 casos de las capturas + clic que elige; (B) bandeja de íconos; (C) comandos
+  nuevos y demás casos (croquis, chapa, soldadas, planos del origen, vacío, Cuerpo). Área con
+  pruebas solo del árbol: antes de programar, acordar la prueba (la del sondeo, convertida en
+  prueba de ventana que compara cada menú con su tabla). Pendiente: pasar el mouse por los íconos
+  de la bandeja de SW para leer qué es cada uno (algunos no se identifican en la captura).
 - **Giro con el botón del medio como SW** (pedido del usuario 14/11: "según dónde pongo el mouse
   se tuerce"). Medido el 14/11 con mouse real en los dos (sin código; datos y método en
   NOTAS_TECNICAS, "Giro de la vista"). SW: nunca se tuerce, velocidad pareja en toda la pantalla y
