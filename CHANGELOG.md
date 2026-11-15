@@ -5,6 +5,13 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Cota que sobra -> conducida, como SW (#93, 15/11):** con Cota inteligente sobre algo que ya
+  está definido (la recta de un oblongo, un círculo con radio, cualquier entidad de un croquis
+  negro), la cota se ve mientras se mueve sin poner el croquis en rojo, y al ubicarla queda
+  conducida (gris), sin preguntar el valor, como el SW 2018 del usuario ("Configurar como
+  conducida de forma predeterminada"). Antes FreeCAD dejaba el croquis redundante mientras se
+  movía la cota y, al ubicarla, pedía el valor y la borraba sin avisar. Si después del primer clic
+  se elige otra entidad, la cota nueva queda normal. Un solo paso de deshacer.
 - **Croquis con error en rojo, como SW (#92, 15/11):** un croquis sobredefinido o con relaciones
   en conflicto se pinta de rojo (FreeCAD lo pinta de naranja, casi igual al resaltado de FreeWorks).
   Pasaba sobre todo con Cota inteligente: al tocar una recta cuyo largo ya está fijado, FreeCAD

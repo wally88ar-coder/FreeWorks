@@ -13,8 +13,18 @@ oblongo tocando primero su recta (largo ya fijado), todo el croquis quedaba nara
 redundantes". Causa: la Cota inteligente de FreeCAD 1.1.4 crea la cota en el primer clic (no hay
 preferencia que lo cambie, revisado) y el naranja de croquis con error es casi el del resaltado.
 Hecho: croquis con error en rojo (#92, `look_sw.py`, prueba `prueba_ventana_croquis_redundante_rojo`).
-Pendiente: #93, que la cota que sobra se comporte como SW (camino 1: corregir la herramienta nativa
-desde afuera; plan para aprobar). Con el mouse real sin probar (el usuario no dio permiso esta vez).
+#93 HECHO (plan aprobado por el usuario, "fijate vos lo que hace SW"): en SW 2018, con el mouse, la
+cota que sobra se ve mientras se mueve (croquis sigue "Completamente definido") y al ubicarla queda
+conducida SIN preguntar: su SW tiene Opciones > Croquis > "Configurar como conducida de forma
+predeterminada" (sin "Avisar"). FreeWorks hace lo mismo (`swui/fork/driven_dims.py`: escucha que pasa
+a conducida la cota nueva redundante mientras hay abierto un paso "Add ... constraint" de FreeCAD;
+lógica en `make_driven_if_redundant`). Pruebas: `prueba_croquis_cota_sobra_funcion` y
+`prueba_ventana_croquis_cota_sobra_conducida` (oblongo, círculo, Esc, deshacer/rehacer, segunda
+entidad, guardar y abrir). Hallazgo: FreeCAD vuelve a crear la cota provisoria con cada movimiento del
+mouse. Límite: la herramienta separada de Radio (no existe en SW) igual muestra "Insertar radio",
+aunque la cota queda conducida. Atacante: `prueba_azar_atacante_cota_sobra` (ángulos, 40 al azar).
+Sin probar con el mouse real en FreeCAD. Decidido solo: no se agrega la opción "Avisar"
+(el usuario no la usa).
 
 **14/11 (objetivo del usuario: "solucionar TODOS los bugs listados en GitHub, procesos lo más
 parecidos a SW").** Acotado por el usuario a las 10:30: se cierra con #86 a #89 y la prueba de campos

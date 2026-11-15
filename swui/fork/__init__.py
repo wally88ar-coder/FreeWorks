@@ -328,6 +328,12 @@ def install(workbench=None):
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] Croquis vacío:\n%s\n" % traceback.format_exc())
     try:
+        from swui.fork import driven_dims  # cota que sobra -> conducida, como SW (#93)
+
+        driven_dims.install()
+    except Exception:
+        FreeCAD.Console.PrintError("[SWUI fork] Cota conducida:\n%s\n" % traceback.format_exc())
+    try:
         # IA (único enganche: nada de FreeWorks importa swui.fork.ia; ver su __init__)
         from swui.fork import ia
 
