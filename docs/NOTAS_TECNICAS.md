@@ -1188,3 +1188,16 @@ que usan está en `tools/test_load.py` (`check_ia`): si una cambia de firma, el 
   - FreeCAD, clic con el medio: CENTRA la vista en el punto clicado (la vista salta) y con el modo 0
     ese punto pasa a ser el centro de giro; con 1 y 2 sigue mandando el punto bajo el cursor. No
     hay giro alrededor de una arista ni de la normal de una cara.
+- **Umbral del centro de giro de SW (medido 14/11, zoom de a un clic de ruedita, x1,2 cada uno):**
+  gira en el centro de la pieza con la caja proyectada hasta 1,19 veces el alto de la vista; con
+  1,44 ya gira cerca del centro de la pantalla, ~95 px (h) / ~134 px (v) de pantalla por detrás de
+  la superficie (constante en píxeles, no en mm). Corrida a la izquierda sin zoom: centro de la
+  pieza mientras su centro está a la vista (a 14 px del borde todavía); con el centro afuera, un
+  punto de lo que se ve (cerca del borde). Esa última parte no la explica ninguna regla simple.
+- **Giro "Como SolidWorks" (`swui/fork/orbit_speed.py`, 14/11):** filtro de Qt en el área de
+  dibujo (el mismo de la velocidad de giro) que se come el arrastre con el medio sin teclas y
+  mueve la cámara de Coin (`getCameraNode()`: orientación y posición alrededor del centro
+  elegido). Caja de la escena con `SoGetBoundingBoxAction` sobre `getSceneGraph()`; proyección con
+  `getPointOnViewport` y punto bajo el centro con `getObjectInfo` (los dos con y hacia arriba).
+  `graphicsView().viewport() == widget` sirve para saber de qué vista es el evento. Cambiar el
+  tipo de cámara (`setCameraType`) deja el archivo "modificado"; girar, no.

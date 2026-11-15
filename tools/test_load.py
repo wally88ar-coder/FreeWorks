@@ -5164,6 +5164,35 @@ def run(split_namespace):
             or "SWUI_OrbitSpeed" not in commands):
         print("  FEHLER: velocidad de giro (x1,5 de fábrica, movimiento agrandado, comando)")
         return False
+    # Fork: giro "Como SolidWorks" (14/11): grados medidos en SW, centro de giro, cámara
+    gh_, gv_ = (math.degrees(v_) for v_ in osp.sw_angles(150, 150, 1007, 557))
+    if abs(gh_ - 377 * 150 / 557) > 1e-6 or abs(gv_ - 377 * 150 / (1007 + 236)) > 1e-6:
+        print("  FEHLER: giro como SW: grados por píxel", gh_, gv_)
+        return False
+    box_ = [(x_, y_) for x_ in (400, 600) for y_ in (200, 400) for _z in (0, 1)]
+    big_ = [(x_, y_) for x_ in (-300, 900) for y_ in (-200, 700) for _z in (0, 1)]
+    off_ = [(x_, y_) for x_ in (-900, -100) for y_ in (100, 300) for _z in (0, 1)]
+    if (osp.pivot_rule(box_, (500, 300), 1000, 550) != ("pieza", (500, 300))
+            or osp.pivot_rule(big_, (300, 250), 1000, 550) != ("pantalla", (450.0, 275.0))
+            or osp.pivot_rule(box_, (-20, 300), 1000, 550)[0] != "pantalla"
+            or osp.pivot_rule([(x_ - 3000, y_) for x_, y_ in box_], (-2500, 300), 1000, 550)[0] != "pieza"):
+        print("  FEHLER: giro como SW: centro de giro (pieza entera / zoom / centro afuera / no se ve)")
+        return False
+    q_, p_ = osp.orbit_step((0, 0, 0, 1), (0, 0, 10), (0, 0, 0), 557 * 90 / 377, 0, 1007, 557)
+    look_ = osp.q_rotate(q_, (0, 0, -1))
+    if (max(abs(a_ - b_) for a_, b_ in zip(p_, (-10, 0, 0))) > 1e-6
+            or max(abs(a_ - b_) for a_, b_ in zip(look_, (1, 0, 0))) > 1e-6
+            or osp.orbit_step((0, 0, 0, 1), (1, 2, 3), (0, 0, 0), 0, 0, 100, 100) != ((0, 0, 0, 1), (1, 2, 3))):
+        print("  FEHLER: giro como SW: la cámara no gira 90° alrededor del centro", q_, p_, look_)
+        return False
+    if (osp.choices()[0] != "Como SolidWorks" or osp.current_choice() != 0 or not osp.like_sw()):
+        print("  FEHLER: giro como SW: tiene que venir de fábrica y primero en el menú")
+        return False
+    osp.apply_choice(2)  # x1,5
+    if osp.like_sw() or osp.factor() != 1.5 or osp.current_choice() != 2:
+        print("  FEHLER: giro como SW: elegir x1,5 no vuelve al giro de FreeCAD agrandado")
+        return False
+    osp.apply_choice(0)
     # Fork: teclas N y F (swui/fork/view_keys.py)
     vk = sys.modules["swui.fork.view_keys"]
     c30 = (0.0, -math.sin(math.radians(30)), -math.cos(math.radians(30)))  # mirando casi desde arriba

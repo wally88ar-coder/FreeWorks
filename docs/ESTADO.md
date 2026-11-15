@@ -2672,8 +2672,17 @@ Etapas:
   la opción del usuario gira alrededor del punto bajo el cursor. Clic con el medio sobre arista /
   cara / vértice: SW gira el arrastre siguiente alrededor de eso (eje de la arista, normal de la
   cara); FreeCAD solo centra la vista en el punto. Detalle en NOTAS_TECNICAS.
-  Pendiente: plan para aprobar (FreeWorks hace el giro con la regla de SW, con opción para
-  apagarlo). Área sin estándares de calidad.
+  **Hecho el 14/11 (partes 1 y 2, aprobadas por el usuario; la 3, clic sobre arista/cara/vértice,
+  no la usa):** `swui/fork/orbit_speed.py`, "Como SolidWorks" de fábrica (FreeWorks > Velocidad de
+  giro... deja volver a FreeCAD). Medido con mouse real contra SW (150 px): horizontal 101,5° (SW
+  104,2), vertical 45,5° (SW 44,1), 50 px 33,8/15,2 (SW 34,7/14,7), diagonal 78,6° (SW 80), sin
+  torcer en ningún lugar; centro de la pieza quieto con la pieza entera o corrida; con zoom gira
+  cerca del centro de la pantalla. Prueba `prueba_ventana_giro_como_sw.py` (comprobado que falla
+  con la velocidad +10 % y con el centro siempre en la pieza) y chequeos en test_load. Antes, el
+  14/11, se cambiaron a mano en la configuración del usuario "Trackball clásico" y "Centro de la
+  ventana" (copia en user.cfg.antes-giro-2026-11-14); con "Como SolidWorks" ya no influyen.
+  Falta: que el usuario lo pruebe con sus piezas; la regla exacta de SW con zoom y el centro
+  fuera de pantalla es aproximada (NOTAS_TECNICAS); la fluidez con piezas grandes no se midió.
 - **Pulido final: comparar con el mouse contra SW los arreglos de la primera gran revisión de
   errores** (decidido por el usuario el 14/11: queda para las etapas finales de corrección, no ahora).
   La revisión (8/11 al 14/11, fichas #1 a #91 de GitHub) cerró 90 de 91; casi todo está probado con

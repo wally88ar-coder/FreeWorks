@@ -5,6 +5,16 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Giro con la ruedita "Como SolidWorks" (14/11, viene de fábrica):** FreeWorks gira la vista él
+  mismo, con lo medido en SW 2018 con el mouse real: a los costados gira alrededor del eje vertical
+  de la pantalla y arriba/abajo alrededor del horizontal, en cualquier parte de la vista y sin
+  torcerse; la misma velocidad que SW en cada sentido (en la pantalla del usuario, 0,68° por
+  píxel horizontal y 0,30° vertical; SW 0,69 y 0,29), pareja y proporcional al recorrido. Centro
+  de giro como SW: el centro de la pieza mientras entra en pantalla (aunque esté corrida), y con
+  mucho zoom lo que hay en el centro de la pantalla. Un clic suelto con la ruedita ya no hace
+  saltar la vista. "FreeWorks > Velocidad de giro..." deja volver al giro de FreeCAD ("x1") o
+  agrandado (x1,5...). Con esto no importan el "Estilo de órbita" ni el "Modo de rotación" de las
+  preferencias de FreeCAD.
 - **Relaciones que se resuelven desde cualquier arranque (#84):** un Ángulo o una Tangente que tienen
   solución no se resolvían desde algunos giros de la pieza (el resolvedor de FreeCAD se trababa).
   Ahora, si falla, la pieza libre se acerca (sus ejes ya en el ángulo pedido) y se prueban otros
