@@ -2724,6 +2724,25 @@ Etapas:
   selección, Normal a, Redondeo, Chaflán (Redondeo y Chaflán también sobre una arista; ahí el
   menú suma "Seleccionar el punto medio" y "Seleccionar bucle"). El clic derecho en la vista de
   SW elige la cara de abajo (visto). Tabla corregida sin tocar lo que el usuario ya marcó.
+  **15/11, tabla COMPLETA por el usuario** (decisiones en la pestaña; aclaraciones al pie de ella):
+  armado general todo Sí (clic que elige, títulos, íconos, », FreeCAD extra detrás de », quitar lo
+  inútil, castellano). Sí, ya existe y solo se acomoda: Editar operación/croquis, Suprimir,
+  Retroceder, Ocultar, Apariencia, Padre/Hijo, Configurar operación, Eliminar (como hoy, sin
+  pregunta), Cambiar transparencia, Seleccionar otra, Croquis, Redondeo, Chaflán, Abrir pieza,
+  Relación de posición, Ver relaciones, Configurar componente, Fijar/Flotar, Renombrar, Suprimir
+  componente (pasa al ícono). Sí, NUEVO chico: Contraer operaciones, Invertir la selección, Aislar
+  (sólido y componente), Padre/Hijo del componente, Material desde el componente, Propiedades del
+  componente, submenú Herramientas de selección. Sí, NUEVO mediano: Exportar cara a DXF, Abrir pieza
+  en posición, reordenar arrastrando en el árbol (Mover arriba/abajo salen del menú; medir antes si
+  FreeCAD 1.1.4 ya lo hace). Sí, NUEVO grande: Editar pieza en el ensamblaje y Editar
+  operación/croquis de la pieza desde el ensamblaje (análisis aparte antes de programar). Más
+  adelante: carpetas, Copiar apariencia, Ventana de vista preliminar, Formar subensamblaje. No:
+  Zoom a selección, Normal a (queda la tecla N), Zoom/Trasladar/Girar (se quitan), Comandos
+  recientes, Ir a..., Abrir dibujo, Visualización ▸, Mover con sistema de referencia, Hacer
+  independiente, Copiar con relaciones, y lo sin equivalente (Comentario, Favoritos, Guardar
+  selección, Bloquear, Propiedades de operación, FeatureWorks, Hacer virtual, Fijar temporal,
+  Elementos ocultos, Peines, Plano paralelo a pantalla). Propuesta de etapas: A motor + 4 casos con
+  lo que existe; B bandeja de íconos; C comandos nuevos chicos y medianos; D editar en contexto.
   Hallazgo de método: el clic derecho de la herramienta de mouse de Claude no abre el menú en la
   vista 3D de SW (sí en el árbol); con un clic derecho real de Windows desde un guion
   (SetCursorPos + mouse_event, botón abajo 0,12 s) sí.
