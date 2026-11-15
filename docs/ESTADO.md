@@ -23,7 +23,12 @@ lógica en `make_driven_if_redundant`). Pruebas: `prueba_croquis_cota_sobra_func
 entidad, guardar y abrir). Hallazgo: FreeCAD vuelve a crear la cota provisoria con cada movimiento del
 mouse. Límite: la herramienta separada de Radio (no existe en SW) igual muestra "Insertar radio",
 aunque la cota queda conducida. Atacante: `prueba_azar_atacante_cota_sobra` (ángulos, 40 al azar).
-Sin probar con el mouse real en FreeCAD. Decidido solo: no se agrega la opción "Avisar"
+Probado por Claude con mouse y teclado REALES de Windows (SetCursorPos + mouse_event desde un guion de
+afuera, 15/11; la herramienta de mouse de Claude no tenía permiso sobre FreeCAD 1.1): el caso del
+usuario (recta del oblongo, horizontal, ubicar, 12 -> Totalmente restringido, nunca naranja), cota que
+sobra sola (gris, sin cuadro), Esc, Ctrl+Z / Ctrl+Y, círculo (⌀ gris; Esc a mitad no deja nada).
+Detalle: la cota conducida queda pegada a la recta aunque se ubique más arriba (FreeCAD). Falta que
+lo pruebe el usuario. Decidido solo: no se agrega la opción "Avisar"
 (el usuario no la usa).
 
 **14/11 (objetivo del usuario: "solucionar TODOS los bugs listados en GitHub, procesos lo más
