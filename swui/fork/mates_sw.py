@@ -519,6 +519,10 @@ class _CompanionObserver:
             try:
                 if not obj.Document.Restoring and obj.Label.startswith("GroundedJoint") and obj.ObjectToGround:
                     obj.Label = grounded_label(obj.ObjectToGround.Label)
+                if not obj.Document.Restoring and not obj.Document.Transacting and obj.ObjectToGround:
+                    # sin el candado que FreeCAD dibuja sobre la pieza fija: SW no muestra nada en la
+                    # vista, solo "(f)" en el árbol (pedido del usuario, 15/11). Queda en el archivo.
+                    hide_markers([obj])
             except Exception:
                 pass
             return

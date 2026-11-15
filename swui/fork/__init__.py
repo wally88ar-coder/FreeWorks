@@ -85,6 +85,12 @@ def install(workbench=None):
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] Velocidad de giro:\n%s\n" % traceback.format_exc())
     try:
+        from swui.fork import fixed_drag_tip  # globito al arrastrar una pieza fija, como SW
+
+        fixed_drag_tip.install()
+    except Exception:
+        FreeCAD.Console.PrintError("[SWUI fork] Aviso de pieza fija:\n%s\n" % traceback.format_exc())
+    try:
         from swui.fork import view_keys
 
         view_keys.install()

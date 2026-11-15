@@ -2713,7 +2713,12 @@ Etapas:
   por cuadro (~9 cuadros/s); 1500 ≈ 340 ms (~3/s; con vínculos igual); 5000 vínculos ≈ 860 ms.
   Si algún día hace falta: dibujo simplificado mientras gira (SW lo hace; FreeCAD 1.1 no lo trae).
 - **Candado en piezas fijas del ensamblaje** (pedido del usuario 15/11: "horrible", no está en
-  SW; plan sin código, esperando aprobación). Medido: el candado rojo-marrón lo dibuja FreeCAD
+  SW). **Hecho el 15/11** (plan aprobado sin el punto de archivos viejos: el usuario tiene uno
+  solo y no le molesta): candado oculto al fijar/insertar y globito de SW al arrastrar la fija
+  (`swui/fork/fixed_drag_tip.py`, `mates_sw.py`), prueba `prueba_ventana_candado_fijo` (detecta
+  ambos rotos a propósito) y captura mirada; revisor: sin nada grave, arreglados la búsqueda solo
+  al arrastrar y el documento de la vista clicada. Sin probar: con el mouse real del usuario,
+  subensamblajes anidados (el globito mira el primer componente del camino). Medido: el candado rojo-marrón lo dibuja FreeCAD
   (`ViewProviderGroundedJoint`, Mod/Assembly/JointObject.py) sobre cada pieza FIJA (relación
   "Fijar"/GroundedJoint), no sobre las totalmente definidas. SW 2018, probado con el mouse 15/11
   (ensamblaje C:\SW-AI-Bridge\trabajos\prueba_fijo2): en la vista no muestra nada; árbol "(f)"

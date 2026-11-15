@@ -5193,6 +5193,12 @@ def run(split_namespace):
         print("  FEHLER: giro como SW: elegir x1,5 no vuelve al giro de FreeCAD agrandado")
         return False
     osp.apply_choice(0)
+    # Fork: aviso al arrastrar una pieza fija (swui/fork/fixed_drag_tip.py)
+    fdt = sys.modules["swui.fork.fixed_drag_tip"]
+    if (fdt.component_name("Body001.Caja.Face6") != "Body001" or fdt.component_name("") is not None
+            or fdt.component_name(None) is not None or fdt.is_grounded(None, "Body")):
+        print("  FEHLER: aviso de pieza fija: el componente bajo el mouse no se lee bien")
+        return False
     # Fork: teclas N y F (swui/fork/view_keys.py)
     vk = sys.modules["swui.fork.view_keys"]
     c30 = (0.0, -math.sin(math.radians(30)), -math.cos(math.radians(30)))  # mirando casi desde arriba

@@ -5,6 +5,13 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Ensamblaje sin candados, como SW (15/11):** la pieza fija ya no muestra el candado rojo de
+  FreeCAD en la vista (queda "(f)" en el árbol, como SW); se oculta la relación Fijar al fijar o
+  al insertar el primer componente, queda guardado en el archivo y la pieza sigue fija. Al
+  arrastrar una pieza fija aparece el globito de SW "El componente seleccionado está fijo. No se
+  puede mover." (medido en SW 2018; con una totalmente definida SW no dice nada, y FreeWorks
+  tampoco). Los archivos guardados antes conservan su candado (decisión del usuario).
+  `swui/fork/fixed_drag_tip.py`, `mates_sw.py`; prueba `prueba_ventana_candado_fijo`.
 - **Cota que sobra -> conducida, como SW (#93, 15/11):** con Cota inteligente sobre algo que ya
   está definido (la recta de un oblongo, un círculo con radio, cualquier entidad de un croquis
   negro), la cota se ve mientras se mueve sin poner el croquis en rojo, y al ubicarla queda
