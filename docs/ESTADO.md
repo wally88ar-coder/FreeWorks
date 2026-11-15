@@ -2712,6 +2712,18 @@ Etapas:
   Lo que pesa es el dibujo de FreeCAD, igual con o sin FreeWorks: 100 piezas fluido; 500 ≈ 110 ms
   por cuadro (~9 cuadros/s); 1500 ≈ 340 ms (~3/s; con vínculos igual); 5000 vínculos ≈ 860 ms.
   Si algún día hace falta: dibujo simplificado mientras gira (SW lo hace; FreeCAD 1.1 no lo trae).
+- **Candado en piezas fijas del ensamblaje** (pedido del usuario 15/11: "horrible", no está en
+  SW; plan sin código, esperando aprobación). Medido: el candado rojo-marrón lo dibuja FreeCAD
+  (`ViewProviderGroundedJoint`, Mod/Assembly/JointObject.py) sobre cada pieza FIJA (relación
+  "Fijar"/GroundedJoint), no sobre las totalmente definidas. SW 2018, probado con el mouse 15/11
+  (ensamblaje C:\SW-AI-Bridge\trabajos\prueba_fijo2): en la vista no muestra nada; árbol "(f)"
+  fija, "(-)" insuficientemente definida, nada si está totalmente definida; arrastrar la fija no
+  la mueve y sale el globito "El componente seleccionado está fijo. No se puede mover.";
+  arrastrar una totalmente definida no hace nada, sin mensaje; la suelta se mueve. Plan: ocultar
+  la relación Fijar (Visibility, nativo, queda en el archivo) al Fijar y al insertar el primer
+  componente; archivos viejos al abrir (probar que no quede "modificado"); globito como SW al
+  arrastrar una fija; pruebas con las 7 preguntas. Visto de paso: FreeWorks no pone "(-)" a las
+  sueltas (FreeCAD mostró "Suelto<1>" sin prefijo).
 - **Idea: "modo ensamblaje grande"** (14/11, solo medición, sin código; nada en el roadmap de
   FreeCAD: el LOD por imágenes fue rechazado en FPA-grant-proposals#104, "reference sets" abierto
   en FreeCAD#32932). Ajustes nativos medidos en esta PC con 1500 placas de 12 agujeros, vista
