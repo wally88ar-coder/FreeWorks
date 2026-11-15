@@ -2681,8 +2681,14 @@ Etapas:
   con la velocidad +10 % y con el centro siempre en la pieza) y chequeos en test_load. Antes, el
   14/11, se cambiaron a mano en la configuración del usuario "Trackball clásico" y "Centro de la
   ventana" (copia en user.cfg.antes-giro-2026-11-14); con "Como SolidWorks" ya no influyen.
-  Falta: que el usuario lo pruebe con sus piezas; la regla exacta de SW con zoom y el centro
-  fuera de pantalla es aproximada (NOTAS_TECNICAS); la fluidez con piezas grandes no se midió.
+  El usuario lo probó el 14/11: "quedó espectacular". Falta: la regla exacta de SW con zoom y el
+  centro fuera de pantalla es aproximada (NOTAS_TECNICAS).
+  Ensamblajes grandes (medido 14/11 en esta PC, placas de 12 agujeros, vista paralela, sin código):
+  lo que agrega FreeWorks es despreciable: 1-1,5 ms al apretar la ruedita (caja + centro), 3-12 ms
+  con mucho zoom (busca la superficie del centro; 5000 componentes = 8 ms) y ~0 ms por movimiento.
+  Lo que pesa es el dibujo de FreeCAD, igual con o sin FreeWorks: 100 piezas fluido; 500 ≈ 110 ms
+  por cuadro (~9 cuadros/s); 1500 ≈ 340 ms (~3/s; con vínculos igual); 5000 vínculos ≈ 860 ms.
+  Si algún día hace falta: dibujo simplificado mientras gira (SW lo hace; FreeCAD 1.1 no lo trae).
 - **Pulido final: comparar con el mouse contra SW los arreglos de la primera gran revisión de
   errores** (decidido por el usuario el 14/11: queda para las etapas finales de corrección, no ahora).
   La revisión (8/11 al 14/11, fichas #1 a #91 de GitHub) cerró 90 de 91; casi todo está probado con
