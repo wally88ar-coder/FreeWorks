@@ -2689,6 +2689,20 @@ Etapas:
   Lo que pesa es el dibujo de FreeCAD, igual con o sin FreeWorks: 100 piezas fluido; 500 ≈ 110 ms
   por cuadro (~9 cuadros/s); 1500 ≈ 340 ms (~3/s; con vínculos igual); 5000 vínculos ≈ 860 ms.
   Si algún día hace falta: dibujo simplificado mientras gira (SW lo hace; FreeCAD 1.1 no lo trae).
+- **Idea: "modo ensamblaje grande"** (14/11, solo medición, sin código; nada en el roadmap de
+  FreeCAD: el LOD por imágenes fue rechazado en FPA-grant-proposals#104, "reference sets" abierto
+  en FreeCAD#32932). Ajustes nativos medidos en esta PC con 1500 placas de 12 agujeros, vista
+  paralela, con el contador de cuadros de FreeCAD (Preferencias > Vista 3D, ShowFPS; medir con
+  repaint() o grab() da números falsos con VBO). Tiempo por cuadro; base 233-245 ms (3 veces):
+  VBO 101-103 (-58 %); caché distribuida 128 (-47 %); centralizada 229 (nada); VBO + distribuida
+  178 (peor que VBO solo); curvas gruesas (Deviation 2 %, ángulo 45°) 164 (-32 %); sin aristas
+  (Sombreado) 193 (-20 %); sin preselección 200 (dudoso); sin suavizado 232 (nada);
+  transparente 50 % 144-146 (raro, no recomendar sin entender); VBO + centralizada + sin suavizado
+  + sombreado + curvas gruesas 90 (-63 %, lo mejor); vínculos sueltos 260 y vínculo en matriz 236
+  (igual que piezas: no aceleran el dibujo); todo en UNA pieza 160 (-34 %). Pasar el mouse
+  (preselección): medición ruidosa, sin conclusión. Si se hace: botón que aplique VBO + curvas
+  gruesas (+ sombreado opcional); VBO puede fallar en algunas placas de video (acá dibujó bien).
+  Área sin estándares de calidad: acordar pruebas antes de programar.
 - **Pulido final: comparar con el mouse contra SW los arreglos de la primera gran revisión de
   errores** (decidido por el usuario el 14/11: queda para las etapas finales de corrección, no ahora).
   La revisión (8/11 al 14/11, fichas #1 a #91 de GitHub) cerró 90 de 91; casi todo está probado con
