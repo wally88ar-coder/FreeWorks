@@ -5,6 +5,11 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Croquis con error en rojo, como SW (#92, 15/11):** un croquis sobredefinido o con relaciones
+  en conflicto se pinta de rojo (FreeCAD lo pinta de naranja, casi igual al resaltado de FreeWorks).
+  Pasaba sobre todo con Cota inteligente: al tocar una recta cuyo largo ya está fijado, FreeCAD
+  agrega la cota en el primer clic, el croquis queda redundante entero en naranja y no se veía qué
+  recta se estaba por elegir después. Ahora el resaltado naranja se ve encima del rojo.
 - **Giro con la ruedita "Como SolidWorks" (14/11, viene de fábrica):** FreeWorks gira la vista él
   mismo, con lo medido en SW 2018 con el mouse real: a los costados gira alrededor del eje vertical
   de la pantalla y arriba/abajo alrededor del horizontal, en cualquier parte de la vista y sin

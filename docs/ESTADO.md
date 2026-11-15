@@ -8,6 +8,14 @@ completa con ventana en cada entrega, mono y fuzzing de noche); última batería
 Queda para el pulido final: comparar con el mouse contra SW los arreglos (ver "Falta / ideas
 pendientes"). De acá en adelante se trabaja con las reglas de calidad de CLAUDE.md.
 
+**15/11, croquis: Cota inteligente que sobra (pedido del usuario).** Al acotar la altura de un
+oblongo tocando primero su recta (largo ya fijado), todo el croquis quedaba naranja y "Restricciones
+redundantes". Causa: la Cota inteligente de FreeCAD 1.1.4 crea la cota en el primer clic (no hay
+preferencia que lo cambie, revisado) y el naranja de croquis con error es casi el del resaltado.
+Hecho: croquis con error en rojo (#92, `look_sw.py`, prueba `prueba_ventana_croquis_redundante_rojo`).
+Pendiente: #93, que la cota que sobra se comporte como SW (camino 1: corregir la herramienta nativa
+desde afuera; plan para aprobar). Con el mouse real sin probar (el usuario no dio permiso esta vez).
+
 **14/11 (objetivo del usuario: "solucionar TODOS los bugs listados en GitHub, procesos lo más
 parecidos a SW").** Acotado por el usuario a las 10:30: se cierra con #86 a #89 y la prueba de campos
 de piezas que se colgó; lo nuevo que encuentre el mono queda en fichas para la noche siguiente. Hecho, cada uno con su prueba (detalle en CHANGELOG):

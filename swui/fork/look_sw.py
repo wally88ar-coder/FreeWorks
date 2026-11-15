@@ -16,7 +16,7 @@ archivos, se cambian sus tablas antes de que se apliquen:
   - Fondo 3D: degradado #E1E4ED (arriba) -> #D7DCE7 (medio) -> #FEFEFE (abajo).
   - Croquis: azul puro #0000FF (insuficientemente definido), negro (definido),
     líneas de 2 px; constructivas 1 px trazo y punto; resaltado naranja
-    #FF8000; aristas de sólidos nuevos 1 px negras.
+    #FF8000; croquis sobredefinido o con error rojo; aristas de sólidos nuevos 1 px negras.
 
 Todas son preferencias de FreeCAD: se guardan antes y se devuelven al salir
 de LikeSolidWorks UI (mismo mecanismo que view_background.py del original;
@@ -54,6 +54,7 @@ COLORS = {
     "sketch_dim_driven": "#7a7a7a",
     "sketch_relation": "#1e7d32",
     "preselect": "#ff8000",
+    "sketch_invalid": "#ff0000",  # croquis sobredefinido o con error: rojo como SW (FreeCAD: naranja)
     "edge": "#000000",
 }
 
@@ -63,6 +64,10 @@ EXTRA_VIEW = [
     ("Unsigned", "BackgroundColor4", "view_mid"),  # color del medio del degradado
     ("Unsigned", "EditedVertexColor", "sketch_open"),
     ("Unsigned", "HighlightColor", "preselect"),  # al pasar el mouse
+    # Croquis con relaciones redundantes o en conflicto: FreeCAD lo pinta entero de naranja, casi
+    # igual al resaltado y entonces no se ve qué se está por elegir (le pasó al usuario el 14/11 con
+    # la cota provisoria de Cota inteligente). Rojo, como lo sobredefinido de SW.
+    ("Unsigned", "InvalidSketchColor", "sketch_invalid"),
     ("Unsigned", "SelectionColor", "selection"),
     ("Unsigned", "DefaultShapeLineColor", "edge"),
     ("Int", "DefaultShapeLineWidth", 1),

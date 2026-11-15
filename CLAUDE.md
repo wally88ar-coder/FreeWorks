@@ -210,6 +210,9 @@ castellano, coma decimal; ver "Falta" en `docs/ESTADO.md`.
   con ventana + reglas de paneles con más casos para lo tocado + capturas; **de noche** (aprobado
   por el usuario 08/11), fuzzing y casos al azar largos, con lo encontrado a las Issues. Si la
   rápida pasa de ~3 min, en el commit solo lo tocado y lo que depende de eso.
+  **Cambios chicos** (colores, textos; decidido por el usuario 2026-11-15): alcanza la rápida + las
+  pruebas del área + su prueba nueva (y capturas si cambia el aspecto); la completa queda para
+  cuando se toca cómo funciona una herramienta.
 - **Flujo de una funcionalidad nueva**: plan simple + "qué tiene que pasar" (2-3 renglones) que el
   usuario aprueba ANTES de programar (él sabe cómo lo hace SW); lógica en función + panel +
   pruebas; revisor y atacante; batería completa (capturas nuevas las aprueba el usuario); mouse
