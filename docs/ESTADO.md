@@ -1,5 +1,62 @@
 # Estado del fork
 
+**17-18/11 noche, RESCATE (con /goal del usuario).** El 17/11 a la tarde el usuario desinstaló FreeCAD 1.0 y
+el desinstalador borró `C:\Users\Windows\AppData\Roaming\FreeCAD` entero: FreeWorks con su `.git`, SheetMetal y
+las preferencias. El disco C es SSD, así que no se pudo recuperar de ahí.
+- **Restaurado desde GitHub** (c905cf2, 15/11). El usuario reinstaló SheetMetal.
+- **Lo no subido se rearmó** reproduciendo, en orden, cada cambio del registro de la sesión de Claude del 15 al
+  17/11 (`replay.py` en el scratchpad de la sesión). Se aplicaron las 200 ediciones sin fallar y se rehicieron
+  los 17 commits con sus mismos mensajes, cada uno con el enganche en verde.
+  - Comprobación: de 241 comandos de lectura (grep, sed, wc) re-ejecutados en el mismo momento, 222 dan la misma
+    salida que en el original. Los 19 restantes difieren por formato, por las pruebas no re-ejecutadas o por
+    `reports/`, no por contenido de archivos.
+  - El resumen de cambios de "Editar pieza = pieza" da igual que el original: 23 archivos, 1645 líneas
+    agregadas y 188 borradas en `swui`.
+  - Los hashes de commit son otros; los nombres viejos (f12d1bb...) quedan en los textos de antes.
+- **También recuperado:** `reports/` y `research_notes/` (informes "Pedidos y bugs viejos de SolidWorks", capturas
+  de la ficha #93). Lo de "Semiconductor" era un texto de ejemplo, no un informe.
+- **Perdido sin arreglo:** las preferencias personales de FreeCAD (`user.cfg`: decimales, últimos archivos, lo
+  que recuerda cada botón desplegable...) y la base de ejemplos de hypothesis (se rehace sola).
+- **Las pruebas con ventana copian la configuración del usuario.** Con la configuración de fábrica, 7 capturas
+  cambiaron sin que cambiara el código: 3 decimales en vez de 2, y otra variante en dos botones desplegables.
+  Desde ahora, `correr.py` fija esas preferencias en la copia.
+- **Capturas del clic derecho** (`menu_cara_vista`, `menu_operacion_arbol`): aprobadas por el usuario el 17/11.
+- **Decisiones del usuario del 17/11 (no cambiar):**
+  - Configuraciones editando una pieza dentro del ensamblaje: quedan como están (no se editan en contexto).
+  - "Hasta la superficie" de otro componente: solo con clic en la vista.
+  - Aristas de otro componente: se toman solas como referencia, sin pasar por Convertir entidades (paso 4).
+- **Batería completa de lo rearmado (17-18/11, c43d3c8):** 130 pruebas, 128 BIEN y 2 FALLA. Las dos eran de la
+  prueba, no de FreeWorks; arregladas y vueltas a correr solas, BIEN:
+  - `config_nueva_deshacer`: dependía de las últimas medidas de redondeo y chaflán guardadas en la configuración del
+    usuario (perdida). Con las de fábrica (10 y 10) el chaflán no entra en esa caja (medido sin ventana). Ahora la
+    prueba fija las suyas.
+  - `mono` (pieza): sin la base de ejemplos vieja, encontró una seguidilla que suprime el agujero y después pide
+    Punto sobre un círculo que ya no hay. Ahora, si no queda qué elegir, cancela el panel y se saltea el paso.
+  - Decidido solo: subir a `rescate` sin repetir las 2 h y media de la batería entera por dos arreglos de prueba;
+    la batería completa se corre igual al final de todo.
+- **Push:** a la rama `rescate` de GitHub, nunca a master hasta que el usuario lo pruebe. Copia también en
+  `D:\FreeWorks-respaldo` (git bundle).
+- **Qué tiene que pasar, pasos 3 a 5** (escrito antes de programar, 18/11):
+  - **#100**, editando una pieza cuyo componente no está en el origen:
+    - lo que FreeWorks toma de la vista y lo que dibuja encima va donde se ve la pieza: Croquis 3D (puntos y
+      planos), vistas previas de Redondeo, Chaflán, Eliminar/Conservar, Matriz y de las herramientas del croquis,
+      cotas con doble clic y marca del centro de gravedad;
+    - en la pieza sola, nada cambia;
+    - **DXF de chapa editando:** exporta esa pieza, igual que en la pieza sola. Decidido así: "Editar pieza =
+      pieza", y en SW el DXF del desarrollo sale de la pieza. El lote del ensamblaje queda para cuando no se
+      edita.
+  - **Hallazgo 12:** el Cuerpo nuevo que entra al contenedor de la pieza lo hace dentro del paso de deshacer del
+    comando (o en uno propio).
+  - **Teclas editando:** Espacio (Medir) y Esc hacen lo mismo que en la pieza sola y no sacan de Editar pieza.
+  - **Paso 4:** editando una pieza con un croquis abierto, cualquier herramienta del croquis acepta directamente un
+    vértice o arista de otro componente.
+    - Se crea sola la referencia en contexto, en el Cuerpo del croquis, y la entidad queda atada a ella, sin
+      Convertir entidades. Si el otro se mueve, el croquis lo sigue. Ctrl+Z la saca entera.
+    - De paso: las aristas de la propia pieza se enganchan en su lugar aunque el componente esté movido.
+  - **Paso 5:** con una configuración de FreeCAD nueva, el PRIMER arranque ya queda en FreeWorks: cinta, sin barras
+    de FreeCAD ni selector, y en castellano, también después de tocar "Done" en el asistente de bienvenida. Un
+    idioma ya elegido no se toca.
+
 **ETAPA CERRADA (14/11): primera gran revisión de errores (8/11 al 14/11).** Empezó con el plan de
 calidad del 08/11 (auditoría, pruebas, mono, fuzzing, revisor). Resultado en GitHub: 91 fichas, 90
 cerradas; abierta solo #91 (un cuelgue de vez en cuando en la prueba al azar de ensamblaje, sin

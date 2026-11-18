@@ -80,6 +80,20 @@ def abrir(caso, rng):
         raise NadaQueElegir()
 
 
+def elegir(caso, rng):
+    """Elige en el panel abierto. Si la pieza ya no tiene qué elegir (p. ej. Punto sin círculos porque se
+    suprimió el agujero: lista vacía), cancela el panel y el paso se saltea: límite de la prueba, no de
+    FreeWorks (encontrado por el mono el 18/11)."""
+    import FreeCADGui
+    try:
+        correr(caso.elegir(rng))
+    except IndexError:
+        if FreeCADGui.Control.activeDialog():
+            correr(caso.cancelar())
+            bombear(800)
+        raise NadaQueElegir()
+
+
 def _tipos(caso):
     t = caso.tipo
     return t if isinstance(t, tuple) else (t,)
@@ -406,7 +420,7 @@ def paso(m, accion, semilla, historia):
         accion = "deshacer"
     if accion == "aceptar":
         abrir(caso, rng)
-        correr(caso.elegir(rng))
+        elegir(caso, rng)
         bombear(800)
         correr(caso.aceptar())
         bombear(800)
@@ -431,7 +445,7 @@ def paso(m, accion, semilla, historia):
             assert not d, "%s: no aceptó y quedó algo: %s" % (que, d[:3])
     elif accion == "cancelar":
         abrir(caso, rng)
-        correr(caso.elegir(rng))
+        elegir(caso, rng)
         bombear(800)
         correr(caso.cancelar())
         bombear(800)
@@ -460,7 +474,7 @@ def paso(m, accion, semilla, historia):
                     assert not d, "%s: no aceptó el cambio y quedó algo: %s" % (que, d[:3])
     elif accion in ("ecuaciones", "material"):
         abrir(caso, rng)
-        correr(caso.elegir(rng))
+        elegir(caso, rng)
         bombear(800)
         if accion == "ecuaciones":
             from swui.fork import equations

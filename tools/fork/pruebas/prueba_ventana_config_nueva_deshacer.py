@@ -35,6 +35,13 @@ def caras_arriba(obj):
 def prueba():
     import FreeCADGui
     from swui.fork import configurations as cf
+    from swui.fork import dress_up_panel as dp
+    # medidas fijas: con las de fábrica (redondeo 10 y chaflán 10, las de SW) el chaflán no entra en la arista de
+    # 20 mm que queda entre redondeos (BRep_API: command not done, medido con FreeCADCmd el 18/11); antes andaba
+    # porque la configuración copiada del usuario guardaba las últimas medidas que él usó (se perdió el 17/11)
+    FreeCAD.ParamGet(dp.FILLET_PARAMS).SetFloat("Radius", 10.0)
+    for prop in ("Size", "Size2"):
+        FreeCAD.ParamGet(dp.CHAMFER_PARAMS).SetFloat(prop, 2.0)
     doc = FreeCAD.newDocument("ConfigNueva")
     body = doc.addObject("PartDesign::Body", "Cuerpo")
     FreeCADGui.ActiveDocument.ActiveView.setActiveObject("pdbody", body)

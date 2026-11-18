@@ -20,7 +20,7 @@ import FreeCAD
 
 from _base import traza
 from azar_comun import Fallas, bombear, comprobado, hypothesis_listo
-from mono_comun import NadaQueElegir, abrir, chequear_ventana, correr, diferencias, sin_lo_previo
+from mono_comun import NadaQueElegir, abrir, chequear_ventana, correr, diferencias, elegir, sin_lo_previo
 
 RAROS = ["", " ", "0", "-0", "-5", "-0,001", "0,0001", "1e9", "99999999", "1e-9", "1,5", "1.5", "1,5,5",
          "1..5", ",", "-", "+", "abc", "5 mm", "5 in", "5 m", "5 °", "=2*3", "2*3", "1/0", "(", "∞",
@@ -238,9 +238,9 @@ def _una_vez(caso, m, texto, cual, aceptar, semilla):
     f0 = m.foto()
     try:
         abrir(caso, rng)
+        elegir(caso, rng)
     except NadaQueElegir:
         return
-    correr(caso.elegir(rng))
     bombear(600)
     campos = _campos(caso)
     if not campos:
