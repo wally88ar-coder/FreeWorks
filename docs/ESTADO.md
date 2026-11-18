@@ -48,6 +48,26 @@ LOCALES sin push hasta que el usuario pruebe; batería completa solo al final).*
   - Exportar a DXF (cara plana en la pieza): un DXF 1:1 del contorno de la cara (con sus agujeros),
     mirado de frente, empezando en 0,0; pide dónde guardarlo con el nombre de la pieza.
   - Abrir pieza en posición (componente): abre la pieza mirada igual que en el ensamblaje.
+- **Etapa C HECHA** (commit local). `swui/fork/context_tools.py` (cada herramienta es una función
+  pública; el comando solo la llama): Contraer operaciones, Invertir la selección, Aislar / Salir de
+  aislar (barra "Aislar" como SW, una por documento; no deja el documento modificado; al guardar, el
+  archivo queda con todo como antes de aislar; "Guardar una copia" y los respaldos no tocan nada),
+  Cambiar de nombre (también desde la vista), Propiedades del componente (nombre, archivo,
+  configuración, suprimido; un paso de deshacer), Padre/Hijo del componente, Material (sobre la pieza),
+  Herramientas de selección ▸ (Seleccionar otra, Seleccionar tangencia), Exportar a DXF/DWG (cara plana,
+  1:1 desde 0,0, con agujeros; reusa el DXF de chapa) y Abrir pieza en posición (íconos propios nuevos
+  t_open_part_pos y t_properties). Pruebas: `prueba_ventana_herramientas_clic_derecho` (con ventana) y
+  `prueba_clic_derecho_tabla` (rápida) ampliada; todas BIEN.
+  Revisor: 1 grave arreglado (guardar una copia estando aislado dejaba el documento como "no
+  modificado": se podía perder trabajo; con prueba) y medianos arreglados (configuración que podía
+  quedar a medias, Abrir en posición girando la vista del ensamblaje si la pieza no quedaba al frente,
+  una sola barra Salir de aislar para todos los documentos, pruebas de geometría flojas: ahora cara de
+  costado y de abajo con agujero corrido, y la mirada medida aparte; tangencia con signo y un mapa de
+  aristas, rápido en piezas grandes; Aislar también con sólidos sueltos de un STEP; aviso si falla el DXF).
+  **Decidido solo:** el giro del DXF dentro del plano de la cara queda el que da la cuenta (sin
+  comparar con SW: SW la pone como "normal a"); Exportar a DXF escribe DXF (no DWG, FreeCAD no lo trae);
+  Aislar se apaga solo si se aísla otra cosa o se cierra el documento.
+  Sin probar: Abrir en posición con subensamblajes anidados (la cuenta los recorre, no hay prueba).
 - Medido en FreeCAD 1.1.4 antes de programar: la preselección (`Selection.getPreselection()`) da
   documento, objeto y camino, también dentro de un ensamblaje; soltar una operación sobre otra en el
   árbol NO reordena (FreeCAD la vuelve "BaseFeature" del Cuerpo); "Ir a la pieza"

@@ -20,6 +20,11 @@ Neueste Version oben. / Newest version first.
   Retroceder...) actúa sobre la operación que creó la cara, la del título. Más textos de FreeCAD
   pasados al castellano. `swui/fork/context_menus.py`; pruebas `prueba_ventana_clic_derecho_sw`,
   `prueba_clic_derecho_tabla`.
+- **Clic derecho como SW, etapa C (15/11):** herramientas nuevas en el clic derecho, como SW:
+  Contraer operaciones, Invertir la selección, Aislar / Salir de aislar, Cambiar de nombre (también en
+  la vista), Propiedades del componente, Padre/Hijo y Material del componente, Herramientas de
+  selección (Seleccionar otra, Seleccionar tangencia), Exportar una cara plana a DXF 1:1 y Abrir pieza
+  en posición. `swui/fork/context_tools.py`; prueba `prueba_ventana_herramientas_clic_derecho`.
 - **Clic derecho como SW, etapa B (15/11):** lo más usado se ve como la fila de íconos de SW arriba
   del menú (nombre al pasar el mouse, gris si no se puede usar), sin repetirlo en el texto. Íconos
   propios nuevos para Editar operación, Editar croquis, Suprimir, Retroceder/Avanzar, Seleccionar

@@ -60,7 +60,8 @@ def prueba():
     m = _menu(derecho_arbol(pad.Label))
     _comun(m, "operación en el árbol")
     esperado = ["{Editar operación|Editar croquis|Suprimir|Retroceder|Ocultar|Apariencia}",
-                "[Operación (%s)]" % pad.Label, "Padre/Hijo...", "Eliminar", "Cambiar transparencia", "»"]
+                "[Operación (%s)]" % pad.Label, "Padre/Hijo...", "Eliminar", "Cambiar transparencia",
+                "Contraer operaciones", "»"]
     assert m["vis"] == esperado, "operación en el árbol:\n%s\nesperado:\n%s" % (m["vis"], esperado)
     atras = [t for t in m["todo"] if t not in m["vis"]]
     for t in ("Copiar", "Renombrar"):
@@ -78,8 +79,9 @@ def prueba():
     assert len(sel) == 1 and "Face" in sel[0], "el clic derecho no eligió la cara de abajo: %s" % sel
     _comun(m, "cara en la vista")
     esperado = ["{Editar operación|Editar croquis|Suprimir|Retroceder|Apariencia|Seleccionar otra|Croquis|Ocultar"
-                "|Redondeo|Chaflán}", "[Cara]", "Cambiar transparencia",
-                "[Operación (%s)]" % pad.Label, "Padre/Hijo...", "Eliminar", "»"]
+                "|Redondeo|Chaflán}", "Herramientas de selección", "[Cara]", "Cambiar transparencia",
+                "[Operación (%s)]" % pad.Label, "Padre/Hijo...", "Eliminar", "[Sólido]", "Aislar",
+                "Exportar a DXF/DWG...", "»"]
     assert m["vis"] == esperado, "cara en la vista:\n%s\nesperado:\n%s" % (m["vis"], esperado)
     assert "Zoom para ajustar" not in m["todo"], "Zoom/Trasladar/Girar tenía que quitarse: %s" % m["todo"]
     yield 100
@@ -245,9 +247,10 @@ def prueba():
     bombear(150)
     m = _menu(derecho_arbol(b.Label))
     _comun(m, "componente en el árbol")
-    esperado = ["{Abrir pieza|Ocultar|Cambiar transparencia|Suprimir|Relación de posición"
-                "|Ver relaciones de posición|Apariencia}", "[Componente (TacoB)]", "Cambiar de nombre", "Fijar",
-                "Eliminar", "»"]
+    esperado = ["{Abrir pieza|Abrir pieza en posición|Ocultar|Cambiar transparencia|Suprimir|Relación de posición"
+                "|Ver relaciones de posición|Propiedades del componente...|Apariencia}", "Invertir la selección",
+                "[Componente (TacoB)]", "Cambiar de nombre", "Aislar", "Fijar", "Eliminar", "Padre/Hijo...",
+                "Material...", "Contraer operaciones", "»"]
     assert m["vis"] == esperado, str(cm.last_decision) + "componente en el árbol:\n%s\nesperado:\n%s" % (m["vis"], esperado)
     yield 100
 
@@ -257,8 +260,10 @@ def prueba():
     sel = _sel()
     assert len(sel) == 1 and b.Name in sel[0] and "Face" in sel[0], "no eligió la cara del componente: %s" % sel
     _comun(m, "componente en la vista")
-    esperado = ["{Seleccionar otra|Abrir pieza|Ocultar|Cambiar transparencia|Suprimir|Relación de posición"
-                "|Ver relaciones de posición|Apariencia}", "[Componente (TacoB)]", "Fijar", "Eliminar", "»"]
+    esperado = ["{Seleccionar otra|Abrir pieza|Abrir pieza en posición|Ocultar|Cambiar transparencia|Suprimir"
+                "|Relación de posición|Ver relaciones de posición|Propiedades del componente...|Apariencia}",
+                "Invertir la selección", "Herramientas de selección", "[Componente (TacoB)]", "Cambiar de nombre",
+                "Aislar", "Fijar", "Eliminar", "Padre/Hijo...", "Material...", "»"]
     assert m["vis"] == esperado, "componente en la vista:\n%s\nesperado:\n%s" % (m["vis"], esperado)
     assert not adoc.isTouched(), "abrir el menú tocó el ensamblaje"
     yield 100

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Propiedades del componente</title>
+  <path d="M10 8 H54 V56 H10 Z" fill="#f4f4f4" stroke="#1b1b1b" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M10 8 H54 V18 H10 Z" fill="#3d8bff" stroke="#1b1b1b" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M18 28 H46" stroke="#1b1b1b" stroke-width="3.0" fill="none" stroke-linecap="round"/>
+  <path d="M18 37 H46" stroke="#1b1b1b" stroke-width="3.0" fill="none" stroke-linecap="round"/>
+  <path d="M18 46 H46" stroke="#1b1b1b" stroke-width="3.0" fill="none" stroke-linecap="round"/>
+</svg>

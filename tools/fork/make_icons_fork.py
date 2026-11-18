@@ -373,6 +373,20 @@ def _():
     return [mk.box(-14, -10, 0, 20, 20, 14), mk.arrow(36, 30, 58, 8, color=mk.NEW, w=3.6)]
 
 
+@icon("t_open_part_pos", "Abrir pieza en posición")
+def _():
+    # la pieza girada (azul) con la flecha de abrir y el eje de giro punteado
+    return [mk.box(-14, -10, 0, 20, 20, 14, mk.NEW_FACES), mk.con("M8 58 L30 36"),
+            mk.arrow(36, 30, 58, 8, color=mk.NEW, w=3.6)]
+
+
+@icon("t_properties", "Propiedades del componente")
+def _():
+    # hoja de propiedades: renglones blancos en un marco, con la pieza chica
+    frame = "M10 8 H54 V56 H10 Z"
+    return [_face(frame, mk.GEO), _face("M10 8 H54 V18 H10 Z", mk.NEW)] +         [mk.thin("M18 %d H46" % y, mk.OUTLINE, 3) for y in (28, 37, 46)]
+
+
 def build(target=TARGET):
     os.makedirs(target, exist_ok=True)
     written = []

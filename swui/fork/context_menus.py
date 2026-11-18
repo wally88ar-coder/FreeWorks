@@ -104,6 +104,12 @@ MATE, VIEW_MATES, FIX, FLOAT = "SWUI_Mate", "SWUI_ViewMates", "SWUI_FixComponent
 COMP_SUPPRESS, COMP_UNSUPPRESS, COMP_CONFIG = ("SWUI_ComponentSuppress", "SWUI_ComponentUnsuppress",
                                                "SWUI_ComponentConfig")
 HIDE_OR_SHOW = "hide_or_show"  # Ocultar u Mostrar, según esté a la vista lo elegido
+# Herramientas propias del clic derecho (context_tools.py, etapa C)
+COLLAPSE, INVERT, ISOLATE = "SWUI_CollapseTree", "SWUI_InvertSelection", "SWUI_Isolate"
+RENAME_COMP, COMP_PROPS, COMP_PARENT = "SWUI_RenameComponent", "SWUI_ComponentProperties", "SWUI_ComponentParentChild"
+COMP_MATERIAL, TANGENT, FACE_DXF = "SWUI_ComponentMaterial", "SWUI_SelectTangent", "SWUI_ExportFaceDXF"
+OPEN_POS = "SWUI_OpenPartInPosition"
+SELECTION_TOOLS = "submenu:selection"  # Herramientas de selección ▸
 
 # Íconos de la bandeja para lo que no trae ícono (propios, tools/fork/make_icons_fork.py; nada de SW)
 TRAY_ICONS = {
@@ -112,7 +118,8 @@ TRAY_ICONS = {
     ROLL_FORWARD: "fork/t_roll_forward", ROLL_END: "fork/t_roll_end", "clarify": "fork/t_select_other",
     VIEW_MATES: "fork/t_view_mates", "Std_ToggleTransparency": "fork/t_transparency",
     "Std_LinkSelectLinked": "fork/t_open_part", COMP_SUPPRESS: "fork/t_suppress",
-    COMP_UNSUPPRESS: "fork/t_unsuppress", MATE: "sketch/m_coincident",
+    COMP_UNSUPPRESS: "fork/t_unsuppress", MATE: "sketch/m_coincident", OPEN_POS: "fork/t_open_part_pos",
+    COMP_PROPS: "fork/t_properties",
     "PartDesign_NewSketch": "sketch/sketch_new", "PartDesign_Fillet": "sketch/f_fillet",
     "PartDesign_Chamfer": "sketch/f_chamfer",
 }
@@ -125,7 +132,8 @@ ON_FEATURE = {EDIT, EDIT_SKETCH, SUPPRESS, UNSUPPRESS, UNSUPPRESS_ALL, ROLLBACK,
               PARENT_CHILD, REPAIR, "SWUI_ConfigureFeature", "Std_Delete"}
 
 # Comandos que la tabla puede pedir aunque FreeCAD no los haya puesto en el menú
-FETCHABLE = {"PartDesign_NewSketch", "PartDesign_Fillet", "PartDesign_Chamfer", "SWUI_ConfigureFeature",
+FETCHABLE = {COLLAPSE, INVERT, ISOLATE, RENAME_COMP, COMP_PROPS, COMP_PARENT, COMP_MATERIAL, FACE_DXF,
+             OPEN_POS, SELECTION_TOOLS, "PartDesign_NewSketch", "PartDesign_Fillet", "PartDesign_Chamfer", "SWUI_ConfigureFeature",
              "Std_HideSelection", "Std_ShowSelection", "Std_SetAppearance", "Std_ToggleTransparency",
              "Std_Delete", "Std_LinkSelectLinked", MATE, VIEW_MATES}
 
@@ -279,23 +287,31 @@ def layout(ctx, where):
             return [(None, tray), (title_of(ctx), [PARENT_CHILD, "Std_Delete"])]
         if view and ctx.element:
             tray = [EDIT, EDIT_SKETCH] + roll + ["Std_SetAppearance", "clarify"]
+            top = [SELECTION_TOOLS] if ctx.element_kind == "Face" else []
             if ctx.element_kind == "Face" and ctx.planar:
                 tray.append("PartDesign_NewSketch")
             tray.append(hide)
             if ctx.element_kind in ("Face", "Edge"):
                 tray += ["PartDesign_Fillet", "PartDesign_Chamfer"]
-            return [(None, tray),
+            solid = [ISOLATE] + ([FACE_DXF] if ctx.element_kind == "Face" and ctx.planar else [])
+            return [(None, tray), (None, top),
                     (ELEMENT_NAMES.get(ctx.element_kind), ["Std_ToggleTransparency"]),
-                    (title_of(ctx), [PARENT_CHILD, "SWUI_ConfigureFeature", "Std_Delete", REPAIR])]
+                    (title_of(ctx), [PARENT_CHILD, "SWUI_ConfigureFeature", "Std_Delete", REPAIR]),
+                    ("Sólido", solid)]
         tray = [EDIT, EDIT_SKETCH] + roll + [hide, "Std_SetAppearance"]
         return [(None, tray),
                 (title_of(ctx), [PARENT_CHILD, "SWUI_ConfigureFeature", "Std_Delete", "Std_ToggleTransparency",
-                                 REPAIR])]
+                                 REPAIR, COLLAPSE])]
     if ctx.kind == "component":
         tray = (["clarify"] if view else []) + [
-            "Std_LinkSelectLinked", hide, "Std_ToggleTransparency", COMP_SUPPRESS, COMP_UNSUPPRESS, MATE,
-            VIEW_MATES, "Std_SetAppearance"]
-        return [(None, tray), (title_of(ctx), ["rename", COMP_CONFIG, FIX, FLOAT, "Std_Delete"])]
+            "Std_LinkSelectLinked", OPEN_POS, hide, "Std_ToggleTransparency", COMP_SUPPRESS, COMP_UNSUPPRESS, MATE,
+            VIEW_MATES, COMP_PROPS, "Std_SetAppearance"]
+        top = [INVERT] + ([SELECTION_TOOLS] if view and ctx.element_kind == "Face" else [])
+        comp = ([RENAME_COMP] if view else ["rename"]) + [ISOLATE, COMP_CONFIG, FIX, FLOAT, "Std_Delete",
+                                                          COMP_PARENT, COMP_MATERIAL]
+        if not view:
+            comp.append(COLLAPSE)
+        return [(None, tray), (None, top), (title_of(ctx), comp)]
     return []
 
 
@@ -666,6 +682,24 @@ def _tray_action(menu, items):
     return act
 
 
+def _selection_menu(menu, by_key):
+    """Herramientas de selección ▸ (como SW): Seleccionar otra y Seleccionar tangencia."""
+    from swui.compat import QtWidgets
+
+    sub = QtWidgets.QMenu("Herramientas de selección", menu)
+    sub.setObjectName("SWUI_cm_selection")
+    if "clarify" in by_key:
+        sub.addAction(_copy_action(by_key["clarify"], LABELS["clarify"], sub))
+    tangent = _command_action(TANGENT, sub)
+    if tangent is not None:
+        sub.addAction(tangent)
+    if sub.isEmpty():
+        return None
+    act = sub.menuAction()
+    act.setObjectName("SWUI_cm_selection")
+    return act
+
+
 def _menu_parent_ok(menu):
     """Solo el menú del clic derecho: sin padre (el del árbol) o hijo del árbol o la vista 3D."""
     parent = menu.parent()
@@ -715,7 +749,9 @@ def arrange(menu):
         for k in wanted:
             pre = before if k in ON_FEATURE else None
             a = by_key.get(k)
-            if a is not None and (k in LABELS or pre is not None or _is_command(a.objectName())):
+            if k == SELECTION_TOOLS:
+                a = _selection_menu(menu, by_key)
+            elif a is not None and (k in LABELS or pre is not None or _is_command(a.objectName())):
                 a = _copy_action(a, LABELS.get(k), menu, pre)
             elif a is None:
                 a = _command_action(k, menu, LABELS.get(k), pre)
