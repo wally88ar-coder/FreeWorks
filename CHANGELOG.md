@@ -20,6 +20,11 @@ Neueste Version oben. / Newest version first.
   Retroceder...) actúa sobre la operación que creó la cara, la del título. Más textos de FreeCAD
   pasados al castellano. `swui/fork/context_menus.py`; pruebas `prueba_ventana_clic_derecho_sw`,
   `prueba_clic_derecho_tabla`.
+- **Clic derecho como SW, etapa E2 (15/11):** con dos o más operaciones elegidas (árbol) o caras de varias
+  operaciones (vista) el clic derecho muestra el menú "Operaciones" como SW: Suprimir, Apariencia,
+  Invertir la selección, Configurar operación (tabla con todas), Eliminar, Cambiar transparencia,
+  Contraer; en la vista, grupos Caras / Operaciones / Sólido (Aislar, Eliminar...). Suprimir actúa sobre
+  todas en un Ctrl+Z. Prueba `prueba_ventana_clic_derecho_operaciones`.
 - **Clic derecho como SW, etapa E1 (15/11):** con dos o más componentes elegidos (árbol o vista) el
   clic derecho muestra el menú "Componente" como SW y cada opción actúa sobre todos en un solo Ctrl+Z:
   Aislar, Suprimir, Fijar/Flotar, Ver relaciones, Relación de posición (con los dos cargados),

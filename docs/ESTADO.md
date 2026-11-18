@@ -183,6 +183,31 @@ LOCALES sin push hasta que el usuario pruebe; batería completa solo al final).*
     transparencia), "Operaciones" (Configurar operación, Eliminar: sobre las operaciones que crearon esas
     caras) y "Sólido" (Aislar, Eliminar: abre Eliminar/Conservar sólido con el sólido cargado). Suprimir y
     Eliminar actúan sobre todas en un solo Ctrl+Z. Mezclado con un croquis u otra cosa: el menú general.
+  - **Medido en SW para E2 (15/11 a la noche):** Configurar operación con dos operaciones abre la misma
+    tabla "Modificar configuraciones", con las columnas de cada operación (Suprimir de cada una).
+  - **E2 HECHA (15/11 a la noche, commit local, sin subir).** `context_menus`: caso "features" (varias
+    operaciones del mismo Cuerpo, o caras de ellas en la vista: cuenta la operación que creó cada cara),
+    menú "Operaciones" en el árbol y grupos Caras / Operaciones / Sólido en la vista; lo de la operación
+    (Suprimir, Configurar, Eliminar) elige antes las operaciones de las caras (`select_features`), y para
+    saber si va en el menú se prueba con ellas elegidas y se deja la selección como estaba
+    (`_active_after`). Invertir la selección con operaciones elige las otras del Cuerpo
+    (`context_tools.invert_features`); Aislar con caras de varias operaciones aísla el sólido; Sólido >
+    Eliminar... abre Eliminar/Conservar sólido; Configurar operación con varias: una tabla con las columnas
+    de todas (`config_feature.all_columns` / `apply_many`). Dos caras de la MISMA operación ahora dan este
+    menú (antes, el general). Prueba nueva `prueba_ventana_clic_derecho_operaciones` (BIEN) y la rápida
+    ampliada. **Decidido solo:** la cara elegida por el Cuerpo ('Face5') y por la operación
+    ('Corte2.Face5') es la misma (se compara la forma); Sólido > Eliminar... solo con varias (con una cara
+    sola no estaba en la tabla del usuario). Sin comparar con SW con el mouse (pendiente).
+    Revisor E2: 2 medios arreglados (cara + arista mezcladas actuaban sobre la última operación: ahora
+    menú de la vista con grupo "Elementos" y la arista cuenta como de la última operación que hizo sus
+    caras, el borde de un agujero es del corte; caras iguales de dos componentes de un STEP se tomaban
+    como la misma) y bajos arreglados (armar el menú ya no toca la selección; IsActive de Invertir y
+    Aislar sin buscar el creador de cada cara; Configurar operación con varias: sin columnas repetidas y
+    primero lo que se activa, después lo que se suprime; pruebas: Cancelar medido, Configurar y Eliminar
+    desde el menú de la vista, Desactivar supresión, Invertir desde el menú, cara + arista).
+    **Decidido solo:** dos caras de la MISMA operación dan el menú "Operaciones" (antes, el general; SW sin
+    medir en ese caso). Eliminar con varias muestra el aviso de FreeCAD "Los siguientes objetos de
+    referencia pueden romperse. ¿Continuar?" (es el de FreeCAD, igual que con una).
   - **Antes de programar, mirar en SW (solo mirar y cancelar):** qué abre Relación de posición, Abrir
     pieza en posición (dos de la misma pieza) y Configurar componente / Configurar operación con varios.
   - **Pruebas:** ampliar `prueba_ventana_clic_derecho_sw` con dos y tres elegidos, selecciones

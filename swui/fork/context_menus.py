@@ -94,6 +94,7 @@ LABELS = {
     "PartDesign_Chamfer": "Chaflán",
     "SWUI_ConfigureFeature": "Configurar operación",
     "SWUI_ComponentConfig": "Configurar componente",
+    "SWUI_DeleteBodies": "Eliminar...",  # DELETE_BODIES
 }
 
 # Comandos de FreeWorks (feature_tree, mates_sw, config_asm) por nombre, sin importar esos módulos
@@ -111,6 +112,7 @@ RENAME_COMP, COMP_PROPS, COMP_PARENT = "SWUI_RenameComponent", "SWUI_ComponentPr
 COMP_MATERIAL, TANGENT, FACE_DXF = "SWUI_ComponentMaterial", "SWUI_SelectTangent", "SWUI_ExportFaceDXF"
 OPEN_POS = "SWUI_OpenPartInPosition"
 OPEN_PARTS = "SWUI_OpenParts"  # Abrir pieza con varios componentes elegidos (E1)
+DELETE_BODIES = "SWUI_DeleteBodies"  # Sólido > Eliminar... con caras de varias operaciones (E2)
 SELECTION_TOOLS = "submenu:selection"  # Herramientas de selección ▸
 
 # Íconos de la bandeja para lo que no trae ícono (propios, tools/fork/make_icons_fork.py; nada de SW)
@@ -140,10 +142,12 @@ FETCHABLE = {COLLAPSE, INVERT, ISOLATE, RENAME_COMP, COMP_PROPS, COMP_PARENT, CO
              "Std_Delete", "Std_LinkSelectLinked", MATE, VIEW_MATES}
 
 # Con varios elegidos FreeCAD (y los menús de FreeWorks) no ponen estos comandos: se piden (E1)
-FETCH_MANY = {COMP_SUPPRESS, COMP_UNSUPPRESS, COMP_CONFIG, FIX, FLOAT}
+FETCH_MANY = {COMP_SUPPRESS, COMP_UNSUPPRESS, COMP_CONFIG, FIX, FLOAT, SUPPRESS, UNSUPPRESS, UNSUPPRESS_ALL,
+              DELETE_BODIES}
 
 ELEMENT = re.compile(r"^(Face|Edge|Vertex)\d+$")
 ELEMENT_NAMES = {"Face": "Cara", "Edge": "Arista", "Vertex": "Vértice"}
+ELEMENTS_NAMES = {"Face": "Caras", "Edge": "Aristas", "Vertex": "Vértices"}
 
 
 def action_key(object_name, text):
@@ -164,12 +168,14 @@ def action_key(object_name, text):
 
 class Context:
     """
-    Lo elegido, visto como SW: kind = 'feature' | 'sketch' | 'component' | 'components' | None.
-    'components' = dos o más componentes elegidos (etapa E1, 15/11): components tiene la lista.
+    Lo elegido, visto como SW: kind = 'feature' | 'sketch' | 'component' | 'components' | 'features'
+    | None. 'components' = dos o más componentes elegidos (etapa E1, 15/11): components tiene la lista.
+    'features' = dos o más operaciones del mismo Cuerpo, o caras de ellas en la vista (etapa E2):
+    features tiene las operaciones (las que crearon las caras), sin repetir.
     """
 
     def __init__(self, kind=None, feature=None, component=None, element="", visible=True, planar=False,
-                 components=None):
+                 components=None, features=None):
         self.kind = kind
         self.feature = feature  # la operación (o el croquis)
         self.component = component  # el vínculo dentro del ensamblaje
@@ -177,6 +183,7 @@ class Context:
         self.visible = visible
         self.planar = planar  # la cara elegida es plana (para "Croquis")
         self.components = list(components or [])
+        self.features = list(features or [])
 
     @property
     def element_kind(self):
@@ -232,13 +239,74 @@ def component_of(top, sub):
     return None
 
 
+def feature_of(top, sub):
+    """
+    (operación, elemento) de la selección (top, sub): la operación de Part Design elegida, o la que
+    creó la cara elegida en la vista (como SW). (None, '') si no es una operación de un Cuerpo.
+    """
+    element = sub.split(".")[-1] if ELEMENT.match(sub.split(".")[-1] or "") else ""
+    last = _chain(top, sub)[-1]
+    if element and getattr(last, "TypeId", "") == "PartDesign::Body":
+        last = last.Tip  # 'Body.Face5': la cara del sólido, o sea de la punta
+    if not _is_feature(last) or _body_of(last) is None:
+        return None, ""
+    if element.startswith("Face") or element.startswith("Edge"):
+        try:
+            import Part
+
+            from swui.fork import feature_tree as ft
+
+            shape = last.Shape
+            sub_shape = shape.getElement(element)
+            if element.startswith("Face"):
+                return ft.creator(last, sub_shape) or last, element
+            # la arista nace con la última de las operaciones que hicieron sus caras (el borde del
+            # agujero es del corte, no de la extrusión que hizo la tapa)
+            order = ft.features(_body_of(last))
+            makers = [ft.creator(last, f) or last for f in shape.ancestorsOfType(sub_shape, Part.Face)]
+            makers = [m for m in makers if m in order]
+            return (max(makers, key=order.index) if makers else last), element
+        except Exception:
+            return last, element
+    return last, element
+
+
+def _several_features(pairs):
+    """Varias operaciones del mismo Cuerpo (o caras de ellas en la vista): Context('features') (E2)."""
+    feats, elements = [], []
+    for top, sub in pairs:
+        if component_of(top, sub) is not None:
+            return Context()
+        feat, element = feature_of(top, sub)
+        if feat is None:
+            return Context()  # un croquis, un plano, otra cosa: el menú general
+        elements.append(element)
+        if feat not in feats:
+            feats.append(feat)
+    bodies = {_body_of(f).Name for f in feats}
+    if len(bodies) != 1:
+        return Context()
+    kinds = {ELEMENT.match(e).group(1) for e in elements if ELEMENT.match(e)}
+    # con algún elemento (cara, arista) es el menú de la vista y lo de la operación elige antes las
+    # operaciones; cara + arista mezcladas: grupo "Elementos" (revisión del 15/11)
+    element = next((e for e in elements if e), "")
+    body = _body_of(feats[0])
+    ctx = Context("features", feature=feats[0], features=feats, element=element,
+                  visible=bool(getattr(body, "Visibility", True)))
+    ctx.mixed = len(kinds) > 1
+    return ctx
+
+
 def _several(pairs):
-    """Varias cosas elegidas: Context de componentes (E1) o Context() si se mezcla con otra cosa."""
+    """
+    Varias cosas elegidas: Context de componentes (E1), de operaciones (E2) o Context() si se mezcla
+    con otra cosa.
+    """
     comps = []
     for top, sub in pairs:
         comp = component_of(top, sub)
         if comp is None:
-            return Context()
+            return _several_features(pairs) if not comps else Context()
         if comp not in comps:
             comps.append(comp)
     visible = all(bool(getattr(c, "Visibility", True)) for c in comps)
@@ -306,6 +374,8 @@ def title_of(ctx):
         return "Componente (%s)" % (name or ctx.component.Label)
     if ctx.kind == "components":
         return "Componente"  # SW, con varios: sin nombre
+    if ctx.kind == "features":
+        return "Operaciones"  # SW, con varias
     if ctx.kind == "sketch":
         return "Croquis (%s)" % ctx.feature.Label
     if ctx.kind == "feature":
@@ -359,6 +429,18 @@ def layout(ctx, where):
                 VIEW_MATES, "Std_SetAppearance"]
         comp = [ISOLATE, COMP_CONFIG, FIX, FLOAT, "Std_Delete", COMP_MATERIAL] + ([] if view else [COLLAPSE])
         return [(None, tray), (None, [INVERT]), (title_of(ctx), comp)]
+    if ctx.kind == "features":
+        # varias operaciones (E2, decisiones del usuario 15/11): sin Editar operación/croquis,
+        # Retroceder, Ocultar (en el árbol) ni Padre/Hijo; Redondeo/Chaflán/Mover cara con varias: no
+        if view and ctx.element:
+            tray = ["clarify", hide, SUPPRESS, UNSUPPRESS, "Std_SetAppearance"]
+            group = "Elementos" if getattr(ctx, "mixed", False) else ELEMENTS_NAMES.get(ctx.element_kind)
+            return [(None, tray), (group, ["Std_ToggleTransparency"]),
+                    (title_of(ctx), ["SWUI_ConfigureFeature", "Std_Delete"]),
+                    ("Sólido", [ISOLATE, DELETE_BODIES])]
+        tray = [SUPPRESS, UNSUPPRESS, UNSUPPRESS_ALL, "Std_SetAppearance"]
+        return [(None, tray), (None, [INVERT]),
+                (title_of(ctx), ["SWUI_ConfigureFeature", "Std_Delete", "Std_ToggleTransparency", COLLAPSE])]
     return []
 
 
@@ -378,7 +460,7 @@ def place(keys, ctx, where, has_selection=True):
         behind = [k for k in keys if k in BEHIND and k not in removed] if has_selection else []
         return [], behind, removed
     ours = {EDIT, EDIT_SKETCH, SUPPRESS, UNSUPPRESS}
-    if ours & set(keys) or ctx.kind in ("feature", "sketch"):
+    if ours & set(keys) or ctx.kind in ("feature", "sketch", "features"):
         removed += [k for k in keys if k in ("vpedit", "nativesuppressed") and k not in removed]
     groups, used = [], set(removed)
     for title, wanted in table:
@@ -388,7 +470,7 @@ def place(keys, ctx, where, has_selection=True):
                 k = hide_key(ctx)
             if k in used:
                 continue
-            if k in keys or k in FETCHABLE or (ctx.kind == "components" and k in FETCH_MANY):
+            if k in keys or k in FETCHABLE or (ctx.kind in ("components", "features") and k in FETCH_MANY):
                 out.append(k)
                 used.add(k)
         if out:
@@ -471,7 +553,12 @@ def same_element(obj, sub_a, sub_b):
         return True
     ea, eb = a.split(".")[-1], b.split(".")[-1]
     ka, kb = ELEMENT.match(ea), ELEMENT.match(eb)
-    if not ka or not kb or ka.group(1) != kb.group(1) or a.split(".")[0] != b.split(".")[0]:
+    if not ka or not kb or ka.group(1) != kb.group(1):
+        return False
+    # en un ensamblaje, el primer nombre es el componente: tiene que ser el mismo (en una pieza puede
+    # faltar: 'Face5' por el Cuerpo y 'Corte2.Face5' por la operación son la misma cara)
+    pa, pb = a.split("."), b.split(".")
+    if len(pa) > 1 and len(pb) > 1 and pa[0] != pb[0]:
         return False
     try:
         sa, sb = obj.getSubObject(sub_a), obj.getSubObject(sub_b)
@@ -555,16 +642,52 @@ def _QAction():
 
 def select_feature(feature):
     """Deja elegida la operación entera (como en el árbol), para que los comandos actúen sobre ella."""
-    body = _body_of(feature)
+    select_features([feature])
+
+
+def select_features(features):
+    """Deja elegidas las operaciones enteras (varias: E2), para que los comandos actúen sobre ellas."""
     FreeCADGui.Selection.clearSelection()
-    if body is not None:
-        FreeCADGui.Selection.addSelection(feature.Document.Name, body.Name, feature.Name + ".")
-    else:
-        FreeCADGui.Selection.addSelection(feature)
+    for feature in features:
+        body = _body_of(feature)
+        if body is not None:
+            FreeCADGui.Selection.addSelection(feature.Document.Name, body.Name, feature.Name + ".")
+        else:
+            FreeCADGui.Selection.addSelection(feature)
 
 
-def _command_action(name, menu, text=None, before=None):
-    """Una acción nueva que corre el comando (para ponerlo aunque FreeCAD no lo haya puesto)."""
+def active_for_features(features, names):
+    """
+    ¿Qué comandos de la operación valen para estas operaciones? (E2: con caras elegidas en la vista,
+    Suprimir todavía no ve las operaciones, que se eligen recién al hacer clic). Se decide mirando las
+    operaciones, sin tocar la selección (revisión del 15/11).
+    """
+    def suppressed(f):
+        return bool(getattr(f, "Suppressed", False))
+    out = set()
+    for n in names:
+        if n == SUPPRESS and any(not suppressed(f) for f in features):
+            out.add(n)
+        elif n in (UNSUPPRESS, UNSUPPRESS_ALL) and any(suppressed(f) for f in features):
+            out.add(n)
+        elif n == "SWUI_ConfigureFeature":
+            try:
+                from swui.fork import configurations as cf
+
+                if features and cf.configured(features[0].Document):
+                    out.add(n)
+            except Exception:
+                pass
+        elif n not in (SUPPRESS, UNSUPPRESS, UNSUPPRESS_ALL):
+            out.add(n)
+    return out
+
+
+def _command_action(name, menu, text=None, before=None, active=None):
+    """
+    Una acción nueva que corre el comando (para ponerlo aunque FreeCAD no lo haya puesto). active:
+    si se sabe de antemano si queda activo (con before), en vez de preguntarle al comando ahora.
+    """
     try:
         cmd = FreeCADGui.Command.get(name)
     except Exception:
@@ -572,7 +695,7 @@ def _command_action(name, menu, text=None, before=None):
     if cmd is None:
         return None
     try:
-        if not cmd.isActive():
+        if not (cmd.isActive() if active is None else active):
             return None
     except Exception:
         pass
@@ -826,6 +949,13 @@ def arrange(menu):
     before = None
     if ctx.kind in ("feature", "sketch") and ctx.element and ctx.feature is not None:
         before = (lambda f=ctx.feature: select_feature(f))
+    elif ctx.kind == "features" and ctx.element:
+        before = (lambda fs=tuple(ctx.features): select_features(fs))
+    # con caras de varias operaciones, lo que se pide (Suprimir...) se mira con las operaciones elegidas
+    active_later = None
+    if ctx.kind == "features" and before is not None:
+        wanted_cmds = [k for _t, ks in groups for k in ks if k in ON_FEATURE and k not in by_key]
+        active_later = active_for_features(ctx.features, wanted_cmds)
     # primero se arma todo y recién después se cambia el menú: si algo falla, queda el de FreeCAD
     new = []  # ("title", texto) / ("sep", None) / ("act", acción)
     first = True
@@ -839,7 +969,8 @@ def arrange(menu):
             elif a is not None and (k in LABELS or pre is not None or _is_command(a.objectName())):
                 a = _copy_action(a, LABELS.get(k), menu, pre)
             elif a is None:
-                a = _command_action(k, menu, LABELS.get(k), pre)
+                known = (k in active_later) if (active_later is not None and pre is not None) else None
+                a = _command_action(k, menu, LABELS.get(k), pre, known)
             if a is not None:
                 items.append(a)
                 tray_keys.append(k)

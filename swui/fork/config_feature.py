@@ -88,16 +88,50 @@ def apply(doc, feature, changes):
     return done
 
 
+def all_columns(features):
+    """
+    Columnas de varias operaciones (Configurar operación con varias elegidas, como SW: medido el
+    15/11, una tabla con las columnas de cada una): [(operación, columna propia, título, target, tipo)].
+    """
+    out, seen = [], set()
+    for f in features:
+        for i, (title, target, kind) in enumerate(columns(f)):
+            key = (target[0], getattr(target[1], "Name", target[1]), target[2] if len(target) > 2 else None)
+            if kind != "sup" and key in seen:  # la misma cota en dos operaciones (un croquis compartido)
+                continue
+            seen.add(key)
+            out.append((f, i, title if len(features) == 1 else "%s: %s" % (f.Label, title), target, kind))
+    return out
+
+
+def apply_many(doc, changes_by_feature):
+    """{operación: {(configuración, columna propia): valor}} -> apply() de cada una. Cuántos cambió."""
+    # primero desactivar supresiones y cotas, después suprimir: suprimir una operación suprime las que
+    # dependen de ella, y desmarcar después una de esas la dejaría activa con el padre suprimido
+    cols = {f: columns(f) for f in changes_by_feature}
+
+    def is_on(f, key, value):
+        return cols[f][key[1]][2] == "sup" and bool(value)
+    first = {f: {k: v for k, v in ch.items() if not is_on(f, k, v)} for f, ch in changes_by_feature.items()}
+    later = {f: {k: v for k, v in ch.items() if is_on(f, k, v)} for f, ch in changes_by_feature.items()}
+    return (sum(apply(doc, f, ch) for f, ch in first.items() if ch)
+            + sum(apply(doc, f, ch) for f, ch in later.items() if ch))
+
+
 class Dialog(QtWidgets.QDialog):
     def __init__(self, feature, parent=None):
         from swui.fork import instant_dims as idm
 
         super().__init__(parent or FreeCADGui.getMainWindow())
-        self.feature, self.doc = feature, feature.Document
-        self.setWindowTitle("Modificar configuraciones: %s" % feature.Label)  # como SW
-        self.cols = columns(feature)
+        feats = list(feature) if isinstance(feature, (list, tuple)) else [feature]
+        self.features = feats
+        self.feature, self.doc = feats[0], feats[0].Document
+        self.setWindowTitle("Modificar configuraciones: %s" % ", ".join(f.Label for f in feats))  # como SW
+        self.map = all_columns(feats)
+        self.cols = [(t, target, kind) for _f, _i, t, target, kind in self.map]
         self.names = cf.names(self.doc)
-        self.before = table_values(self.doc, feature)
+        self.before = {(name, c): cf.value_in(self.doc, target, name)
+                       for c, (_t, target, _k) in enumerate(self.cols) for name in self.names}
         lay = QtWidgets.QVBoxLayout(self)
         self.table = QtWidgets.QTableWidget(len(self.names), len(self.cols), self)
         self.table.setObjectName("SWUI_ConfigureFeatureTable")
@@ -160,9 +194,13 @@ class Dialog(QtWidgets.QDialog):
         if changes:
             from swui.fork import safe_ops
 
+            by_feature = {}
+            for (name, c), value in changes.items():
+                f, own, _t, _target, _k = self.map[c]
+                by_feature.setdefault(f, {})[(name, own)] = value
             try:
                 with safe_ops.undo_step(self.doc, TITLE):  # con un panel abierto, se suma al suyo (#3)
-                    apply(self.doc, self.feature, changes)
+                    apply_many(self.doc, by_feature)
             except Exception:
                 FreeCAD.Console.PrintError("[SWUI fork] %s:\n%s\n" % (TITLE, traceback.format_exc()))
                 QtWidgets.QMessageBox.warning(self, TITLE, "No se pudo aplicar (detalle en la vista de informe).")
@@ -177,6 +215,9 @@ def _target():
         sel = FreeCADGui.Selection.getSelection()
     except Exception:
         return None
+    feats = [o for o in sel if ft.is_feature(o) and ft.body_of(o) is not None]
+    if len(sel) > 1 and len(feats) == len(sel) and len({ft.body_of(f).Name for f in feats}) == 1:
+        return feats if cf.configured(feats[0].Document) else None  # varias (E2): una tabla con todas
     if len(sel) != 1 or not ft.is_feature(sel[0]) or ft.body_of(sel[0]) is None:
         return None
     return sel[0] if cf.configured(sel[0].Document) else None

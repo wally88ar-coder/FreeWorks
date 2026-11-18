@@ -68,7 +68,11 @@ def prueba():
         (face.kind, face.element, face.planar)
     assert cm.context_of([(body, ["Croquis."])]).kind == "sketch"
     assert cm.context_of([(body, [""])]).kind is None, "el Cuerpo es el caso general"
-    assert cm.context_of([]).kind is None and cm.context_of([(body, ["Extruir.Face1", "Extruir.Face2"])]).kind is None
+    assert cm.context_of([]).kind is None
+    # dos caras (E2, 15/11): el menú de operaciones, con la operación que las creó
+    dos = cm.context_of([(body, ["Extruir.Face1", "Extruir.Face2"])])
+    assert dos.kind == "features" and dos.features == [pad] and dos.element_kind == "Face", (dos.kind, dos.features)
+    assert cm.context_of([(body, ["Extruir.Face1", "Croquis."])]).kind is None, "cara + croquis: el general"
     assert cm.plain_sub("Extruir.;#14:1;:G0;XTR;:H55e:8,F.Face6") == "Extruir.Face6"
 
     # Operación en el árbol: la tabla del usuario

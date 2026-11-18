@@ -64,6 +64,49 @@ def picked_component():
     return ctx.component if ctx is not None and ctx.kind == "component" else None
 
 
+def _selected_body():
+    """El Cuerpo si todo lo elegido (dos o más cosas) está dentro de un mismo Cuerpo (barato, sin
+    buscar qué operación creó cada cara: FreeCAD pregunta IsActive todo el tiempo)."""
+    from swui.fork import context_menus as cm
+
+    pairs = [(s.Object, sub) for s in _entries() for sub in (list(s.SubElementNames) or [""])]
+    if len(pairs) < 2:
+        return None
+    bodies = set()
+    for top, sub in pairs:
+        last = cm._chain(top, sub)[-1]
+        if getattr(last, "TypeId", "") == "PartDesign::Body" and sub:
+            body = last
+        elif cm._is_feature(last):
+            body = cm._body_of(last)
+        else:
+            return None
+        if body is None or cm.component_of(top, sub) is not None:
+            return None
+        bodies.add(body)
+    return bodies.pop() if len(bodies) == 1 else None
+
+
+def picked_features():
+    """Las operaciones elegidas (varias del mismo Cuerpo, o las que crearon las caras elegidas: E2)."""
+    from swui.fork import context_menus as cm
+
+    ctx = cm.context_of([(s.Object, list(s.SubElementNames)) for s in _entries()])
+    if ctx.kind == "features":
+        return list(ctx.features)
+    if ctx.kind == "feature":
+        return [ctx.feature]
+    return []
+
+
+def invert_features(features):
+    """Las otras operaciones del Cuerpo (Invertir la selección con operaciones, como SW)."""
+    from swui.fork import context_menus as cm, feature_tree as ft
+
+    body = cm._body_of(features[0]) if features else None
+    return [f for f in ft.features(body) if f not in features] if body is not None else []
+
+
 def picked_components():
     """
     Los componentes elegidos, sin repetir y en orden (uno o varios: árbol con Ctrl+clic o caras de
@@ -113,6 +156,13 @@ def invert_components(asm, chosen):
 
 
 def invert_selection():
+    feats = picked_features()
+    if feats and not picked_components():
+        from swui.fork import context_menus as cm
+
+        others = invert_features(feats)
+        cm.select_features(others)
+        return others
     comps = []
     asm = None
     for s in _entries():
@@ -708,7 +758,7 @@ class _Invert(_Cmd):
     menu, tip = "Invertir la selección", "Elige todos los otros componentes del ensamblaje"
 
     def IsActive(self):
-        return bool(picked_components())
+        return bool(picked_components()) or _selected_body() is not None
 
     def Activated(self):
         invert_selection()
@@ -721,6 +771,9 @@ class _Isolate(_Cmd):
         comps = picked_components()
         if len(comps) > 1:
             return comps  # varios componentes (E1): quedan a la vista todos
+        body = _selected_body()
+        if body is not None:  # varias operaciones o caras de ellas (E2): el sólido
+            return body
         ctx, _s = picked()
         if ctx is None:
             return None
@@ -728,7 +781,7 @@ class _Isolate(_Cmd):
             return ctx.component
         from swui.fork import context_menus as cm
 
-        return cm._body_of(ctx.feature)
+        return cm._body_of(ctx.feature) if ctx.feature is not None else None
 
     def IsActive(self):
         if self.target() is not None:
