@@ -122,6 +122,15 @@ LOCALES sin push hasta que el usuario pruebe; batería completa solo al final).*
   (copia de la pieza dentro del ensamblaje): AVISAR Y NO DEJAR editarlo ("Este componente usa otra
   configuración; abrí la pieza para cambiarla"). (3) Ctrl+Z: lo mide Claude antes de programar.
   Plan de la etapa D APROBADO para hacer cuando el usuario dé el OK.
+  **16/11, relevamiento de botones editando (pedido del usuario: editando, TODOS los íconos de Operaciones y
+  Croquis tienen que comportarse como en la pieza sola).** `prueba_ventana_editar_pieza_botones` (por ahora
+  solo releva, no falla): 133 casos (botón × nada/cara/arista; los del croquis dentro de un croquis), 45
+  distintos. Distintos: Taladro, Barrer/Recubrir/Hélice sin nada, Redondeo, Chaflán, Matrices, Simetría,
+  Ángulo de salida, Plano/Eje/Punto, Cuerpo (lo crea en el ensamblaje y sale de Editar pieza), Mover/Copiar
+  sólido, Croquis 3D (en el ensamblaje); B-spline/Elipse a revisar (probable falla del relevamiento). Tabla y
+  propuesta en el checklist, pestaña "Editar pieza: botones", ESPERANDO APROBACIÓN del usuario. Plan: una
+  pieza común "lo elegido a través del componente / crear en la pieza editada" + la prueba que recorre todos
+  los botones en los dos modos y falla si difieren. Chapa y Soldadas: sin relevar.
   **16/11, probando el usuario (#95, arreglado, commit local, sin subir):** editando una pieza, Croquis no
   aceptaba la cara (salía "Seleccione un plano" nativo) y Extruir corte tomaba la cara entera. Qué tiene que
   pasar: Croquis / Extruir / Corte / Revolución / Ranura como en la pieza sola (cara elegida: croquis ahí;
