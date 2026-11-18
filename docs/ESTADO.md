@@ -68,6 +68,11 @@ LOCALES sin push hasta que el usuario pruebe; batería completa solo al final).*
   comparar con SW: SW la pone como "normal a"); Exportar a DXF escribe DXF (no DWG, FreeCAD no lo trae);
   Aislar se apaga solo si se aísla otra cosa o se cierra el documento.
   Sin probar: Abrir en posición con subensamblajes anidados (la cuenta los recorre, no hay prueba).
+- **Batería completa al final de A-C (15/11, 18:03): 120 pruebas, BIEN 119, FALLA 1**: la única es
+  `prueba_ventana_capturas`, que espera que el usuario apruebe 2 capturas nuevas
+  (`tools/fork/pruebas/capturas/nuevas/`: menu_operacion_arbol.png y menu_cara_vista.png). Nada que
+  arreglar. Sin subir a GitHub (commits locales c1d6f18, 63acaeb, bd0624d, 9aa2968): lo prueba el usuario.
+  Comparación con el mouse contra SW: PENDIENTE (no hubo permiso para manejar FreeCAD con el mouse).
 - **Etapa D (editar la pieza dentro del ensamblaje): ANÁLISIS Y PLAN, sin código (lo aprueba el
   usuario).** Medido el 15/11 en FreeCAD 1.1.4 real (sondeo de un solo uso, borrado), con dos piezas
   (cada una su archivo) en un ensamblaje, la segunda corrida y girada 30°:
