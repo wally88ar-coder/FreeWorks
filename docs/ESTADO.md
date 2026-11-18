@@ -73,6 +73,15 @@ LOCALES sin push hasta que el usuario pruebe; batería completa solo al final).*
   (`tools/fork/pruebas/capturas/nuevas/`: menu_operacion_arbol.png y menu_cara_vista.png). Nada que
   arreglar. Sin subir a GitHub (commits locales c1d6f18, 63acaeb, bd0624d, 9aa2968): lo prueba el usuario.
   Comparación con el mouse contra SW: PENDIENTE (no hubo permiso para manejar FreeCAD con el mouse).
+- **Batería completa al final de E1, E2 y D (16/11, 02:15, commit c41739b): 123 pruebas, BIEN 121,
+  FALLA 2.**
+  - `prueba_ventana_capturas` sigue esperando que el usuario apruebe las mismas 2 capturas de `nuevas/`.
+  - `prueba_ventana_reglas_ensamblaje`: volvió la ficha #83 (intermitente, reabierta). Las piezas de
+    prueba quedaron con error al prepararse y después no se abrió el panel de relaciones.
+  - Repetida sola: falló 1 vez más (con otro síntoma) y pasó 9 veces (2 fallas en 11 corridas).
+  - Las etapas no tocan esa preparación ni el panel de relaciones. Próximo paso: correrla de noche con
+    `--detalle` hasta atrapar el registro.
+  - Nada más que arreglar. Sin subir a GitHub: lo prueba el usuario.
 - **Etapa D (editar la pieza dentro del ensamblaje): ANÁLISIS Y PLAN, sin código (lo aprueba el
   usuario).** Medido el 15/11 en FreeCAD 1.1.4 real (sondeo de un solo uso, borrado), con dos piezas
   (cada una su archivo) en un ensamblaje, la segunda corrida y girada 30°:
