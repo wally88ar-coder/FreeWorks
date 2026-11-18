@@ -79,6 +79,32 @@ def _is_assembly(doc):
     return any(getattr(o, "TypeId", "") == "Assembly::AssemblyObject" for o in doc.Objects)
 
 
+def _activate_in_edited_part():
+    """
+    Editando una pieza de varios Cuerpos dentro del ensamblaje (Editar pieza = pieza, 16/11): lo mismo que en
+    la pieza sola, el Cuerpo de lo elegido queda activo (a través del componente). Nada si no se edita.
+    """
+    from swui.fork import edit_context as ec
+
+    ctx = ec.current()
+    if ctx is None or FreeCADGui.Control.activeDialog():
+        return None
+    gdoc = FreeCADGui.ActiveDocument
+    vp = gdoc.getInEdit() if gdoc is not None else None
+    if getattr(vp, "Object", None) is not None:
+        return None  # algo en edición (croquis...): ese panel decide
+    body = target_body(ec.resolved_selection())
+    if body is None or ec.active_body() is body:
+        return None
+    path = ec.path_of(body, ctx)
+    if path is None:
+        return None
+    from swui.fork import edit_part as ep
+
+    ep._view(ctx.asm.Document).setActiveObject("pdbody", ctx.asm, path)
+    return body
+
+
 def activate_for_selection():
     """
     Activa el Cuerpo de lo elegido si es uno solo y no es el activo. Nada si hay un panel
@@ -88,7 +114,9 @@ def activate_for_selection():
     try:
         doc = FreeCAD.ActiveDocument
         gdoc = FreeCADGui.ActiveDocument
-        if doc is None or gdoc is None or _is_assembly(doc):
+        if doc is not None and _is_assembly(doc):
+            return _activate_in_edited_part()
+        if doc is None or gdoc is None:
             return None
         if FreeCADGui.Control.activeDialog() or gdoc.getInEdit() is not None:
             return None

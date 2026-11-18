@@ -56,6 +56,27 @@ from swui.compat import QtCore, QtWidgets
 from swui.fork import dress_up_panel as dp
 from swui.fork import safe_ops  # noqa: E402  (#60: cerrar pasos con end_step)
 
+
+def _work_doc():
+    """Documento de trabajo: la pieza editada dentro de un ensamblaje, o el activo (edit_context)."""
+    from swui.fork import edit_context as ec
+
+    return ec.work_document()
+
+
+def _sel_ex(*args):
+    """getSelectionEx visto desde la pieza, también editándola dentro de un ensamblaje (edit_context)."""
+    from swui.fork import edit_context as ec
+
+    return ec.selection_ex(*args)
+
+
+def _gui_for(doc):
+    """Gui.Document de doc para editar: también a través del ensamblaje (edit_context)."""
+    from swui.fork import edit_context as ec
+
+    return ec.gui_for(doc)
+
 COMMAND = "SWUI_MoveFace"
 MARK = "SWUI_MoveFace"
 LABEL = "Mover cara"
@@ -1241,7 +1262,7 @@ class MoveFacePanel(dp.SwPanel):
         self.target = self._ref(obj.Document, self.spec.get("target"))
         self.axis = self._ref(obj.Document, self.spec.get("axis"))
         self.hinge = self.spec.get("hinge") or ""
-        gdoc = FreeCADGui.getDocument(obj.Document.Name)
+        gdoc = _gui_for(obj.Document)
         if gdoc.getInEdit() is not None and not obj.Document.HasPendingTransaction:
             # Editar una existente: sin modo edición de FreeCAD, así se puede cambiar Pad <-> Pocket
             gdoc.resetEdit()
@@ -1495,7 +1516,7 @@ class MoveFacePanel(dp.SwPanel):
     def _picked_point(obj, sub):
         """Punto donde se hizo clic (global) sobre obj/sub, de la selección actual, o None."""
         try:
-            for sel in FreeCADGui.Selection.getSelectionEx():
+            for sel in _sel_ex():
                 if sel.Object is not obj:
                     continue
                 for name, point in zip(sel.SubElementNames, sel.PickedPoints):
@@ -2023,14 +2044,14 @@ def start(doc=None, preset=None):
     """Crear el Mover cara (con las caras ya elegidas, si hay) y abrir el panel."""
     from swui.fork import multibody
 
-    doc = doc or FreeCAD.ActiveDocument
+    doc = doc or _work_doc()
     if doc is None:
         return None
     if FreeCADGui.Control.activeDialog():
         QtWidgets.QMessageBox.information(FreeCADGui.getMainWindow(), LABEL,
                                           "Cierre primero el panel que está abierto.")
         return None
-    sels = FreeCADGui.Selection.getSelectionEx(doc.Name)
+    sels = _sel_ex(doc.Name)
     if not sels and _active_body(doc) is None:
         # como SW: el panel se abre y espera la cara (hay varios sólidos, o un sólido suelto)
         panel = _WaitFacePanel(doc)
@@ -2160,7 +2181,7 @@ class _WaitFacePanel:
                 "delta": [s.value() for s in self.deltas], "angle": self.angle.value()}
 
     def take_selection(self):
-        sels = FreeCADGui.Selection.getSelectionEx(self.doc.Name)
+        sels = _sel_ex(self.doc.Name)
         faces = [s for s in sels if any(n.split(".")[-1].startswith("Face") for n in s.SubElementNames)]
         if not faces:
             self.message.setText("Elija una cara (no una arista ni un vértice).")
@@ -2201,7 +2222,7 @@ class _MoveFaceCommand:
                 "Pixmap": paths.icon("fork/move_face") or ""}
 
     def IsActive(self):
-        return FreeCAD.ActiveDocument is not None
+        return _work_doc() is not None
 
     def Activated(self):
         start()

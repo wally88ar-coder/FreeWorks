@@ -122,6 +122,56 @@ LOCALES sin push hasta que el usuario pruebe; batería completa solo al final).*
   (copia de la pieza dentro del ensamblaje): AVISAR Y NO DEJAR editarlo ("Este componente usa otra
   configuración; abrí la pieza para cambiarla"). (3) Ctrl+Z: lo mide Claude antes de programar.
   Plan de la etapa D APROBADO para hacer cuando el usuario dé el OK.
+  **Noche 16 al 17/11 (/goal "Editar pieza = pieza"), qué tiene que pasar por paso:**
+  - Paso 1 (piezas de prueba, `tools/fork/pruebas/piezas_editar.py`): bloque, chapa (Brida base 100x40x2,
+    Brida de arista de 20, corte redondo), marco soldado (esqueleto 600x400, 4 caños 40x40x2, inglete) y pieza
+    con variable global y material; cada una entra a un ensamblaje junto a otra y Editar pieza entra en todas.
+    Encontrado: una pieza de varios Cuerpos (soldadura, multicuerpo) entraba al ensamblaje como su croquis
+    esqueleto o un componente por Cuerpo. Ahora entra ENTERA, como en SW, por un contenedor Parte nativo
+    (`swui/fork/part_container.py`, nombre interno estable "Pieza" + marca SWUI_PartContainer) que FreeWorks
+    crea en el archivo de la pieza al insertarla (y guarda la pieza). Los Cuerpos nuevos de esa pieza van
+    adentro. **DECIDIDO SOLO (grande, revisar):** cambia el archivo de la pieza (un nivel "Pieza" arriba en su
+    árbol). Un vínculo a la carpeta de los miembros no se puede entre archivos (medido).
+  - Paso 2 (relevamiento a fondo, `prueba_ventana_editar_pieza_botones`): cada botón de las 5 pestañas con su
+    pieza y selecciones con sentido, en los dos modos, Aceptando el panel como viene; compara panel, edición,
+    lo creado (y dónde), inválidos, avisos, errores y si sigue editando. Falla si difiere (salvo EXCEPCIONES
+    anotadas); FW_SONDEO_SOLO=1 solo releva.
+  - Paso 3 (pieza común `swui/fork/edit_context.py`): documento de trabajo, Gui.Document de edición
+    (`gui_for`, `in_edit`, `set_edit`, `reset_edit`), lo elegido como lo ve la pieza, elegir por el camino del
+    componente, croquis nuevo en la pieza. Las herramientas la usan en vez de ActiveDocument /
+    getDocument(obj.Document.Name). Fuera de Editar pieza, todo igual que antes.
+  - Paso 4 (herramienta por herramienta): cada botón que el relevamiento marque distinto, editando, da el
+    mismo panel, crea lo mismo y en la pieza (no en el ensamblaje), no saca de Editar pieza y no deja errores
+    que en la pieza sola no salen. Cuerpo nuevo y Croquis 3D / miembros nuevos: dentro de la pieza y visibles
+    en el componente. Clic derecho en cara/arista/operación de la pieza editada: el menú de pieza.
+  - Paso 5: el relevamiento falla si un botón difiere; cada excepción, anotada con su motivo en la prueba.
+  **Resultado de la noche (17/11, commit local, SIN SUBIR, sin probar por el usuario):** relevamiento de los
+    dos modos por pestaña: Croquis 104 casos, Operaciones 162, Evaluar 30, Chapa 48, Piezas soldadas 36:
+    0 diferencias salvo 10 aceptadas y anotadas en EXCEPCIONES de la prueba (Barrer/Recubrir/Hélice sin
+    nada elegido: lista propia de croquis en vez de la de FreeCAD; Revolución/Ranura con una arista: los dos
+    dan error, cambia el texto; Cuerpo con cara/arista elegida: sin el aviso de error de FreeCAD). Arreglado
+    en el camino: Combinar/Barrer/Recubrir/Hélice editando, contenedor (#97) que se armaba y GUARDABA la
+    pieza con solo abrirla (lo consultaba Plano nuevo), Croquis 3D cancelado que dejaba el componente roto,
+    `getParents` inexistente en 1.1.4 (lo de una pieza con contenedor no se podía elegir), Taladro con
+    arista (#98), Ecuaciones con un archivo cerrado (#99). Top-down hecho y probado
+    (`prueba_ventana_editar_pieza_topdown`). Clic derecho editando probado (`_menu`).
+    **Decidido solo:** (1) Barrer/Recubrir/Hélice sin nada elegido, editando: lista propia "Croquis del
+    perfil" (la nativa no anda ahí). (2) Cuerpo nuevo editando ignora lo elegido (en la pieza sola FreeCAD
+    da un aviso de error y lo crea igual). (3) Editando una pieza de UN Cuerpo, Cuerpo nuevo / Croquis 3D /
+    Miembro / Tapa / Cartela pasan la pieza a contenedor ANTES del comando (cambia el archivo de la pieza:
+    un nivel "Pieza" arriba; queda aunque se cancele). (4) Referencia externa oculta (como SW, que no la
+    muestra como pieza); sin marca "->" en el árbol todavía. (5) Equidistanciar entidades no toma aristas
+    del modelo, tampoco en la pieza sola: igual en los dos modos.
+    **Sin hacer / límites:** comparar con SW con el mouse (el acceso a SolidWorks quedó denegado de noche:
+    PENDIENTE); "Hasta la superficie" solo con un clic en la vista (no desde el árbol); Convertir entidades
+    de otro componente solo con las aristas elegidas ANTES del botón; Cuerpo activo borrado editando = sale
+    de Editar pieza; Configuraciones editando: la pieza con configuraciones sigue sin editarse en contexto
+    (decidido en D). Teclas: Ctrl+Z probado (contenedor, Cuerpo); Esc y Espacio (= Medir, relevado) sin
+    prueba propia editando.
+  - Paso 6 (top-down, medir antes en SW): editando una pieza, Croquis sobre la cara de OTRO componente abre un
+    croquis en la pieza editada apoyado en una copia de forma en contexto de esa cara; Convertir entidades /
+    Equidistanciar sobre aristas de otro componente las traen al croquis; "Hasta la cara" de otro componente
+    acepta esa cara. Si el otro componente se mueve, la pieza editada sigue (al recalcular).
   **PLAN "EDITAR PIEZA = PIEZA" (16/11 noche, aprobado por el usuario: "TODO es TODO"; pensado para diseño
   top-down).** Qué tiene que pasar: editando una pieza dentro del ensamblaje, TODO lo del entorno de pieza
   funciona igual que en la pieza sola, sobre la pieza editada: todas las pestañas (Operaciones, Croquis,

@@ -110,7 +110,16 @@ def _closed(key):
     _new.discard(key)
     doc.openTransaction("Croquis vacío")
     try:
+        # la referencia externa (top-down, edit_context.external_reference) que se armó solo para este croquis
+        refs = []
+        try:
+            refs = [o for o, _s in (sketch.AttachmentSupport or []) if hasattr(o, "SWUI_ExternalRef")]
+        except Exception:
+            pass
         doc.removeObject(sketch.Name)
+        for ref in refs:
+            if doc.getObject(ref.Name) is ref and not [o for o in ref.InList if o.TypeId != "PartDesign::Body"]:
+                doc.removeObject(ref.Name)
         safe_ops.end_step(doc)
         doc.recompute()
     except Exception:

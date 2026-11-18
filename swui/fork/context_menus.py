@@ -534,10 +534,36 @@ def widget_kind(w):
 
 
 def selection_entries():
+    """
+    [(objeto de arriba, [subnombres])] como getSelectionEx("", 0). Editando una pieza dentro del ensamblaje
+    ("Editar pieza = pieza", 16/11), lo elegido de esa pieza se da como en la pieza sola (desde la pieza):
+    así el clic derecho trae el menú de pieza (cara, operación) y no el de componente.
+    """
     try:
-        return [(s.Object, list(s.SubElementNames)) for s in FreeCADGui.Selection.getSelectionEx("", 0)]
+        raw = [(s.Object, list(s.SubElementNames)) for s in FreeCADGui.Selection.getSelectionEx("", 0)]
     except Exception:
         return []
+    try:
+        from swui.fork import edit_context as ec
+
+        ctx = ec.current()
+    except Exception:
+        ctx = None
+    if ctx is None:
+        return raw
+    out = []
+    for top, subs in raw:
+        # el componente editado entero ('Comp.') sigue siendo el componente (su menú, Salir); lo de adentro, la pieza
+        def own(x):
+            p = plain_sub(x)
+            return top is ctx.asm and p.startswith(ctx.prefix) and p != ctx.prefix
+        inside = [plain_sub(x)[len(ctx.prefix):] for x in subs if own(x)]
+        rest = [x for x in subs if not own(x)]
+        if inside:
+            out.append((ctx.part, inside))
+        if rest or not subs:
+            out.append((top, rest))
+    return out
 
 
 def plain_sub(sub):
@@ -662,9 +688,13 @@ def select_feature(feature):
 def select_features(features):
     """Deja elegidas las operaciones enteras (varias: E2), para que los comandos actúen sobre ellas."""
     FreeCADGui.Selection.clearSelection()
+    from swui.fork import edit_context as ec
+
     for feature in features:
         body = _body_of(feature)
-        if body is not None:
+        if ec.for_document(feature.Document) is not None and ec.current() is not None:
+            ec.select(feature, clear=False)  # editando la pieza: por el camino del componente
+        elif body is not None:
             FreeCADGui.Selection.addSelection(feature.Document.Name, body.Name, feature.Name + ".")
         else:
             FreeCADGui.Selection.addSelection(feature)
@@ -695,6 +725,22 @@ def active_for_features(features, names):
         elif n not in (SUPPRESS, UNSUPPRESS, UNSUPPRESS_ALL):
             out.add(n)
     return out
+
+
+# Comandos que el clic derecho corre como la cinta (ribbon._run): Croquis pasa así por el armado de FreeWorks,
+# que editando una pieza dentro del ensamblaje no usa el Croquis nativo (ahí apoya y abre OTRO croquis: error
+# de FreeCAD 1.1.4, NOTAS_TECNICAS errores 10)
+VIA_RIBBON = ("PartDesign_NewSketch",)
+
+
+def run_command(name):
+    """Corre el comando como desde el clic derecho (los de VIA_RIBBON, como la cinta)."""
+    if name in VIA_RIBBON:
+        from swui import ribbon
+
+        ribbon._run(name)
+    else:
+        FreeCADGui.runCommand(name)
 
 
 def _command_action(name, menu, text=None, before=None, active=None):
@@ -734,7 +780,7 @@ def _command_action(name, menu, text=None, before=None, active=None):
     def run(_checked=False, n=name):
         if before is not None:
             before()
-        FreeCADGui.runCommand(n)
+        run_command(n)
     act.triggered.connect(run)
     return act
 
@@ -779,6 +825,11 @@ def _copy_action(original, text, menu, before=None):
         act.setChecked(original.isChecked())
 
     def run(_checked=False, a=original):
+        if a.objectName() in VIA_RIBBON:
+            if before is not None:
+                before()
+            run_command(a.objectName())
+            return
         if before is not None:
             before()
             # recién elegida, FreeCAD todavía no volvió a habilitar la acción original (lo hace con

@@ -35,6 +35,38 @@ from swui.compat import QtCore, QtGui, QtWidgets
 from swui.fork import sketch3d as s3
 from swui.fork import safe_ops  # noqa: E402  (#60: cerrar pasos con end_step)
 
+
+def _info_object(info):
+    """El objeto de la pieza de trabajo que dio getObjectInfo, o None (el nombre solo no alcanza: editando una
+    pieza, puede ser de OTRO componente con un objeto del mismo nombre; revisión 17/11)."""
+    if not info:
+        return None
+    doc = _work_doc()
+    if doc is None or info.get("Document", doc.Name) != doc.Name:
+        return None
+    return doc.getObject(info.get("Object"))
+
+
+def _work_doc():
+    """Documento de trabajo: la pieza editada dentro de un ensamblaje, o el activo (edit_context)."""
+    from swui.fork import edit_context as ec
+
+    return ec.work_document()
+
+
+def _sel_ex(*args):
+    """getSelectionEx visto desde la pieza, también editándola dentro de un ensamblaje (edit_context)."""
+    from swui.fork import edit_context as ec
+
+    return ec.selection_ex(*args)
+
+
+def _gui_for(doc):
+    """Gui.Document de doc para editar: también a través del ensamblaje (edit_context)."""
+    from swui.fork import edit_context as ec
+
+    return ec.gui_for(doc)
+
 V = FreeCAD.Vector
 TITLE = "Croquis 3D"
 SNAP_PX = 16.0  # pedido del usuario (07/11): con 10 tomaba antes la línea que el punto
@@ -400,7 +432,7 @@ class _Draw:
             info = view.getObjectInfo((int(pos[0]), int(pos[1])))
         except Exception:
             info = None
-        obj = FreeCAD.ActiveDocument.getObject(info.get("Object")) if info else None
+        obj = _info_object(info)
         if obj is not None and not s3.is_line(obj):
             # vértices de la pieza bajo el mouse, por cercanía en la pantalla (como los demás puntos)
             try:
@@ -564,7 +596,7 @@ class _Draw:
             info = None
         if not info:
             return
-        obj = FreeCAD.ActiveDocument.getObject(info.get("Object"))
+        obj = _info_object(info)
         comp = str(info.get("Component", ""))
         base = V(info.get("x", 0), info.get("y", 0), info.get("z", 0))
         normal, name = None, None
@@ -701,7 +733,7 @@ class _Filter(QtCore.QObject):
 
 class Sketch3DPanel:
     def __init__(self, sk=None, draw=True):
-        self.doc = FreeCAD.ActiveDocument
+        self.doc = _work_doc()
         self.doc.openTransaction(TITLE)
         self.new = sk is None
         self.sk = sk or s3.new_sketch(self.doc)
@@ -858,7 +890,7 @@ class Sketch3DPanel:
 
     def selected_lines(self):
         out = []
-        for s in FreeCADGui.Selection.getSelectionEx("", 0):
+        for s in _sel_ex("", 0):
             for name in [s.ObjectName] + [x.split(".")[0] for x in (s.SubElementNames or []) if x]:
                 o = self.doc.getObject(name)
                 if s3.is_line(o) and s3.sketch_of(o) is not None and s3.sketch_of(o).Name == self.sk.Name \
@@ -1045,9 +1077,9 @@ class _SelObserver:
 
 
 def _selected_sketch():
-    for s in FreeCADGui.Selection.getSelectionEx("", 0):
+    for s in _sel_ex("", 0):
         for name in [s.ObjectName] + [x.split(".")[0] for x in (s.SubElementNames or []) if x]:
-            sk = s3.sketch_of(FreeCAD.ActiveDocument.getObject(name))
+            sk = s3.sketch_of(_work_doc().getObject(name))
             if sk is not None:
                 return sk
     return None
@@ -1079,7 +1111,7 @@ def _empty_view(doc):
 
 def open_sketch(sk=None, draw=None):
     """Abre el panel: croquis nuevo (sk None, dibujando) o editar uno existente."""
-    doc = FreeCAD.ActiveDocument
+    doc = _work_doc()
     if doc is None:
         return None
     old = _state["panel"]
@@ -1115,7 +1147,7 @@ class _Command:
                 "Pixmap": paths.icon("fork/sketch3d") or ""}
 
     def IsActive(self):
-        return FreeCAD.ActiveDocument is not None
+        return _work_doc() is not None
 
     def Activated(self):
         try:
@@ -1156,7 +1188,7 @@ class _Watch(QtCore.QObject):
 def _line_under_mouse():
     """Línea de croquis 3D bajo el mouse; si getObjectInfo no la toma (a veces por un píxel), la
     que dejó elegida el primer clic del doble clic."""
-    doc = FreeCAD.ActiveDocument
+    doc = _work_doc()
     view = _view()
     names = []
     try:
@@ -1166,7 +1198,7 @@ def _line_under_mouse():
             names += [x for x in str(info.get("SubName", "")).split(".") if x]
     except Exception:
         pass
-    for s in FreeCADGui.Selection.getSelectionEx("", 0):
+    for s in _sel_ex("", 0):
         names.append(s.ObjectName)
         for sub in s.SubElementNames or []:
             names += [x for x in sub.split(".") if x]

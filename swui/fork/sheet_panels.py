@@ -28,6 +28,27 @@ from swui.fork import dress_up_panel as dp
 from swui.fork import sheet_metal as sm
 from swui.fork import safe_ops  # noqa: E402  (#60: cerrar pasos con end_step)
 
+
+def _work_doc():
+    """Documento de trabajo: la pieza editada dentro de un ensamblaje, o el activo (edit_context)."""
+    from swui.fork import edit_context as ec
+
+    return ec.work_document()
+
+
+def _sel_ex(*args):
+    """getSelectionEx visto desde la pieza, también editándola dentro de un ensamblaje (edit_context)."""
+    from swui.fork import edit_context as ec
+
+    return ec.selection_ex(*args)
+
+
+def _gui_for(doc):
+    """Gui.Document de doc para editar: también a través del ensamblaje (edit_context)."""
+    from swui.fork import edit_context as ec
+
+    return ec.gui_for(doc)
+
 BASE_COMMAND = "SWUI_SMBaseFlange"
 EDGE_COMMAND = "SWUI_SMEdgeFlange"
 HEM_COMMAND = "SWUI_SMHem"
@@ -85,7 +106,7 @@ def _leave_native_edit(obj):
     Aceptar, #39); el panel SW abre el suyo. Una operación nueva no pasa por acá con edición nativa
     (la arma FreeWorks en su propio paso), y por las dudas solo se descarta el paso de la edición.
     """
-    gdoc = FreeCADGui.getDocument(obj.Document.Name)
+    gdoc = _gui_for(obj.Document)
     if gdoc.getInEdit() is None:
         return
     doc = obj.Document
@@ -630,7 +651,7 @@ class ConvertPanel:
         return body
 
     def take_selection(self):
-        for sel in FreeCADGui.Selection.getSelectionEx():
+        for sel in _sel_ex():
             obj = sel.Object
             for sub in sel.SubElementNames:
                 sub = sub.split(".")[-1]
@@ -812,7 +833,7 @@ def _open_sketch_on_flat(body, sketch, flat, hide):
     if old:  # al salir del croquis vuelven a como estaban (antes quedaban así para siempre, #20)
         FreeCADGui.addDocumentObserver(_RestoreSketchView(sketch, old))
     FreeCADGui.Selection.clearSelection()
-    FreeCADGui.getDocument(body.Document.Name).setEdit(sketch)
+    _gui_for(body.Document).setEdit(sketch)
 
     def show_flat():
         try:
@@ -858,7 +879,7 @@ def _choose(obj):
 
 
 def _ready_to_start():
-    if FreeCAD.ActiveDocument is None:
+    if _work_doc() is None:
         return False
     if not sm.available():
         _info(sm.MISSING_TEXT)
@@ -900,8 +921,8 @@ def start_base_flange():
     if from_sketch.handle(BASE_COMMAND):
         pick_plane._disarm()  # como la cinta: la brida ya sale con este croquis
         return None  # croquis abierto: lo cierra y vuelve a llamar con el croquis elegido
-    doc = FreeCAD.ActiveDocument
-    sels = FreeCADGui.Selection.getSelectionEx(doc.Name)
+    doc = _work_doc()
+    sels = _sel_ex(doc.Name)
     sketch = sels[0].Object if len(sels) == 1 and sels[0].Object.TypeId == "Sketcher::SketchObject" else None
     if sketch is None:
         if not pick_plane.handle(BASE_COMMAND):
@@ -955,8 +976,8 @@ def _active_body():
 
 def target_body(doc=None, quiet=False):
     """La chapa a usar: la elegida, la del desarrollo elegido, el Cuerpo activo o la única."""
-    doc = doc or FreeCAD.ActiveDocument
-    for sel in FreeCADGui.Selection.getSelectionEx(doc.Name):
+    doc = doc or _work_doc()
+    for sel in _sel_ex(doc.Name):
         obj = sel.Object
         if sm.kind(obj) == "flat":
             body = sm.flat_body(obj)
@@ -998,8 +1019,8 @@ def _start_on_edges(kind):
     """Brida de arista ("wall") o Dobladillo ("hem") sobre las aristas elegidas (o sin elegir)."""
     if not _ready_to_start():
         return None
-    doc = FreeCAD.ActiveDocument
-    sels = FreeCADGui.Selection.getSelectionEx(doc.Name)
+    doc = _work_doc()
+    sels = _sel_ex(doc.Name)
     body = target_body(doc)
     if body is None:
         return None
@@ -1071,8 +1092,8 @@ def start_convert():
     """Convertir en chapa una pieza sin historia (STEP): Cuerpo que arranca de ella + cara fija."""
     if not _ready_to_start():
         return None
-    doc = FreeCAD.ActiveDocument
-    sels = FreeCADGui.Selection.getSelectionEx(doc.Name)
+    doc = _work_doc()
+    sels = _sel_ex(doc.Name)
     if not sels:
         # como SW: el panel se abre y espera la cara fija
         doc.openTransaction("Convertir en chapa")
@@ -1206,7 +1227,7 @@ def start_cut():
     """Extruir corte nativo, con el mismo flujo SW de la pestaña Operaciones (plano o cara, croquis)."""
     from swui import ribbon
 
-    doc = FreeCAD.ActiveDocument
+    doc = _work_doc()
     _disarm_cut()
     if doc is not None:
         _cut_watch["observer"] = _CutThroughThickness(doc.Name)
@@ -1325,7 +1346,7 @@ def _is_assembly(doc):
 
 def export_all(doc=None):
     """DXF por lotes: un DXF por pieza de chapa del ensamblaje, en la carpeta del ensamblaje."""
-    doc = doc or FreeCAD.ActiveDocument
+    doc = doc or _work_doc()
     bodies = sm.sheet_parts(doc)
     if not bodies:
         _info("El ensamblaje no tiene piezas de chapa.")
@@ -1391,7 +1412,7 @@ def export_all(doc=None):
 def export_dxf():
     if not _ready_to_start():
         return None
-    if _is_assembly(FreeCAD.ActiveDocument):
+    if _is_assembly(_work_doc()):
         return export_all()
     body = target_body()
     if body is None:
@@ -1507,7 +1528,7 @@ def start_fold():
     """Doblar: el corte dibujado sobre el desarrollo pasa a la chapa plegada (Wrap Cutout)."""
     from swui import from_sketch, pick_plane
 
-    if FreeCAD.ActiveDocument is None or not sm.available():
+    if _work_doc() is None or not sm.available():
         return None
     if from_sketch.handle(FOLD_COMMAND):
         pick_plane._disarm()
@@ -1599,7 +1620,7 @@ class _Command:
         return {"MenuText": self.text, "ToolTip": self.tip, "Pixmap": paths.icon(self.icon) or ""}
 
     def IsActive(self):
-        return FreeCAD.ActiveDocument is not None
+        return _work_doc() is not None
 
     def Activated(self):
         self.run()

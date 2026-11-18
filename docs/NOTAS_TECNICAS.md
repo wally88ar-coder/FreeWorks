@@ -540,6 +540,26 @@ Cada uno con lo que hace el fork mientras tanto. Buscado en los issues de FreeCA
    (`edit_part.new_sketch_in_part`); prueba `prueba_ventana_editar_pieza_cara`. El comando nativo
    directo (Ctrl+... o un menú que no pase por la cinta) sigue con el error.
 
+11. **Comandos nativos de pieza editando dentro de un ensamblaje** (FreeCAD 1.1.4, medido 2026-11-17).
+   Barrer / Recubrir / Hélice sin nada elegido no hacen nada (no encuentran el Cuerpo a través del
+   componente); con algo elegido y el documento de la pieza como activo, crean la operación pero la abren
+   en la ventana de la pieza, donde no se puede elegir nada. La copia de forma (SubShapeBinder) hecha con
+   su comando a veces queda con `Context` = el Cuerpo y entonces no sigue a la pieza editada si se mueve.
+   El panel nativo de Extruir, en "Hasta la superficie", filtra la cara de otro componente antes de que
+   llegue a la selección. Fork: `edit_part.profile_feature` (Barrer/Recubrir/Hélice, lista propia de
+   croquis sin nada elegido), `edit_context.external_reference` (copia armada por código con
+   `Context = (ensamblaje, camino)`, medido que sigue a las dos piezas) y un filtro del clic en la vista
+   (`edit_part._make_up_to_filter`) para "Hasta la superficie".
+
+Hallazgos del 17/11 (Editar pieza = pieza; no son errores para reportar):
+- `DocumentObject.getParents()` no existe en 1.1.4: es la propiedad `Parents` (lista de (padre, camino)).
+- `view.getObjectInfo((x, y))` sobre un componente da `ParentObject` = el ensamblaje y `SubName` =
+  'Componente.Operación.Cara' (Document/Object son los de la pieza).
+- Una copia de forma con `Support = [(vínculo del otro componente, ('Extruir.Face6',))]` y
+  `Context = (ensamblaje, 'Comp.Body.Copia.')`, `Relative = True`, sigue a los dos componentes.
+- `assembly_drop.pick_objects` lo consulta también Plano nuevo (IsActive) todo el tiempo: nada que cambie
+  archivos puede ir ahí (el contenedor se arma solo al insertar, #97).
+
 Otros hallazgos del 12/11 (no son errores para reportar):
 - Congelar (`Std_ToggleFreeze`) no tiene función de Python en 1.1.4 (`freeze`/`isFreezed` no
   existen en el objeto) y, como ya decía `feature_tree.py`, cuelga FreeCAD al guardar: probado de

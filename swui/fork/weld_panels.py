@@ -30,6 +30,27 @@ from swui.compat import QtCore, QtWidgets
 from swui.fork import safe_ops
 from swui.fork import weldments as w
 
+
+def _work_doc():
+    """Documento de trabajo: la pieza editada dentro de un ensamblaje, o el activo (edit_context)."""
+    from swui.fork import edit_context as ec
+
+    return ec.work_document()
+
+
+def _sel_ex(*args):
+    """getSelectionEx visto desde la pieza, también editándola dentro de un ensamblaje (edit_context)."""
+    from swui.fork import edit_context as ec
+
+    return ec.selection_ex(*args)
+
+
+def _gui_for(doc):
+    """Gui.Document de doc para editar: también a través del ensamblaje (edit_context)."""
+    from swui.fork import edit_context as ec
+
+    return ec.gui_for(doc)
+
 TITLE = "Piezas soldadas"
 CORNER_TEXTS = (("A tope (pasa el más largo)", "tope"), ("Inglete", "inglete"), ("Ninguno", "ninguno"))
 
@@ -43,7 +64,7 @@ def _info(text):
 
 
 def _doc():
-    return FreeCAD.ActiveDocument
+    return _work_doc()
 
 
 def _close():
@@ -241,7 +262,7 @@ class _Base:
 
 def _selected_edges():
     out = []
-    for s in FreeCADGui.Selection.getSelectionEx():
+    for s in _sel_ex():
         if _owner_member(s.Object) is not None:
             continue
         for sub in s.SubElementNames:
@@ -372,7 +393,7 @@ class MemberPanel(_Base):
         # clic sobre un caño de la vista previa = clic en su línea (la tapa): la saca de la lista
         hit = None
         names = [b.Name for b in self.bodies]
-        for sel in FreeCADGui.Selection.getSelectionEx("", 0):
+        for sel in _sel_ex("", 0):
             for sub in (sel.SubElementNames or [""]):
                 for part in [sel.Object.Name] + sub.split("."):
                     if part in names:
@@ -621,7 +642,7 @@ class TrimPanel(_Base):
         FreeCADGui.Selection.clearSelection()
 
     def _selection_changed(self):
-        sel = FreeCADGui.Selection.getSelectionEx("", 0)
+        sel = _sel_ex("", 0)
         if not sel:
             return
         s = sel[-1]
@@ -715,7 +736,7 @@ class EndCapPanel(_Base):
         return f
 
     def _selection_changed(self):
-        for s in FreeCADGui.Selection.getSelectionEx("", 0):
+        for s in _sel_ex("", 0):
             picked = list(getattr(s, "PickedPoints", []) or [])
             for k, sub in enumerate(s.SubElementNames):
                 leaf = s.Object.getSubObject(sub, retType=1)
@@ -775,7 +796,7 @@ class GussetPanel(_Base):
 
     def _selection_changed(self):
         found = []
-        for s in FreeCADGui.Selection.getSelectionEx("", 0):
+        for s in _sel_ex("", 0):
             for sub in (s.SubElementNames or [""]):
                 leaf = s.Object.getSubObject(sub, retType=1) if sub else s.Object
                 member = _owner_member(leaf) if leaf is not None else None
@@ -921,7 +942,7 @@ def start_corners():
     if doc is None:
         return
     chosen = []
-    for s in FreeCADGui.Selection.getSelectionEx("", 0):
+    for s in _sel_ex("", 0):
         for sub in (s.SubElementNames or [""]):
             for name in [s.Object.Name] + sub.split(".")[:-1]:
                 o = doc.getObject(name)
@@ -960,7 +981,7 @@ class _Command:
         return {"MenuText": self.text, "ToolTip": self.tip, "Pixmap": paths.icon(self.icon) or ""}
 
     def IsActive(self):
-        return FreeCAD.ActiveDocument is not None
+        return _work_doc() is not None
 
     def Activated(self):
         try:

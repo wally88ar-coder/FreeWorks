@@ -23,6 +23,27 @@ import FreeCADGui
 from swui.compat import QtCore, QtWidgets
 from swui.fork import dress_up_panel as dp
 
+
+def _work_doc():
+    """Documento de trabajo: la pieza editada dentro de un ensamblaje, o el activo (edit_context)."""
+    from swui.fork import edit_context as ec
+
+    return ec.work_document()
+
+
+def _sel_ex(*args):
+    """getSelectionEx visto desde la pieza, también editándola dentro de un ensamblaje (edit_context)."""
+    from swui.fork import edit_context as ec
+
+    return ec.selection_ex(*args)
+
+
+def _gui_for(doc):
+    """Gui.Document de doc para editar: también a través del ensamblaje (edit_context)."""
+    from swui.fork import edit_context as ec
+
+    return ec.gui_for(doc)
+
 COMMAND = "SWUI_Combine"
 BOOLEAN = "PartDesign::Boolean"
 LABEL = "Combinar"
@@ -265,7 +286,7 @@ def start(doc=None):
     """Crear la Booleana en el Cuerpo elegido (o el activo) y abrir el panel."""
     from swui.fork import multibody
 
-    doc = doc or FreeCAD.ActiveDocument
+    doc = doc or _work_doc()
     if doc is None:
         return None
     bodies = multibody.solid_bodies(doc)
@@ -274,7 +295,7 @@ def start(doc=None):
                                           "Hacen falta al menos dos sólidos (Cuerpos) en la pieza.")
         return None
     chosen = []
-    for sel in FreeCADGui.Selection.getSelectionEx(doc.Name):
+    for sel in _sel_ex(doc.Name):
         body = _body_of(sel.Object)
         if body in bodies and body not in chosen:
             chosen.append(body)
@@ -289,7 +310,7 @@ def start(doc=None):
         _START_EMPTY.add(obj.Name)  # el Cuerpo activo solo aloja la operación: no va a la lista
     multibody._set_tip(host, obj)
     FreeCADGui.Selection.clearSelection()
-    FreeCADGui.getDocument(doc.Name).setEdit(obj)  # el panel SW reemplaza al nativo (dress_up_panel)
+    _gui_for(doc).setEdit(obj)  # el panel SW reemplaza al nativo (dress_up_panel); editando, por el ensamblaje
     return obj
 
 
@@ -311,7 +332,7 @@ class _CombineCommand:
                 "Pixmap": paths.icon("fork/combine") or ""}
 
     def IsActive(self):
-        return FreeCAD.ActiveDocument is not None
+        return _work_doc() is not None
 
     def Activated(self):
         start()

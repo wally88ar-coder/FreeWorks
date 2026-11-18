@@ -1062,7 +1062,9 @@ class _MaterialCommand:
         return FreeCAD.ActiveDocument is not None
 
     def Activated(self):
-        show_dialog()
+        from swui.fork import edit_context as ec
+
+        show_dialog(ec.work_document())  # editando una pieza en el ensamblaje: el de esa pieza (como en ella)
 
 
 _observer = None

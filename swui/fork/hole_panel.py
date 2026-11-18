@@ -181,7 +181,7 @@ class HolePanel(dp.SwPanel):
 
     def centers(self):
         sk = self._sketch()
-        if sk is None:
+        if sk is None or not hasattr(sk, "Geometry"):  # perfil que no es croquis (una arista elegida)
             return 0
         n = 0
         for i, g in enumerate(sk.Geometry):
@@ -647,7 +647,9 @@ class _BackToHole:
             if hole is not None and not FreeCADGui.Control.activeDialog():
                 if self.unconfirmed:
                     set_reopen_mark(hole, self.wizard)
-                FreeCADGui.getDocument(self.doc).setEdit(hole)
+                from swui.fork import edit_context as ec
+
+                ec.set_edit(hole)  # también editando la pieza dentro de un ensamblaje
         except Exception:
             FreeCAD.Console.PrintError("[SWUI fork] Volver al taladro:\n%s\n" % traceback.format_exc())
 
@@ -819,7 +821,9 @@ def dp_fmt(value):
 def _edit_sketch(sketch):
     try:
         if sketch.Document is not None:
-            FreeCADGui.getDocument(sketch.Document.Name).setEdit(sketch)
+            from swui.fork import edit_context as ec
+
+            ec.set_edit(sketch)  # también editando la pieza dentro de un ensamblaje
     except Exception:
         FreeCAD.Console.PrintError("[SWUI fork] Editar posiciones del taladro: no se pudo abrir el croquis.\n")
 

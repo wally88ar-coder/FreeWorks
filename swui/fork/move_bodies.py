@@ -37,6 +37,27 @@ from swui.compat import QtCore, QtWidgets
 from swui.fork import dress_up_panel as dp
 from swui.fork import safe_ops  # noqa: E402  (#60: cerrar pasos con end_step)
 
+
+def _work_doc():
+    """Documento de trabajo: la pieza editada dentro de un ensamblaje, o el activo (edit_context)."""
+    from swui.fork import edit_context as ec
+
+    return ec.work_document()
+
+
+def _sel_ex(*args):
+    """getSelectionEx visto desde la pieza, también editándola dentro de un ensamblaje (edit_context)."""
+    from swui.fork import edit_context as ec
+
+    return ec.selection_ex(*args)
+
+
+def _gui_for(doc):
+    """Gui.Document de doc para editar: también a través del ensamblaje (edit_context)."""
+    from swui.fork import edit_context as ec
+
+    return ec.gui_for(doc)
+
 COMMAND = "SWUI_MoveBodies"
 MARK = "SWUI_MoveBody"
 BINDER = "PartDesign::SubShapeBinder"
@@ -343,7 +364,7 @@ class MoveBodiesPanel:
 
     def __init__(self, binder=None, doc=None, sources=None):
         self.doc = binder.Document if binder is not None else doc
-        self.gdoc = FreeCADGui.getDocument(self.doc.Name)
+        self.gdoc = _gui_for(self.doc)
         if binder is not None:
             self.spec = read_spec(getattr(binder, MARK))
             group = binders_of_op(self.doc, self.spec["op"])
@@ -528,7 +549,7 @@ class MoveBodiesPanel:
 
     def take_selection(self):
         try:
-            sels = FreeCADGui.Selection.getSelectionEx("", 0)
+            sels = _sel_ex("", 0)
         except Exception:
             sels = []
         changed = False
@@ -827,7 +848,7 @@ def open_panel(binder):
 def start(doc=None):
     from swui.fork import multibody
 
-    doc = doc or FreeCAD.ActiveDocument
+    doc = doc or _work_doc()
     if doc is None:
         return None
     if FreeCADGui.Control.activeDialog():
@@ -838,7 +859,7 @@ def start(doc=None):
         QtWidgets.QMessageBox.information(FreeCADGui.getMainWindow(), LABEL, "No hay sólidos (Cuerpos) en la pieza.")
         return None
     chosen = []
-    for sel in FreeCADGui.Selection.getSelectionEx(doc.Name):
+    for sel in _sel_ex(doc.Name):
         body = _body_of(sel.Object)
         if body in bodies and body not in chosen:
             chosen.append(body)
@@ -862,7 +883,7 @@ class _Command:
                 "Pixmap": paths.icon("fork/move_bodies") or ""}
 
     def IsActive(self):
-        return FreeCAD.ActiveDocument is not None
+        return _work_doc() is not None
 
     def Activated(self):
         start()

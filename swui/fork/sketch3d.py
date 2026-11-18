@@ -152,7 +152,10 @@ def _next_label(doc, base):
 
 def new_sketch(doc=None, label=None):
     """Crea un croquis 3D vacío: grupo "Croquis3D1" con su VarSet de cotas adentro."""
-    doc = doc or FreeCAD.ActiveDocument
+    if doc is None:
+        from swui.fork import edit_context as ec
+
+        doc = ec.work_document()  # editando una pieza en el ensamblaje: en la pieza
     sk = doc.addObject("App::DocumentObjectGroup", "Croquis3D")
     sk.Label = label or _next_label(doc, "Croquis3D")
     sk.addProperty("App::PropertyLink", MARK, "SWUI", "Cotas del croquis 3D (FreeWorks)")

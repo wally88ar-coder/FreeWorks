@@ -403,7 +403,11 @@ class _MassDialog(QtWidgets.QDialog):
         self.recompute()
 
     def recompute(self):
-        if self.doc is None or self.doc.Name not in FreeCAD.listDocuments():
+        try:
+            if self.doc is None or self.doc.Name not in FreeCAD.listDocuments():
+                return
+        except ReferenceError:  # se cerró el documento con la ventana abierta
+            self.doc = None
             return
         parts = selected_components(self.doc)
         if parts:
@@ -488,7 +492,9 @@ class _MassCommand:
         if has_native():
             FreeCADGui.runCommand(NATIVE)
             return
-        show_dialog()
+        from swui.fork import edit_context as ec
+
+        show_dialog(ec.work_document())  # editando una pieza en el ensamblaje: la de esa pieza (como en ella)
 
 
 def install():

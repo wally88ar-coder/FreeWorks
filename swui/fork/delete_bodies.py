@@ -32,6 +32,27 @@ from swui.compat import QtCore, QtWidgets
 from swui.fork import dress_up_panel as dp
 from swui.fork import safe_ops  # noqa: E402  (#60: cerrar pasos con end_step)
 
+
+def _work_doc():
+    """Documento de trabajo: la pieza editada dentro de un ensamblaje, o el activo (edit_context)."""
+    from swui.fork import edit_context as ec
+
+    return ec.work_document()
+
+
+def _sel_ex(*args):
+    """getSelectionEx visto desde la pieza, también editándola dentro de un ensamblaje (edit_context)."""
+    from swui.fork import edit_context as ec
+
+    return ec.selection_ex(*args)
+
+
+def _gui_for(doc):
+    """Gui.Document de doc para editar: también a través del ensamblaje (edit_context)."""
+    from swui.fork import edit_context as ec
+
+    return ec.gui_for(doc)
+
 COMMAND = "SWUI_DeleteBodies"
 MARK = "SWUI_DeleteBodies"
 GROUP = "App::DocumentObjectGroup"
@@ -375,7 +396,7 @@ class DeleteBodiesPanel:
     def __init__(self, group=None, doc=None, items=None):
         self.group = group
         self.doc = group.Document if group is not None else doc
-        self.gdoc = FreeCADGui.getDocument(self.doc.Name)
+        self.gdoc = _gui_for(self.doc)
         self.spec = read_spec(getattr(group, MARK, "") if group is not None else "")
         if items is not None:
             self.spec["items"] = items
@@ -468,7 +489,7 @@ class DeleteBodiesPanel:
 
     def take_selection(self):
         try:
-            sels = FreeCADGui.Selection.getSelectionEx("", 0)
+            sels = _sel_ex("", 0)
         except Exception:
             sels = []
         changed = False
@@ -654,13 +675,13 @@ def open_panel(group):
 
 
 def start(doc=None):
-    doc = doc or FreeCAD.ActiveDocument
+    doc = doc or _work_doc()
     if doc is None:
         return None
     if FreeCADGui.Control.activeDialog():
         QtWidgets.QMessageBox.information(FreeCADGui.getMainWindow(), LABEL, "Cierre primero el panel que está abierto.")
         return None
-    picked = [(sel.Object, sub) for sel in FreeCADGui.Selection.getSelectionEx("", 0)
+    picked = [(sel.Object, sub) for sel in _sel_ex("", 0)
               for sub in (sel.SubElementNames or [""])]  # antes: el panel limpia la selección
     try:
         panel = DeleteBodiesPanel(doc=doc, items=[])
@@ -685,7 +706,7 @@ class _Command:
                 "Pixmap": paths.icon("fork/delete_bodies") or ""}
 
     def IsActive(self):
-        return FreeCAD.ActiveDocument is not None
+        return _work_doc() is not None
 
     def Activated(self):
         start()

@@ -1207,7 +1207,9 @@ class _EditFeature(_Command):
         if own is not None:
             own[1](own[0])
         else:
-            FreeCADGui.ActiveDocument.setEdit(obj)
+            from swui.fork import edit_context as ec
+
+            ec.set_edit(obj)  # también editando la pieza dentro de un ensamblaje
 
 
 class _EditSketch(_Command):
@@ -1233,7 +1235,9 @@ class _EditSketch(_Command):
 
             sketch3d_panel.open_sketch(target, draw=False)
             return
-        FreeCADGui.ActiveDocument.setEdit(target)
+        from swui.fork import edit_context as ec
+
+        ec.set_edit(target)  # también editando la pieza dentro de un ensamblaje
 
 
 class _Suppress(_Command):

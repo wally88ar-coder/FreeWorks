@@ -5,6 +5,19 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Editar pieza = pieza, y top-down (noche del 16 al 17/11, #96, #97, #98, #99; sin probar por el usuario).**
+  Editando una pieza dentro del ensamblaje, todos los botones de Operaciones, Croquis, Evaluar, Chapa y
+  Piezas soldadas hacen lo mismo que en la pieza sola, sobre la pieza editada (relevamiento automático de
+  los dos modos: 0 diferencias salvo 10 anotadas). Pieza común `swui/fork/edit_context.py`. Top-down como SW:
+  croquis sobre la cara de OTRO componente, Convertir entidades con aristas de otro componente y "Hasta la
+  superficie" con la cara de otro componente, por una "Referencia externa" (copia de forma nativa en
+  contexto) en la pieza editada, que sigue al otro componente si se mueve. Una pieza de varios Cuerpos
+  (soldadura, multicuerpo) entra ENTERA al ensamblaje por un contenedor Parte nativo
+  (`swui/fork/part_container.py`); Cuerpo nuevo / Croquis 3D / miembros editando una pieza de un Cuerpo la
+  pasan antes a contenedor. Arreglos encontrados de paso: Taladro con una arista elegida (#98), Ecuaciones
+  con un archivo ya cerrado (#99). Pruebas nuevas: `prueba_ventana_editar_pieza_botones` (ahora falla si un
+  botón difiere), `_menu`, `_topdown`, `prueba_ventana_contenedor_pieza`,
+  `prueba_ventana_ecuaciones_doc_cerrado`, `prueba_taladro_perfil_arista`.
 - **Editar pieza: Croquis, Extruir y Extruir corte sobre una cara de la pieza (16/11, arregla #95, visto por
   el usuario).** Editando una pieza dentro del ensamblaje, Croquis con una cara plana elegida abre el croquis
   ahí; sin nada elegido, el panel "elegí plano o cara" acepta las caras de esa pieza (antes salía el nativo,

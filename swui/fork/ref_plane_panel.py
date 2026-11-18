@@ -38,6 +38,27 @@ import FreeCADGui
 from swui.compat import QtCore, QtWidgets
 from swui.fork import dress_up_panel as dp
 
+
+def _work_doc():
+    """Documento de trabajo: la pieza editada dentro de un ensamblaje, o el activo (edit_context)."""
+    from swui.fork import edit_context as ec
+
+    return ec.work_document()
+
+
+def _sel_ex(*args):
+    """getSelectionEx visto desde la pieza, también editándola dentro de un ensamblaje (edit_context)."""
+    from swui.fork import edit_context as ec
+
+    return ec.selection_ex(*args)
+
+
+def _gui_for(doc):
+    """Gui.Document de doc para editar: también a través del ensamblaje (edit_context)."""
+    from swui.fork import edit_context as ec
+
+    return ec.gui_for(doc)
+
 PLANE = "PartDesign::Plane"
 SPEC_PROP = "SWUI_PlaneSpec"  # NO CAMBIAR: queda en los archivos
 PLANE_TYPES = ("App::Plane", "PartDesign::Plane", "Part::DatumPlane")

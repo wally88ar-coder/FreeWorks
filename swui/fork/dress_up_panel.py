@@ -552,7 +552,9 @@ class SwPanel:
     def __init__(self, obj):
         self.obj = obj
         self.doc = obj.Document
-        self.gdoc = FreeCADGui.getDocument(self.doc.Name)
+        from swui.fork import edit_context as ec
+
+        self.gdoc = ec.gui_for(self.doc)  # también editando la pieza dentro de un ensamblaje
         self.pick_style = None
         if self.UNPICKABLE_PREVIEW:
             # Selectable=False no alcanza: la vista previa sigue frenando el clic. Con
@@ -1517,9 +1519,11 @@ def busy_panel():
 def _take_over(doc_name, obj_name):
     """Cambiar el diálogo nativo por el panel SW (ya fuera del slotInEdit)."""
     try:
+        from swui.fork import edit_context as ec
+
         doc = FreeCAD.getDocument(doc_name)
         obj = doc.getObject(obj_name)
-        vp = FreeCADGui.getDocument(doc_name).getInEdit()
+        vp = ec.in_edit(doc)  # también abierto desde el ensamblaje (Editar pieza)
         if obj is None or vp is None or vp.Object != obj or busy_panel() is not None:
             return
         old_preview = _hide_native_preview()
@@ -1568,7 +1572,9 @@ def _restore_native_preview(old):
 def _native(doc_name, obj_name):
     """Si el panel falla, volver a abrir el diálogo de FreeCAD (mejor eso que nada)."""
     try:
-        gdoc = FreeCADGui.getDocument(doc_name)
+        from swui.fork import edit_context as ec
+
+        gdoc = ec.gui_for(doc_name)
         obj = FreeCAD.getDocument(doc_name).getObject(obj_name)
         if obj is None or FreeCADGui.Control.activeDialog():
             return
@@ -1665,7 +1671,9 @@ def start_empty(command):
         obj = body.newObject(type_id, name)
         if obj.BaseFeature is not None:
             obj.Base = (obj.BaseFeature, [])
-        gdoc.setEdit(obj)
+        from swui.fork import edit_context as ec
+
+        ec.set_edit(obj)  # también editando la pieza dentro de un ensamblaje
     except Exception:
         safe_ops.end_step(doc, abort=True)
         FreeCAD.Console.PrintError("[SWUI fork] %s sin selección:\n%s\n" % (transaction, traceback.format_exc()))

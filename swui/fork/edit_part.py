@@ -191,11 +191,30 @@ def check(link):
         except Exception:
             same = False
         return COPY_SAME if same else COPY_WARNING
-    body = getattr(link, "LinkedObject", None)
-    if body is None or getattr(body, "TypeId", "") != "PartDesign::Body":
-        return "La pieza de este componente no es un Cuerpo de Part Design (%s): abrila para cambiarla." % (
-            getattr(body, "TypeId", "nada"))
+    part = getattr(link, "LinkedObject", None)
+    if part is None or work_body(part) is None:
+        return "La pieza de este componente no tiene un Cuerpo de Part Design (%s): abrila para cambiarla." % (
+            getattr(part, "TypeId", "nada"))
     return None
+
+
+def bodies_of(part):
+    """Cuerpos de la pieza de un componente: el Cuerpo mismo, o los de un contenedor Parte (varios Cuerpos)."""
+    if getattr(part, "TypeId", "") == "PartDesign::Body":
+        return [part]
+    if getattr(part, "TypeId", "") == "App::Part":
+        return [o for o in part.Document.Objects if o.TypeId == "PartDesign::Body"
+                and getattr(o.getParentGeoFeatureGroup(), "Name", None) == part.Name]
+    return []
+
+
+def work_body(part):
+    """El Cuerpo que queda activo al editar: el único, o el último con sólido de un contenedor Parte."""
+    bodies = bodies_of(part)
+    if not bodies:
+        return None
+    solid = [b for b in bodies if b.Tip is not None and not b.Shape.isNull()]
+    return (solid or bodies)[-1]
 
 
 def start(link, warn=True):
@@ -219,11 +238,16 @@ def start(link, warn=True):
         if c is not link and _ghostable(c):
             m = c.ViewObject.ShapeMaterial
             saved[c.Name] = (bool(c.ViewObject.OverrideMaterial), m.Transparency, m.DiffuseColor)
-    st = {"link": link.Name, "saved": saved, "body": link.LinkedObject.Name}
+    part = link.LinkedObject
+    body = work_body(part)
+    st = {"link": link.Name, "saved": saved, "body": body.Name, "prefix": path}
     _editing[doc.Name] = st
     try:
         _set_ghosts(doc, st, True)
-        _view(doc).setActiveObject("pdbody", asm, path)
+        from swui.fork import edit_context as ec
+
+        body_path = ec.path_of(body, ec.Context(asm, link, path, part, part.Document)) or path
+        _view(doc).setActiveObject("pdbody", asm, body_path)
         _show_bar(doc, link)
     except Exception:
         # sin vista 3D o algo que falla: no queda a medias (revisión del 15/11)
@@ -246,7 +270,10 @@ def _still_active(doc):
         act = _view(doc).getActiveObject("pdbody", False)
     except Exception:
         return False
-    return bool(act) and act[0] is not None and getattr(act[0], "Name", None) == st["body"]
+    if not act or act[0] is None:
+        return False
+    # cualquier Cuerpo de la pieza editada (en una de varios Cuerpos se puede pasar de uno a otro)
+    return len(act) > 2 and act[1] is not None and bool(st.get("prefix")) and str(act[2]).startswith(st["prefix"])
 
 
 _timers = {}
@@ -326,7 +353,16 @@ def feature_path(top, sub):
     if comp.Name not in tokens:
         return None
     i = tokens.index(comp.Name)
-    base = tokens[:i + 2] if i + 1 < len(tokens) and tokens[i + 1] == body.Name else tokens[:i + 1]
+    base = tokens[:i + 1]
+    if body.TypeId == "App::Part":  # contenedor (pieza de varios Cuerpos): hasta el Cuerpo de la operación
+        from swui.fork import feature_tree as ft
+
+        owner = ft.body_of(feat)
+        if owner is None:
+            return None
+        base = base + [owner.Name]
+    elif i + 1 < len(tokens) and tokens[i + 1] == body.Name:
+        base = tokens[:i + 2]
     path = ".".join(base) + "." + feat.Name + "."
     return asm, comp, feat, path
 
@@ -381,114 +417,53 @@ def _picked_face():
 
 def _edit_target(doc=None):
     """(ensamblaje, componente, camino del componente) que se está editando en doc (o el activo), o None."""
-    if not _editing:
-        return None  # nada en edición (lo común): ni se mira el documento
-    doc = doc or FreeCAD.ActiveDocument
-    link = editing(doc) if getattr(doc, "Name", None) else None
-    if link is None:
-        return None
-    asm, prefix = assembly_and_path(link)
-    return (asm, link, prefix) if asm is not None else None
+    from swui.fork import edit_context as ec
+
+    ctx = ec.current(doc)
+    return (ctx.asm, ctx.link, ctx.prefix) if ctx is not None else None
 
 
 def selection_in_part(doc=None):
-    """
-    Lo elegido mientras se edita una pieza, como lo ve la pieza: ([(objeto de la pieza, [elemento])],
-    hay_algo_de_afuera). None si no se está editando. Lo de otros componentes no entra en la lista.
-    """
-    from swui.fork import context_menus as cm
+    """Lo elegido como lo ve la pieza editada (edit_context.selection)."""
+    from swui.fork import edit_context as ec
 
-    found = _edit_target(doc)
-    if found is None:
-        return None
-    asm, link, prefix = found
-    body = getattr(link, "LinkedObject", None)
-    out, outside = [], False
-    for s in FreeCADGui.Selection.getSelectionEx("", 0):
-        for sub in list(s.SubElementNames or []) or [""]:
-            plain = cm.plain_sub(sub)
-            if s.Object is not asm or not plain.startswith(prefix) or body is None:
-                outside = True
-                continue
-            tokens = plain[len(prefix):].split(".")
-            element, chain = tokens[-1], [t for t in tokens[:-1] if t]
-            obj = body.Document.getObject(chain[-1]) if chain else body
-            if obj is body and element:
-                # 'Comp.Body.Face6': la forma del Cuerpo es la de su Punta (mismos nombres de caras); un
-                # croquis del Cuerpo apoyado en el propio Cuerpo sería una dependencia circular (revisión)
-                obj = getattr(body, "Tip", None)
-            if obj is None:
-                outside = True
-                continue
-            out.append((obj, [element] if element else []))
-    return out, outside
-
-
-def _chain(body, obj):
-    """Camino de obj dentro del Cuerpo ('' el Cuerpo, 'Op.', 'Origin.XY_Plane.'), o None si no es de él."""
-    if body is None or obj is None or getattr(obj, "Document", None) is not body.Document:
-        return None
-    if obj is body:
-        return ""
-    if obj in getattr(body, "Group", []):
-        return obj.Name + "."
-    origin = getattr(body, "Origin", None)
-    if origin is not None and obj in origin.OriginFeatures:
-        return "%s.%s." % (origin.Name, obj.Name)
-    return None
+    return ec.selection() if ec.current(doc) is not None else None
 
 
 def select_in_part(obj, element="", doc=None):
-    """Elige obj (y su elemento) de la pieza editada, por el camino del componente. False si no se puede."""
-    found = _edit_target(doc)
-    if found is None:
+    """Elige obj por el camino del componente (edit_context.select). False si no se edita esa pieza."""
+    from swui.fork import edit_context as ec
+
+    if ec.for_document(getattr(obj, "Document", None)) is None:
         return False
-    asm, link, prefix = found
-    chain = _chain(getattr(link, "LinkedObject", None), obj)
-    if chain is None:
-        return False
-    path = prefix + chain + element
-    try:
-        if asm.getSubObject(prefix + chain, 1) is not obj:
-            return False
-    except Exception:
-        return False
-    FreeCADGui.Selection.clearSelection()
-    FreeCADGui.Selection.addSelection(asm.Document.Name, asm.Name, path)
-    return True
+    return ec.select(obj, element)
 
 
 def new_sketch_in_part(obj, element="", doc=None):
-    """
-    Croquis nuevo en la pieza que se edita, apoyado en obj (cara `element` de una operación, o un plano), y
-    abierto desde el ensamblaje. Devuelve el croquis, o None si no se está editando o obj no es de esa pieza.
-    No se usa el Croquis nativo: en 1.1.4, dentro de un ensamblaje, calcula el nombre del croquis nuevo en
-    el ensamblaje y no en la pieza, y si la pieza ya tiene un "Sketch" apoya y abre ESE (lo mueve a la
-    cara elegida) y deja el nuevo suelto (medido el 16/11; ver NOTAS_TECNICAS).
-    """
-    found = _edit_target(doc)
-    if found is None:
+    """Croquis nuevo en la pieza editada, apoyado en obj y abierto (edit_context.new_sketch)."""
+    from swui.fork import edit_context as ec
+
+    return ec.new_sketch(obj, element)
+
+
+class _Outside:
+    """Cara plana de OTRO componente elegida editando (top-down): el croquis va sobre su referencia externa."""
+
+    def __init__(self, sub):
+        self.sub = sub
+
+
+def _outside_face():
+    """La única cara plana de otro componente elegida (sin nada de la pieza), como _Outside, o None."""
+    from swui.fork import edit_context as ec
+
+    subs = ec.outside_selection() or []
+    if len(subs) != 1:
         return None
-    asm, link, prefix = found
-    body = getattr(link, "LinkedObject", None)
-    if not _chain(body, obj) or (obj is body):
-        return None  # solo una operación o un plano de ESE Cuerpo (no el Cuerpo: dependencia circular)
-    pdoc = body.Document
-    # paso de deshacer de la aplicación (como un comando): FreeCAD lo anota en la pieza y en el ensamblaje,
-    # así Ctrl+Z en la ventana del ensamblaje lo deshace
-    FreeCAD.setActiveTransaction("Croquis")
-    try:
-        sketch = body.newObject("Sketcher::SketchObject", "Sketch")
-        sketch.AttachmentSupport = [(obj, [element] if element else [""])]
-        sketch.MapMode = "FlatFace"
-        pdoc.recompute()
-    except Exception:
-        FreeCAD.closeActiveTransaction(True)
-        raise
-    FreeCAD.closeActiveTransaction()
-    FreeCADGui.Selection.clearSelection()
-    FreeCADGui.getDocument(asm.Document.Name).setEdit(asm, 0, prefix + sketch.Name + ".")
-    return sketch
+    shape = ec.outside_shape(subs[0])
+    if shape is None or shape.ShapeType != "Face" or shape.Surface.__class__.__name__ != "Plane":
+        return None
+    return _Outside(subs[0])
 
 
 def _hook_pick_plane():
@@ -501,14 +476,20 @@ def _hook_pick_plane():
     if getattr(pp.handle, "_swui_edit_part", False):
         return
     handle, selection, picked, tick = pp.handle, pp._selection, pp.picked, pp.tick
-    # fijos a propósito: Taladro y Brida base (que también se anotan en pick_plane) siguen con lo de FreeCAD
-    # editando una pieza (sin probar ahí sus paneles: decidido el 16/11)
-    commands = (pp.SKETCH_COMMAND, "PartDesign_Pad", "PartDesign_Pocket", "PartDesign_Revolution",
-                "PartDesign_Groove")
+    picked_target = pp.picked_target
+    def commands():
+        # todos los de pick_plane, leídos en el momento (Taladro y Brida base se anotan después; "Editar
+        # pieza = pieza", 16/11: todo lo de la pieza también editando)
+        return (pp.SKETCH_COMMAND,) + tuple(pp.FEATURE_COMMANDS)
 
     def _start(command, target):
+        from swui.fork import edit_context as ec
+
         try:
-            sketch = new_sketch_in_part(*target)
+            if isinstance(target[0], _Outside):  # top-down: sobre la cara de otro componente
+                sketch = ec.sketch_on_outside_face(target[0].sub)
+            else:
+                sketch = new_sketch_in_part(*target)
         except Exception:
             # sin volver al Croquis nativo, que acá tiene el error de FreeCAD
             FreeCAD.Console.PrintError("[SWUI fork] Croquis en la pieza editada:\n%s\n" % traceback.format_exc())
@@ -521,7 +502,10 @@ def _hook_pick_plane():
     def _open_panel(command):
         found = _edit_target()
         try:
-            panel = pp._TaskPanel(command, found[1].LinkedObject)  # el Cuerpo editado, no el que diga la vista
+            from swui.fork import edit_context as ec
+
+            body = ec.active_body()  # el Cuerpo editado (con contenedor, LinkedObject es la Parte)
+            panel = pp._TaskPanel(command, body if body is not None else found[1].LinkedObject)
             panel._swui_edit = True
             panel._orphaned = panel._cleanup  # si FreeCAD lo cierra solo: sacar la escucha de la selección
             pp._panel = panel
@@ -533,11 +517,16 @@ def _hook_pick_plane():
             FreeCAD.Console.PrintError("[SWUI fork] Croquis en la pieza editada:\n%s\n" % traceback.format_exc())
 
     def _handle(command):
-        if command not in commands or _edit_target() is None or pp._dialog_open():
+        if command not in commands() or _edit_target() is None or pp._dialog_open():
             return handle(command)
         inside, outside = selection_in_part()
         if outside:
-            return False  # algo de otro componente: lo de FreeCAD, como antes
+            external = None if inside else _outside_face()
+            if external is None:
+                return False  # algo de otro componente que no es una cara plana sola: lo de FreeCAD
+            pp._disarm()
+            _start(command, (external, ""))
+            return True
         pp._disarm()
         if not inside:
             _open_panel(command)
@@ -553,7 +542,10 @@ def _hook_pick_plane():
         if found is None:
             return selection()
         inside, outside = found
-        return [(None, [])] if outside else inside  # de otro componente: "no es plano ni cara"
+        if outside:  # de otro componente: su cara plana (top-down) o "no es plano ni cara"
+            external = None if inside else _outside_face()
+            return [(external, [])] if external is not None else [(None, [])]
+        return inside
 
     def _picked(target, command):
         from swui.compat import QtCore
@@ -615,9 +607,15 @@ def _hook_pick_plane():
                                        % (command, traceback.format_exc()))
         return None
 
-    for fn in (_handle, _selection, _picked, _tick):
+    def _picked_target(sel):
+        if len(sel) == 1 and isinstance(sel[0][0], _Outside):
+            return sel[0][0], ""
+        return picked_target(sel)
+
+    for fn in (_handle, _selection, _picked, _tick, _picked_target):
         fn._swui_edit_part = True
     pp.handle, pp._selection, pp.picked, pp.tick = _handle, _selection, _picked, _tick
+    pp.picked_target = _picked_target
 
 
 # --- Guardar -------------------------------------------------------------------------------------------------
@@ -862,3 +860,325 @@ def install():
         _hook_pick_plane()
     except Exception:
         FreeCAD.Console.PrintLog("[SWUI fork] Editar pieza / pick_plane:\n%s\n" % traceback.format_exc())
+    global _up_to
+    if _up_to is None:
+        _up_to = _make_up_to_filter()
+        from swui.compat import QtWidgets
+
+        QtWidgets.QApplication.instance().installEventFilter(_up_to)
+    try:
+        _hook_ribbon()
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Editar pieza / cinta:\n%s\n" % traceback.format_exc())
+
+
+# --- Top-down: "Hasta la superficie" con la cara de otro componente (17/11) --------------------------------
+UP_TO_TYPES = ("PartDesign::Pad", "PartDesign::Pocket")
+_up_to = None
+
+
+def _up_to_target():
+    """(contexto, operación) si se edita una pieza con Extruir / Extruir corte abierto esperando la cara de
+    "Hasta la superficie"; si no, None."""
+    from swui.fork import edit_context as ec
+
+    if not _editing:
+        return None
+    ctx = ec.current()
+    if ctx is None:
+        return None
+    feat = getattr(ec.in_edit(ctx.pdoc), "Object", None)
+    if feat is None or feat.TypeId not in UP_TO_TYPES or getattr(feat, "Type", "") != "UpToFace":
+        return None
+    return ctx, feat
+
+
+def _waiting_face():
+    """¿El panel de Extruir está esperando la cara ("Elegir cara" apretado)?"""
+    from swui.compat import QtWidgets
+
+    try:
+        return any(b.isVisible() and b.isChecked()
+                   for b in FreeCADGui.getMainWindow().findChildren(QtWidgets.QAbstractButton, "buttonFace"))
+    except Exception:
+        return False
+
+
+def outside_face_at(view, x, y):
+    """Camino ('Otro.Extruir.Face5') de la cara de OTRO componente bajo el punto Qt (x, y) de la vista, o None."""
+    from swui.fork import context_menus as cm
+    from swui.fork import edit_context as ec
+
+    ctx = ec.current()
+    if ctx is None:
+        return None
+    viewport = view.graphicsView().viewport()
+    ratio = viewport.devicePixelRatioF()
+    info = view.getObjectInfo((int(round(x * ratio)), int(round((viewport.height() - y) * ratio))))
+    # medido (1.1.4): {'ParentObject': <el ensamblaje>, 'SubName': 'Body001.Extruir.Face6', 'Document': 'Otro', ...}
+    if not info or info.get("ParentObject") is not ctx.asm:
+        return None
+    plain = cm.plain_sub(info.get("SubName") or "")
+    if not plain or plain.startswith(ctx.prefix) or not plain.split(".")[-1].startswith("Face"):
+        return None
+    return plain
+
+
+def _make_up_to_filter():
+    """
+    Con Extruir / Extruir corte de la pieza editada abierto en "Hasta la superficie", un clic en la cara de OTRO
+    componente: el panel nativo la filtra (es de otro archivo) antes de que llegue a la selección. Se mira el
+    clic en la vista: se arma la referencia externa en la pieza y se elige su cara, que el panel sí acepta
+    (como en SW: la operación queda referida al otro componente).
+    """
+    from swui.compat import QtCore
+
+    class UpToOutside(QtCore.QObject):
+        def eventFilter(self, obj, event):
+            try:
+                if event.type() != QtCore.QEvent.Type.MouseButtonRelease or event.button() != QtCore.Qt.MouseButton.LeftButton:
+                    return False
+                found = _up_to_target()
+                if found is None or not _waiting_face():
+                    return False
+                view = FreeCADGui.ActiveDocument.ActiveView
+                if obj is not view.graphicsView().viewport():
+                    return False
+                pos = event.position() if hasattr(event, "position") else event.pos()
+                sub = outside_face_at(view, pos.x(), pos.y())
+                if sub is not None:
+                    feat = found[1]
+                    QtCore.QTimer.singleShot(0, lambda: up_to_outside_face(feat, sub))
+            except Exception:
+                FreeCAD.Console.PrintLog("[SWUI fork] Hasta la superficie:\n%s\n" % traceback.format_exc())
+            return False
+
+    return UpToOutside()
+
+
+def up_to_outside_face(feature, sub):
+    """
+    Pone la cara `sub` de otro componente (camino desde el ensamblaje) como "Hasta la superficie" de `feature`
+    (Extruir / Extruir corte de la pieza editada, abierto): referencia externa y su cara elegida para el panel.
+    Devuelve la referencia o None.
+    """
+    from swui.fork import edit_context as ec
+
+    ctx = ec.for_document(feature.Document)
+    if ctx is None:
+        return None
+    binder = ec.external_reference([sub], ctx)
+    if binder is None:
+        return None
+    try:
+        binder.ViewObject.Visibility = False
+    except Exception:
+        pass
+    # el panel nativo, al recibir la cara del otro componente, deja de esperar una cara: se le vuelve a pedir
+    try:
+        from swui.compat import QtWidgets
+
+        for button in FreeCADGui.getMainWindow().findChildren(QtWidgets.QAbstractButton, "buttonFace"):
+            if button.isVisible() and button.isCheckable() and not button.isChecked():
+                button.click()
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Hasta la superficie:\n%s\n" % traceback.format_exc())
+    FreeCADGui.Selection.clearSelection()
+    ec.select(binder, "Face1")
+    return binder
+
+
+def new_body():
+    """
+    Cuerpo nuevo en la pieza que se edita (no en el ensamblaje), activo, como el botón Cuerpo en la pieza sola.
+    La pieza pasa antes a contenedor si hacía falta (prepare_container). Devuelve el Cuerpo, o None.
+    """
+    from swui.compat import QtCore
+    from swui.fork import edit_context as ec
+
+    ctx = prepare_container(ec.current())
+    if ctx is None:
+        return None
+    FreeCAD.setActiveTransaction("Cuerpo")
+    try:
+        body = ctx.pdoc.addObject("PartDesign::Body", "Body")
+    except Exception:
+        FreeCAD.closeActiveTransaction(True)
+        raise
+    FreeCAD.closeActiveTransaction()
+    asm_doc, name = ctx.asm.Document, body.Name
+
+    def activate():
+        c = ec.current(asm_doc)
+        b = c.pdoc.getObject(name) if c is not None else None
+        path = ec.path_of(b, c) if b is not None else None
+        if path:
+            try:
+                _view(asm_doc).setActiveObject("pdbody", c.asm, path)
+            except Exception:
+                FreeCAD.Console.PrintLog("[SWUI fork] Cuerpo nuevo: activar\n%s\n" % traceback.format_exc())
+    QtCore.QTimer.singleShot(100, activate)  # después de pasarlo al contenedor (part_container.adopt)
+    return body
+
+
+# comandos nativos que buscan sus croquis en el documento activo (Barrer, Recubrir, Hélice): editando, la pieza
+PART_DOC_COMMANDS = ("PartDesign_AdditivePipe", "PartDesign_AdditiveLoft", "PartDesign_AdditiveHelix",
+                     "PartDesign_SubtractivePipe", "PartDesign_SubtractiveLoft", "PartDesign_SubtractiveHelix")
+
+
+# comandos que crean algo FUERA del Cuerpo (otro Cuerpo, un grupo): editando una pieza de un solo Cuerpo, la
+# pieza pasa antes a contenedor Parte, para que lo nuevo se vea en el componente
+OUTSIDE_BODY = ("SWUI_Sketch3D", "SWUI_WeldMember", "SWUI_WeldEndCap", "SWUI_WeldGusset")
+CONVERT = ("Sketcher_Projection", "Sketcher_External")  # Convertir entidades (top-down: aristas de otro componente)
+
+
+def prepare_container(ctx):
+    """
+    Si se edita una pieza de un solo Cuerpo, la pasa a contenedor (edit_context.ensure_container) en un paso de
+    deshacer propio, ANTES del comando: si después se cancela el comando, el componente sigue apuntando a algo
+    que existe. Devuelve el contexto actualizado (o el mismo, o None).
+    """
+    from swui.fork import edit_context as ec
+
+    if ctx is None or ctx.part.TypeId != "PartDesign::Body":
+        return ctx
+    FreeCAD.setActiveTransaction("Pieza de varios cuerpos")
+    try:
+        ec.ensure_container(ctx)
+    except Exception:
+        FreeCAD.closeActiveTransaction(True)
+        raise
+    FreeCAD.closeActiveTransaction()
+    return ec.current(ctx.asm.Document) or ctx
+
+
+def _helix_defaults(body, feat, obj, subs):
+    """Lo que el comando nativo de Hélice propone (medido en 1.1.4): eje Y del Cuerpo, paso = 1,1 x la diagonal
+    del perfil, altura = vueltas x paso."""
+    for axis in getattr(getattr(body, "Origin", None), "OriginFeatures", []):
+        if getattr(axis, "Role", "") == "Y_Axis":
+            feat.ReferenceAxis = (axis, [""])
+            break
+    try:
+        shape = obj.Shape.getElement(subs[0]) if subs and subs[0] else obj.Shape
+        diag = shape.BoundBox.DiagonalLength
+        if diag > 0:
+            feat.Pitch = 1.1 * diag
+            feat.Height = feat.Turns * feat.Pitch.Value
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Hélice editando:\n%s\n" % traceback.format_exc())
+
+
+def _pick_profile_sketch():
+    """
+    Sin nada elegido, editando: la lista de croquis del Cuerpo activo para el perfil (en la pieza sola FreeCAD
+    muestra la suya; editando, la nativa no encuentra el Cuerpo a través del componente). None si se cancela o
+    no hay croquis.
+    """
+    from swui.compat import QtWidgets
+    from swui.fork import edit_context as ec
+
+    body = ec.active_body()
+    sketches = [o for o in getattr(body, "Group", []) if o.TypeId == "Sketcher::SketchObject"]
+    main = FreeCADGui.getMainWindow()
+    if not sketches:
+        QtWidgets.QMessageBox.information(main, "Perfil", "No hay croquis en la pieza: dibujá primero el perfil.")
+        return None
+    labels = [s.Label for s in sketches]
+    text, ok = QtWidgets.QInputDialog.getItem(main, "Perfil", "Croquis del perfil:", labels, len(labels) - 1, False)
+    if not ok or text not in labels:
+        return None
+    return sketches[labels.index(text)]
+
+
+def profile_feature(ctx, command, obj, subs):
+    """
+    Barrer / Recubrir / Hélice (PART_DOC_COMMANDS) con algo elegido, editando una pieza: como el comando nativo
+    en la pieza sola (operación nueva en el Cuerpo activo de la pieza, con lo elegido de perfil, abierta), pero
+    abierta por el camino del componente (el nativo la abre en la ventana de la pieza, donde no se puede elegir).
+    El paso de deshacer queda abierto mientras está el panel, como en el nativo: Aceptar lo cierra, Cancelar lo
+    deshace. Devuelve la operación.
+    """
+    from swui.fork import edit_context as ec
+
+    body = ec.active_body()
+    if body is None or body.Document is not ctx.pdoc:
+        return None
+    type_id = "PartDesign::" + command.split("_", 1)[1]
+    FreeCAD.setActiveTransaction(type_id.split("::")[1])
+    try:
+        feat = body.newObject(type_id, type_id.split("::")[1])
+        feat.Profile = (obj, [s for s in subs if s]) if subs else obj
+        if type_id.endswith("Helix"):
+            _helix_defaults(body, feat, obj, subs)
+        ctx.pdoc.recompute()
+        FreeCADGui.Selection.clearSelection()
+        opened = ec.set_edit(feat)
+    except Exception:
+        FreeCAD.closeActiveTransaction(True)
+        raise
+    if not opened:  # como el nativo: si no se puede abrir (perfil que no sirve), la operación queda, con su error
+        FreeCAD.closeActiveTransaction()
+    return feat
+
+
+def _hook_ribbon():
+    """Botones de la cinta que, editando una pieza, tienen que trabajar en la pieza (Cuerpo nuevo)."""
+    from swui import ribbon
+
+    original = ribbon._run
+    if getattr(original, "_swui_edit_part", False):
+        return
+
+    def run(command, index=None, *args):
+        from swui.fork import edit_context as ec
+
+        ctx = ec.current() if command in ("PartDesign_Body",) + PART_DOC_COMMANDS + OUTSIDE_BODY + CONVERT else None
+        if ctx is None:
+            return original(command, index, *args)
+        if command in CONVERT:
+            # top-down: con un croquis de la pieza abierto y aristas de otro componente elegidas
+            sketch = getattr(ec.in_edit(ctx.pdoc), "Object", None)
+            outside = ec.outside_selection() or []
+            if sketch is None or sketch.TypeId != "Sketcher::SketchObject" or not outside:
+                return original(command, index, *args)
+            try:
+                ec.convert_outside_edges(sketch, outside, ctx)
+            except Exception:
+                FreeCAD.Console.PrintError("[SWUI fork] Convertir entidades:\n%s\n" % traceback.format_exc())
+            return None
+        if command in OUTSIDE_BODY:
+            try:
+                prepare_container(ctx)
+            except Exception:
+                FreeCAD.Console.PrintError("[SWUI fork] Pieza a contenedor:\n%s\n" % traceback.format_exc())
+            return original(command, index, *args)
+        if command == "PartDesign_Body":
+            try:
+                new_body()
+            except Exception:
+                FreeCAD.Console.PrintError("[SWUI fork] Cuerpo nuevo:\n%s\n" % traceback.format_exc())
+            return None
+        # el comando nativo busca sus croquis en el documento activo (el ensamblaje: "Ningún croquis
+        # disponible"): mientras corre, el activo es la pieza (lo que se ve sigue siendo el ensamblaje)
+        asm_name = ctx.asm.Document.Name
+        # y lo elegido (con el camino del ensamblaje) pasa a la pieza, como lo vería en la pieza sola
+        local = []
+        try:
+            local = [(s.Object, list(s.SubElementNames)) for s in ec.selection_ex(asm_name)
+                     if s.Document is ctx.pdoc]
+        except Exception:
+            FreeCAD.Console.PrintLog("[SWUI fork] Editar pieza / selección:\n%s\n" % traceback.format_exc())
+        if not local:
+            sketch = _pick_profile_sketch()
+            if sketch is None:
+                return None
+            local = [(sketch, [])]
+        try:
+            return profile_feature(ctx, command, local[0][0], local[0][1])
+        except Exception:
+            FreeCAD.Console.PrintError("[SWUI fork] %s editando:\n%s\n" % (command, traceback.format_exc()))
+            return None
+
+    run._swui_edit_part = True
+    ribbon._run = run

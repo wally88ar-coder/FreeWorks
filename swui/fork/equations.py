@@ -760,7 +760,15 @@ def show_dialog(doc=None):
     if doc is None:
         return None
     for d in list(_open):
-        d.reject()
+        try:
+            d.reject()
+        except Exception:  # su documento ya se cerró (#99): solo se cierra la ventana
+            if d in _open:
+                _open.remove(d)
+            try:
+                d.done(QtWidgets.QDialog.DialogCode.Rejected)
+            except Exception:
+                pass
     dialog = _EquationsDialog(doc)
     _open.append(dialog)
     dialog.finished.connect(lambda *_a: _open.remove(dialog) if dialog in _open else None)
@@ -1103,7 +1111,9 @@ class _EquationsCommand:
         return FreeCAD.ActiveDocument is not None
 
     def Activated(self):
-        show_dialog()
+        from swui.fork import edit_context as ec
+
+        show_dialog(ec.work_document())  # editando una pieza en el ensamblaje: las de esa pieza (como en ella)
 
 
 def install():
