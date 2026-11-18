@@ -5,6 +5,26 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Clic derecho como SW, etapa A (15/11, tabla decidida por el usuario):** en la vista, el clic
+  derecho elige primero lo que está debajo del mouse (si ya estaba elegido, no cambia nada). El
+  menú de una operación en el árbol, de una cara en la vista, de un componente en el árbol y de la
+  cara de un componente en la vista trae solo lo de la tabla: arriba lo más usado (Editar
+  operación, Editar croquis, Suprimir, Retroceder, Ocultar, Apariencia; en la cara también
+  Seleccionar otra, Croquis, Redondeo y Chaflán; en el componente Abrir pieza, Cambiar
+  transparencia, Relación de posición, Ver relaciones) y después secciones con título como SW
+  ("Operación (Saliente-Extruir1)", "Cara", "Componente (Taco)"). Lo de FreeCAD que SW no tiene
+  queda detrás de la "»" del pie (se despliega en el mismo menú); se quitan Enviar a consola de
+  Python, Acciones de expresión, Enlazar acciones, Marcar para recalcular, Ajustes del árbol,
+  Estilos de navegación, Ventana de documento, Color aleatorio, Mover arriba/abajo y, con algo
+  elegido, el zoom y las vistas. Con una cara elegida, lo de la operación (Suprimir, Eliminar,
+  Retroceder...) actúa sobre la operación que creó la cara, la del título. Más textos de FreeCAD
+  pasados al castellano. `swui/fork/context_menus.py`; pruebas `prueba_ventana_clic_derecho_sw`,
+  `prueba_clic_derecho_tabla`.
+- **Reordenar arrastrando en el árbol, como SW (15/11):** soltar una operación en la mitad de
+  arriba de otra la deja antes; en la de abajo, después (una línea azul muestra dónde). Un paso de
+  deshacer; no deja soltar donde una dependencia lo impide. Antes FreeCAD convertía la operación
+  soltada en "BaseFeature" del Cuerpo. `swui/fork/tree_drag.py`; prueba
+  `prueba_ventana_arrastre_arbol`.
 - **Ensamblaje sin candados, como SW (15/11):** la pieza fija ya no muestra el candado rojo de
   FreeCAD en la vista (queda "(f)" en el árbol, como SW); se oculta la relación Fijar al fijar o
   al insertar el primer componente, queda guardado en el archivo y la pieza sigue fija. Al

@@ -949,6 +949,19 @@ MENU_ES = {
     "Active Body": "Cuerpo activo",
     "Edit Sketch": "Editar croquis",  # antes de la regla "Edit X" (daba "Editar Sketch")
     "Go to Linked Object": "Ir a la pieza",
+    # medidos con el sondeo del clic derecho (15/11): quedaban en inglés
+    "Fit All": "Zoom para ajustar",
+    "Draw Style": "Estilo de visualización",
+    "Standard Views": "Vistas estándar",
+    "Go to Selection": "Ir a la selección en el árbol",
+    "Rotate Left": "Girar a la izquierda",
+    "Rotates Right": "Girar a la derecha",
+    "Rotate Right": "Girar a la derecha",
+    "Link Group": "Grupo de vínculos",
+    "Make Link": "Crear vínculo",
+    "Make Sub-Link": "Crear subvínculo",
+    "Select All Links": "Seleccionar todos los vínculos",
+    "Docked": "Acoplada",
 }
 
 
@@ -1063,18 +1076,40 @@ class _MenuShow:
     def __init__(self):
         from swui.compat import QtCore, QtWidgets
 
+        T = QtCore.QEvent.Type
+        PRESS, CONTEXT, DRAG_MOVE, DROP, LEAVE = T.MouseButtonPress, T.ContextMenu, T.DragMove, T.Drop, T.DragLeave
+
         class Filter(QtCore.QObject):
             def eventFilter(self, obj, event):
+                t = event.type()
                 try:
-                    if event.type() == QtCore.QEvent.Type.Show and isinstance(obj, QtWidgets.QMenu):
-                        changed = translate_menu(obj) | arrange_menu(obj)
+                    if t == PRESS or t == CONTEXT:
+                        # clic derecho como SW: elige lo de abajo y anota dónde fue (context_menus)
+                        from swui.fork import context_menus
+
+                        context_menus.on_event(obj, event)
+                    elif t == DRAG_MOVE or t == DROP or t == LEAVE:
+                        # reordenar arrastrando en el árbol, como SW (tree_drag)
+                        from swui.fork import tree_drag
+
+                        return bool(tree_drag.on_event(obj, event))
+                    elif t == T.Show and isinstance(obj, QtWidgets.QMenu):
+                        top = not isinstance(obj.parent(), (QtWidgets.QMenu, QtWidgets.QMenuBar))
+                        handled = False
+                        if top:
+                            try:
+                                from swui.fork import context_menus
+
+                                handled = context_menus.arrange(obj)
+                            except Exception:
+                                FreeCAD.Console.PrintLog("[SWUI fork] Clic derecho:\n%s\n" % traceback.format_exc())
+                        changed = translate_menu(obj) | (False if handled else arrange_menu(obj))
                         # el menú del árbol no tiene padre; un submenú tiene de padre otro menú y los
                         # de arriba (Archivo, Editar...) la barra de menús: con un componente elegido,
                         # Archivo quedaba en "Más opciones" (visto con el mouse 01/11)
-                        if (not isinstance(obj.parent(), (QtWidgets.QMenu, QtWidgets.QMenuBar))
-                                and is_component_selection()):
+                        if not handled and top and is_component_selection():
                             changed = fold_component_menu(obj) or changed
-                        if changed:
+                        if changed or handled:
                             obj.adjustSize()
                 except Exception:
                     pass

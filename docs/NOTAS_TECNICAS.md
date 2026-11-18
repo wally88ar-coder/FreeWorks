@@ -1201,3 +1201,25 @@ que usan está en `tools/test_load.py` (`check_ia`): si una cambia de firma, el 
   `getPointOnViewport` y punto bajo el centro con `getObjectInfo` (los dos con y hacia arriba).
   `graphicsView().viewport() == widget` sirve para saber de qué vista es el evento. Cambiar el
   tipo de cámara (`setCameraType`) deja el archivo "modificado"; girar, no.
+
+## Clic derecho y arrastre en el árbol (15/11): hallazgos en FreeCAD 1.1.4
+- `FreeCADGui.Selection.getPreselection()` da lo que está debajo del mouse en la vista (después de un
+  MouseMove): `DocumentName`, `ObjectName`, `SubElementNames` (en un Cuerpo "Extruir.Face6" con el
+  nombre de la punta; en un ensamblaje "Body001.Caja.Face6" bajo el Assembly). Sin nada debajo,
+  `DocumentName` vacío. Sirve para `Selection.addSelection(doc, obj, sub)`.
+- Los nombres de elemento de la selección pueden traer el nombre topológico
+  ("Extruir.;#14:1;:G0;XTR;:H55e:8,F.Face6"): para comparar, sacar las partes que empiezan con ";"
+  (`context_menus.plain_sub`).
+- Las QAction de los comandos son COMPARTIDAS entre la barra de menús, las barras y cada clic derecho:
+  `setVisible(False)` o `setText` en una la cambia en todos lados (y queda así). En un menú propio
+  usar copias que llamen a la original o a `FreeCADGui.runCommand`.
+- El estado habilitado de esas acciones se actualiza con un temporizador: justo después de cambiar la
+  selección figura el de antes. Preguntar `FreeCADGui.Command.get(nombre).isActive()`.
+- El ensamblaje activo está "en edición": `getInEdit()` devuelve el `ViewProviderAssembly` (sin
+  `.Object`). No confundirlo con un croquis en edición.
+- Árbol: soltar una operación sobre otra del mismo Cuerpo NO reordena: FreeCAD la vuelve "BaseFeature"
+  del Cuerpo (medido con eventos de Qt). El arrastre lleva `application/x-qabstractitemmodeldatalist`;
+  `source()` es el árbol (los eventos armados en una prueba no tienen source).
+- `Std_LinkSelectLinked` ("Ir a la pieza") abre la pieza del componente en su ventana y la activa.
+- La herramienta de mouse de Claude no abre el clic derecho en la vista 3D de SW 2018 (sí en el
+  árbol); un clic derecho real de Windows (SetCursorPos + mouse_event, botón abajo 0,12 s) sí.

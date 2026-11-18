@@ -8,6 +8,46 @@ completa con ventana en cada entrega, mono y fuzzing de noche); última batería
 Queda para el pulido final: comparar con el mouse contra SW los arreglos (ver "Falta / ideas
 pendientes"). De acá en adelante se trabaja con las reglas de calidad de CLAUDE.md.
 
+**15/11 noche, CLIC DERECHO COMO SW (con /goal del usuario: etapas A, B, C y análisis de D; commits
+LOCALES sin push hasta que el usuario pruebe; batería completa solo al final).**
+- **Etapa A HECHA** (commit local). Qué tenía que pasar (aprobado): el clic derecho en la vista elige
+  lo de abajo; el menú tiene solo lo marcado Sí, con títulos de sección como SW; lo de FreeCAD que SW
+  no tiene va detrás de la "»"; lo inútil se quita; todo en castellano. Más: Mover arriba/abajo fuera
+  del menú y reordenar arrastrando. `swui/fork/context_menus.py` (tabla y decisión en funciones sin
+  interfaz: `context_of`, `layout`, `place`), `swui/fork/tree_drag.py` (`drop_index`, `blocker`,
+  `reorder`), enganchados en el filtro que ya existía (`feature_tree._MenuShow`, sin filtro nuevo).
+  Pruebas: `prueba_ventana_clic_derecho_sw`, `prueba_ventana_arrastre_arbol` (con ventana) y
+  `prueba_clic_derecho_tabla` (rápida), todas BIEN; 7 preguntas en `docs/SIETE_PREGUNTAS.md`.
+- Medido en FreeCAD 1.1.4 antes de programar: la preselección (`Selection.getPreselection()`) da
+  documento, objeto y camino, también dentro de un ensamblaje; soltar una operación sobre otra en el
+  árbol NO reordena (FreeCAD la vuelve "BaseFeature" del Cuerpo); "Ir a la pieza"
+  (Std_LinkSelectLinked) abre la pieza en su ventana: es el "Abrir pieza" de SW.
+- Hallazgos de FreeCAD (anotados en NOTAS_TECNICAS): las acciones de los comandos son COMPARTIDAS
+  (esconder o renombrar una en un clic derecho la cambia en la barra de menús y en el menú
+  siguiente): el menú usa copias; su estado habilitado se actualiza con un temporizador (justo
+  después de cambiar la selección figura gris): se le pregunta al comando en el momento; el
+  ensamblaje activo cuenta como "en edición" (`getInEdit()` da el ViewProviderAssembly).
+- Revisor independiente: 1 grave (con una cara elegida, el título decía la operación de la cara
+  pero Suprimir/Eliminar actuaban sobre la última del sólido: ARREGLADO, con prueba), medianos
+  arreglados (menú de una barra armado como clic derecho tras un clic derecho sin menú; arrastre con
+  panel abierto, con Ctrl/Alt o de otro documento con el mismo nombre; menú a medio armar si fallaba;
+  título que cerraba el menú; avisos repetidos; sin línea de dónde cae).
+- **Decidido solo (revisar):** (1) "Cambiar de nombre a pieza" de SW se llama "Cambiar de nombre"
+  (cambia el nombre del componente, no el del archivo: no se promete lo que no hace); en la vista
+  no está (FreeCAD solo renombra desde el árbol; va en la etapa C). (2) En el ensamblaje no van
+  Croquis/Redondeo/Chaflán (son de la pieza). (3) Con el fondo vacío y nada elegido queda el zoom y
+  las vistas (es lo único que trae ese menú); con algo elegido se quitan. (4) Los textos de FreeCAD
+  que quedaban en inglés se traducen también en la barra de menús (Zoom para ajustar, Vistas
+  estándar...): la traducción es la misma en todos lados. (5) Pasar una operación por debajo de la
+  barra de retroceso la deja retrocedida (la barra no se mueve), como SW. (6) Un croquis arrastrado
+  sigue siendo de FreeCAD. 
+- Límites que quedan: la "»" no se alcanza con el teclado (solo con el mouse); al arrastrar no hay
+  desplazamiento automático del árbol; un croquis apoyado en un plano de referencia que quede en el
+  medio no se revisa al reordenar (como Mover arriba/abajo de antes).
+- **Comparar con SW con el mouse: PENDIENTE.** El acceso de la herramienta de mouse a FreeCAD fue
+  rechazado (sin respuesta del usuario): no se buscó otra forma de capturar la pantalla. Las pruebas
+  de ventana abren los menús con eventos de Qt y leen su contenido.
+
 **15/11, croquis: Cota inteligente que sobra (pedido del usuario).** Al acotar la altura de un
 oblongo tocando primero su recta (largo ya fijado), todo el croquis quedaba naranja y "Restricciones
 redundantes". Causa: la Cota inteligente de FreeCAD 1.1.4 crea la cota en el primer clic (no hay

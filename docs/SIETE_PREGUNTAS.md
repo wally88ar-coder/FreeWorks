@@ -51,6 +51,8 @@ Abreviaturas de las pruebas:
 | Material, Propiedades físicas | — | — | — | — | (es "la otra" en M) | — | A |
 | Suprimir operación (árbol) | M | M | — | M | — | — | — |
 | Hélice, Barrido, Recubrir (paneles nativos con términos SW) | R | R | — | R | R | — | R |
+| Clic derecho como SW (15/11; `prueba_ventana_clic_derecho_sw`, `prueba_clic_derecho_tabla`) | Esc: no toca el documento | no cambia nada (solo ordena acciones) | no aplica | no guarda nada | croquis en edición: menú de FreeCAD sin tocar | pieza y ensamblaje abiertos a la vez | Cuerpo, vacío, dos caras, croquis |
+| Reordenar arrastrando en el árbol (15/11; `prueba_ventana_arrastre_arbol`) | soltar donde no se puede: nada cambia | un paso, Ctrl+Z/Ctrl+Y | volumen igual tras reordenar | guardar y abrir conserva el orden | — | — | croquis (sigue de FreeCAD), dependencia, barra retrocedida |
 
 ## Lo que falta, por pregunta
 
