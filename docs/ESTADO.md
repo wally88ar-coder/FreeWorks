@@ -108,6 +108,37 @@ LOCALES sin push hasta que el usuario pruebe; batería completa solo al final).*
   ensamblaje (límite conocido): editar esa copia no cambia el archivo de la pieza. ¿Avisar y no dejar, o
   editar la copia? (3) Ctrl+Z dentro de Editar pieza: sin medir todavía qué deshace (el paso queda en la
   pieza o en el ensamblaje); se mide antes de programar.
+- **Etapa E (clic derecho con VARIOS elegidos): PLAN, sin código (lo aprueba el usuario).** Encontrado
+  por el usuario el 15/11: con dos componentes elegidos no sale Aislar. Causa: el clic derecho solo
+  reconoce UN elemento elegido (`context_of` en `swui/fork/context_menus.py`); con dos o más cae en el
+  menú general de FreeCAD (sin título, sin bandeja). Medido en SW 2018 el 15/11 (ensamblaje con 3 Tacos;
+  pieza piloto-redondeo con Saliente-Extruir1 y Redondeo1), árbol y vista. Lo que va y lo que no, marcado
+  por el usuario en el checklist ("Clic derecho como SW": tablas "Ensamblaje: dos o más componentes
+  elegidos" y "Pieza: dos operaciones elegidas").
+  - **E1, ensamblaje (varios componentes):** menú "Componente" igual que con uno, en árbol y vista.
+    Bandeja: Abrir pieza y Abrir pieza en posición (cada pieza), Ocultar, Cambiar transparencia,
+    Suprimir, Relación de posición (con los elegidos cargados), Ver relaciones (las de todos). Lista:
+    Aislar (se ven todos los elegidos), Configurar componente (una fila por componente si son piezas
+    distintas), Fijar/Flotar, Eliminar, Material, Invertir la selección, Contraer operaciones. NO con
+    varios: Editar pieza, Propiedades, Cambiar de nombre, Padre/Hijo. Carpetas: más adelante.
+  - **E2, pieza (varias operaciones / caras de varias operaciones):** en el árbol, menú de operación
+    corto: bandeja Suprimir y Apariencias; lista Configurar operación, Eliminar, Cambiar transparencia,
+    Invertir la selección, Contraer operaciones (NO: Editar operación/croquis, Retroceder, Ocultar,
+    Padre/Hijo; carpeta más adelante). En la vista, grupos Caras / Operaciones / Sólido: bandeja
+    Seleccionar otra, Ocultar, Suprimir, Apariencias; Caras: Cambiar transparencia; Operaciones:
+    Configurar operación y Eliminar (sobre la operación que creó cada cara); Sólido: Aislar y Eliminar
+    (abre Eliminar/Conservar sólido). NO con varias (decidido por el usuario 15/11, por trabajoso):
+    Redondeo y Chaflán con las dos caras cargadas, Mover cara con varias caras. Tampoco: Croquis,
+    Seleccionar tangencia, Exportar a DXF, Ir a operación, Copiar apariencia, Normal a, análisis.
+  - **Cómo:** un caso nuevo "varios" en el clic derecho, uno solo para los tres (componentes,
+    operaciones en el árbol, caras en la vista); si se mezcla con otra cosa (relación, plano), queda el
+    menú general. Todo lo que actúa sobre varios, en UN paso de Ctrl+Z (Suprimir en el orden correcto
+    si una depende de la otra; Material con piezas de archivos distintos: un paso en cada pieza).
+  - **Antes de programar, mirar en SW (solo mirar y cancelar):** qué abre Relación de posición, Abrir
+    pieza en posición (dos de la misma pieza) y Configurar componente / Configurar operación con varios.
+  - **Pruebas:** ampliar `prueba_ventana_clic_derecho_sw` con dos y tres elegidos, selecciones
+    mezcladas, dos componentes de la misma pieza; las 7 preguntas para Aislar y Suprimir con varios.
+    Commit por subetapa (E1, E2).
 - Medido en FreeCAD 1.1.4 antes de programar: la preselección (`Selection.getPreselection()`) da
   documento, objeto y camino, también dentro de un ensamblaje; soltar una operación sobre otra en el
   árbol NO reordena (FreeCAD la vuelve "BaseFeature" del Cuerpo); "Ir a la pieza"
