@@ -122,6 +122,13 @@ LOCALES sin push hasta que el usuario pruebe; batería completa solo al final).*
   (copia de la pieza dentro del ensamblaje): AVISAR Y NO DEJAR editarlo ("Este componente usa otra
   configuración; abrí la pieza para cambiarla"). (3) Ctrl+Z: lo mide Claude antes de programar.
   Plan de la etapa D APROBADO para hacer cuando el usuario dé el OK.
+  **OBJETIVO DEL USUARIO (16/11): todo lo que está en el entorno de pieza tiene que estar igual en Editar
+  pieza** (Operaciones, Croquis, Evaluar, Chapa, Piezas soldadas), "como si estuvieras en la pieza sola".
+  Relevadas también Evaluar, Chapa y Soldadas: distintos Medir (error con cara/arista), Ecuaciones (falla),
+  Brida base (aviso en vez de panel/croquis), Miembro estructural (lo arma en el ensamblaje), Lista de cortes
+  (la del ensamblaje). Falta relevar con una chapa y una estructura de verdad (con un bloque, las demás de
+  Chapa/Soldadas solo avisan "no tiene chapa"/"faltan miembros" en los dos modos), y Propiedades físicas y
+  Material (no se vio panel en ninguno de los dos). Exportar DXF fuera del relevamiento (cuadro de Windows).
   **16/11, relevamiento de botones editando (pedido del usuario: editando, TODOS los íconos de Operaciones y
   Croquis tienen que comportarse como en la pieza sola).** `prueba_ventana_editar_pieza_botones` (por ahora
   solo releva, no falla): 133 casos (botón × nada/cara/arista; los del croquis dentro de un croquis), 45

@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 # SPDX-License-Identifier: LGPL-2.1-or-later
 # SPDX-FileCopyrightText: 2026 wally88ar-coder
-QUE = """Relevamiento (16/11, pedido del usuario): cada botón de las pestañas Operaciones y Croquis, en la
+QUE = """Relevamiento (16/11, pedido del usuario): cada botón de las pestañas de la pieza (Operaciones, Croquis,
+Evaluar, Chapa, Piezas soldadas), en la
 pieza sola y editando la pieza dentro del ensamblaje (Editar pieza), con nada, una cara o una arista
 elegida (los del croquis, dentro de un croquis). Anota qué panel abre, qué queda en edición, qué crea y en
 qué documento, avisos y errores, y lista lo que se comporta distinto en los dos modos. Por ahora solo
@@ -18,7 +19,8 @@ from azar_comun import bombear  # noqa: E402
 
 V = FreeCAD.Vector
 SALIDA = os.environ.get("FW_SONDEO_OUT", "")
-NO_PROBAR = ("Sketcher_LeaveSketch",)
+NO_PROBAR = ("Sketcher_LeaveSketch",
+             "SWUI_SMExportDXF", "SWUI_ExportFaceDXF")  # cuadro de Windows para guardar: colgaría la prueba
 
 
 def _comandos():
@@ -38,8 +40,15 @@ def _comandos():
                         walk(it[k], tab)
             elif isinstance(it, (list, tuple)):
                 walk(it, tab)
-    walk(rl.FEATURES[1], "Operaciones")
-    walk(rl.SKIZZE[1], "Croquis")
+    # todas las pestañas del entorno de pieza (objetivo del usuario, 16/11: todo lo de la pieza, igual en
+    # Editar pieza); FW_SONDEO_TABS=Chapa,... para correr solo algunas
+    nombres = {rl.FEATURES[0]: "Operaciones", rl.SKIZZE[0]: "Croquis", rl.EVALUIEREN[0]: "Evaluar",
+               "Chapa": "Chapa", "Piezas soldadas": "Piezas soldadas"}
+    solo = [t for t in os.environ.get("FW_SONDEO_TABS", "").split(",") if t]
+    for title, groups in rl.TABS:
+        tab = nombres.get(title)
+        if tab and (not solo or tab in solo):
+            walk(groups, tab)
     return out
 
 
