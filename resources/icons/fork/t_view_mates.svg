@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Ver relaciones de posición</title>
+  <path d="M33.9 38.4 L20.4 46.2 L20.4 32.8 L33.9 25.0 Z" fill="#7b818a" stroke="#1b1b1b" stroke-width="1.6" stroke-linejoin="round"/><path d="M20.4 46.2 L6.8 38.4 L6.8 25.0 L20.4 32.8 Z" fill="#9aa0a8" stroke="#1b1b1b" stroke-width="1.6" stroke-linejoin="round"/><path d="M20.4 17.1 L33.9 25.0 L20.4 32.8 L6.8 25.0 Z" fill="#c3c7ce" stroke="#1b1b1b" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M47.5 46.2 L33.9 54.1 L33.9 40.6 L47.5 32.8 Z" fill="#2a6bc9" stroke="#1b1b1b" stroke-width="1.6" stroke-linejoin="round"/><path d="M33.9 54.1 L20.4 46.2 L20.4 32.8 L33.9 40.6 Z" fill="#3d8bff" stroke="#1b1b1b" stroke-width="1.6" stroke-linejoin="round"/><path d="M33.9 25.0 L47.5 32.8 L33.9 40.6 L20.4 32.8 Z" fill="#8cbcff" stroke="#1b1b1b" stroke-width="1.6" stroke-linejoin="round"/>
+  <circle cx="46" cy="18" r="9" fill="none" stroke="#1b1b1b" stroke-width="7"/>
+  <circle cx="46" cy="18" r="9" fill="none" stroke="#f4f4f4" stroke-width="3.6"/>
+  <path d="M52 25 L60 33" stroke="#1b1b1b" stroke-width="7.0" fill="none" stroke-linecap="round"/>
+  <path d="M52 25 L60 33" stroke="#f4f4f4" stroke-width="3.6" fill="none" stroke-linecap="round"/>
+</svg>

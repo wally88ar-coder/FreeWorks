@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Avanzar hasta el final</title>
+  <path d="M10 30 H32" stroke="#1b1b1b" stroke-width="7.0" stroke-linejoin="round" stroke-linecap="round" fill="none"/><path d="M10 30 H32" stroke="#f4f4f4" stroke-width="4.0" stroke-linejoin="round" stroke-linecap="round" fill="none"/>
+  <path d="M10 40 H32" stroke="#1b1b1b" stroke-width="7.0" stroke-linejoin="round" stroke-linecap="round" fill="none"/><path d="M10 40 H32" stroke="#f4f4f4" stroke-width="4.0" stroke-linejoin="round" stroke-linecap="round" fill="none"/>
+  <path d="M8 14 H56" stroke="#1b1b1b" stroke-width="8" stroke-linecap="round"/>
+  <path d="M8 14 H56" stroke="#3d8bff" stroke-width="4.6" stroke-linecap="round"/>
+  <path d="M48.0 20.0 L48.0 41.0" stroke="#1b1b1b" stroke-width="6.4" stroke-linecap="round"/><path d="M48.0 48.0 L51.9 41.0 L44.1 41.0 Z" fill="#3d8bff" stroke="#1b1b1b" stroke-width="1.2" stroke-linejoin="round"/><path d="M48.0 20.0 L48.0 41.0" stroke="#3d8bff" stroke-width="4.0" stroke-linecap="round"/>
+  <path d="M38 56 H58" stroke="#1b1b1b" stroke-width="8" stroke-linecap="round"/>
+  <path d="M38 56 H58" stroke="#3d8bff" stroke-width="4.6" stroke-linecap="round"/>
+</svg>

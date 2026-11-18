@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Seleccionar otra</title>
+  <path d="M8 8 H36 V36 H8 Z" stroke="#9a9a9a" stroke-width="3" stroke-dasharray="4 3" fill="none" stroke-linecap="butt"/>
+  <path d="M20 20 H48 V48 H20 Z" stroke="#1b1b1b" stroke-width="7.0" stroke-linejoin="round" stroke-linecap="round" fill="none"/><path d="M20 20 H48 V48 H20 Z" stroke="#f4f4f4" stroke-width="4.0" stroke-linejoin="round" stroke-linecap="round" fill="none"/>
+  <path d="M36 30 L36 58 L43 51 L48 60 L53 58 L48 49 L57 49 Z" fill="#f4f4f4" stroke="#1b1b1b" stroke-width="2" stroke-linejoin="round"/>
+</svg>

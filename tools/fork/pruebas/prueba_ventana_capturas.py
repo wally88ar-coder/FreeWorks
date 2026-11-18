@@ -4,7 +4,7 @@
 QUE = """Capturas de referencia (plan de calidad, paso 9), con la ventana a 1366 x 705 (la pantalla del
 usuario): una foto de la ventana con cada pestaña de la cinta y con los paneles principales abiertos
 (Redondeo, Extruir, Brida base, Miembro estructural, Relación de posición), y una del diálogo de
-Ecuaciones. Cada foto se compara con la aprobada por el usuario (`capturas/aprobadas/`): si cambia
+Ecuaciones, y dos del clic derecho como SW (operación en el árbol, cara en la vista; 15/11). Cada foto se compara con la aprobada por el usuario (`capturas/aprobadas/`): si cambia
 más de un 0,02 % de los píxeles comparados (sin la barra de estado ni el dibujo de la vista 3D, que
 se corre un píxel de una corrida a otra), falla y deja la foto nueva y una imagen con las
 diferencias en `capturas/nuevas/`. Una foto sin aprobada queda en `nuevas/` para que el usuario la
@@ -174,6 +174,30 @@ def prueba():
         _comparar("dialogo_ecuaciones", dlg.grab().toImage(), problemas, pendientes)
     finally:
         dlg.reject()
+        limpiar()
+    # el clic derecho como SW (15/11): operación en el árbol y cara en la vista
+    try:
+        import FreeCADGui
+        from menu_comun import abrir_menu, derecho_arbol, derecho_vista, pieza
+        doc, body, _sk, pad = pieza()
+        FreeCADGui.ActiveDocument.ActiveView.viewIsometric()
+        FreeCADGui.SendMsgToActiveView("ViewFit")
+        bombear(600)
+        FreeCADGui.Selection.clearSelection()
+        FreeCADGui.Selection.addSelection(doc.Name, body.Name, pad.Name + ".")
+        for nombre, abrir in (("menu_operacion_arbol", derecho_arbol(pad.Label)),
+                              ("menu_cara_vista", None)):
+            if abrir is None:
+                FreeCADGui.Selection.clearSelection()
+                abrir = derecho_vista(FreeCAD.Vector(30, 20, 20))
+            visto = abrir_menu(abrir, foto=True)
+            if visto.get("foto") is None:
+                problemas.append("%s: no se abrió el menú" % nombre)
+            else:
+                _comparar(nombre, visto["foto"], problemas, pendientes)
+    except Exception as exc:
+        problemas.append("menús del clic derecho: %s: %s" % (type(exc).__name__, exc))
+    finally:
         limpiar()
     # primero lo que es un problema de verdad (FALLA); después, lo pendiente de aprobar (CONOCIDO)
     assert not problemas, "\n".join(problemas)

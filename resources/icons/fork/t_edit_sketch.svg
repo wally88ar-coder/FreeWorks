@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Editar croquis</title>
+  <path d="M6 44 L22 22 H58 L42 44 Z" fill="#8b9099" fill-opacity="0.55" stroke="#1b1b1b" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M20 38 L30 26 H46 L36 38 Z" stroke="#1b1b1b" stroke-width="7.0" stroke-linejoin="round" stroke-linecap="round" fill="none"/><path d="M20 38 L30 26 H46 L36 38 Z" stroke="#f4f4f4" stroke-width="4.0" stroke-linejoin="round" stroke-linecap="round" fill="none"/>
+  <path d="M36.0 30.0 L51.3 13.2" stroke="#1b1b1b" stroke-width="10" stroke-linecap="round"/>
+  <path d="M36.0 30.0 L51.3 13.2" stroke="#3d8bff" stroke-width="6.4" stroke-linecap="round"/>
+  <path d="M54.0 15.6 L56.0 8.0 L48.6 10.8 Z" fill="#f4f4f4" stroke="#1b1b1b" stroke-width="1.8" stroke-linejoin="round"/>
+  <circle cx="56.0" cy="8.0" r="2.4" fill="#e0261b" stroke="#1b1b1b" stroke-width="1.6"/>
+</svg>

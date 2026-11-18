@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Abrir pieza</title>
+  <path d="M47.5 41.8 L28.1 53.0 L28.1 37.3 L47.5 26.1 Z" fill="#7b818a" stroke="#1b1b1b" stroke-width="1.6" stroke-linejoin="round"/><path d="M28.1 53.0 L8.7 41.8 L8.7 26.1 L28.1 37.3 Z" fill="#9aa0a8" stroke="#1b1b1b" stroke-width="1.6" stroke-linejoin="round"/><path d="M28.1 14.9 L47.5 26.1 L28.1 37.3 L8.7 26.1 Z" fill="#c3c7ce" stroke="#1b1b1b" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M36.0 30.0 L53.1 12.9" stroke="#1b1b1b" stroke-width="6.0" stroke-linecap="round"/><path d="M58.0 8.0 L50.3 10.2 L55.8 15.7 Z" fill="#3d8bff" stroke="#1b1b1b" stroke-width="1.2" stroke-linejoin="round"/><path d="M36.0 30.0 L53.1 12.9" stroke="#3d8bff" stroke-width="3.6" stroke-linecap="round"/>
+</svg>

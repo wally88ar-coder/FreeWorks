@@ -276,6 +276,103 @@ def _():
     return [_face(horiz, mk.GEO), _face(vert, mk.GEO), _face(gus, mk.NEW)]
 
 
+# --- Bandeja del clic derecho (15/11): lo que en SW está en la fila de íconos del menú -----------
+# Mismo lenguaje que el original: GRIS = la pieza, AZUL = lo que cambia o se hace, BLANCO = líneas.
+
+GHOST_FACES = ("#eef0f3", "#dfe2e6", "#cfd3d8")  # pieza que deja de calcularse
+
+
+def pencil(x0, y0, x1, y1):
+    """Lápiz azul de (x0, y0) a la punta (x1, y1): editar."""
+    import math
+    ang = math.atan2(y1 - y0, x1 - x0)
+    tip = 7.0
+    bx, by = x1 - tip * math.cos(ang), y1 - tip * math.sin(ang)
+    nx, ny = -math.sin(ang) * 3.6, math.cos(ang) * 3.6
+    body = "M%.1f %.1f L%.1f %.1f" % (x0, y0, bx, by)
+    head = "M%.1f %.1f L%.1f %.1f L%.1f %.1f Z" % (bx + nx, by + ny, x1, y1, bx - nx, by - ny)
+    return [
+        '<path d="%s" stroke="%s" stroke-width="10" stroke-linecap="round"/>' % (body, mk.OUTLINE),
+        '<path d="%s" stroke="%s" stroke-width="6.4" stroke-linecap="round"/>' % (body, mk.NEW),
+        '<path d="%s" fill="%s" stroke="%s" stroke-width="1.8" stroke-linejoin="round"/>' % (head, mk.GEO, mk.OUTLINE),
+        mk.pt(x1, y1, r=2.4),
+    ]
+
+
+def bar(y, x0=8, x1=56):
+    """La barra de retroceso del árbol (azul)."""
+    d = "M%d %d H%d" % (x0, y, x1)
+    return ['<path d="%s" stroke="%s" stroke-width="8" stroke-linecap="round"/>' % (d, mk.OUTLINE),
+            '<path d="%s" stroke="%s" stroke-width="4.6" stroke-linecap="round"/>' % (d, mk.NEW)]
+
+
+def tree_rows(ys, x0=10, x1=32):
+    """Renglones del árbol: blanco con contorno, como la geometría del original."""
+    return [mk.geo("M%d %d H%d" % (x0, y, x1)) for y in ys]
+
+
+@icon("t_edit_feature", "Editar operación")
+def _():
+    return [mk.box(-16, -8, 0, 20, 20, 14)] + pencil(34, 30, 54, 10)
+
+
+@icon("t_edit_sketch", "Editar croquis")
+def _():
+    return [mk.plane(), mk.geo("M20 38 L30 26 H46 L36 38 Z")] + pencil(36, 30, 56, 8)
+
+
+@icon("t_suppress", "Suprimir")
+def _():
+    return [mk.box(-10, -10, 0, 20, 20, 12, GHOST_FACES), mk.arrow(32, 4, 32, 22, color=mk.NEW, w=3.4)]
+
+
+@icon("t_unsuppress", "Desactivar supresión")
+def _():
+    return [mk.box(-10, -10, 0, 20, 20, 12, mk.NEW_FACES), mk.arrow(32, 24, 32, 4, color=mk.NEW, w=3.4)]
+
+
+@icon("t_rollback", "Retroceder")
+def _():
+    return tree_rows((12, 22, 32)) + bar(46) + [mk.arrow(48, 40, 48, 8, color=mk.NEW, w=4)]
+
+
+@icon("t_roll_forward", "Avanzar")
+def _():
+    return tree_rows((32, 42, 52)) + bar(18) + [mk.arrow(48, 24, 48, 56, color=mk.NEW, w=4)]
+
+
+@icon("t_roll_end", "Avanzar hasta el final")
+def _():
+    return tree_rows((30, 40)) + bar(14) + [mk.arrow(48, 20, 48, 48, color=mk.NEW, w=4)] + bar(56, 38, 58)
+
+
+@icon("t_select_other", "Seleccionar otra")
+def _():
+    cursor = "M36 30 L36 58 L43 51 L48 60 L53 58 L48 49 L57 49 Z"
+    return [mk.old("M8 8 H36 V36 H8 Z"), mk.geo("M20 20 H48 V48 H20 Z"),
+            '<path d="%s" fill="%s" stroke="%s" stroke-width="2" stroke-linejoin="round"/>' % (
+                cursor, mk.GEO, mk.OUTLINE)]
+
+
+@icon("t_view_mates", "Ver relaciones de posición")
+def _():
+    return [mk.box(-18, -6, 0, 14, 14, 12), mk.box(-4, -6, 0, 14, 14, 12, mk.NEW_FACES),
+            '<circle cx="46" cy="18" r="9" fill="none" stroke="%s" stroke-width="7"/>' % mk.OUTLINE,
+            '<circle cx="46" cy="18" r="9" fill="none" stroke="%s" stroke-width="3.6"/>' % mk.GEO,
+            mk.thin("M52 25 L60 33", mk.OUTLINE, 7), mk.thin("M52 25 L60 33", mk.GEO, 3.6)]
+
+
+@icon("t_transparency", "Cambiar transparencia")
+def _():
+    return [mk.old("M24 14 H52 V42 H24 Z"), mk.old("M12 50 L24 42"),
+            mk.geo("M12 24 H40 V52 H12 Z"), mk.geo("M12 24 L24 14 M40 24 L52 14 M40 52 L52 42")]
+
+
+@icon("t_open_part", "Abrir pieza")
+def _():
+    return [mk.box(-14, -10, 0, 20, 20, 14), mk.arrow(36, 30, 58, 8, color=mk.NEW, w=3.6)]
+
+
 def build(target=TARGET):
     os.makedirs(target, exist_ok=True)
     written = []

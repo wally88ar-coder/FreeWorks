@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Editar operación</title>
+  <path d="M43.6 41.8 L24.2 53.0 L24.2 37.3 L43.6 26.1 Z" fill="#7b818a" stroke="#1b1b1b" stroke-width="1.6" stroke-linejoin="round"/><path d="M24.2 53.0 L4.8 41.8 L4.8 26.1 L24.2 37.3 Z" fill="#9aa0a8" stroke="#1b1b1b" stroke-width="1.6" stroke-linejoin="round"/><path d="M24.2 14.9 L43.6 26.1 L24.2 37.3 L4.8 26.1 Z" fill="#c3c7ce" stroke="#1b1b1b" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M34.0 30.0 L49.1 14.9" stroke="#1b1b1b" stroke-width="10" stroke-linecap="round"/>
+  <path d="M34.0 30.0 L49.1 14.9" stroke="#3d8bff" stroke-width="6.4" stroke-linecap="round"/>
+  <path d="M51.6 17.5 L54.0 10.0 L46.5 12.4 Z" fill="#f4f4f4" stroke="#1b1b1b" stroke-width="1.8" stroke-linejoin="round"/>
+  <circle cx="54.0" cy="10.0" r="2.4" fill="#e0261b" stroke="#1b1b1b" stroke-width="1.6"/>
+</svg>

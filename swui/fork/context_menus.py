@@ -105,6 +105,19 @@ COMP_SUPPRESS, COMP_UNSUPPRESS, COMP_CONFIG = ("SWUI_ComponentSuppress", "SWUI_C
                                                "SWUI_ComponentConfig")
 HIDE_OR_SHOW = "hide_or_show"  # Ocultar u Mostrar, según esté a la vista lo elegido
 
+# Íconos de la bandeja para lo que no trae ícono (propios, tools/fork/make_icons_fork.py; nada de SW)
+TRAY_ICONS = {
+    EDIT: "fork/t_edit_feature", EDIT_SKETCH: "fork/t_edit_sketch", SUPPRESS: "fork/t_suppress",
+    UNSUPPRESS: "fork/t_unsuppress", UNSUPPRESS_ALL: "fork/t_unsuppress", ROLLBACK: "fork/t_rollback",
+    ROLL_FORWARD: "fork/t_roll_forward", ROLL_END: "fork/t_roll_end", "clarify": "fork/t_select_other",
+    VIEW_MATES: "fork/t_view_mates", "Std_ToggleTransparency": "fork/t_transparency",
+    "Std_LinkSelectLinked": "fork/t_open_part", COMP_SUPPRESS: "fork/t_suppress",
+    COMP_UNSUPPRESS: "fork/t_unsuppress", MATE: "sketch/m_coincident",
+    "PartDesign_NewSketch": "sketch/sketch_new", "PartDesign_Fillet": "sketch/f_fillet",
+    "PartDesign_Chamfer": "sketch/f_chamfer",
+}
+TRAY_COLUMNS = 8  # íconos por fila, como la bandeja de SW
+
 # Lo que actúa sobre la operación del título: con una cara elegida en la vista, antes de correrlo se
 # elige esa operación (la que creó la cara, como SW). Sin esto, Suprimir/Eliminar/Retroceder actuaban
 # sobre la última operación del sólido aunque el título dijera otra (revisión del 15/11).
@@ -609,6 +622,50 @@ def expand(menu):
     return False
 
 
+def _tray_action(menu, items):
+    """
+    La bandeja de SW: una fila de íconos arriba del menú. items = [(clave, acción)]. Cada ícono hace
+    lo mismo que la acción (la copia, que ya sabe elegir la operación del título) y dice su nombre al
+    pasar el mouse; gris si no se puede usar.
+    """
+    from swui import paths
+    from swui.compat import QtCore, QtGui, QtWidgets
+
+    box = QtWidgets.QWidget()
+    box.setObjectName("SWUI_cm_tray")
+    box.setStyleSheet("#SWUI_cm_tray { background: transparent; }"
+                      "QToolButton { border: 1px solid transparent; border-radius: 2px; padding: 2px; }"
+                      "QToolButton:hover { border-color: #7eb4ea; background: #e5f1fb; }")
+    grid = QtWidgets.QGridLayout(box)
+    grid.setContentsMargins(2, 1, 2, 1)  # casi sin huecos: un clic entre íconos cerraba el menú sin hacer nada
+    grid.setSpacing(0)
+    act = QtWidgets.QWidgetAction(menu)
+    act.setObjectName("SWUI_cm_tray")
+    for i, (key, a) in enumerate(items):
+        button = QtWidgets.QToolButton(box)
+        button.setObjectName("SWUI_cm_tray_" + key)
+        icon = a.icon()
+        own = TRAY_ICONS.get(key)
+        if (icon is None or icon.isNull()) and own and paths.icon(own):
+            icon = QtGui.QIcon(paths.icon(own))
+        button.setIcon(icon)
+        button.setIconSize(QtCore.QSize(20, 20))
+        button.setAutoRaise(True)
+        text = a.text().replace("&", "")
+        button.setToolTip(text)
+        button.setAccessibleName(text)
+        button.setEnabled(a.isEnabled())
+        button.setProperty("swui_text", text)
+
+        def click(_c=False, a=a):
+            menu.hide()  # como un ícono de SW: se cierra el menú y se hace
+            a.trigger()
+        button.clicked.connect(click)
+        grid.addWidget(button, i // TRAY_COLUMNS, i % TRAY_COLUMNS)
+    act.setDefaultWidget(box)
+    return act
+
+
 def _menu_parent_ok(menu):
     """Solo el menú del clic derecho: sin padre (el del árbol) o hijo del árbol o la vista 3D."""
     parent = menu.parent()
@@ -654,7 +711,7 @@ def arrange(menu):
     new = []  # ("title", texto) / ("sep", None) / ("act", acción)
     first = True
     for title, wanted in groups:
-        items = []
+        items, tray_keys = [], []
         for k in wanted:
             pre = before if k in ON_FEATURE else None
             a = by_key.get(k)
@@ -664,7 +721,13 @@ def arrange(menu):
                 a = _command_action(k, menu, LABELS.get(k), pre)
             if a is not None:
                 items.append(a)
+                tray_keys.append(k)
         if not items:
+            continue
+        if title is None and first:
+            # la bandeja: íconos arriba, sin repetirlos en el texto (como SW)
+            new.append(_tray_action(menu, [(k, a) for k, a in zip(tray_keys, items)]))
+            first = False
             continue
         if title:
             new.append(_title_action(menu, title, first))
@@ -726,6 +789,30 @@ def _tidy_separators(menu):
         menu.removeAction(acts[-1])
 
 
+def click_text(menu, text):
+    """Hace clic en lo que dice text (un ícono de la bandeja o una opción). True si estaba."""
+    for a in menu.actions():
+        if a.objectName() == "SWUI_cm_tray":
+            for b in tray_buttons(a):
+                if b.property("swui_text") == text:
+                    b.click()
+                    return b.isEnabled()
+        elif not a.isSeparator() and a.text().replace("&", "") == text:
+            a.trigger()
+            return a.isEnabled()
+    return False
+
+
+def tray_buttons(action):
+    """Los íconos de la bandeja, en orden."""
+    from swui.compat import QtWidgets
+
+    box = action.defaultWidget()
+    grid = box.layout()
+    return [grid.itemAt(i).widget() for i in range(grid.count())
+            if isinstance(grid.itemAt(i).widget(), QtWidgets.QToolButton)]
+
+
 def visible_texts(menu, with_hidden=False):
     """Textos del menú como los ve el usuario (para las pruebas): títulos entre [ ], » al final."""
     out = []
@@ -738,6 +825,8 @@ def visible_texts(menu, with_hidden=False):
             out.append("[%s]" % a.defaultWidget().text())
         elif a.objectName() == "SWUI_cm_more":
             out.append("»")
+        elif a.objectName() == "SWUI_cm_tray":
+            out.append("{%s}" % "|".join(b.property("swui_text") for b in tray_buttons(a)))
         else:
             out.append(a.text().replace("&", "").split("\t")[0])
     return out

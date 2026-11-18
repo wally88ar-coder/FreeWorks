@@ -18,6 +18,36 @@ LOCALES sin push hasta que el usuario pruebe; batería completa solo al final).*
   `reorder`), enganchados en el filtro que ya existía (`feature_tree._MenuShow`, sin filtro nuevo).
   Pruebas: `prueba_ventana_clic_derecho_sw`, `prueba_ventana_arrastre_arbol` (con ventana) y
   `prueba_clic_derecho_tabla` (rápida), todas BIEN; 7 preguntas en `docs/SIETE_PREGUNTAS.md`.
+- **Etapa B (bandeja de íconos): qué tiene que pasar** (escrito por Claude, aprobado de antemano por el
+  usuario): arriba del menú, lo más usado se ve como la fila de íconos de SW; cada ícono hace lo mismo
+  que la opción y dice su nombre al pasar el mouse; gris si no se puede usar; el texto no lo repite;
+  íconos de FreeCAD o propios (`tools/fork/make_icons_fork.py`, sección "Bandeja"), nada de Dassault.
+- **Etapa B HECHA** (commit local): bandeja de íconos arriba del menú (`context_menus._tray_action`),
+  10 íconos propios nuevos (`resources/icons/fork/t_*.svg`, generados con make_icons_fork.py; los
+  demás íconos no cambian: comprobado por el revisor regenerando todo). Prueba
+  `prueba_ventana_clic_derecho_sw` ampliada (cada ícono con dibujo, comprobado que falla sin la tabla
+  de íconos; Mostrar con lo oculto) y 2 capturas nuevas sin aprobar en `capturas/nuevas/`
+  (`menu_operacion_arbol.png`, `menu_cara_vista.png`): **las aprueba el usuario**; mientras tanto
+  `prueba_ventana_capturas` da "falta que el usuario apruebe 2 capturas". Revisor: nada grave.
+  **Decidido solo:** la bandeja se usa con el mouse, como la de SW (el teclado no entra en los íconos;
+  lo que está ahí no se repite en el texto).
+- **Etapa C (comandos nuevos): qué tiene que pasar** (escrito antes de programar):
+  - Contraer operaciones (árbol, pieza y ensamblaje): se cierran todas las ramas del árbol; quedan
+    abiertos el documento y los Cuerpos/ensamblaje, como SW. No cambia el documento.
+  - Invertir la selección (componente): quedan elegidos todos los otros componentes del ensamblaje.
+  - Aislar (sólido en la pieza, componente en el ensamblaje): se ve solo eso; un botón "Salir de
+    aislar" (como SW) vuelve a mostrar exactamente lo que se veía. No deja el documento modificado ni
+    guarda nada oculto en el archivo.
+  - Cambiar de nombre (componente, también desde la vista): pide el nombre; un paso de deshacer.
+  - Propiedades del componente: nombre, archivo, configuración y suprimido; Aceptar aplica todo en un
+    paso de deshacer; Cancelar no cambia nada.
+  - Padre/Hijo del componente: lista sus relaciones de posición y lo del ensamblaje que lo usa.
+  - Material (componente): abre Material sobre la pieza del componente.
+  - Herramientas de selección ▸ (cara en la vista): Seleccionar otra y Seleccionar tangencia (la cara
+    y las que siguen tangentes a ella).
+  - Exportar a DXF (cara plana en la pieza): un DXF 1:1 del contorno de la cara (con sus agujeros),
+    mirado de frente, empezando en 0,0; pide dónde guardarlo con el nombre de la pieza.
+  - Abrir pieza en posición (componente): abre la pieza mirada igual que en el ensamblaje.
 - Medido en FreeCAD 1.1.4 antes de programar: la preselección (`Selection.getPreselection()`) da
   documento, objeto y camino, también dentro de un ensamblaje; soltar una operación sobre otra en el
   árbol NO reordena (FreeCAD la vuelve "BaseFeature" del Cuerpo); "Ir a la pieza"

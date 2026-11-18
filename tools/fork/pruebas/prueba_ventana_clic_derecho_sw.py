@@ -10,10 +10,9 @@ edición el menú es el de FreeCAD. Abrir el menú y cerrarlo con Esc no cambia 
 elige del menú hace lo que dice."""
 TIPO = "completa"
 import FreeCAD  # noqa: E402
-import Part  # noqa: E402
-import Sketcher  # noqa: E402
 from _base import carpeta_temporal  # noqa: E402
 from azar_comun import bombear  # noqa: E402
+from menu_comun import abrir_menu as _menu, arbol as _arbol, derecho_arbol, derecho_vista, pieza as _pieza  # noqa: E402,F401
 
 V = FreeCAD.Vector
 INGLES = ("Fit All", "Draw Style", "Standard Views", "Go to Selection", "Rotate", "Link Actions", "Make Link",
@@ -21,108 +20,6 @@ INGLES = ("Fit All", "Draw Style", "Standard Views", "Go to Selection", "Rotate"
 NUNCA = ("Enviar a consola de Python", "Acciones de expresión", "Enlazar acciones", "Marcar para recalcular",
          "Ajustes del árbol", "Estilos de navegación", "Ventana de documento", "Color aleatorio", "Mover arriba",
          "Mover abajo", "Toggle Freeze")
-
-
-def _menu(abrir, cerrar=True):
-    """Abre un clic derecho con abrir() y devuelve (visibles, con lo de atrás, desplegado) del menú."""
-    from swui.compat import QtCore, QtWidgets
-    from swui.fork import context_menus as cm
-
-    visto = {}
-
-    class F(QtCore.QObject):
-        def eventFilter(self, obj, ev):
-            if (ev.type() == QtCore.QEvent.Type.Show and isinstance(obj, QtWidgets.QMenu)
-                    and not isinstance(obj.parent(), QtWidgets.QMenu) and "menu" not in visto):
-                visto["menu"] = obj
-
-                def leer():
-                    try:
-                        visto["vis"] = cm.visible_texts(obj)
-                        visto["todo"] = cm.visible_texts(obj, with_hidden=True)
-                        visto["acciones"] = {a.text().replace("&", ""): a for a in obj.actions()}
-                        if cm.expand(obj):
-                            bombear(150)
-                        visto["desplegado"] = cm.visible_texts(obj)
-                        visto["elegir"] = visto.get("elegir_fn")(obj) if visto.get("elegir_fn") else None
-                    finally:
-                        if cerrar:
-                            obj.close()
-                QtCore.QTimer.singleShot(350, leer)
-            return False
-
-    f = F()
-    app = QtWidgets.QApplication.instance()
-    app.installEventFilter(f)
-    try:
-        abrir()
-        bombear(900)
-    finally:
-        app.removeEventFilter(f)
-    return visto
-
-
-def _arbol():
-    import FreeCADGui
-    from swui.compat import QtWidgets
-    for t in FreeCADGui.getMainWindow().findChildren(QtWidgets.QTreeWidget):
-        if t.metaObject().className() == "Gui::TreeWidget" and t.isVisible():
-            return t
-
-
-def _item(label):
-    from swui.compat import QtWidgets
-    tree = _arbol()
-    it = QtWidgets.QTreeWidgetItemIterator(tree)
-    while it.value():
-        if it.value().text(0) == label:
-            return it.value()
-        it += 1
-
-
-def derecho_arbol(label):
-    from swui.compat import QtCore, QtGui, QtWidgets
-    tree = _arbol()
-    item = _item(label)
-    assert item is not None, "no está %s en el árbol" % label
-    tree.scrollToItem(item)
-    r = tree.visualItemRect(item)
-    p = QtCore.QPoint(r.left() + 30, r.center().y())
-    vp = tree.viewport()
-
-    def abrir():
-        ev = QtGui.QContextMenuEvent(QtGui.QContextMenuEvent.Reason.Mouse, p, vp.mapToGlobal(p))
-        QtWidgets.QApplication.sendEvent(vp, ev)
-    return abrir
-
-
-def _px(view, vp, p):
-    s = view.getSize()
-    x, y = view.getPointOnViewport(p)[:2]
-    return x * vp.width() / s[0], vp.height() - y * vp.height() / s[1]
-
-
-def derecho_vista(punto):
-    import FreeCADGui
-    from swui.compat import QtCore, QtGui, QtWidgets
-    view = FreeCADGui.ActiveDocument.ActiveView
-    vp = view.graphicsView().viewport()
-    x, y = _px(view, vp, punto)
-    R, N = QtCore.Qt.MouseButton.RightButton, QtCore.Qt.MouseButton.NoButton
-
-    def ev(t, b, bs, dx=0):
-        p = QtCore.QPointF(x + dx, y)
-        return QtGui.QMouseEvent(t, p, QtCore.QPointF(vp.mapToGlobal(p)), b, bs,
-                                 QtCore.Qt.KeyboardModifier.NoModifier)
-
-    def abrir():
-        for dx in (3, 1, 0):  # que FreeCAD preseleccione lo de abajo
-            QtWidgets.QApplication.sendEvent(vp, ev(QtCore.QEvent.Type.MouseMove, N, N, dx))
-            bombear(80)
-        QtWidgets.QApplication.sendEvent(vp, ev(QtCore.QEvent.Type.MouseButtonPress, R, R))
-        bombear(30)
-        QtWidgets.QApplication.sendEvent(vp, ev(QtCore.QEvent.Type.MouseButtonRelease, R, N))
-    return abrir
 
 
 def _sel():
@@ -133,30 +30,14 @@ def _sel():
 
 def _comun(m, que):
     assert m.get("vis") is not None, "%s: no se abrió el menú" % que
+    sin_icono = [t for t, con_icono, _h in m.get("bandeja", []) if not con_icono]
+    assert not sin_icono, "%s: íconos sin dibujo en la bandeja: %s" % (que, sin_icono)
     todo = m["todo"]
     for t in todo:
         for ing in INGLES:
             assert ing not in t, "%s: queda en inglés %r (%s)" % (que, t, todo)
         for nunca in NUNCA:
             assert nunca not in t, "%s: está %r, que se quitó (%s)" % (que, t, todo)
-
-
-def _pieza():
-    doc = FreeCAD.newDocument("Taco")
-    body = doc.addObject("PartDesign::Body", "Body")
-    sk = body.newObject("Sketcher::SketchObject", "Croquis")
-    sk.AttachmentSupport = [(body.Origin.OriginFeatures[3], "")]
-    sk.MapMode = "FlatFace"
-    pts = [V(0, 0, 0), V(60, 0, 0), V(60, 40, 0), V(0, 40, 0)]
-    for i in range(4):
-        sk.addGeometry(Part.LineSegment(pts[i], pts[(i + 1) % 4]))
-    for i in range(4):
-        sk.addConstraint(Sketcher.Constraint("Coincident", i, 2, (i + 1) % 4, 1))
-    pad = body.newObject("PartDesign::Pad", "Extruir")
-    pad.Profile = sk
-    pad.Length = 20
-    doc.recompute()
-    return doc, body, sk, pad
 
 
 def prueba():
@@ -178,7 +59,7 @@ def prueba():
     bombear(150)
     m = _menu(derecho_arbol(pad.Label))
     _comun(m, "operación en el árbol")
-    esperado = ["Editar operación", "Editar croquis", "Suprimir", "Retroceder", "Ocultar", "Apariencia",
+    esperado = ["{Editar operación|Editar croquis|Suprimir|Retroceder|Ocultar|Apariencia}",
                 "[Operación (%s)]" % pad.Label, "Padre/Hijo...", "Eliminar", "Cambiar transparencia", "»"]
     assert m["vis"] == esperado, "operación en el árbol:\n%s\nesperado:\n%s" % (m["vis"], esperado)
     atras = [t for t in m["todo"] if t not in m["vis"]]
@@ -196,8 +77,8 @@ def prueba():
     sel = _sel()
     assert len(sel) == 1 and "Face" in sel[0], "el clic derecho no eligió la cara de abajo: %s" % sel
     _comun(m, "cara en la vista")
-    esperado = ["Editar operación", "Editar croquis", "Suprimir", "Retroceder", "Apariencia", "Seleccionar otra",
-                "Croquis", "Ocultar", "Redondeo", "Chaflán", "[Cara]", "Cambiar transparencia",
+    esperado = ["{Editar operación|Editar croquis|Suprimir|Retroceder|Apariencia|Seleccionar otra|Croquis|Ocultar"
+                "|Redondeo|Chaflán}", "[Cara]", "Cambiar transparencia",
                 "[Operación (%s)]" % pad.Label, "Padre/Hijo...", "Eliminar", "»"]
     assert m["vis"] == esperado, "cara en la vista:\n%s\nesperado:\n%s" % (m["vis"], esperado)
     assert "Zoom para ajustar" not in m["todo"], "Zoom/Trasladar/Girar tenía que quitarse: %s" % m["todo"]
@@ -221,15 +102,8 @@ def prueba():
     elegido = {}
 
     def suprimir(menu):
-        for a in menu.actions():
-            if a.text() == "Suprimir":
-                elegido["ok"] = True
-                elegido["nombre"] = a.objectName()
-                a.trigger()
-                elegido["sel"] = [o.Name for o in FreeCADGui.Selection.getSelection()]
-                elegido["activo"] = FreeCADGui.Command.get("SWUI_Suppress").isActive()
-                return True
-        return False
+        elegido["ok"] = cm.click_text(menu, "Suprimir")
+        return elegido["ok"]
     visto = {}
     from swui.compat import QtCore as _C, QtWidgets as _W
 
@@ -253,7 +127,8 @@ def prueba():
     assert "[Operación (%s)]" % pad.Label in (visto.get("vis") or []), "título: %s" % visto.get("vis")
     assert elegido.get("ok"), "no estaba Suprimir"
     doc.recompute()
-    assert pad.Suppressed and not corte.Suppressed or pad.Suppressed,         "Suprimir no actuó sobre la operación del título (%s / %s) %s" % (pad.Suppressed, corte.Suppressed, elegido)
+    assert pad.Suppressed, "Suprimir no actuó sobre la operación del título (%s)" % elegido
+    assert corte.Suppressed, "el corte depende de la extrusión: tenía que quedar suprimido con ella"
     doc.undo()
     doc.recompute()
     assert not pad.Suppressed, "Ctrl+Z no volvió la supresión"
@@ -323,11 +198,7 @@ def prueba():
     FreeCADGui.Selection.addSelection(doc.Name, body.Name, pad.Name + ".")
 
     def ocultar(menu):
-        for a in menu.actions():
-            if a.text() == "Ocultar":
-                a.trigger()
-                return True
-        return False
+        return cm.click_text(menu, "Ocultar")
     from swui.compat import QtCore, QtWidgets
     visto = {}
 
@@ -349,6 +220,14 @@ def prueba():
     QtWidgets.QApplication.instance().removeEventFilter(f)
     assert visto.get("ok"), "no estaba Ocultar en el menú"
     assert not body.Visibility or not pad.Visibility, "Ocultar no ocultó"
+    # oculta: la bandeja ofrece Mostrar, con su ícono
+    body.Visibility = False
+    FreeCADGui.Selection.clearSelection()
+    FreeCADGui.Selection.addSelection(doc.Name, body.Name, pad.Name + ".")
+    m = _menu(derecho_arbol(pad.Label))
+    _comun(m, "operación oculta")
+    assert "Mostrar" in m["vis"][0] and "Ocultar" not in m["vis"][0], "oculta: %s" % m["vis"][0]
+    body.Visibility = True
     pad.Visibility = True
     yield 100
 
@@ -366,8 +245,8 @@ def prueba():
     bombear(150)
     m = _menu(derecho_arbol(b.Label))
     _comun(m, "componente en el árbol")
-    esperado = ["Abrir pieza", "Ocultar", "Cambiar transparencia", "Suprimir", "Relación de posición",
-                "Ver relaciones de posición", "Apariencia", "[Componente (TacoB)]", "Cambiar de nombre", "Fijar",
+    esperado = ["{Abrir pieza|Ocultar|Cambiar transparencia|Suprimir|Relación de posición"
+                "|Ver relaciones de posición|Apariencia}", "[Componente (TacoB)]", "Cambiar de nombre", "Fijar",
                 "Eliminar", "»"]
     assert m["vis"] == esperado, str(cm.last_decision) + "componente en el árbol:\n%s\nesperado:\n%s" % (m["vis"], esperado)
     yield 100
@@ -378,9 +257,8 @@ def prueba():
     sel = _sel()
     assert len(sel) == 1 and b.Name in sel[0] and "Face" in sel[0], "no eligió la cara del componente: %s" % sel
     _comun(m, "componente en la vista")
-    esperado = ["Seleccionar otra", "Abrir pieza", "Ocultar", "Cambiar transparencia", "Suprimir",
-                "Relación de posición", "Ver relaciones de posición", "Apariencia", "[Componente (TacoB)]", "Fijar",
-                "Eliminar", "»"]
+    esperado = ["{Seleccionar otra|Abrir pieza|Ocultar|Cambiar transparencia|Suprimir|Relación de posición"
+                "|Ver relaciones de posición|Apariencia}", "[Componente (TacoB)]", "Fijar", "Eliminar", "»"]
     assert m["vis"] == esperado, "componente en la vista:\n%s\nesperado:\n%s" % (m["vis"], esperado)
     assert not adoc.isTouched(), "abrir el menú tocó el ensamblaje"
     yield 100

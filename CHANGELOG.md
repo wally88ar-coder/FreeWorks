@@ -20,6 +20,10 @@ Neueste Version oben. / Newest version first.
   Retroceder...) actúa sobre la operación que creó la cara, la del título. Más textos de FreeCAD
   pasados al castellano. `swui/fork/context_menus.py`; pruebas `prueba_ventana_clic_derecho_sw`,
   `prueba_clic_derecho_tabla`.
+- **Clic derecho como SW, etapa B (15/11):** lo más usado se ve como la fila de íconos de SW arriba
+  del menú (nombre al pasar el mouse, gris si no se puede usar), sin repetirlo en el texto. Íconos
+  propios nuevos para Editar operación, Editar croquis, Suprimir, Retroceder/Avanzar, Seleccionar
+  otra, Ver relaciones, Cambiar transparencia y Abrir pieza (`tools/fork/make_icons_fork.py`).
 - **Reordenar arrastrando en el árbol, como SW (15/11):** soltar una operación en la mitad de
   arriba de otra la deja antes; en la de abajo, después (una línea azul muestra dónde). Un paso de
   deshacer; no deja soltar donde una dependencia lo impide. Antes FreeCAD convertía la operación
