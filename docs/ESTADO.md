@@ -68,6 +68,41 @@ LOCALES sin push hasta que el usuario pruebe; batería completa solo al final).*
   comparar con SW: SW la pone como "normal a"); Exportar a DXF escribe DXF (no DWG, FreeCAD no lo trae);
   Aislar se apaga solo si se aísla otra cosa o se cierra el documento.
   Sin probar: Abrir en posición con subensamblajes anidados (la cuenta los recorre, no hay prueba).
+- **Etapa D (editar la pieza dentro del ensamblaje): ANÁLISIS Y PLAN, sin código (lo aprueba el
+  usuario).** Medido el 15/11 en FreeCAD 1.1.4 real (sondeo de un solo uso, borrado), con dos piezas
+  (cada una su archivo) en un ensamblaje, la segunda corrida y girada 30°:
+  1. **Editar croquis desde el ensamblaje** (`Gui.Document.setEdit(ensamblaje, 0, "Body001.Body.Croquis.")`,
+     el camino del componente): abre el croquis de la pieza EN el ensamblaje (queda en edición el croquis
+     de la pieza, documento activo el ensamblaje, con el panel). Cambiar una cota y salir: la pieza cambia
+     (60 -> 80) y el componente en el ensamblaje también; la pieza queda "modificada". FUNCIONA.
+  2. **Editar operación desde el ensamblaje** (igual, con la Extrusión): abre el panel de la extrusión;
+     el cambio (20 -> 35) pasa a la pieza y al ensamblaje. FUNCIONA.
+  3. **"Editar pieza" como SW** (agregarle cosas a la pieza sin salir del ensamblaje): el Cuerpo de la
+     pieza se puede activar a través del componente (`vista.setActiveObject("pdbody", ensamblaje,
+     "Body001.")`); con eso, Croquis sobre una cara del componente crea el croquis NUEVO EN LA PIEZA y lo
+     abre en el ensamblaje (sin el aviso "Cuerpo activo requerido", que sale si no se activa). FUNCIONA.
+  4. **Referencia a otra pieza (en contexto):** en la pieza B, una copia de forma (`SubShapeBinder`)
+     que apunta a una cara de la pieza A a través del ensamblaje queda bien calculada. Es lo que en SW es
+     una referencia externa ("->"): la pieza B pasa a depender del ensamblaje. FUNCIONA (sin probar al
+     guardar, cerrar y abrir la pieza sola).
+  **Plan propuesto (para aprobar):**
+  - Ícono **Editar pieza** en la bandeja del componente (como SW): activa el Cuerpo de la pieza a través
+    del componente, pone los otros componentes transparentes (sin dejar el archivo modificado ni guardarlo
+    así, igual que Aislar), muestra arriba "Editando pieza: Taco — Salir" (en SW: el botón de la esquina y
+    el árbol en azul). Todo lo de la cinta (Croquis sobre una cara, Extruir, Cortar, Redondeo...) va a la
+    pieza. Salir: desactiva el Cuerpo, vuelve las transparencias, recalcula el ensamblaje.
+  - **Editar operación / Editar croquis** en el clic derecho de la cara de un componente: abren la
+    operación o el croquis de la pieza sin salir del ensamblaje (punto 1 y 2).
+  - Guardar: la pieza queda modificada; Guardar del ensamblaje pregunta si guardar también las piezas
+    cambiadas (como SW: "Guardar todo").
+  - Pruebas con ventana con las 7 preguntas (cancelar el panel, Ctrl+Z en el ensamblaje y en la pieza,
+    guardar/cerrar/abrir la pieza sola, dos ensamblajes con la misma pieza, componente repetido).
+  **Preguntas para el usuario:** (1) ¿Referencias externas a otras piezas (punto 4) sí, o "Editar pieza"
+  solo para cosas propias de la pieza? En SW las usa con cuidado porque atan la pieza al ensamblaje.
+  (2) Un componente con otra configuración de la pieza hoy guarda una COPIA de la pieza dentro del
+  ensamblaje (límite conocido): editar esa copia no cambia el archivo de la pieza. ¿Avisar y no dejar, o
+  editar la copia? (3) Ctrl+Z dentro de Editar pieza: sin medir todavía qué deshace (el paso queda en la
+  pieza o en el ensamblaje); se mide antes de programar.
 - Medido en FreeCAD 1.1.4 antes de programar: la preselección (`Selection.getPreselection()`) da
   documento, objeto y camino, también dentro de un ensamblaje; soltar una operación sobre otra en el
   árbol NO reordena (FreeCAD la vuelve "BaseFeature" del Cuerpo); "Ir a la pieza"
