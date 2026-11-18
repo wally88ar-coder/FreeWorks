@@ -226,6 +226,11 @@ def _lines_node(shapes, color, width):
     from pivy import coin
 
     sep = coin.SoSeparator()
+    from swui.fork import edit_context as ec
+
+    place = ec.view_transform_node()  # editando: donde se ve la pieza (#100; revisión del 18/11, hallazgo 3)
+    if place is not None:
+        sep.addChild(place)
     mat = coin.SoBaseColor()
     mat.rgb = color
     style = coin.SoDrawStyle()
@@ -249,6 +254,11 @@ def _faces_node(faces, color):
     from pivy import coin
 
     sep = coin.SoSeparator()
+    from swui.fork import edit_context as ec
+
+    place = ec.view_transform_node()  # editando dentro de un ensamblaje: donde se ve la pieza (#100)
+    if place is not None:
+        sep.addChild(place)
     mat = coin.SoMaterial()
     mat.diffuseColor = color
     mat.emissiveColor = tuple(c * 0.35 for c in color)
@@ -402,6 +412,10 @@ class Callout:
             spin.blockSignals(False)
 
     def place(self, point):
+        if point is not None:  # punto de la pieza -> de la vista (editando dentro de un ensamblaje, #100)
+            from swui.fork import edit_context as ec
+
+            point = ec.to_view(point)
         self.anchor = point
         self.camera = None
         if point is None:

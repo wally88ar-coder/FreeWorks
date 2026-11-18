@@ -56,6 +56,21 @@ las preferencias. El disco C es SSD, así que no se pudo recuperar de ahí.
   - **Paso 5:** con una configuración de FreeCAD nueva, el PRIMER arranque ya queda en FreeWorks: cinta, sin barras
     de FreeCAD ni selector, y en castellano, también después de tocar "Done" en el asistente de bienvenida. Un
     idioma ya elegido no se toca.
+- **Resultado pasos 3 a 5 (18/11 madrugada, rama `rescate`, sin probar por el usuario):**
+  - Relevamiento de todos los botones editando una pieza (`editar_pieza_botones`, 70 min): BIEN, 0 diferencias.
+    El croquis de la chapa no volvió a abrir inválido en esta corrida (no hubo qué investigar).
+  - #100 arreglado (prueba `editar_pieza_coordenadas`). DXF de chapa editando: queda la pieza (anotado en #100).
+  - Hallazgo 12 + revisión: el Cuerpo nuevo entra al contenedor en el MISMO paso que lo crea; un solo Ctrl+Z lo
+    saca (antes hacían falta dos) y Ctrl+Y lo trae adentro (`contenedor_deshacer`, `contenedor_pieza`).
+  - Teclas Esc / Espacio editando: prueba `editar_pieza_teclas`, BIEN.
+  - Paso 4: prueba `croquis_arista_otro_componente`, BIEN (línea pegada al vértice de otro componente con
+    Coincidente; Esc sin usarla no deja nada). Ficha nueva **#102**: se enganchan aristas tapadas por la cara.
+  - Paso 5 (#101): además del banco y el idioma, las barras de FreeCAD: con configuración nueva FreeCAD las
+    mostraba después de que FreeWorks las ocultara. Ahora `first_run` las anota ocultas (solo las que no tienen
+    nada anotado). Prueba `primer_arranque`, BIEN.
+  - **Decidido solo:** el idioma se pone una sola vez por configuración; las referencias a aristas de la PROPIA
+    pieza que se traen y no se usan siguen sin borrarse al cancelar (era así antes; solo se limpian las de otro
+    componente); proyectar todos los componentes al elegir puede ser lento en ensamblajes grandes (sin medir).
 
 **ETAPA CERRADA (14/11): primera gran revisión de errores (8/11 al 14/11).** Empezó con el plan de
 calidad del 08/11 (auditoría, pruebas, mono, fuzzing, revisor). Resultado en GitHub: 91 fichas, 90

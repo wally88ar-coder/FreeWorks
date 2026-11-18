@@ -90,6 +90,7 @@ def prueba():
     assert nuevo.getParentGeoFeatureGroup() is uno.LinkedObject, "el Cuerpo nuevo quedó fuera del contenedor"
     assert not [o for o in doc.Objects if o.TypeId == "PartDesign::Body"], "el Cuerpo nuevo fue al ensamblaje"
     assert ep.editing(doc) is uno, "Cuerpo nuevo sacó de Editar pieza"
+    traza("  pasos: pieza %s, ensamblaje %s" % (pdoc.UndoNames[:3], doc.UndoNames[:3]))
     FreeCADGui.runCommand("Std_Undo")
     bombear(800)
     assert len([o for o in pdoc.Objects if o.TypeId == "PartDesign::Body"]) == antes, "Ctrl+Z no deshizo el Cuerpo"

@@ -433,7 +433,10 @@ class _MassDialog(QtWidgets.QDialog):
         try:
             from pivy import coin
 
-            view = FreeCADGui.getDocument(self.doc.Name).ActiveView
+            from swui.fork import edit_context as ec
+
+            view = ec.gui_for(self.doc).ActiveView  # editando: la ventana del ensamblaje (#100)
+            center = ec.to_view(center, part_doc=self.doc)  # solo si self.doc es la pieza editada
             node = coin.SoAnnotation()
             color = coin.SoBaseColor()
             color.rgb = (0.0, 0.35, 0.85)

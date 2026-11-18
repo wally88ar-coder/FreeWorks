@@ -380,6 +380,11 @@ def _draw_lines(view, dims):
     from pivy import coin
 
     sep = coin.SoAnnotation()
+    from swui.fork import edit_context as ec
+
+    place = ec.view_transform_node()  # editando dentro de un ensamblaje: donde se ve la pieza (#100)
+    if place is not None:
+        sep.addChild(place)
     color = coin.SoBaseColor()
     color.rgb = LINE_COLOR
     style = coin.SoDrawStyle()
@@ -428,7 +433,9 @@ def _place():
         return
     ratio = vp.devicePixelRatioF()
     for button, dim in _state["labels"]:
-        x, y = view.getPointOnViewport(dim.label_at)
+        from swui.fork import edit_context as ec
+
+        x, y = view.getPointOnViewport(ec.to_view(dim.label_at))
         button.move(int(x / ratio - button.width() / 2), int(vp.height() - y / ratio - button.height() / 2))
 
 

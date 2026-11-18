@@ -198,11 +198,11 @@ EXTERNAL_MARK = "SWUI_ExternalRef"
 _creating = [0]  # >0 mientras external_reference elige lo de afuera para la copia (los observadores no actúan)
 
 
-def external_reference(subs, ctx=None):
+def external_reference(subs, ctx=None, body=None):
     """
-    Copia de forma en contexto, en el Cuerpo activo de la pieza editada, de los elementos `subs` de otros
-    componentes (caminos desde el ensamblaje, como da outside_selection). Un paso de deshacer. Devuelve la
-    copia (sus elementos: Face1, Edge1... en el orden de subs) o None.
+    Copia de forma en contexto, en el Cuerpo activo de la pieza editada (o en `body`), de los elementos `subs`
+    de otros componentes (caminos desde el ensamblaje, como da outside_selection). Un paso de deshacer.
+    Devuelve la copia (sus elementos: Face1, Edge1... en el orden de subs) o None.
     Se arma por código y no con el comando nativo: con un panel abierto (Extruir) el comando no corre, y el
     contexto que pone solo a veces queda en el Cuerpo, y entonces no sigue a la pieza editada si se mueve
     (medido el 17/11): acá el contexto es siempre el ensamblaje, por el camino de la copia.
@@ -210,7 +210,7 @@ def external_reference(subs, ctx=None):
     ctx = ctx or current()
     if ctx is None or not subs:
         return None
-    body = active_body()
+    body = body or active_body()
     if body is None or body.Document is not ctx.pdoc:
         return None
     support = collections.OrderedDict()
@@ -330,6 +330,218 @@ def convert_outside_edges(sketch, subs, ctx=None):
     FreeCAD.closeActiveTransaction()
     ctx.pdoc.recompute()
     return n
+
+
+def part_placement(ctx):
+    """
+    Dónde está la pieza editada dentro del ensamblaje (Placement de la pieza al ensamblaje; también con el
+    componente dentro de un contenedor o movido). Identidad si no se puede saber.
+    """
+    import Part
+
+    try:
+        local = Part.getShape(ctx.part)
+        glob = Part.getShape(ctx.asm, ctx.prefix)
+        if not local.isNull() and not glob.isNull():
+            return glob.Placement.multiply(local.Placement.inverse())
+        # pieza todavía vacía (Cuerpo sin operaciones) o con error: sin forma, por la ubicación del camino
+        # (revisión del 18/11). La del camino no incluye la de la pieza; si el componente la reemplaza
+        # (LinkTransform falso, lo normal), se le saca (medido con FreeCADCmd, las 4 combinaciones)
+        plc = ctx.asm.getSubObject(ctx.prefix, retType=3, transform=True)
+        if not getattr(ctx.link, "LinkTransform", False):
+            plc = plc.multiply(ctx.part.Placement.inverse())
+        return plc
+    except Exception:
+        log("Ubicación de la pieza editada")
+    return FreeCAD.Placement()
+
+
+_view_cache = {}
+
+
+def _cache_key(ctx):
+    """Todo lo que cambia la ubicación de la pieza en la vista (revisión del 18/11, hallazgo 7)."""
+    import Part
+
+    link, part = ctx.link, ctx.part
+    return (ctx.asm.Document.Name, link.Name, str(link.Placement), str(getattr(ctx.asm, "Placement", "")),
+            bool(getattr(link, "LinkTransform", False)), part.Document.Name, part.Name, str(part.Placement),
+            Part.getShape(part).isNull())
+
+
+def view_placement(doc=None, part_doc=None):
+    """
+    #100 (18/11): editando una pieza dentro de un ensamblaje, la vista es la del ensamblaje y la pieza se ve donde
+    está su componente. Placement de la pieza a la vista (para pasar puntos y dibujos de vista previa), o None si
+    el documento activo (o doc) no edita una pieza. Con part_doc: solo si ESE documento es la pieza que se edita
+    (para lo que ya sabe de qué documento es, como el croquis o las propiedades físicas).
+    """
+    ctx = for_document(part_doc) if part_doc is not None else current(doc)
+    if ctx is None:
+        return None
+    try:
+        key = _cache_key(ctx)
+    except Exception:
+        key = None
+    if key is not None and key in _view_cache:
+        return _view_cache[key]
+    plc = part_placement(ctx)
+    if key is not None:
+        _view_cache.clear()
+        _view_cache[key] = plc
+    return plc
+
+
+def to_view(point, doc=None, part_doc=None):
+    """Punto de la pieza -> punto de la vista (igual sin edición)."""
+    plc = view_placement(doc, part_doc)
+    return plc.multVec(point) if plc is not None else point
+
+
+def from_view(point, doc=None):
+    """Punto de la vista -> punto de la pieza (igual sin edición)."""
+    plc = view_placement(doc)
+    return plc.inverse().multVec(point) if plc is not None else point
+
+
+def direction_from_view(vec, doc=None):
+    """Dirección de la vista -> dirección de la pieza (solo el giro)."""
+    plc = view_placement(doc)
+    return plc.Rotation.inverted().multVec(vec) if plc is not None else vec
+
+
+def view_transform_node(doc=None):
+    """
+    Nodo Coin que pone lo que se dibuja en coordenadas de la pieza donde se ve la pieza en la vista del ensamblaje
+    (va primero dentro del separador de la vista previa), o None si no se edita una pieza.
+    """
+    plc = view_placement(doc)
+    if plc is None:
+        return None
+    from pivy import coin
+
+    node = coin.SoTransform()
+    node.translation.setValue(plc.Base.x, plc.Base.y, plc.Base.z)
+    q = plc.Rotation.Q
+    node.rotation.setValue(coin.SbRotation(q[0], q[1], q[2], q[3]))
+    return node
+
+
+def global_shape(obj, ctx=None):
+    """Forma de obj (de la pieza editada) en coordenadas del ensamblaje; sin edición, la de siempre."""
+    import Part
+
+    ctx = ctx or for_document(getattr(obj, "Document", None))
+    path = path_of(obj, ctx) if ctx is not None else None
+    if path:
+        try:
+            shape = Part.getShape(ctx.asm, path)
+            if not shape.isNull():
+                return shape
+        except Exception:
+            pass
+    shape = Part.getShape(obj)
+    if ctx is not None and not shape.isNull():
+        shape = shape.copy()
+        shape.Placement = part_placement(ctx).multiply(shape.Placement)
+    return shape
+
+
+def other_components(ctx):
+    """
+    [(componente, forma en el ensamblaje)] de los OTROS componentes visibles del ensamblaje de la edición
+    (los del primer nivel; no la pieza editada ni los que la contienen: una referencia haría un ciclo).
+    """
+    import Part
+
+    out = []
+    for o in getattr(ctx.asm, "Group", []) or []:
+        try:
+            if o is ctx.link or not getattr(o, "Visibility", True) or not hasattr(o, "getLinkedObject"):
+                continue
+            if o.TypeId not in ("App::Link", "App::LinkElement") or _would_cycle(o, ctx):
+                continue
+            shape = Part.getShape(ctx.asm, o.Name + ".")
+            if not shape.isNull() and (shape.Edges or shape.Vertexes):
+                out.append((o, shape))
+        except Exception:
+            pass
+    return out
+
+
+def _outside_external(sketch, link, sub):
+    """(copia, elemento) de una referencia ya traída al croquis para `sub` del componente `link`, o None."""
+    for target, subs in getattr(sketch, "ExternalGeometry", []) or []:
+        if not hasattr(target, EXTERNAL_MARK):
+            continue
+        try:
+            support = list(target.Support)
+            if support == [(link, (sub,))] and subs:
+                return target.Name, subs[0]
+            # una copia de Convertir entidades trae varias aristas: la n-ésima es EdgeN (revisión 18/11, hallazgo 8)
+            if len(support) == 1 and support[0][0] is link and sub.startswith("Edge"):
+                names = list(support[0][1])
+                if all(n.startswith("Edge") for n in names) and sub in names:
+                    element = "Edge%d" % (names.index(sub) + 1)
+                    if element in subs:
+                        return target.Name, element
+        except Exception:
+            pass
+    return None
+
+
+def outside_element_in_sketch(sketch, sub, ctx=None):
+    """
+    Top-down (18/11, decisión del usuario: mejor que SW): con el croquis `sketch` de la pieza editada abierto,
+    trae al croquis la arista o vértice `sub` de OTRO componente ('Otro.Edge5', camino desde el ensamblaje)
+    como geometría externa, a través de una referencia externa en el Cuerpo del croquis; sin pasar por
+    Convertir entidades. Un paso de deshacer (o dentro del que esté abierto). Si ya estaba, no repite.
+    Devuelve (nombre de la copia, 'Edge1' o 'Vertex1') o None.
+    """
+    from swui.fork import feature_tree as ft
+
+    ctx = ctx or for_document(sketch.Document)
+    if ctx is None:
+        return None
+    first, _dot, element = sub.partition(".")
+    link = ctx.asm.Document.getObject(first)
+    kind = "Vertex" if element.startswith("Vertex") else "Edge"
+    if link is None or not element.startswith(("Edge", "Vertex")) or "." in element:
+        return None
+    found = _outside_external(sketch, link, element)
+    if found is not None:
+        return found
+    body = ft.body_of(sketch)
+    if body is None:
+        return None  # croquis fuera de un Cuerpo: la copia no podría ir a otro lado (revisión 18/11, hallazgo 6)
+    own = not _transaction_open()
+    if own:
+        FreeCAD.setActiveTransaction("Referencia de otro componente")
+    binder = None
+    try:
+        binder = external_reference([sub], ctx, body=body)
+        if binder is None:
+            raise RuntimeError("sin referencia externa")
+        try:
+            binder.ViewObject.Visibility = False
+        except Exception:
+            pass
+        sketch.addExternal(binder.Name, kind + "1")
+        sketch.recompute()
+    except Exception:
+        log("Arista de otro componente en el croquis")
+        if own:
+            FreeCAD.closeActiveTransaction(True)
+        elif binder is not None:  # dentro de un paso ajeno: que no quede la copia colgada
+            try:
+                if ctx.pdoc.getObject(binder.Name) is binder:
+                    ctx.pdoc.removeObject(binder.Name)
+            except Exception:
+                pass
+        return None
+    if own:
+        FreeCAD.closeActiveTransaction()
+    return binder.Name, kind + "1"
 
 
 def resolved_selection():

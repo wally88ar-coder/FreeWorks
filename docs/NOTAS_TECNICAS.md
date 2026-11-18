@@ -1258,6 +1258,26 @@ que usan está en `tools/test_load.py` (`check_ia`): si una cambia de firma, el 
 - Después de salir de un croquis abierto desde el ensamblaje, `getInEdit()` del ensamblaje da el
   `ViewProviderAssembly` (el ensamblaje vuelve a quedar activo).
 
+## Editar pieza fuera del origen y top-down en el croquis (18/11): hallazgos en FreeCAD 1.1.4
+
+- **Ubicación de la pieza en el ensamblaje:** `Part.getShape(asm, prefijo).Placement * Part.getShape(pieza).Placement⁻¹`.
+  Con la pieza vacía (Cuerpo sin operaciones) las dos formas son nulas: entonces
+  `asm.getSubObject(prefijo, retType=3)` (Placement del camino, con el del ensamblaje) y, si el componente
+  REEMPLAZA la ubicación de la pieza (`LinkTransform` falso, lo normal), por `pieza.Placement⁻¹`. Medido con
+  FreeCADCmd en las 4 combinaciones (Cuerpo con y sin ubicación, LinkTransform sí y no): da lo mismo que por
+  las formas. `getSubObject(..., retType=1)` sin `matrix` devuelve solo el objeto, no (objeto, matriz).
+- **Lo que se dibuja con Coin** (vistas previas) se pasa con un `SoTransform` primero en el separador; el
+  cuaternión de `Rotation.Q` es (x, y, z, w), el mismo orden que `SbRotation`. Los nodos armados y no colgados
+  de la escena hay que `ref()`-earlos para mirarlos desde Python (si no, FreeCAD se cierra).
+- **Geometría externa fuera del plano:** el croquis la dibuja PROYECTADA en su plano. Para que una herramienta se
+  enganche (Línea: Coincidente con la externa), el clic que se le pasa tiene que ir al punto de pantalla de la
+  proyección, no al del vértice original (en una vista inclinada caen en lugares distintos del plano).
+- **Rehacer recrea objetos y avisa `slotCreatedObject`** con `doc.Transacting` verdadero: un escucha que abre un
+  paso de deshacer ahí borra lo que queda por rehacer.
+- **Primer arranque:** el asistente de bienvenida de FreeCAD 1.1.4 (`Mod/Start/FirstStart2024`) graba "English"
+  si `General/Language` está vacío; FreeWorks pone castellano antes (una sola vez por configuración,
+  `SWUI/FirstRunLanguage`).
+
 ## Clic derecho y arrastre en el árbol (15/11): hallazgos en FreeCAD 1.1.4
 - `FreeCADGui.Selection.getPreselection()` da lo que está debajo del mouse en la vista (después de un
   MouseMove): `DocumentName`, `ObjectName`, `SubElementNames` (en un Cuerpo "Extruir.Face6" con el

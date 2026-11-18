@@ -337,7 +337,7 @@ def mirror_preview(sketch, geo_ids, axis_geo, number=48):
     axis = axis_line(sketch, axis_geo)
     if axis is None:
         return []
-    plc = sketch.getGlobalPlacement()
+    plc = view_placement(sketch)
     out = []
     for g in geo_ids:
         try:
@@ -348,6 +348,16 @@ def mirror_preview(sketch, geo_ids, axis_geo, number=48):
     return out
 
 
+def view_placement(sketch):
+    """Del croquis a la vista: su ubicacion global, y editando la pieza dentro de un ensamblaje, donde se ve
+    la pieza (#100, 18/11)."""
+    from swui.fork import edit_context as ec
+
+    plc = ec.view_placement(part_doc=sketch.Document)
+    glob = sketch.getGlobalPlacement()
+    return plc.multiply(glob) if plc is not None else glob
+
+
 def _discretize(geo, number=48):
     if _geo_type(geo) == "Point":
         return [FreeCAD.Vector(geo.X, geo.Y, geo.Z)]
@@ -356,7 +366,7 @@ def _discretize(geo, number=48):
 
 def entity_lines(sketch, geo_ids, number=48):
     """Listas de puntos GLOBALES de entidades del croquis (geo < 0: ejes y referencias)."""
-    plc = sketch.getGlobalPlacement()
+    plc = view_placement(sketch)
     out = []
     for g in geo_ids:
         try:
@@ -781,7 +791,9 @@ class EntityPanel:
 
     def _graph(self):
         try:
-            return FreeCADGui.getDocument(self.doc.Name).ActiveView.getSceneGraph()
+            from swui.fork import edit_context as ec
+
+            return ec.gui_for(self.doc).ActiveView.getSceneGraph()  # editando: la ventana del ensamblaje
         except Exception:
             return None
 
@@ -935,7 +947,7 @@ def sketch_point(sketch, vp, event):
         get = getattr(view, "getPointOnFocalPlane", None) or view.getPoint
         p = get(int(cx), int(cy))
         d = view.getViewDirection()
-        inv = sketch.getGlobalPlacement().inverse()
+        inv = view_placement(sketch).inverse()
         pl = inv.multVec(p)
         dl = inv.Rotation.multVec(d)
         if abs(dl.z) > 1e-9:
@@ -965,7 +977,7 @@ def snap_point(sketch, vp, event):
     try:
         view = FreeCADGui.ActiveDocument.ActiveView
         cx, cy = _event_coin(vp, event)
-        plc = sketch.getGlobalPlacement()
+        plc = view_placement(sketch)
         best = None
         for p in sketch_vertices(sketch):
             q = view.getPointOnViewport(plc.multVec(p))

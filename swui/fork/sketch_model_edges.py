@@ -160,18 +160,50 @@ def _editing_sketch():
     return obj if obj is not None and getattr(obj, "TypeId", "") == SKETCH else None
 
 
-def _global_shape(obj):
-    """Forma del objeto en coordenadas globales (mismo orden de aristas/vértices)."""
+OUTSIDE = "<otro>"  # prefijo de las candidatas de OTRO componente (editando la pieza en un ensamblaje)
+
+
+class _Outside:
+    """Candidata de otro componente: se nombra como el componente, con el prefijo OUTSIDE."""
+
+    def __init__(self, link):
+        self.link = link
+        self.Name = OUTSIDE + link.Name
+
+
+def _context(sketch):
+    """Contexto de Editar pieza del croquis (la pieza editada dentro de un ensamblaje), o None."""
+    try:
+        from swui.fork import edit_context as ec
+
+        return ec.for_document(sketch.Document)
+    except Exception:
+        return None
+
+
+def _global_shape(obj, ctx=None):
+    """
+    Forma del objeto en coordenadas de la vista (mismo orden de aristas/vértices): las del documento, o las del
+    ensamblaje si la pieza se edita dentro de uno. (Antes se usaba obj.getParents(), que FreeCAD 1.1.4 no tiene:
+    editando una pieza movida, las aristas quedaban corridas.)
+    """
     import Part
 
-    try:
-        parents = obj.getParents()
-    except Exception:
-        parents = []
-    if parents:
-        root, sub = parents[0]
-        return Part.getShape(root, sub)
+    if ctx is not None:
+        from swui.fork import edit_context as ec
+
+        return ec.global_shape(obj, ctx)
     return Part.getShape(obj)
+
+
+def _sketch_placement(sketch, ctx=None):
+    """Ubicación del croquis en la vista (en el ensamblaje, si la pieza se edita dentro de uno)."""
+    plc = sketch.getGlobalPlacement()
+    if ctx is None:
+        return plc
+    from swui.fork import edit_context as ec
+
+    return ec.part_placement(ctx).multiply(plc)
 
 
 def _candidates(sketch):
@@ -193,14 +225,24 @@ def _candidates(sketch):
                 objs.append(target)
     except Exception:
         pass
+    ctx = _context(sketch)
     out = []
     for obj in objs:
         try:
-            shape = _global_shape(obj)
+            shape = _global_shape(obj, ctx)
             if shape is not None and not shape.isNull() and shape.Edges:
                 out.append((obj, shape))
         except Exception:
             pass
+    from swui.fork import feature_tree as ft
+
+    if ctx is not None and ft.body_of(sketch) is not None:
+        # top-down (18/11): las aristas y vértices de los otros componentes también (como referencia externa; solo
+        # con el croquis en un Cuerpo, que es donde va la copia)
+        from swui.fork import edit_context as ec
+
+        for link, shape in ec.other_components(ctx):
+            out.append((_Outside(link), shape))
     return out
 
 
@@ -219,7 +261,7 @@ def _camera_key(view):
 
 def _screen(view, sketch, cands):
     """Vértices y aristas en pantalla (Coin), con su lejanía al plano del croquis."""
-    plc = sketch.getGlobalPlacement()
+    plc = _sketch_placement(sketch, _context(sketch))
     normal = plc.Rotation.multVec(FreeCAD.Vector(0, 0, 1))
     origin = plc.Base
 
@@ -306,11 +348,23 @@ def _hide(view=None):
 
 
 def bring(sketch, obj_name, sub):
-    """Agregar la referencia (como Convertir entidades). True si se agregó."""
+    """
+    Agregar la referencia (como Convertir entidades). Devuelve (objeto, elemento) de la referencia como la tiene
+    el croquis (para elegirla), o None si no se pudo. Lo de otro componente (OUTSIDE) entra por una referencia
+    externa (edit_context.outside_element_in_sketch).
+    """
+    if obj_name.startswith(OUTSIDE):
+        from swui.fork import edit_context as ec
+
+        found = ec.outside_element_in_sketch(sketch, obj_name[len(OUTSIDE):] + "." + sub)
+        _state["sketch"] = None  # el croquis cambió: recalcular candidatas
+        return found
     doc = sketch.Document
     obj = doc.getObject(obj_name)
-    if obj is None or already(sketch, obj_name, sub) or depends_on(obj, sketch):
-        return False
+    if obj is not None and already(sketch, obj_name, sub):
+        return obj_name, sub
+    if obj is None or depends_on(obj, sketch):
+        return None
     doc.openTransaction("Referencia del modelo")
     try:
         sketch.addExternal(obj_name, sub)
@@ -318,10 +372,101 @@ def bring(sketch, obj_name, sub):
     except Exception:
         safe_ops.end_step(doc, abort=True)
         FreeCAD.Console.PrintLog("[SWUI fork] Arista del modelo:\n%s\n" % traceback.format_exc())
-        return False
+        return None
     safe_ops.end_step(doc)
     _state["sketch"] = None  # el croquis cambió: recalcular candidatas
-    return True
+    return obj_name, sub
+
+
+# --- Lo de otro componente traído con una herramienta y no usado ---------------------
+#
+# Revisión del 18/11 (hallazgo 4): con Línea, el clic sobre un vértice de otro componente trae la referencia (copia
+# oculta + geometría externa) ANTES de que la herramienta use el clic. Si después se cancela (Esc) sin usarla, no
+# tiene que quedar nada: cuando la herramienta termina o se cierra el croquis, lo traído que ninguna relación usa
+# se saca (con Ctrl+Z de su paso si es el último; si no, en un paso propio).
+
+_pending = []  # [(documento, croquis, copia, elemento, UndoCount después de traerla)]
+_pending_timer = [None]
+_pending_viewport = [None]  # la vista donde se hizo el clic (editando, la del ensamblaje: la pieza no tiene vista)
+
+
+def _remember(sketch, brought, viewport):
+    doc = sketch.Document
+    _pending_viewport[0] = viewport
+    _pending.append((doc.Name, sketch.Name, brought[0], brought[1], doc.UndoCount))
+    timer = _pending_timer[0]
+    if timer is None:
+        timer = QtCore.QTimer()
+        timer.setInterval(400)
+        timer.timeout.connect(_check_pending)
+        _pending_timer[0] = timer
+    timer.start()
+
+
+def _tool_active():
+    try:
+        vp = _pending_viewport[0]
+        return vp is not None and vp.cursor().shape() == QtCore.Qt.CursorShape.BitmapCursor
+    except Exception:
+        return False
+
+
+def _used(sketch, binder, element):
+    index = external_index(sketch, binder, element)
+    if index is None:
+        return None  # ya no está (deshecho o borrado)
+    geo = -2 - index  # la primera externa es -3
+    for c in sketch.Constraints:
+        if geo in (c.First, c.Second, c.Third):
+            return True
+    return False
+
+
+def _check_pending():
+    try:
+        if not _pending:
+            if _pending_timer[0] is not None:
+                _pending_timer[0].stop()
+            return
+        editing = _editing_sketch()
+        for item in list(_pending):
+            doc_name, sketch_name, binder, element, undo_count = item
+            try:
+                doc = FreeCAD.getDocument(doc_name)
+                sketch = doc.getObject(sketch_name)
+            except Exception:
+                sketch = None
+            if sketch is None:
+                _pending.remove(item)
+                continue
+            if editing is sketch and _tool_active():
+                continue  # la herramienta sigue: todavía la puede usar
+            _pending.remove(item)
+            used = _used(sketch, binder, element)
+            if used is None or used:
+                continue
+            if doc.UndoCount == undo_count and doc.UndoNames and doc.UndoNames[0] == OUTSIDE_STEP:
+                doc.undo()  # nada después: como si no se hubiera traído
+                continue
+            own = safe_ops.begin_step(doc, "Quitar referencia sin usar")
+            try:
+                index = external_index(sketch, binder, element)
+                sketch.delExternal(index - 1)
+                if doc.getObject(binder) is not None and not doc.getObject(binder).InList:
+                    doc.removeObject(binder)
+                sketch.recompute()
+            except Exception:
+                if own:
+                    safe_ops.end_step(doc, abort=True)
+                raise
+            if own:
+                safe_ops.end_step(doc)
+            _state["sketch"] = None
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Referencia de otro componente sin usar:\n%s\n" % traceback.format_exc())
+
+
+OUTSIDE_STEP = "Referencia de otro componente"  # nombre del paso de deshacer (edit_context)
 
 
 # --- Filtro de eventos ---------------------------------------------------
@@ -348,7 +493,7 @@ def _sketch_near(view, sketch, coin, radius):
     de radius del mouse? Se mide en pantalla en vez de mirar la preselección de FreeCAD,
     que sin herramienta no siempre está al día.
     """
-    plc = sketch.getGlobalPlacement()
+    plc = _sketch_placement(sketch, _context(sketch))
     shapes = []
     for geo in list(sketch.Geometry) + list(getattr(sketch, "ExternalGeo", [])[2:]):
         try:
@@ -369,6 +514,29 @@ def _sketch_near(view, sketch, coin, radius):
             if hit is not None and hit[0] <= radius:
                 return True
     return False
+
+
+def _snap_screen(view, sketch, brought, q):
+    """
+    Punto de pantalla (Coin) donde la herramienta tiene que recibir el clic para engancharse a la referencia recién
+    traída: su lugar PROYECTADO en el plano del croquis (ahí la dibuja el croquis). Con el vértice o la arista
+    fuera del plano, el punto de pantalla del original cae en otro lugar del plano en una vista inclinada y la línea
+    quedaba suelta (18/11). None si no se puede saber (queda el punto de siempre).
+    """
+    try:
+        index = external_index(sketch, *brought)
+        if not index:
+            return None
+        shape = sketch.ExternalGeo[1 + index].toShape()
+        plc = _sketch_placement(sketch, _context(sketch))
+        if shape.ShapeType == "Vertex" or not shape.Edges:
+            return tuple(view.getPointOnViewport(plc.multVec(shape.Vertexes[0].Point)))
+        pts = [tuple(view.getPointOnViewport(plc.multVec(p))) for p in shape.Edges[0].discretize(Number=POINTS_PER_EDGE)]
+        hit = closest_on_polyline(q, pts)
+        return tuple(hit[1]) if hit is not None else None
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Arista del modelo:\n%s\n" % traceback.format_exc())
+        return None
 
 
 def _pick_radius():
@@ -449,19 +617,37 @@ class _Filter(QtCore.QObject):
             sketch = _editing_sketch()
             ratio = viewport.devicePixelRatioF()
             obj, sub, q = hot
-            bring(sketch, obj, sub)
+            before = set(o.Name for o in sketch.Document.Objects)
+            brought = bring(sketch, obj, sub)
+            new_outside = bool(brought) and obj.startswith(OUTSIDE) and brought[0] not in before
             _hide(view)
             _state["hot"] = None
             if viewport.cursor().shape() == QtCore.Qt.CursorShape.ArrowCursor:
                 # Sin herramienta (seleccionando): se suma a la selección, como en SW, para
                 # relacionarla con lo ya elegido. El croquis elegiría al soltar el botón lo
                 # que tenía bajo el mouse (desactualizado): ese soltar no le llega.
-                index = external_index(sketch, obj, sub)
+                index = external_index(sketch, *brought) if brought else None
                 if index:
-                    FreeCADGui.Selection.addSelection(sketch.Document.Name, sketch.Name,
-                                                      "ExternalEdge%d" % index)
+                    from swui.fork import edit_context as ec
+
+                    # editando la pieza dentro de un ensamblaje, por el camino del componente (18/11: si no, no
+                    # quedaba elegida); en la pieza sola, igual que antes
+                    ec.select(sketch, "ExternalEdge%d" % index, clear=False)
                 self.swallow_release = True
                 return True
+            if new_outside:
+                _remember(sketch, brought, viewport)  # con herramienta: si no se usa, no queda (hallazgo 4)
+            if brought:
+                # que la herramienta vea la referencia recién traída al recibir el clic (si no, el croquis todavía
+                # no la dibujó y la línea no queda pegada: medido el 18/11)
+                try:
+                    view.redraw()
+                    FreeCADGui.updateGui()
+                except Exception:
+                    pass
+            on_plane = _snap_screen(view, sketch, brought, q) if brought else None
+            if on_plane is not None:
+                q = on_plane
             x, y = qt_point(q[0], q[1], viewport.height(), ratio)
             snapped = QtCore.QPointF(x, y)
             self.busy = True

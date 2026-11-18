@@ -5,6 +5,20 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Rescate y cierre de "Editar pieza = pieza" (17-18/11, sin probar por el usuario).** Lo perdido al desinstalar
+  FreeCAD 1.0 se rearmó desde el registro de la sesión (17 commits, rama `rescate`). Editando una pieza cuyo
+  componente no está en el origen (#100), el Croquis 3D, las vistas previas (caras y líneas de Redondeo,
+  Chaflán, Eliminar/Conservar, Matriz, Mover cara, Plano/Eje/Punto, herramientas del croquis), las cotas con
+  doble clic y la marca del centro de gravedad van donde se ve la pieza, también con la pieza nueva vacía
+  (`edit_context.view_placement`). Top-down (decisión del usuario, mejor que SW): en cualquier herramienta del
+  croquis, una arista o vértice de OTRO componente se toma sola como referencia (copia oculta en el Cuerpo, sin
+  Convertir entidades), la sigue si el otro se mueve, y si se cancela la herramienta sin usarla no queda nada;
+  el clic va al punto proyectado en el plano del croquis, así la línea queda pegada. El Cuerpo nuevo que entra
+  al contenedor de la pieza lo hace en el mismo paso que lo crea (un solo Ctrl+Z, como SW) y Rehacer ya no lo
+  rompe. Instalación de cero (#101): el primer arranque queda en FreeWorks, en castellano y sin las barras de
+  FreeCAD (`swui/fork/first_run.py`). Pruebas nuevas:
+  `prueba_ventana_editar_pieza_coordenadas`, `_teclas`, `prueba_ventana_croquis_arista_otro_componente`,
+  `prueba_ventana_contenedor_deshacer`, `prueba_ventana_primer_arranque`.
 - **Editar pieza = pieza, y top-down (noche del 16 al 17/11, #96, #97, #98, #99; sin probar por el usuario).**
   Editando una pieza dentro del ensamblaje, todos los botones de Operaciones, Croquis, Evaluar, Chapa y
   Piezas soldadas hacen lo mismo que en la pieza sola, sobre la pieza editada (relevamiento automático de

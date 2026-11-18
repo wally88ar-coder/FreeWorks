@@ -1002,6 +1002,12 @@ def new_body():
     FreeCAD.setActiveTransaction("Cuerpo")
     try:
         body = ctx.pdoc.addObject("PartDesign::Body", "Body")
+        # al contenedor en este mismo paso: un solo Ctrl+Z saca el Cuerpo (revisión del 18/11)
+        from swui.fork import part_container as pc
+
+        part = pc.container(ctx.pdoc)
+        if part is not None and body.getParentGeoFeatureGroup() is None:
+            part.addObject(body)
     except Exception:
         FreeCAD.closeActiveTransaction(True)
         raise

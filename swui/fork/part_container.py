@@ -129,6 +129,7 @@ def _hook_insert():
 
 
 ADOPT = ("PartDesign::Body", "App::DocumentObjectGroup")  # lo que tiene que verse en el componente
+BODY_STEP = "Add a Body"  # nombre (sin traducir) del paso que abre PartDesign_Body en FreeCAD 1.1.4
 
 
 class _NewBodies:
@@ -142,15 +143,27 @@ class _NewBodies:
         try:
             if obj.TypeId not in ADOPT:
                 return
+            if getattr(obj.Document, "Transacting", False):
+                return  # lo trae Deshacer/Rehacer: su paso ya trae (o no) la entrada al contenedor; abrir uno
+                #         nuevo acá borraría lo que queda por rehacer (revisión del 18/11, hallazgo 2)
+            if getattr(obj.Document, "Restoring", False):
+                return  # abriendo un archivo o pegando: lo que viene ya trae su lugar (revisión 18/11, 2.ª pasada)
             doc, name = obj.Document.Name, obj.Name
         except Exception:
             return
+        active = FreeCAD.getActiveTransaction()  # (nombre, número) o None
+        if obj.TypeId == "PartDesign::Body" and active and active[0] == BODY_STEP:
+            # botón Cuerpo: ya mismo, dentro del paso del comando, así un solo Ctrl+Z saca el Cuerpo (como SW). Solo
+            # ese comando: otros (miembros de soldadas...) ponen el Cuerpo en una carpeta después de crearlo, y
+            # adoptarlo antes lo dejaba en dos grupos (revisión del 18/11, 2.ª pasada). En FreeCAD 1.1.4 el Cuerpo
+            # ya tiene su Origen al avisar que se creó (medido con FreeCADCmd el 18/11).
+            adopt(doc, name, recompute=False)
         from swui.compat import QtCore
 
         QtCore.QTimer.singleShot(0, lambda: adopt(doc, name))
 
 
-def adopt(doc_name, obj_name):
+def adopt(doc_name, obj_name, recompute=True):
     """
     Un Cuerpo o grupo nuevo suelto en la raíz de una pieza con el contenedor de FreeWorks va adentro. (Editando
     una pieza de un solo Cuerpo, el contenedor lo arma antes el botón: edit_part.prepare_container; acá no, porque
@@ -164,8 +177,21 @@ def adopt(doc_name, obj_name):
         part = container(doc)
         if part is None or not hasattr(part, MARK):
             return
-        part.addObject(obj)
-        doc.recompute()
+        # dentro del paso de deshacer que esté abierto (el del comando); si no hay, uno propio (hallazgo 12 de la
+        # revisión del 17/11: quedaba fuera de todo paso y Ctrl+Z / Ctrl+Y no lo devolvían igual)
+        from swui.fork import safe_ops
+
+        own = not FreeCAD.getActiveTransaction() and safe_ops.begin_step(doc, "Cuerpo a la pieza")
+        try:
+            part.addObject(obj)
+            if recompute:  # dentro del comando no: el comando recalcula al terminar
+                doc.recompute()
+        except Exception:
+            if own:
+                safe_ops.end_step(doc, abort=True)
+            raise
+        if own:
+            safe_ops.end_step(doc)
     except Exception:
         import traceback
 

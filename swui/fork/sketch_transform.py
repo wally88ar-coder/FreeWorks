@@ -289,7 +289,7 @@ def _state_closed(panel):
 
 def moved_lines(sketch, geo_ids, change, number=48):
     """Vista previa: puntos GLOBALES de las entidades cambiadas (sin tocar el croquis)."""
-    plc = sketch.getGlobalPlacement()
+    plc = se.view_placement(sketch)
     out = []
     for g in geo_ids:
         try:

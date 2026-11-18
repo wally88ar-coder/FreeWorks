@@ -97,26 +97,36 @@ def _is_viewport(widget):
         return False
 
 
+def _ec():
+    from swui.fork import edit_context as ec
+
+    return ec
+
+
+# Los puntos del croquis 3D estan en coordenadas de la pieza; la vista, editando la pieza dentro de un
+# ensamblaje, es la del ensamblaje (#100, 18/11): se pasa de una a otra solo en estas puertas.
+
+
 def _screen(view, p):
     fn = getattr(view, "getPointOnViewport", None) or getattr(view, "getPointOnScreen")
-    x, y = fn(p)
+    x, y = fn(_ec().to_view(p))
     return float(x), float(y)
 
 
 def _focal(view, pos):
     fn = getattr(view, "getPointOnFocalPlane", None) or getattr(view, "getPoint")
-    return fn(int(pos[0]), int(pos[1]))
+    return _ec().from_view(fn(int(pos[0]), int(pos[1])))
 
 
 def _ray(view, pos):
     """(punto, dirección) del rayo del mouse."""
     p = _focal(view, pos)
-    d = view.getViewDirection()
+    d = _ec().direction_from_view(V(view.getViewDirection()))
     try:
         cam = view.getCameraNode()
         if cam.getTypeId().getName() == "PerspectiveCamera":
             c = cam.position.getValue()
-            o = V(c[0], c[1], c[2])
+            o = _ec().from_view(V(c[0], c[1], c[2]))
             return o, (p - o).normalize()
     except Exception:
         pass
@@ -148,6 +158,9 @@ class _Overlay:
         self.coin = coin
         self.view = view
         self.root = coin.SoAnnotation()
+        node = _ec().view_transform_node()  # editando dentro de un ensamblaje: donde se ve la pieza (#100)
+        if node is not None:
+            self.root.addChild(node)
         self.sep = coin.SoSeparator()
         self.root.addChild(self.sep)
         self.dims_sep = coin.SoSeparator()
@@ -598,7 +611,7 @@ class _Draw:
             return
         obj = _info_object(info)
         comp = str(info.get("Component", ""))
-        base = V(info.get("x", 0), info.get("y", 0), info.get("z", 0))
+        base = _ec().from_view(V(info.get("x", 0), info.get("y", 0), info.get("z", 0)))
         normal, name = None, None
         try:
             if comp.startswith("Face"):

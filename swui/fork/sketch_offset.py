@@ -442,7 +442,7 @@ class OffsetPanel(se.EntityPanel):
                                    self.reverse.isChecked(), self.both.isChecked(), self._caps())
         except Exception:
             return []
-        plc = self.sketch.getGlobalPlacement()
+        plc = se.view_placement(self.sketch)
         out = []
         for shape in shapes:
             for e in shape.Edges:

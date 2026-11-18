@@ -377,6 +377,10 @@ try:
     from swui import assembly_drop as _ad
 
     _ad.restore_workbench_setting()
+    # Fork: instalacion de cero (banco de arranque e idioma desde el primer arranque; swui/fork/first_run.py).
+    from swui.fork import first_run as _fr
+
+    _fr.apply()
 except Exception:
     FreeCAD.Console.PrintWarning(
         "[SWUI] Aufräumen beim Start fehlgeschlagen:\n%s\n" % traceback.format_exc()
