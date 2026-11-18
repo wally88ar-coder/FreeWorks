@@ -122,6 +122,28 @@ LOCALES sin push hasta que el usuario pruebe; batería completa solo al final).*
   (copia de la pieza dentro del ensamblaje): AVISAR Y NO DEJAR editarlo ("Este componente usa otra
   configuración; abrí la pieza para cambiarla"). (3) Ctrl+Z: lo mide Claude antes de programar.
   Plan de la etapa D APROBADO para hacer cuando el usuario dé el OK.
+  **PLAN "EDITAR PIEZA = PIEZA" (16/11 noche, aprobado por el usuario: "TODO es TODO"; pensado para diseño
+  top-down).** Qué tiene que pasar: editando una pieza dentro del ensamblaje, TODO lo del entorno de pieza
+  funciona igual que en la pieza sola, sobre la pieza editada: todas las pestañas (Operaciones, Croquis,
+  Evaluar, Chapa, Piezas soldadas), los menús de pieza (Insertar, Herramientas, Edición), el clic derecho en
+  caras/aristas/operaciones de la pieza editada (menú de pieza, no de componente), el árbol de la pieza
+  (operaciones del componente editado: editar, suprimir, retroceder...), las teclas (Ctrl+Z, Esc, Espacio =
+  Medir) y Ecuaciones / Material / Propiedades físicas / Configuraciones de la pieza. Lo creado va a la pieza,
+  no al ensamblaje; no saca de Editar pieza; Ctrl+Z en el ensamblaje lo deshace. Top-down (como SW, medir en
+  SW antes): croquis sobre la cara de OTRO componente, Convertir entidades / Equidistanciar de aristas de otro
+  componente y "hasta la cara" de otro componente crean la referencia en contexto (copia de forma nativa) en la
+  pieza editada.
+  Pasos: (1) piezas de prueba propias: chapa (Brida base + Brida de arista + corte), soldadura (croquis
+  esqueleto + miembros + esquinas), pieza con ecuaciones y material; cada una como componente de un
+  ensamblaje junto a otra pieza. (2) relevamiento completo y profundo (`prueba_ventana_editar_pieza_botones`):
+  cada botón/menú/clic derecho, con selecciones que tengan sentido para cada herramienta, en los dos modos,
+  llevando la operación hasta Aceptar con valores por omisión y comparando lo creado (tipos, forma válida,
+  volumen), si sigue editando y Ctrl+Z. (3) pieza común (`swui/fork/edit_context.py`): documento/Cuerpo de
+  trabajo, lo elegido a través del componente, volver a elegir por el camino del componente, abrir en edición
+  desde el ensamblaje, crear en la pieza; cada herramienta la usa (Panel = cara de una función). (4) arreglar
+  herramienta por herramienta en el orden de la tabla del checklist. (5) el relevamiento pasa a ser prueba
+  que FALLA si un botón difiere (excepciones decididas y anotadas). (6) top-down. Reglas de CLAUDE.md:
+  7 preguntas, prueba para todo, revisor independiente por tanda, rápida + área durante, completa al final.
   **OBJETIVO DEL USUARIO (16/11): todo lo que está en el entorno de pieza tiene que estar igual en Editar
   pieza** (Operaciones, Croquis, Evaluar, Chapa, Piezas soldadas), "como si estuvieras en la pieza sola".
   Relevadas también Evaluar, Chapa y Soldadas: distintos Medir (error con cara/arista), Ecuaciones (falla),
