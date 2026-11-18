@@ -108,6 +108,11 @@ LOCALES sin push hasta que el usuario pruebe; batería completa solo al final).*
   ensamblaje (límite conocido): editar esa copia no cambia el archivo de la pieza. ¿Avisar y no dejar, o
   editar la copia? (3) Ctrl+Z dentro de Editar pieza: sin medir todavía qué deshace (el paso queda en la
   pieza o en el ensamblaje); se mide antes de programar.
+  **Respuestas del usuario (15/11):** (1) referencias a otras piezas: SÍ, como en SW (la pieza queda
+  atada al ensamblaje; marcarlo en el árbol con "->" como SW). (2) componente en otra configuración
+  (copia de la pieza dentro del ensamblaje): AVISAR Y NO DEJAR editarlo ("Este componente usa otra
+  configuración; abrí la pieza para cambiarla"). (3) Ctrl+Z: lo mide Claude antes de programar.
+  Plan de la etapa D APROBADO para hacer cuando el usuario dé el OK.
 - **Etapa E (clic derecho con VARIOS elegidos): PLAN, sin código (lo aprueba el usuario).** Encontrado
   por el usuario el 15/11: con dos componentes elegidos no sale Aislar. Causa: el clic derecho solo
   reconoce UN elemento elegido (`context_of` en `swui/fork/context_menus.py`); con dos o más cae en el
