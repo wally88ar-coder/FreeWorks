@@ -290,7 +290,9 @@ def _limpiar(ctx, tab, cmd, antes_p, antes_a):
         gdoc.resetEdit()
         bombear(300)
     FreeCADGui.Selection.clearSelection()
-    if ctx["pieza"] == "marco":  # Esquinas y otras rehacen operaciones que ya estaban: borrar no alcanza
+    # marco: Esquinas y otras rehacen operaciones que ya estaban, borrar no alcanza; chapa: borrar con
+    # removeObject la brida recién aceptada (la punta del Cuerpo) dejaba el Cuerpo sin punta (17/11)
+    if ctx["pieza"] in ("marco", "chapa"):
         pdoc = ctx["pdoc"]
         while pdoc.UndoCount > ctx["deshacer"]:
             pdoc.undo()
@@ -336,6 +338,11 @@ def _modo_pieza(pieza, ruta, comandos, resultados):
     from swui.fork import edit_context as ec
     pdoc = FreeCAD.openDocument(ruta)
     bombear(800)
+    # el armado del ensamblaje (modo editando) recalcula la pieza; acá también, para arrancar igual en los
+    # dos modos (17/11: en la corrida completa el croquis del corte de la chapa abría a veces sin recalcular)
+    traza("  inválidos al abrir: %s" % _invalidos(pdoc, set(o.Name for o in pdoc.Objects)))
+    pdoc.recompute()
+    bombear(200)
     gdoc = _al_frente(pdoc)
     bodies = [o for o in pdoc.Objects if o.TypeId == "PartDesign::Body"]
     gdoc.activeView().setActiveObject("pdbody", bodies[-1])

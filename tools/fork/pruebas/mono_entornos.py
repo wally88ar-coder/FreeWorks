@@ -408,8 +408,13 @@ class Configuraciones(Entorno):
         from swui.fork import configurations as cf
         if len(self.largos) >= 4:
             return
+        from swui.fork import safe_ops
+        # como los botones (panel Agregar configuración y la cota configurada): cada paso con su Ctrl+Z.
+        # Sin esto, un Ctrl+Z después deshacía el paso anterior y dejaba la cota atada a una columna que
+        # ya no estaba (falla del 17/11: artefacto de la prueba, la interfaz siempre abre el paso)
         try:
-            nombre = cf.add(self.doc, "Mono%d" % rng.randint(1, 9999))
+            with safe_ops.undo_step(self.doc, "Agregar configuración"):
+                nombre = cf.add(self.doc, "Mono%d" % rng.randint(1, 9999))
         except ValueError as e:  # #75: con una operación en error
             raise AssertionError("%s: %s" % (que, e))
         # desde 40: más corta, la pared derecha (x = largo - 20) llega al Agujero (borde en x = 13) y
@@ -417,8 +422,9 @@ class Configuraciones(Entorno):
         # sin configuraciones y en SW). Era la variante de #74 que quedaba (12/11, 300 casos sin
         # ventana: 0 rotos de 38 a 70; con el agujero lejos de la pared, 0 rotos de 25 a 70)
         largo = round(rng.uniform(40.0, 70.0), 1)
-        cf.configure(self.doc, ("prop", self._caja(), "Length"), largo, scope="this")
-        self.doc.recompute()
+        with safe_ops.undo_step(self.doc, "Modificar cota"):
+            cf.configure(self.doc, ("prop", self._caja(), "Length"), largo, scope="this")
+            self.doc.recompute()
         bombear(400)
         self.largos[nombre] = largo
         assert abs(self._caja().Length.Value - largo) < 1e-6, "%s: la configuración nueva no tomó su largo" % que
@@ -429,8 +435,10 @@ class Configuraciones(Entorno):
         if not conocidas:
             return
         nombre = rng.choice(conocidas)
-        cf.activate(self.doc, nombre)
-        self.doc.recompute()
+        from swui.fork import safe_ops
+        with safe_ops.undo_step(self.doc, "Mostrar configuración"):  # como la pestaña Configuraciones
+            cf.activate(self.doc, nombre)
+            self.doc.recompute()
         bombear(400)
         largo = self._caja().Length.Value
         assert abs(largo - self.largos[nombre]) < 1e-6, \
