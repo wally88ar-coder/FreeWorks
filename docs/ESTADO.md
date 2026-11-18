@@ -122,6 +122,20 @@ LOCALES sin push hasta que el usuario pruebe; batería completa solo al final).*
   (copia de la pieza dentro del ensamblaje): AVISAR Y NO DEJAR editarlo ("Este componente usa otra
   configuración; abrí la pieza para cambiarla"). (3) Ctrl+Z: lo mide Claude antes de programar.
   Plan de la etapa D APROBADO para hacer cuando el usuario dé el OK.
+  **16/11, probando el usuario (#95, arreglado, commit local, sin subir):** editando una pieza, Croquis no
+  aceptaba la cara (salía "Seleccione un plano" nativo) y Extruir corte tomaba la cara entera. Qué tiene que
+  pasar: Croquis / Extruir / Corte / Revolución / Ranura como en la pieza sola (cara elegida: croquis ahí;
+  nada: panel FreeWorks que acepta las caras de la pieza editada; operación: al salir del croquis); lo de
+  otros componentes, como antes. Hecho en `edit_part.py` (`selection_in_part`, `select_in_part`,
+  `new_sketch_in_part`, enganche sobre pick_plane). Encontrado: el Croquis nativo, dentro de un ensamblaje,
+  apoya y abre otro croquis "Sketch" que ya esté en la pieza (error de FreeCAD, NOTAS_TECNICAS 10): editando,
+  el croquis lo arma FreeWorks. Revisor: 1 alto (cara nombrada por el Cuerpo: croquis apoyado en su propio
+  Cuerpo) y medios (si falla, no volver al nativo; salir de Editar pieza a mitad; panel con el Cuerpo
+  editado) arreglados con prueba. **Decidido solo:** Taladro y Brida base editando siguen con lo de FreeCAD
+  (sin probar ahí sus paneles); cara curva elegida: lo de FreeCAD (igual que en la pieza sola).
+  **Sin hacer (a medir en SW):** el clic derecho en la cara de la pieza editada muestra el menú de
+  componente (sin Croquis); en SW, editando, sale el de la cara. Croquis sobre la cara de OTRO componente
+  (referencia externa, como SW): sigue lo de FreeCAD. Subensamblajes: sin probar.
   **Etapa D HECHA (15/11 a la noche, commit local, sin subir).** `swui/fork/edit_part.py`: Editar pieza
   (ícono propio nuevo t_edit_part en la bandeja de UN componente; otra vez o "Salir" vuelve), Editar
   operación / Editar croquis desde la cara de un componente (abren la operación o el croquis que hizo esa

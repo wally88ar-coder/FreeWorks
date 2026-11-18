@@ -529,6 +529,16 @@ Cada uno con lo que hace el fork mientras tanto. Buscado en los issues de FreeCA
    varias alineadas) da `makeOffset2D: wires are nonplanar or noncoplanar` (el plano no queda
    definido y la función no deja darlo). El fork arma esa equidistancia a mano en el plano del
    croquis (`sketch_offset._offset2d`); prueba `prueba_croquis_equidistanciar_recta`.
+10. **Croquis nativo dentro de un ensamblaje apoya y abre OTRO croquis** (FreeCAD 1.1.4, 2026-11-16).
+   Editando una pieza en el ensamblaje (Cuerpo activo a través del componente), con una cara de la
+   pieza elegida, `PartDesign_NewSketch` crea el croquis en la pieza con `body.newObject(..., 'Sketch')`
+   (queda "Sketch001" si la pieza ya tiene un "Sketch"), pero las líneas siguientes usan el nombre
+   calculado en el ENSAMBLAJE (`getObject('Sketch')`): apoya en la cara y abre el "Sketch" que ya
+   existía (lo MUEVE si estaba en otra cara) y el nuevo queda suelto y vacío. Visto en la consola de
+   Python (`App.getDocument('Disco').getObject('Sketch').AttachmentSupport = ...`). En una pieza sola,
+   bien. Fork: editando una pieza, Croquis/Extruir/Corte de la cinta arman el croquis a mano
+   (`edit_part.new_sketch_in_part`); prueba `prueba_ventana_editar_pieza_cara`. El comando nativo
+   directo (Ctrl+... o un menú que no pase por la cinta) sigue con el error.
 
 Otros hallazgos del 12/11 (no son errores para reportar):
 - Congelar (`Std_ToggleFreeze`) no tiene función de Python en 1.1.4 (`freeze`/`isFreezed` no
@@ -1217,6 +1227,16 @@ que usan está en `tools/test_load.py` (`check_ia`): si una cambia de firma, el 
   salir de un croquis vacío vuelve a traerlo (no deshace el croquis).
 - Borrar operaciones con dependientes muestra el aviso de FreeCAD "Los siguientes objetos de referencia
   pueden romperse. ¿Continuar?" (botones Sí/No): en una prueba hay que contestarlo o se traba.
+- (16/11) Croquis / Extruir / Corte con una cara: `pick_plane` (croquis en la cara y después la operación)
+  se apaga en los ensamblajes; editando una pieza, `edit_part._hook_pick_plane` lo enciende. Hace falta:
+  leer lo elegido a través del componente (`getSelectionEx("", 0)`, camino `Comp.Op.;#..;F.Face6`), crear
+  el croquis en el documento de la pieza (el Croquis nativo tiene el error 10 de "Errores de FreeCAD"),
+  abrirlo con `setEdit(ensamblaje, 0, "Comp.Sketch.")`, y para arrancar la operación al salir, elegir el
+  croquis por el camino del componente (`Selection.addSelection(docEnsamblaje, "Assembly", "Comp.Sketch.")`):
+  elegido directo en el documento de la pieza, el Corte nativo no lo toma. `FreeCAD.setActiveTransaction`
+  deja el paso en la pieza y Ctrl+Z en la ventana del ensamblaje lo deshace (probado).
+- Después de salir de un croquis abierto desde el ensamblaje, `getInEdit()` del ensamblaje da el
+  `ViewProviderAssembly` (el ensamblaje vuelve a quedar activo).
 
 ## Clic derecho y arrastre en el árbol (15/11): hallazgos en FreeCAD 1.1.4
 - `FreeCADGui.Selection.getPreselection()` da lo que está debajo del mouse en la vista (después de un

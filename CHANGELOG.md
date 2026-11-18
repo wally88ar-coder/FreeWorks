@@ -5,6 +5,14 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Editar pieza: Croquis, Extruir y Extruir corte sobre una cara de la pieza (16/11, arregla #95, visto por
+  el usuario).** Editando una pieza dentro del ensamblaje, Croquis con una cara plana elegida abre el croquis
+  ahí; sin nada elegido, el panel "elegí plano o cara" acepta las caras de esa pieza (antes salía el nativo,
+  que no las acepta); Extruir saliente / Extruir corte / Revolución / Ranura abren primero el croquis en la
+  cara y al salir la operación (antes el corte tomaba la cara entera). El croquis lo arma FreeWorks: el
+  nativo de FreeCAD 1.1.4, dentro de un ensamblaje, apoya y abre otro croquis "Sketch" que ya estuviera en
+  la pieza. Taladro y Brida base siguen con lo de FreeCAD ahí. `swui/fork/edit_part.py`; prueba
+  `prueba_ventana_editar_pieza_cara`.
 - **Clic derecho como SW, etapa A (15/11, tabla decidida por el usuario):** en la vista, el clic
   derecho elige primero lo que está debajo del mouse (si ya estaba elegido, no cambia nada). El
   menú de una operación en el árbol, de una cara en la vista, de un componente en el árbol y de la

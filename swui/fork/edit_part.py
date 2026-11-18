@@ -373,6 +373,253 @@ def _picked_face():
     return (top, sub) if cm.ELEMENT.match(sub.split(".")[-1] or "") else None
 
 
+# --- Croquis / Extruir / Corte sobre una cara, editando (16/11, visto por el usuario) -----------------------
+# FreeWorks arma "croquis en la cara y después la operación" en pick_plane, que se apaga en los ensamblajes.
+# Editando una pieza, se enciende: lo elegido se lee a través del componente y se vuelve a elegir por ese
+# mismo camino (FreeCAD solo acepta la cara o el croquis de la pieza elegidos desde el ensamblaje).
+
+
+def _edit_target(doc=None):
+    """(ensamblaje, componente, camino del componente) que se está editando en doc (o el activo), o None."""
+    if not _editing:
+        return None  # nada en edición (lo común): ni se mira el documento
+    doc = doc or FreeCAD.ActiveDocument
+    link = editing(doc) if getattr(doc, "Name", None) else None
+    if link is None:
+        return None
+    asm, prefix = assembly_and_path(link)
+    return (asm, link, prefix) if asm is not None else None
+
+
+def selection_in_part(doc=None):
+    """
+    Lo elegido mientras se edita una pieza, como lo ve la pieza: ([(objeto de la pieza, [elemento])],
+    hay_algo_de_afuera). None si no se está editando. Lo de otros componentes no entra en la lista.
+    """
+    from swui.fork import context_menus as cm
+
+    found = _edit_target(doc)
+    if found is None:
+        return None
+    asm, link, prefix = found
+    body = getattr(link, "LinkedObject", None)
+    out, outside = [], False
+    for s in FreeCADGui.Selection.getSelectionEx("", 0):
+        for sub in list(s.SubElementNames or []) or [""]:
+            plain = cm.plain_sub(sub)
+            if s.Object is not asm or not plain.startswith(prefix) or body is None:
+                outside = True
+                continue
+            tokens = plain[len(prefix):].split(".")
+            element, chain = tokens[-1], [t for t in tokens[:-1] if t]
+            obj = body.Document.getObject(chain[-1]) if chain else body
+            if obj is body and element:
+                # 'Comp.Body.Face6': la forma del Cuerpo es la de su Punta (mismos nombres de caras); un
+                # croquis del Cuerpo apoyado en el propio Cuerpo sería una dependencia circular (revisión)
+                obj = getattr(body, "Tip", None)
+            if obj is None:
+                outside = True
+                continue
+            out.append((obj, [element] if element else []))
+    return out, outside
+
+
+def _chain(body, obj):
+    """Camino de obj dentro del Cuerpo ('' el Cuerpo, 'Op.', 'Origin.XY_Plane.'), o None si no es de él."""
+    if body is None or obj is None or getattr(obj, "Document", None) is not body.Document:
+        return None
+    if obj is body:
+        return ""
+    if obj in getattr(body, "Group", []):
+        return obj.Name + "."
+    origin = getattr(body, "Origin", None)
+    if origin is not None and obj in origin.OriginFeatures:
+        return "%s.%s." % (origin.Name, obj.Name)
+    return None
+
+
+def select_in_part(obj, element="", doc=None):
+    """Elige obj (y su elemento) de la pieza editada, por el camino del componente. False si no se puede."""
+    found = _edit_target(doc)
+    if found is None:
+        return False
+    asm, link, prefix = found
+    chain = _chain(getattr(link, "LinkedObject", None), obj)
+    if chain is None:
+        return False
+    path = prefix + chain + element
+    try:
+        if asm.getSubObject(prefix + chain, 1) is not obj:
+            return False
+    except Exception:
+        return False
+    FreeCADGui.Selection.clearSelection()
+    FreeCADGui.Selection.addSelection(asm.Document.Name, asm.Name, path)
+    return True
+
+
+def new_sketch_in_part(obj, element="", doc=None):
+    """
+    Croquis nuevo en la pieza que se edita, apoyado en obj (cara `element` de una operación, o un plano), y
+    abierto desde el ensamblaje. Devuelve el croquis, o None si no se está editando o obj no es de esa pieza.
+    No se usa el Croquis nativo: en 1.1.4, dentro de un ensamblaje, calcula el nombre del croquis nuevo en
+    el ensamblaje y no en la pieza, y si la pieza ya tiene un "Sketch" apoya y abre ESE (lo mueve a la
+    cara elegida) y deja el nuevo suelto (medido el 16/11; ver NOTAS_TECNICAS).
+    """
+    found = _edit_target(doc)
+    if found is None:
+        return None
+    asm, link, prefix = found
+    body = getattr(link, "LinkedObject", None)
+    if not _chain(body, obj) or (obj is body):
+        return None  # solo una operación o un plano de ESE Cuerpo (no el Cuerpo: dependencia circular)
+    pdoc = body.Document
+    # paso de deshacer de la aplicación (como un comando): FreeCAD lo anota en la pieza y en el ensamblaje,
+    # así Ctrl+Z en la ventana del ensamblaje lo deshace
+    FreeCAD.setActiveTransaction("Croquis")
+    try:
+        sketch = body.newObject("Sketcher::SketchObject", "Sketch")
+        sketch.AttachmentSupport = [(obj, [element] if element else [""])]
+        sketch.MapMode = "FlatFace"
+        pdoc.recompute()
+    except Exception:
+        FreeCAD.closeActiveTransaction(True)
+        raise
+    FreeCAD.closeActiveTransaction()
+    FreeCADGui.Selection.clearSelection()
+    FreeCADGui.getDocument(asm.Document.Name).setEdit(asm, 0, prefix + sketch.Name + ".")
+    return sketch
+
+
+def _hook_pick_plane():
+    """
+    Croquis / Extruir / Corte (pick_plane: croquis en la cara o plano y, al salir, la operación) también
+    editando una pieza del ensamblaje; pick_plane solo, en un ensamblaje, deja todo a FreeCAD.
+    """
+    from swui import pick_plane as pp
+
+    if getattr(pp.handle, "_swui_edit_part", False):
+        return
+    handle, selection, picked, tick = pp.handle, pp._selection, pp.picked, pp.tick
+    # fijos a propósito: Taladro y Brida base (que también se anotan en pick_plane) siguen con lo de FreeCAD
+    # editando una pieza (sin probar ahí sus paneles: decidido el 16/11)
+    commands = (pp.SKETCH_COMMAND, "PartDesign_Pad", "PartDesign_Pocket", "PartDesign_Revolution",
+                "PartDesign_Groove")
+
+    def _start(command, target):
+        try:
+            sketch = new_sketch_in_part(*target)
+        except Exception:
+            # sin volver al Croquis nativo, que acá tiene el error de FreeCAD
+            FreeCAD.Console.PrintError("[SWUI fork] Croquis en la pieza editada:\n%s\n" % traceback.format_exc())
+            return
+        if sketch is not None and command != pp.SKETCH_COMMAND:
+            pp.arm(command, sketch)
+            if pp._armed:
+                pp._armed["swui_edit"] = True  # armado editando: si se sale antes, no se hace nada
+
+    def _open_panel(command):
+        found = _edit_target()
+        try:
+            panel = pp._TaskPanel(command, found[1].LinkedObject)  # el Cuerpo editado, no el que diga la vista
+            panel._swui_edit = True
+            panel._orphaned = panel._cleanup  # si FreeCAD lo cierra solo: sacar la escucha de la selección
+            pp._panel = panel
+            from swui.fork import safe_ops
+
+            safe_ops.show_panel(panel)
+            panel.start()
+        except Exception:
+            FreeCAD.Console.PrintError("[SWUI fork] Croquis en la pieza editada:\n%s\n" % traceback.format_exc())
+
+    def _handle(command):
+        if command not in commands or _edit_target() is None or pp._dialog_open():
+            return handle(command)
+        inside, outside = selection_in_part()
+        if outside:
+            return False  # algo de otro componente: lo de FreeCAD, como antes
+        pp._disarm()
+        if not inside:
+            _open_panel(command)
+            return True
+        target = pp.picked_target(inside)
+        if target is None:
+            return False  # un croquis u otra cosa elegida: decide FreeCAD
+        _start(command, target)
+        return True
+
+    def _selection():
+        found = selection_in_part()
+        if found is None:
+            return selection()
+        inside, outside = found
+        return [(None, [])] if outside else inside  # de otro componente: "no es plano ni cara"
+
+    def _picked(target, command):
+        from swui.compat import QtCore
+
+        from_edit = getattr(pp._panel, "_swui_edit", False)
+        if _edit_target() is None:
+            if from_edit:  # el panel se abrió editando y ya se salió: nada (no el Croquis nativo)
+                try:
+                    FreeCADGui.Control.closeDialog()
+                except Exception:
+                    pass
+                return None
+            return picked(target, command)
+        try:
+            FreeCADGui.Control.closeDialog()
+        except Exception:
+            pass
+
+        def go():
+            try:
+                _start(command, target)
+            except Exception:
+                FreeCAD.Console.PrintError("[SWUI fork] Croquis en la pieza editada:\n%s\n" % traceback.format_exc())
+
+        QtCore.QTimer.singleShot(pp.DELAY_MS, go)
+        return None
+
+    def _tick():
+        # como pick_plane.tick, pero el croquis terminado se elige por el camino del componente (FreeCAD no
+        # toma para la operación un croquis elegido directo en el documento de la pieza)
+        armed = pp._armed
+        if not armed or not armed.get("swui_edit"):
+            return tick()
+        if _edit_target() is None:
+            pp._disarm()  # se salió de Editar pieza con el croquis abierto: la operación no arranca
+            return None
+        sketch = armed["sketch"]
+        try:
+            alive = sketch.Document is not None and sketch.Document.getObject(sketch.Name) is sketch
+        except Exception:
+            alive = False
+        if not alive:
+            pp._disarm()
+            return None
+        if pp._editing() is sketch:
+            armed["seen_edit"] = True
+            return None
+        if not armed["seen_edit"] or pp._dialog_open():
+            return None
+        command = armed["command"]
+        pp._disarm()
+        if pp._used_by_feature(sketch) or not pp._has_geometry(sketch):
+            return None
+        try:
+            if select_in_part(sketch):
+                FreeCADGui.runCommand(command)
+        except Exception:
+            FreeCAD.Console.PrintError("[SWUI fork] %s con el croquis de la pieza editada:\n%s\n"
+                                       % (command, traceback.format_exc()))
+        return None
+
+    for fn in (_handle, _selection, _picked, _tick):
+        fn._swui_edit_part = True
+    pp.handle, pp._selection, pp.picked, pp.tick = _handle, _selection, _picked, _tick
+
+
 # --- Guardar -------------------------------------------------------------------------------------------------
 
 
@@ -611,3 +858,7 @@ def install():
     if _observer is None:
         _observer = _Observer()
         FreeCAD.addDocumentObserver(_observer)
+    try:
+        _hook_pick_plane()
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Editar pieza / pick_plane:\n%s\n" % traceback.format_exc())
