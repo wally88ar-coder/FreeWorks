@@ -93,6 +93,7 @@ LABELS = {
     "PartDesign_Fillet": "Redondeo",
     "PartDesign_Chamfer": "Chaflán",
     "SWUI_ConfigureFeature": "Configurar operación",
+    "SWUI_ComponentConfig": "Configurar componente",
 }
 
 # Comandos de FreeWorks (feature_tree, mates_sw, config_asm) por nombre, sin importar esos módulos
@@ -109,6 +110,7 @@ COLLAPSE, INVERT, ISOLATE = "SWUI_CollapseTree", "SWUI_InvertSelection", "SWUI_I
 RENAME_COMP, COMP_PROPS, COMP_PARENT = "SWUI_RenameComponent", "SWUI_ComponentProperties", "SWUI_ComponentParentChild"
 COMP_MATERIAL, TANGENT, FACE_DXF = "SWUI_ComponentMaterial", "SWUI_SelectTangent", "SWUI_ExportFaceDXF"
 OPEN_POS = "SWUI_OpenPartInPosition"
+OPEN_PARTS = "SWUI_OpenParts"  # Abrir pieza con varios componentes elegidos (E1)
 SELECTION_TOOLS = "submenu:selection"  # Herramientas de selección ▸
 
 # Íconos de la bandeja para lo que no trae ícono (propios, tools/fork/make_icons_fork.py; nada de SW)
@@ -119,7 +121,7 @@ TRAY_ICONS = {
     VIEW_MATES: "fork/t_view_mates", "Std_ToggleTransparency": "fork/t_transparency",
     "Std_LinkSelectLinked": "fork/t_open_part", COMP_SUPPRESS: "fork/t_suppress",
     COMP_UNSUPPRESS: "fork/t_unsuppress", MATE: "sketch/m_coincident", OPEN_POS: "fork/t_open_part_pos",
-    COMP_PROPS: "fork/t_properties",
+    COMP_PROPS: "fork/t_properties", OPEN_PARTS: "fork/t_open_part",
     "PartDesign_NewSketch": "sketch/sketch_new", "PartDesign_Fillet": "sketch/f_fillet",
     "PartDesign_Chamfer": "sketch/f_chamfer",
 }
@@ -133,9 +135,12 @@ ON_FEATURE = {EDIT, EDIT_SKETCH, SUPPRESS, UNSUPPRESS, UNSUPPRESS_ALL, ROLLBACK,
 
 # Comandos que la tabla puede pedir aunque FreeCAD no los haya puesto en el menú
 FETCHABLE = {COLLAPSE, INVERT, ISOLATE, RENAME_COMP, COMP_PROPS, COMP_PARENT, COMP_MATERIAL, FACE_DXF,
-             OPEN_POS, SELECTION_TOOLS, "PartDesign_NewSketch", "PartDesign_Fillet", "PartDesign_Chamfer", "SWUI_ConfigureFeature",
+             OPEN_POS, OPEN_PARTS, SELECTION_TOOLS, "PartDesign_NewSketch", "PartDesign_Fillet", "PartDesign_Chamfer", "SWUI_ConfigureFeature",
              "Std_HideSelection", "Std_ShowSelection", "Std_SetAppearance", "Std_ToggleTransparency",
              "Std_Delete", "Std_LinkSelectLinked", MATE, VIEW_MATES}
+
+# Con varios elegidos FreeCAD (y los menús de FreeWorks) no ponen estos comandos: se piden (E1)
+FETCH_MANY = {COMP_SUPPRESS, COMP_UNSUPPRESS, COMP_CONFIG, FIX, FLOAT}
 
 ELEMENT = re.compile(r"^(Face|Edge|Vertex)\d+$")
 ELEMENT_NAMES = {"Face": "Cara", "Edge": "Arista", "Vertex": "Vértice"}
@@ -158,15 +163,20 @@ def action_key(object_name, text):
 
 
 class Context:
-    """Lo elegido, visto como SW: kind = 'feature' | 'sketch' | 'component' | None."""
+    """
+    Lo elegido, visto como SW: kind = 'feature' | 'sketch' | 'component' | 'components' | None.
+    'components' = dos o más componentes elegidos (etapa E1, 15/11): components tiene la lista.
+    """
 
-    def __init__(self, kind=None, feature=None, component=None, element="", visible=True, planar=False):
+    def __init__(self, kind=None, feature=None, component=None, element="", visible=True, planar=False,
+                 components=None):
         self.kind = kind
         self.feature = feature  # la operación (o el croquis)
         self.component = component  # el vínculo dentro del ensamblaje
         self.element = element  # 'Face6' / 'Edge3' / '' (todo el objeto)
         self.visible = visible
         self.planar = planar  # la cara elegida es plana (para "Croquis")
+        self.components = list(components or [])
 
     @property
     def element_kind(self):
@@ -211,18 +221,46 @@ def _chain(top, sub):
     return out
 
 
+def component_of(top, sub):
+    """El componente (vínculo de un ensamblaje) por el que pasa la selección (top, sub), o None."""
+    chain = _chain(top, sub)
+    for parent, child in zip(chain, chain[1:]):
+        if _is_component(child, parent):
+            return child
+    if _is_component(top, top.InList[0] if getattr(top, "InList", None) else None):
+        return top
+    return None
+
+
+def _several(pairs):
+    """Varias cosas elegidas: Context de componentes (E1) o Context() si se mezcla con otra cosa."""
+    comps = []
+    for top, sub in pairs:
+        comp = component_of(top, sub)
+        if comp is None:
+            return Context()
+        if comp not in comps:
+            comps.append(comp)
+    visible = all(bool(getattr(c, "Visibility", True)) for c in comps)
+    if len(comps) == 1:  # dos caras del mismo componente: el menú de ese componente
+        ctx = Context("component", component=comps[0], visible=visible)
+        ctx.many = True  # el "Abrir pieza" de FreeCAD no anda con dos caras elegidas: va el propio
+        return ctx
+    return Context("components", components=comps, visible=visible)
+
+
 def context_of(entries):
     """
     entries: [(objeto de arriba, [subnombres])] como da getSelectionEx("", 0).
-    Un solo objeto elegido (con a lo sumo un elemento) -> Context; si no, Context() (caso general).
+    Un solo objeto elegido (con a lo sumo un elemento) -> Context del caso; varios componentes ->
+    Context('components'); si no, Context() (caso general).
     """
-    if len(entries) != 1:
+    pairs = [(top, sub) for top, subs in entries for sub in (list(subs or []) or [""])]
+    if not pairs:
         return Context()
-    top, subs = entries[0]
-    subs = list(subs or []) or [""]
-    if len(subs) != 1:
-        return Context()
-    sub = subs[0]
+    if len(pairs) > 1:
+        return _several(pairs)
+    top, sub = pairs[0]
     element = sub.split(".")[-1] if ELEMENT.match(sub.split(".")[-1] or "") else ""
     chain = _chain(top, sub)
     # componente de un ensamblaje: el primer vínculo que cuelga de un ensamblaje
@@ -266,6 +304,8 @@ def title_of(ctx):
         except Exception:
             name = None
         return "Componente (%s)" % (name or ctx.component.Label)
+    if ctx.kind == "components":
+        return "Componente"  # SW, con varios: sin nombre
     if ctx.kind == "sketch":
         return "Croquis (%s)" % ctx.feature.Label
     if ctx.kind == "feature":
@@ -304,7 +344,7 @@ def layout(ctx, where):
                                  REPAIR, COLLAPSE])]
     if ctx.kind == "component":
         tray = (["clarify"] if view else []) + [
-            "Std_LinkSelectLinked", OPEN_POS, hide, "Std_ToggleTransparency", COMP_SUPPRESS, COMP_UNSUPPRESS, MATE,
+            OPEN_PARTS if getattr(ctx, "many", False) else "Std_LinkSelectLinked", OPEN_POS, hide, "Std_ToggleTransparency", COMP_SUPPRESS, COMP_UNSUPPRESS, MATE,
             VIEW_MATES, COMP_PROPS, "Std_SetAppearance"]
         top = [INVERT] + ([SELECTION_TOOLS] if view and ctx.element_kind == "Face" else [])
         comp = ([RENAME_COMP] if view else ["rename"]) + [ISOLATE, COMP_CONFIG, FIX, FLOAT, "Std_Delete",
@@ -312,6 +352,13 @@ def layout(ctx, where):
         if not view:
             comp.append(COLLAPSE)
         return [(None, tray), (None, top), (title_of(ctx), comp)]
+    if ctx.kind == "components":
+        # varios componentes (E1, decisiones del usuario 15/11): sin Editar pieza, Propiedades,
+        # Cambiar de nombre ni Padre/Hijo; cada opción actúa sobre todos los elegidos
+        tray = [OPEN_PARTS, OPEN_POS, hide, "Std_ToggleTransparency", COMP_SUPPRESS, COMP_UNSUPPRESS, MATE,
+                VIEW_MATES, "Std_SetAppearance"]
+        comp = [ISOLATE, COMP_CONFIG, FIX, FLOAT, "Std_Delete", COMP_MATERIAL] + ([] if view else [COLLAPSE])
+        return [(None, tray), (None, [INVERT]), (title_of(ctx), comp)]
     return []
 
 
@@ -341,7 +388,7 @@ def place(keys, ctx, where, has_selection=True):
                 k = hide_key(ctx)
             if k in used:
                 continue
-            if k in keys or k in FETCHABLE:
+            if k in keys or k in FETCHABLE or (ctx.kind == "components" and k in FETCH_MANY):
                 out.append(k)
                 used.add(k)
         if out:
@@ -412,6 +459,35 @@ def plain_sub(sub):
     return ".".join(p for p in (sub or "").split(".") if not p.startswith(";"))
 
 
+def same_element(obj, sub_a, sub_b):
+    """
+    ¿Las dos selecciones (de obj) son el mismo elemento? FreeCAD nombra la misma cara de dos maneras
+    según el camino: por el Cuerpo ('Body003.Body.Face6') o por la operación ('Body003.Caja.Face6')
+    (visto el 15/11 con dos componentes elegidos). Mismo componente de arriba, mismo tipo de elemento
+    y la misma forma en el mismo lugar.
+    """
+    a, b = plain_sub(sub_a), plain_sub(sub_b)
+    if a == b:
+        return True
+    ea, eb = a.split(".")[-1], b.split(".")[-1]
+    ka, kb = ELEMENT.match(ea), ELEMENT.match(eb)
+    if not ka or not kb or ka.group(1) != kb.group(1) or a.split(".")[0] != b.split(".")[0]:
+        return False
+    try:
+        sa, sb = obj.getSubObject(sub_a), obj.getSubObject(sub_b)
+        if sa is None or sb is None or sa.ShapeType != sb.ShapeType:
+            return False
+        if sa.isSame(sb):
+            return True
+        if ka.group(1) == "Vertex":
+            return sa.Point.distanceToPoint(sb.Point) < 1e-7
+        size = (lambda s: s.Area) if ka.group(1) == "Face" else (lambda s: s.Length)
+        return (abs(size(sa) - size(sb)) < 1e-7 * max(1.0, size(sa))
+                and sa.CenterOfMass.distanceToPoint(sb.CenterOfMass) < 1e-7 * max(1.0, sa.BoundBox.DiagonalLength))
+    except Exception:
+        return False
+
+
 def pick_under_cursor():
     """
     Como SW: el clic derecho en la vista elige lo que está debajo del mouse. Si ya estaba elegido,
@@ -426,10 +502,19 @@ def pick_under_cursor():
     if pre is None or not pre.DocumentName or not pre.ObjectName:
         return False
     sub = (list(pre.SubElementNames) or [""])[0]
-    key = (pre.DocumentName, pre.ObjectName, plain_sub(sub))
-    for s in FreeCADGui.Selection.getSelectionEx("", 0):
+    sels = FreeCADGui.Selection.getSelectionEx("", 0)
+    several = sum(len(list(s.SubElementNames) or [""]) for s in sels) > 1
+    for s in sels:
+        if (s.DocumentName, s.ObjectName) != (pre.DocumentName, pre.ObjectName):
+            continue
         for chosen in (list(s.SubElementNames) or [""]):
-            if (s.DocumentName, s.ObjectName, plain_sub(chosen)) == key:
+            if same_element(s.Object, chosen, sub):
+                return False
+            # varios objetos enteros elegidos en el árbol ('Placa.', 'Bloque.') y el mouse sobre una cara
+            # de uno de ellos: ya está elegido, quedan todos (revisión del 15/11, E1). Con uno solo, la
+            # cara pasa a ser lo elegido, como antes.
+            whole = plain_sub(chosen)
+            if several and whole.endswith(".") and plain_sub(sub).startswith(whole):
                 return False
     FreeCADGui.Selection.clearSelection()
     FreeCADGui.Selection.addSelection(pre.DocumentName, pre.ObjectName, sub)

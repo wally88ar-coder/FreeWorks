@@ -20,6 +20,12 @@ Neueste Version oben. / Newest version first.
   Retroceder...) actúa sobre la operación que creó la cara, la del título. Más textos de FreeCAD
   pasados al castellano. `swui/fork/context_menus.py`; pruebas `prueba_ventana_clic_derecho_sw`,
   `prueba_clic_derecho_tabla`.
+- **Clic derecho como SW, etapa E1 (15/11):** con dos o más componentes elegidos (árbol o vista) el
+  clic derecho muestra el menú "Componente" como SW y cada opción actúa sobre todos en un solo Ctrl+Z:
+  Aislar, Suprimir, Fijar/Flotar, Ver relaciones, Relación de posición (con los dos cargados),
+  Configurar componente (tabla, una fila por componente), Material (a las piezas de todos), Abrir pieza
+  y Abrir pieza en posición (cada pieza una vez). El clic derecho en la vista ya no pierde lo elegido
+  cuando FreeCAD nombra la misma cara por otro camino. Prueba `prueba_ventana_clic_derecho_varios`.
 - **Clic derecho como SW, etapa C (15/11):** herramientas nuevas en el clic derecho, como SW:
   Contraer operaciones, Invertir la selección, Aislar / Salir de aislar, Cambiar de nombre (también en
   la vista), Propiedades del componente, Padre/Hijo y Material del componente, Herramientas de

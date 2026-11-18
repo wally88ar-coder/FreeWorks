@@ -139,6 +139,50 @@ LOCALES sin push hasta que el usuario pruebe; batería completa solo al final).*
     operaciones en el árbol, caras en la vista); si se mezcla con otra cosa (relación, plano), queda el
     menú general. Todo lo que actúa sobre varios, en UN paso de Ctrl+Z (Suprimir en el orden correcto
     si una depende de la otra; Material con piezas de archivos distintos: un paso en cada pieza).
+  - **Medido en SW el 15/11 a la noche (solo mirando y cancelando):** con dos componentes elegidos,
+    Relación de posición abre el panel con los DOS ya cargados en "Selecciones" y propone Bloquear.
+    Configurar componente abre "Modificar configuraciones": una tabla con una columna por componente
+    (Suprimir y Configuración) y una fila por configuración del ensamblaje. Título del menú con dos:
+    "Componente" (sin nombre).
+  - **E1, qué tiene que pasar (escrito antes de programar):** con dos o más componentes elegidos (en el
+    árbol con Ctrl+clic, o caras de dos componentes en la vista), el clic derecho muestra el menú
+    "Componente" con la bandeja Abrir pieza / Abrir pieza en posición / Ocultar (o Mostrar) /
+    Cambiar transparencia / Suprimir / Relación de posición / Ver relaciones / Apariencia, y la lista
+    Invertir la selección; Aislar, Configurar componente, Fijar o Flotar, Eliminar, Material (y
+    Contraer en el árbol). Cada opción actúa sobre TODOS los elegidos en un solo Ctrl+Z: Aislar deja a
+    la vista todos los elegidos; Suprimir/Fijar los que falten; Relación de posición abre con los dos
+    cargados y Bloquear; Configurar componente abre una tabla con una fila por componente
+    (Configuración y Suprimir); Material se asigna a las piezas de todos; Abrir pieza abre cada pieza
+    (una vez cada pieza aunque esté repetida). Dos caras del MISMO componente: el menú de ese componente.
+    Mezclado con otra cosa (una relación, un plano): el menú general, como hoy.
+  - **E1 HECHA (15/11 a la noche, commit local, sin subir).** Menú "Componente" con varios elegidos
+    (árbol y vista) y cada opción sobre todos en un solo Ctrl+Z: Aislar (lista), Suprimir/Desactivar
+    (`config_asm.suppress_many`), Fijar/Flotar (`mates_sw.set_grounded`), Ver relaciones (las de todos),
+    Relación de posición (abre con los dos y Bloquear: ya lo hacía el panel), Configurar componente
+    (`config_asm.show_configs_dialog` / `apply_configs`: tabla con una fila por componente), Material
+    (`material.assign_many`: un paso en cada pieza), Abrir pieza (`context_tools.open_parts`, comando nuevo
+    SWUI_OpenParts) y Abrir pieza en posición (`open_parts_in_position`, la cámara del ensamblaje se toma
+    una vez). Arreglado de paso: el clic derecho en la vista soltaba lo elegido cuando FreeCAD nombra la
+    misma cara por otro camino (por el Cuerpo o por la operación): `context_menus.same_element` compara la
+    forma. Prueba nueva `prueba_ventana_clic_derecho_varios` (BIEN) y la rápida `prueba_clic_derecho_tabla`
+    ampliada. Revisor: 2 medios arreglados (Abrir en posición con dos tomaba la cámara de la pieza abierta
+    antes; componentes elegidos en el árbol + clic derecho en la vista los soltaba) y bajos arreglados
+    (errores no atrapados con varios, material inexistente a medias, componente interno del ensamblaje,
+    pruebas más fuertes: tabla aceptada con dos configuraciones, Material por su botón, cámara medida).
+    **Decidido solo:** Configurar componente con varios solo se ofrece si alguno tiene más de una
+    configuración (si no, no hay nada que elegir: Suprimir está aparte); Abrir pieza en posición con la
+    misma pieza dos veces la abre una vez, mirada como el primer componente elegido; con varios, la tabla
+    de configuraciones es de la configuración activa del ensamblaje (SW muestra una fila por cada
+    configuración del ensamblaje: más adelante si hace falta). Sin comparar con SW con el mouse (pendiente).
+  - **E2, qué tiene que pasar (escrito antes de programar):** con dos o más operaciones del mismo
+    Cuerpo elegidas en el árbol, el clic derecho muestra el menú "Operaciones" (como SW) con la bandeja
+    Suprimir (o Desactivar supresión) y Apariencia, y la lista Configurar operación, Eliminar, Cambiar
+    transparencia, Invertir la selección (elige las otras operaciones del Cuerpo) y Contraer operaciones;
+    sin Editar operación/croquis, Retroceder, Ocultar ni Padre/Hijo. Con caras de dos operaciones elegidas
+    en la vista: bandeja Seleccionar otra, Ocultar, Suprimir, Apariencia; grupos "Caras" (Cambiar
+    transparencia), "Operaciones" (Configurar operación, Eliminar: sobre las operaciones que crearon esas
+    caras) y "Sólido" (Aislar, Eliminar: abre Eliminar/Conservar sólido con el sólido cargado). Suprimir y
+    Eliminar actúan sobre todas en un solo Ctrl+Z. Mezclado con un croquis u otra cosa: el menú general.
   - **Antes de programar, mirar en SW (solo mirar y cancelar):** qué abre Relación de posición, Abrir
     pieza en posición (dos de la misma pieza) y Configurar componente / Configurar operación con varios.
   - **Pruebas:** ampliar `prueba_ventana_clic_derecho_sw` con dos y tres elegidos, selecciones

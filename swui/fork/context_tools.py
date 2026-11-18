@@ -32,6 +32,7 @@ MATERIAL = "SWUI_ComponentMaterial"
 TANGENT = "SWUI_SelectTangent"
 FACE_DXF = "SWUI_ExportFaceDXF"
 OPEN_IN_POSITION = "SWUI_OpenPartInPosition"
+OPEN_PARTS = "SWUI_OpenParts"
 
 BODY = "PartDesign::Body"
 ASSEMBLY = "Assembly::AssemblyObject"
@@ -61,6 +62,21 @@ def picked():
 def picked_component():
     ctx, _s = picked()
     return ctx.component if ctx is not None and ctx.kind == "component" else None
+
+
+def picked_components():
+    """
+    Los componentes elegidos, sin repetir y en orden (uno o varios: árbol con Ctrl+clic o caras de
+    varios componentes en la vista). [] si no hay o si se mezcla con otra cosa (E1, 15/11).
+    """
+    from swui.fork import context_menus as cm
+
+    ctx = cm.context_of([(s.Object, list(s.SubElementNames)) for s in _entries()])
+    if ctx.kind == "component":
+        return [ctx.component]
+    if ctx.kind == "components":
+        return list(ctx.components)
+    return []
 
 
 def assembly_of(comp):
@@ -122,17 +138,25 @@ _isolated = {}  # nombre del documento -> {nombre de objeto: Visibility de antes
 _shown = {}  # nombre del documento -> (lo que se oculta, lo que queda a la vista) al aislar
 
 
+def _as_list(keep):
+    return list(keep) if isinstance(keep, (list, tuple)) else [keep]
+
+
 def isolate_targets(keep):
-    """Lo que se oculta al aislar keep: los otros Cuerpos de la pieza o los otros componentes."""
+    """
+    Lo que se oculta al aislar keep (uno o una lista, E1): los otros Cuerpos de la pieza o los otros
+    componentes del ensamblaje.
+    """
     from swui.fork import mates_sw
 
-    asm = assembly_of(keep)
+    keeps = _as_list(keep)
+    asm = assembly_of(keeps[0])
     if asm is not None:
-        return [c for c in mates_sw.components_of(asm) if c is not keep]
+        return [c for c in mates_sw.components_of(asm) if c not in keeps]
     from swui.fork import material
 
     # los otros Cuerpos y los sólidos sueltos (un STEP importado), como los que cuenta Material
-    return [o for o in material.part_objects(keep.Document) if o is not keep]
+    return [o for o in material.part_objects(keeps[0].Document) if o not in keeps]
 
 
 def _quiet(doc, fn):
@@ -149,24 +173,27 @@ def _quiet(doc, fn):
 
 def isolate(keep):
     """
-    Aislar como SW: se ve solo keep (un Cuerpo o un componente). Recuerda lo que se veía para
-    "Salir de aislar". Aislar otra cosa estando aislado primero vuelve todo a como estaba.
+    Aislar como SW: se ve solo keep (un Cuerpo o un componente, o una lista de ellos: E1). Recuerda
+    lo que se veía para "Salir de aislar". Aislar otra cosa estando aislado primero vuelve todo a
+    como estaba.
     """
-    doc = keep.Document
+    keeps = _as_list(keep)
+    doc = keeps[0].Document
     exit_isolate(doc)
     saved = {}
-    hide = isolate_targets(keep)
+    hide = isolate_targets(keeps)
 
     def run():
         for o in hide:
             saved[o.Name] = bool(o.Visibility)
             o.Visibility = False
-        if not keep.Visibility:
-            saved[keep.Name] = False
-            keep.Visibility = True
+        for k in keeps:
+            if not k.Visibility:
+                saved[k.Name] = False
+                k.Visibility = True
     _quiet(doc, run)
     _isolated[doc.Name] = saved
-    _shown[doc.Name] = ([o.Name for o in hide], keep.Name)
+    _shown[doc.Name] = ([o.Name for o in hide], [k.Name for k in keeps])
     _show_exit_bar(doc)
     return hide
 
@@ -295,13 +322,14 @@ class _IsolateObserver:
             return
         _pending_reisolate.discard(doc.Name)
         gdoc = FreeCADGui.getDocument(doc.Name)
-        hide, keep = _shown.get(doc.Name, ([], None))
+        hide, keeps = _shown.get(doc.Name, ([], []))
         for name in hide:
             obj = doc.getObject(name)
             if obj is not None:
                 obj.Visibility = False
-        if keep and doc.getObject(keep) is not None:
-            doc.getObject(keep).Visibility = True
+        for name in keeps:
+            if doc.getObject(name) is not None:
+                doc.getObject(name).Visibility = True
         # solo llega acá al guardar el archivo propio (no una copia ni un respaldo): recién guardado,
         # volver a ocultar no tiene que dejarlo como modificado
         try:
@@ -384,12 +412,65 @@ def component_relatives(link):
 
 
 def component_material(link):
-    """Abre Material sobre la pieza del componente (la pieza, como SW)."""
+    """
+    Abre Material sobre la pieza del componente (la pieza, como SW). link puede ser una lista de
+    componentes (E1): el material se asigna a las piezas de todos (una vez cada pieza).
+    """
     from swui.fork import material
 
-    linked = getattr(link, "LinkedObject", None)
-    doc = linked.Document if linked is not None else link.Document
-    return material.show_dialog(doc)
+    links = _as_list(link)
+    objs, docs = [], []
+    for lk in links:
+        linked = getattr(lk, "LinkedObject", None)
+        doc = linked.Document if linked is not None else lk.Document
+        if doc not in docs:
+            docs.append(doc)
+    if len(docs) == 1:
+        return material.show_dialog(docs[0])
+    for lk in links:
+        linked = getattr(lk, "LinkedObject", None)
+        if linked is not None and linked.Document is lk.Document:
+            # pieza guardada dentro del ensamblaje: solo la de ese componente, no todo el ensamblaje
+            mine = [linked] if material.is_part_object(linked) else []
+        else:
+            mine = material.part_objects(linked.Document if linked is not None else lk.Document)
+        objs += [o for o in mine if o not in objs]
+    return material.show_dialog(docs[0], objs)
+
+
+def part_documents(links):
+    """Los documentos de las piezas de los componentes, sin repetir: [(documento, primer componente)]."""
+    out = []
+    for lk in _as_list(links):
+        linked = getattr(lk, "LinkedObject", None)
+        doc = linked.Document if linked is not None else None
+        if doc is not None and doc not in [d for d, _l in out]:
+            out.append((doc, lk))
+    return out
+
+
+def open_parts_in_position(links):
+    """Abrir pieza en posición con varios (E1): cada pieza una vez, con la cámara del ensamblaje."""
+    cam = assembly_camera()
+    return [open_in_position(lk, cam) for _doc, lk in part_documents(links)]
+
+
+def open_parts(links):
+    """
+    Abrir pieza con varios componentes (E1): abre cada pieza una sola vez aunque el componente esté
+    repetido; la última queda al frente. Devuelve los documentos de las piezas.
+    """
+    out = []
+    for doc, lk in part_documents(links):
+        asm = assembly_of(lk)
+        FreeCADGui.Selection.clearSelection()
+        if asm is not None:
+            FreeCADGui.Selection.addSelection(asm.Document.Name, asm.Name, lk.Name + ".")
+        else:
+            FreeCADGui.Selection.addSelection(lk)
+        FreeCADGui.runCommand("Std_LinkSelectLinked")
+        out.append(doc)
+    return out
 
 
 # --- Seleccionar tangencia -----------------------------------------------------------------------------------
@@ -557,13 +638,22 @@ def component_rotation(link, asm=None):
     return pl.Rotation
 
 
-def open_in_position(link):
-    """Abre la pieza del componente mirada como en el ensamblaje. Devuelve el documento de la pieza."""
-    asm_view = FreeCADGui.ActiveDocument.ActiveView
+def assembly_camera():
+    """La orientación de la cámara de la vista que está al frente (la del ensamblaje)."""
     try:
-        cam = asm_view.getCameraOrientation()
+        return FreeCADGui.ActiveDocument.ActiveView.getCameraOrientation()
     except Exception:
-        cam = FreeCAD.Rotation()
+        return FreeCAD.Rotation()
+
+
+def open_in_position(link, cam=None):
+    """
+    Abre la pieza del componente mirada como en el ensamblaje. Devuelve el documento de la pieza.
+    cam: la cámara del ensamblaje (con varios componentes se toma una sola vez: después de abrir la
+    primera pieza, la vista al frente ya es la de esa pieza; revisión del 15/11).
+    """
+    if cam is None:
+        cam = assembly_camera()
     asm = assembly_of(link)
     rot = component_rotation(link, asm)
     FreeCADGui.Selection.clearSelection()
@@ -618,7 +708,7 @@ class _Invert(_Cmd):
     menu, tip = "Invertir la selección", "Elige todos los otros componentes del ensamblaje"
 
     def IsActive(self):
-        return picked_component() is not None
+        return bool(picked_components())
 
     def Activated(self):
         invert_selection()
@@ -628,6 +718,9 @@ class _Isolate(_Cmd):
     menu, tip = "Aislar", "Muestra solo esto; Salir de aislar vuelve a mostrar todo"
 
     def target(self):
+        comps = picked_components()
+        if len(comps) > 1:
+            return comps  # varios componentes (E1): quedan a la vista todos
         ctx, _s = picked()
         if ctx is None:
             return None
@@ -701,10 +794,20 @@ class _Material(_Cmd):
     menu, tip = "Material...", "Material de la pieza del componente"
 
     def IsActive(self):
-        return picked_component() is not None
+        return bool(picked_components())
 
     def Activated(self):
-        component_material(picked_component())
+        component_material(picked_components())
+
+
+class _OpenParts(_Cmd):
+    menu, tip, icon = "Abrir pieza", "Abre la pieza de cada componente elegido", "fork/t_open_part"
+
+    def IsActive(self):
+        return bool(picked_components())
+
+    def Activated(self):
+        open_parts(picked_components())
 
 
 class _Tangent(_Cmd):
@@ -734,16 +837,17 @@ class _OpenInPosition(_Cmd):
         "fork/t_open_part_pos"
 
     def IsActive(self):
-        return picked_component() is not None
+        return bool(picked_components())
 
     def Activated(self):
-        open_in_position(picked_component())
+        # con varios (E1): cada pieza una vez, mirada como su primer componente elegido
+        open_parts_in_position(picked_components())
 
 
 COMMANDS = ((COLLAPSE, _Collapse), (INVERT, _Invert), (ISOLATE, _Isolate), (EXIT_ISOLATE, _ExitIsolate),
             (RENAME, _Rename), (PROPERTIES, _Properties), (PARENT_CHILD, _ParentChild),
             (MATERIAL, _Material), (TANGENT, _Tangent), (FACE_DXF, _FaceDxf),
-            (OPEN_IN_POSITION, _OpenInPosition))
+            (OPEN_IN_POSITION, _OpenInPosition), (OPEN_PARTS, _OpenParts))
 
 
 # --- Ventanas -------------------------------------------------------------------------------------------------

@@ -98,6 +98,29 @@ def prueba():
                                                 "SWUI_ComponentMaterial"]), groups[2]
     for k in ("Std_ViewFitAll", "drawstyle", "Standard Views", "docwindow", "navstyles"):
         assert k in removed, k
+    # Varios componentes (E1): menú "Componente" sin nombre, sin Cambiar de nombre / Propiedades /
+    # Padre/Hijo / Seleccionar otra; los comandos que FreeCAD no puso se piden
+    varios = cm.Context("components", components=[comp.component, comp.component], visible=True)
+    assert cm.title_of(varios) == "Componente"
+    groups, behind, removed = cm.place(VISTA_COMPONENTE, varios, "View")
+    assert groups[0][1] == ["SWUI_OpenParts", "SWUI_OpenPartInPosition", "Std_HideSelection",
+                            "Std_ToggleTransparency", "SWUI_ComponentSuppress", "SWUI_ComponentUnsuppress",
+                            "SWUI_Mate", "SWUI_ViewMates", "Std_SetAppearance"], groups[0]
+    assert groups[1] == (None, ["SWUI_InvertSelection"]), groups[1]
+    assert groups[2] == ("Componente", ["SWUI_Isolate", "SWUI_ComponentConfig", "SWUI_FixComponent",
+                                        "SWUI_FloatComponent", "Std_Delete", "SWUI_ComponentMaterial"]), groups[2]
+    oculto = cm.Context("components", components=[comp.component], visible=False)
+    assert "Std_ShowSelection" in cm.place([], oculto, "Tree")[0][0][1], "con alguno oculto: Mostrar"
+    arbol = cm.place([], varios, "Tree")[0]
+    assert arbol[2][1][-1] == "SWUI_CollapseTree", arbol[2]
+    # Un componente solo: los comandos de varios no se piden (queda como antes)
+    groups, _b, _r = cm.place(VISTA_COMPONENTE, comp, "View")
+    assert "SWUI_ComponentConfig" not in groups[2][1] and "SWUI_FloatComponent" not in groups[2][1]
+    # La misma cara nombrada de dos maneras (por el Cuerpo o por la operación) es la misma
+    assert cm.same_element(None, "Body003.Body.;Face6;:H18d,F.Face6", "Body003.Body.Face6")
+    assert not cm.same_element(None, "Body003.Body.Face6", "Body002.Body.Face6")
+    assert not cm.same_element(None, "Body003.Body.Face6", "Body003.Body.Edge6")
+
     # Sin nada elegido (fondo vacío) el zoom queda: es lo único que tiene ese menú
     _g, _b, removed = cm.place(["Std_ViewFitAll", "drawstyle", "Std_SendToPythonConsole"], cm.Context(), "View",
                                has_selection=False)

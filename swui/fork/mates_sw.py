@@ -1853,6 +1853,56 @@ def selected_component():
     return asm, None
 
 
+def selected_components():
+    """(ensamblaje, [componentes]) de todo lo elegido, sin repetir (varios elegidos: E1, 15/11)."""
+    asm = active_assembly()
+    if asm is None:
+        return None, []
+    try:
+        sels = FreeCADGui.Selection.getSelectionEx("", 0)
+    except Exception:
+        return asm, []
+    _jo, ua = _assembly_modules()
+    out = []
+    for sel in sels:
+        for sub in (list(sel.SubElementNames or []) or [""]):
+            try:
+                comp, _rel = ua.getComponentReference(asm, sel.Object, sub)
+            except Exception:
+                comp = None
+            if comp is None and sel.Object in asm.Group and hasattr(sel.Object, "LinkedObject"):
+                comp = sel.Object
+            if comp is not None and comp.TypeId != "App::FeaturePython" and comp not in out:
+                out.append(comp)
+    return asm, out
+
+
+def set_grounded(asm, comps, flag):
+    """
+    Fija (flag True) o suelta los componentes que hagan falta, en un solo paso de deshacer (E1).
+    Usa Fijar de FreeCAD (Assembly_ToggleGrounded) sobre los que cambian; la selección queda como
+    estaba. Devuelve los que cambiaron.
+    """
+    todo = [c for c in comps if (grounded_joint(asm, c) is None) == bool(flag)]
+    if not todo:
+        return []
+    before = [(s.DocumentName, s.ObjectName, list(s.SubElementNames))
+              for s in FreeCADGui.Selection.getSelectionEx("", 0)]
+    doc = asm.Document
+    try:
+        # el comando de FreeCAD abre su propio paso de deshacer para todo lo elegido
+        FreeCADGui.Selection.clearSelection()
+        for c in todo:
+            FreeCADGui.Selection.addSelection(doc.Name, asm.Name, c.Name + ".")
+        FreeCADGui.runCommand("Assembly_ToggleGrounded")
+    finally:
+        FreeCADGui.Selection.clearSelection()
+        for d, o, subs in before:
+            for s in (subs or [""]):
+                FreeCADGui.Selection.addSelection(d, o, s)
+    return todo
+
+
 class _CompCommand:
     menu = ""
     tip = ""
@@ -1873,10 +1923,17 @@ class _FixCommand(_CompCommand):
     tip = "Fija el componente en su lugar (como Fijar de SW)"
 
     def applies(self):
+        asm, comps = selected_components()
+        if len(comps) > 1:  # varios (E1): si falta fijar alguno
+            return any(grounded_joint(asm, c) is None for c in comps)
         asm, comp = selected_component()
         return comp is not None and grounded_joint(asm, comp) is None
 
     def Activated(self):
+        asm, comps = selected_components()
+        if len(comps) > 1:
+            set_grounded(asm, comps, True)
+            return
         FreeCADGui.runCommand("Assembly_ToggleGrounded")
 
 
@@ -1885,10 +1942,17 @@ class _FloatCommand(_CompCommand):
     tip = "Libera el componente fijo para que se mueva con sus relaciones (como Flotar de SW)"
 
     def applies(self):
+        asm, comps = selected_components()
+        if len(comps) > 1:
+            return any(grounded_joint(asm, c) is not None for c in comps)
         asm, comp = selected_component()
         return comp is not None and grounded_joint(asm, comp) is not None
 
     def Activated(self):
+        asm, comps = selected_components()
+        if len(comps) > 1:
+            set_grounded(asm, comps, False)
+            return
         FreeCADGui.runCommand("Assembly_ToggleGrounded")
 
 
@@ -1897,15 +1961,18 @@ class _ViewMatesCommand(_CompCommand):
     tip = "Selecciona en el árbol las relaciones de posición del componente"
 
     def Activated(self):
-        asm, comp = selected_component()
-        if comp is None:
+        asm, comps = selected_components()  # con varios (E1): las de todos
+        if not comps:
             return
-        found = mates_of(asm, comp)
+        found = []
+        for comp in comps:
+            found += [j for j in mates_of(asm, comp) if j not in found]
         FreeCADGui.Selection.clearSelection()
         for j in found:
             FreeCADGui.Selection.addSelection(j)
         if not found:
-            FreeCAD.Console.PrintMessage("[SWUI] %s no tiene relaciones de posición.\n" % comp.Label)
+            FreeCAD.Console.PrintMessage("[SWUI] %s no tiene relaciones de posición.\n"
+                                         % ", ".join(c.Label for c in comps))
 
 
 class _MateCommand:

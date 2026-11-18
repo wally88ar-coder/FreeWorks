@@ -687,6 +687,60 @@ def picked_component():
     return None
 
 
+def picked_components():
+    """
+    Los componentes elegidos (uno o varios, E1 del clic derecho, 15/11). Con uno solo es
+    picked_component() de siempre.
+    """
+    try:
+        from swui.fork import context_tools
+
+        comps = context_tools.picked_components()
+    except Exception:
+        comps = []
+    if len(comps) > 1:
+        return comps
+    one = picked_component()
+    return [one] if one is not None else []
+
+
+def suppress_many(links, flag):
+    """Suprime (o desactiva la supresión de) varios componentes en un solo paso de deshacer."""
+    links = [lk for lk in links if bool(is_suppressed(lk)) != bool(flag)]
+    if not links:
+        return []
+    from swui.fork import safe_ops
+
+    doc = links[0].Document
+    with safe_ops.undo_step(doc, "Suprimir componentes" if flag else "Desactivar supresión de componentes"):
+        for lk in links:
+            suppress(lk, flag)
+        doc.recompute()
+    return links
+
+
+def apply_configs(rows):
+    """
+    Configurar componente con varios (como "Modificar configuraciones" de SW): rows = [(componente,
+    configuración o None, suprimido o None)]. Todo en un solo paso de deshacer; si algo falla, no
+    queda nada a medias.
+    """
+    rows = list(rows)
+    if not rows:
+        return False
+    from swui.fork import safe_ops
+
+    doc = rows[0][0].Document
+    with safe_ops.undo_step(doc, "Configurar componentes"):
+        for link, config, suppressed in rows:
+            if config and len(part_configs(link)) > 1 and config != current(link):
+                set_config(link, config)
+            if suppressed is not None and bool(suppressed) != bool(is_suppressed(link)):
+                suppress(link, bool(suppressed))
+        doc.recompute()
+    return True
+
+
 def _run(doc, name, fn):
     """Un paso de deshacer; con un panel abierto se suma al suyo (pieza común, Issue #3)."""
     from swui.fork import safe_ops
@@ -951,6 +1005,71 @@ def _refresh_later(doc_name, name):
         _state["busy"] = False
 
 
+def _run_many(fn, name):
+    """Para las funciones que ya hacen su propio paso de deshacer (varios componentes, E1)."""
+    try:
+        fn()
+    except ValueError as e:
+        QtWidgets.QMessageBox.information(FreeCADGui.getMainWindow(), name, str(e))
+    except Exception:
+        FreeCAD.Console.PrintError("[SWUI fork] %s:\n%s\n" % (name, traceback.format_exc()))
+
+
+def show_configs_dialog(links):
+    """
+    Configurar componente con varios elegidos, como "Modificar configuraciones" de SW (medido el
+    15/11): una fila por componente con su configuración y Suprimir. Aceptar aplica todo junto
+    (un Ctrl+Z); Cancelar no cambia nada. Devuelve True si se aceptó.
+    """
+    dlg = QtWidgets.QDialog(FreeCADGui.getMainWindow())
+    dlg.setObjectName("SWUI_component_configs")
+    dlg.setWindowTitle("Configurar componentes")
+    lay = QtWidgets.QVBoxLayout(dlg)
+    table = QtWidgets.QTableWidget(len(links), 3)
+    table.setObjectName("SWUI_component_configs_table")
+    table.setHorizontalHeaderLabels(["Componente", "Configuración", "Suprimir"])
+    table.verticalHeader().setVisible(False)
+    widgets = []
+    for i, link in enumerate(links):
+        item = QtWidgets.QTableWidgetItem(link.Label)
+        item.setFlags(QtCore.Qt.ItemFlag.ItemIsEnabled)
+        table.setItem(i, 0, item)
+        names = part_configs(link)
+        combo = QtWidgets.QComboBox()
+        if len(names) > 1:
+            combo.addItems(names)
+            cur = current(link)
+            if cur in names:
+                combo.setCurrentIndex(names.index(cur))
+        else:
+            combo.addItem(names[0] if names else "(única)")
+            combo.setEnabled(False)
+        table.setCellWidget(i, 1, combo)
+        check = QtWidgets.QCheckBox()
+        check.setChecked(bool(is_suppressed(link)))
+        table.setCellWidget(i, 2, check)
+        widgets.append((link, combo, check, len(names) > 1))
+    table.resizeColumnsToContents()
+    table.horizontalHeader().setStretchLastSection(True)
+    lay.addWidget(table)
+    buttons = QtWidgets.QDialogButtonBox(QtWidgets.QDialogButtonBox.StandardButton.Ok
+                                         | QtWidgets.QDialogButtonBox.StandardButton.Cancel)
+    buttons.button(QtWidgets.QDialogButtonBox.StandardButton.Ok).setText("Aceptar")
+    buttons.button(QtWidgets.QDialogButtonBox.StandardButton.Cancel).setText("Cancelar")
+    buttons.accepted.connect(dlg.accept)
+    buttons.rejected.connect(dlg.reject)
+    lay.addWidget(buttons)
+    dlg.resize(480, 120 + 30 * len(links))
+    from swui.compat import exec_dialog
+
+    if not exec_dialog(dlg):
+        return False
+    rows = [(link, combo.currentText() if many else None, check.isChecked())
+            for link, combo, check, many in widgets]
+    _run_many(lambda: apply_configs(rows), "Configurar componentes")
+    return True
+
+
 class _Command:
     menu = ""
     tip = ""
@@ -970,11 +1089,17 @@ class _Suppress(_Command):
     tip = "Oculta el componente y suprime sus relaciones (en la configuración activa del ensamblaje)"
 
     def target(self):
+        comps = picked_components()
+        if len(comps) > 1:  # varios (E1): los que falten suprimir
+            return [lk for lk in comps if not is_suppressed(lk)] or None
         link = picked_component()
         return link if link is not None and not is_suppressed(link) else None
 
     def Activated(self):
         link = self.target()
+        if isinstance(link, list):
+            _run_many(lambda: suppress_many(link, True), "Suprimir componentes")
+            return
         _run(link.Document, "Suprimir componente", lambda: suppress(link, True))
 
 
@@ -983,11 +1108,17 @@ class _Unsuppress(_Command):
     tip = "Vuelve a mostrar el componente y activa sus relaciones"
 
     def target(self):
+        comps = picked_components()
+        if len(comps) > 1:
+            return [lk for lk in comps if is_suppressed(lk)] or None
         link = picked_component()
         return link if link is not None and is_suppressed(link) else None
 
     def Activated(self):
         link = self.target()
+        if isinstance(link, list):
+            _run_many(lambda: suppress_many(link, False), "Desactivar supresión")
+            return
         _run(link.Document, "Desactivar supresión de componente", lambda: suppress(link, False))
 
 
@@ -996,11 +1127,17 @@ class _ConfigCmd(_Command):
     tip = "Elegir la configuración de la pieza para este componente"
 
     def target(self):
+        comps = picked_components()
+        if len(comps) > 1:  # varios (E1): si alguno tiene más de una configuración
+            return comps if any(len(part_configs(lk)) > 1 for lk in comps) else None
         link = picked_component()
         return link if link is not None and len(part_configs(link)) > 1 else None
 
     def Activated(self):
         link = self.target()
+        if isinstance(link, list):
+            show_configs_dialog(link)
+            return
         names = part_configs(link)
         cur = current(link)
         name, ok = QtWidgets.QInputDialog.getItem(FreeCADGui.getMainWindow(), "Configuración del componente",

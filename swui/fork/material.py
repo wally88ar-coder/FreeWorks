@@ -682,12 +682,35 @@ class _DocObserver:
 # --- Ventana Material ---------------------------------------------------
 
 
-def show_dialog(doc=None):
-    """Ventana Material (no modal), sobre lo elegido o toda la pieza."""
+def assign_many(objs, info, name="Asignar material"):
+    """
+    assign() sobre piezas de varios documentos (varios componentes elegidos, E1): un paso de
+    deshacer en cada documento.
+    """
+    from swui.fork import safe_ops
+
+    if info and get_material(info["uuid"]) is None:  # antes de tocar nada: que no quede a medias
+        raise RuntimeError("El material «%s» no está en la biblioteca." % info["name"])
+    docs = []
+    for o in objs:
+        if o.Document not in docs:
+            docs.append(o.Document)
+    # uno detrás del otro (FreeCAD no anida transacciones: abrir la de un documento con la de otro
+    # abierta la confirmaría, ver safe_ops.undo_step)
+    for d in docs:
+        with safe_ops.undo_step(d, name):
+            assign([o for o in objs if o.Document is d], info)
+
+
+def show_dialog(doc=None, objs=None):
+    """
+    Ventana Material (no modal), sobre lo elegido o toda la pieza. objs: las piezas a las que se
+    asigna (pueden ser de varios documentos: varios componentes elegidos en un ensamblaje, E1).
+    """
     doc = doc or FreeCAD.ActiveDocument
     for d in list(_open):
         d.close()
-    dialog = _MaterialDialog(doc)
+    dialog = _MaterialDialog(doc, objs)
     _open.append(dialog)
     dialog.finished.connect(lambda *_a: _open.remove(dialog) if dialog in _open else None)
     dialog.show()
@@ -698,11 +721,11 @@ def show_dialog(doc=None):
 class _MaterialDialog(QtWidgets.QDialog):
     ROLE = 256  # Qt.UserRole
 
-    def __init__(self, doc):
+    def __init__(self, doc, objs=None):
         super().__init__(FreeCADGui.getMainWindow())
         self.QtCore, self.Qt = QtCore, QtWidgets
         self.doc = doc
-        self.targets = targets(doc) if doc else []
+        self.targets = list(objs) if objs else (targets(doc) if doc else [])
         self.current = None  # info elegida
         self.editable = False
         self.setWindowTitle("Material")
@@ -981,11 +1004,9 @@ class _MaterialDialog(QtWidgets.QDialog):
                 return
         if info is None:
             return
-        from swui.fork import safe_ops
-
         try:
-            with safe_ops.undo_step(self.doc, "Asignar material"):  # con un panel abierto, se suma al suyo (#3)
-                assign(self.targets, info)
+            # con un panel abierto, se suma al suyo (#3); piezas de varios documentos: un paso en cada uno
+            assign_many(self.targets, info, "Asignar material")
         except Exception as exc:
             self.Qt.QMessageBox.warning(self, "Material", str(exc))
             return
@@ -1002,11 +1023,8 @@ class _MaterialDialog(QtWidgets.QDialog):
     def _remove(self):
         if not self.targets:
             return
-        from swui.fork import safe_ops
-
         try:
-            with safe_ops.undo_step(self.doc, "Quitar material"):  # con un panel abierto, se suma al suyo (#3)
-                assign(self.targets, None)
+            assign_many(self.targets, None, "Quitar material")  # con un panel abierto, se suma al suyo (#3)
         except Exception as exc:
             self.Qt.QMessageBox.warning(self, "Material", str(exc))
             return
