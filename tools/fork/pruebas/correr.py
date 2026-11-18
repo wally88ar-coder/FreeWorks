@@ -82,6 +82,41 @@ def tiempo_para(clase, propio=0):
     return limite
 
 
+# Preferencias que cambian lo que se ve y que el usuario cambia con el uso (17/11: al reinstalar FreeCAD se
+# borró su configuración y las capturas de referencia dejaron de coincidir). En la COPIA de la prueba se
+# fijan a lo de las capturas aprobadas: 2 decimales y la variante que muestra cada botón desplegable.
+FIJAS = [
+    (("BaseApp", "Preferences", "Units"), "FCInt", "Decimals", "2"),
+    (("BaseApp", "Preferences", "Mod", "SWUI", "Ribbon"), "FCText", "SWUI_ComponentLinearPattern", "SWUI_MirrorComponents"),
+    (("BaseApp", "Preferences", "Mod", "SWUI", "Ribbon"), "FCText", "SWUI_MoveBodies", "SWUI_DeleteBodies"),
+]
+
+
+def fijar_preferencias(cfg):
+    import xml.etree.ElementTree as ET
+
+    arbol = ET.parse(cfg)
+    raiz = arbol.getroot()
+    grupo0 = raiz.find("FCParamGroup[@Name='Root']")
+    if grupo0 is None:
+        grupo0 = ET.SubElement(raiz, "FCParamGroup", Name="Root")
+    for camino, tipo_xml, nombre, valor in FIJAS:
+        g = grupo0
+        for parte in camino:
+            h = g.find("FCParamGroup[@Name='%s']" % parte)
+            if h is None:
+                h = ET.SubElement(g, "FCParamGroup", Name=parte)
+            g = h
+        e = g.find("%s[@Name='%s']" % (tipo_xml, nombre))
+        if e is None:
+            e = ET.SubElement(g, tipo_xml, Name=nombre)
+        if tipo_xml == "FCText":
+            e.text = valor
+        else:
+            e.set("Value", valor)
+    arbol.write(cfg, encoding="utf-8", xml_declaration=True)
+
+
 def correr_una(ruta, clase, cobertura, tmp):
     nombre = os.path.splitext(os.path.basename(ruta))[0]
     limite = tiempo_para(clase, tiempo_propio(ruta))
@@ -107,6 +142,7 @@ def correr_una(ruta, clase, cobertura, tmp):
         propia = os.path.join(os.environ.get("APPDATA", ""), "FreeCAD", "v1-1", "user.cfg")
         if os.path.exists(propia):
             shutil.copy(propia, cfg)
+            fijar_preferencias(cfg)
         cmd = [os.path.join(BIN, "freecad.exe"), "-u", cfg, lanzar]
     else:
         cmd = [os.path.join(BIN, "freecadcmd.exe"), lanzar]
