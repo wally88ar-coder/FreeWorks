@@ -223,11 +223,13 @@ def prueba():
     import math
     view = FreeCADGui.ActiveDocument.ActiveView
     punto = None
-    for k in range(36):
-        a = math.radians(10 * k)
+    for k in range(72):
+        a = math.radians(5 * k)
         q = V(45 + 4 * math.cos(a), 20 + 4 * math.sin(a), 18)
-        info = view.getObjectInfo(tuple(view.getPointOnViewport(q))[:2])
-        if info and str(info.get("Component", "")).endswith(pared1):
+        x, y = tuple(view.getPointOnViewport(q))[:2]
+        # el clic derecho mueve el mouse unos píxeles antes (derecho_vista): todos sobre la misma pared
+        infos = [view.getObjectInfo((x + dx, y)) for dx in (0, 1, 3, -1, -3)]
+        if all(i and str(i.get("Component", "")).endswith(pared1) for i in infos):
             punto = q
             break
     assert punto is not None, "no se encontró un punto visible de la pared del agujero"

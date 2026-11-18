@@ -113,6 +113,8 @@ COMP_MATERIAL, TANGENT, FACE_DXF = "SWUI_ComponentMaterial", "SWUI_SelectTangent
 OPEN_POS = "SWUI_OpenPartInPosition"
 OPEN_PARTS = "SWUI_OpenParts"  # Abrir pieza con varios componentes elegidos (E1)
 DELETE_BODIES = "SWUI_DeleteBodies"  # Sólido > Eliminar... con caras de varias operaciones (E2)
+# Editar la pieza dentro del ensamblaje (etapa D, edit_part.py)
+EDIT_PART, EDIT_IN_ASM, EDIT_SKETCH_IN_ASM = "SWUI_EditPart", "SWUI_EditPartFeature", "SWUI_EditPartSketch"
 SELECTION_TOOLS = "submenu:selection"  # Herramientas de selección ▸
 
 # Íconos de la bandeja para lo que no trae ícono (propios, tools/fork/make_icons_fork.py; nada de SW)
@@ -124,6 +126,7 @@ TRAY_ICONS = {
     "Std_LinkSelectLinked": "fork/t_open_part", COMP_SUPPRESS: "fork/t_suppress",
     COMP_UNSUPPRESS: "fork/t_unsuppress", MATE: "sketch/m_coincident", OPEN_POS: "fork/t_open_part_pos",
     COMP_PROPS: "fork/t_properties", OPEN_PARTS: "fork/t_open_part",
+    EDIT_PART: "fork/t_edit_part", EDIT_IN_ASM: "fork/t_edit_feature", EDIT_SKETCH_IN_ASM: "fork/t_edit_sketch",
     "PartDesign_NewSketch": "sketch/sketch_new", "PartDesign_Fillet": "sketch/f_fillet",
     "PartDesign_Chamfer": "sketch/f_chamfer",
 }
@@ -137,7 +140,7 @@ ON_FEATURE = {EDIT, EDIT_SKETCH, SUPPRESS, UNSUPPRESS, UNSUPPRESS_ALL, ROLLBACK,
 
 # Comandos que la tabla puede pedir aunque FreeCAD no los haya puesto en el menú
 FETCHABLE = {COLLAPSE, INVERT, ISOLATE, RENAME_COMP, COMP_PROPS, COMP_PARENT, COMP_MATERIAL, FACE_DXF,
-             OPEN_POS, OPEN_PARTS, SELECTION_TOOLS, "PartDesign_NewSketch", "PartDesign_Fillet", "PartDesign_Chamfer", "SWUI_ConfigureFeature",
+             OPEN_POS, OPEN_PARTS, EDIT_PART, EDIT_IN_ASM, EDIT_SKETCH_IN_ASM, SELECTION_TOOLS, "PartDesign_NewSketch", "PartDesign_Fillet", "PartDesign_Chamfer", "SWUI_ConfigureFeature",
              "Std_HideSelection", "Std_ShowSelection", "Std_SetAppearance", "Std_ToggleTransparency",
              "Std_Delete", "Std_LinkSelectLinked", MATE, VIEW_MATES}
 
@@ -413,8 +416,9 @@ def layout(ctx, where):
                 (title_of(ctx), [PARENT_CHILD, "SWUI_ConfigureFeature", "Std_Delete", "Std_ToggleTransparency",
                                  REPAIR, COLLAPSE])]
     if ctx.kind == "component":
-        tray = (["clarify"] if view else []) + [
-            OPEN_PARTS if getattr(ctx, "many", False) else "Std_LinkSelectLinked", OPEN_POS, hide, "Std_ToggleTransparency", COMP_SUPPRESS, COMP_UNSUPPRESS, MATE,
+        edit_face = [EDIT_IN_ASM, EDIT_SKETCH_IN_ASM] if view and ctx.element_kind == "Face" else []
+        tray = (["clarify"] if view else []) + edit_face + [
+            OPEN_PARTS if getattr(ctx, "many", False) else "Std_LinkSelectLinked", OPEN_POS, EDIT_PART, hide, "Std_ToggleTransparency", COMP_SUPPRESS, COMP_UNSUPPRESS, MATE,
             VIEW_MATES, COMP_PROPS, "Std_SetAppearance"]
         top = [INVERT] + ([SELECTION_TOOLS] if view and ctx.element_kind == "Face" else [])
         comp = ([RENAME_COMP] if view else ["rename"]) + [ISOLATE, COMP_CONFIG, FIX, FLOAT, "Std_Delete",

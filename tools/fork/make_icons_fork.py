@@ -387,6 +387,13 @@ def _():
     return [_face(frame, mk.GEO), _face("M10 8 H54 V18 H10 Z", mk.NEW)] +         [mk.thin("M18 %d H46" % y, mk.OUTLINE, 3) for y in (28, 37, 46)]
 
 
+@icon("t_edit_part", "Editar pieza")
+def _():
+    # la pieza que se edita (azul) junto a otra del ensamblaje (gris, transparente) y el lápiz
+    return [mk.box(-22, 2, 0, 12, 12, 10, GHOST_FACES), mk.box(-8, -10, 0, 18, 18, 12, mk.NEW_FACES)] + \
+        pencil(36, 32, 56, 10)
+
+
 def build(target=TARGET):
     os.makedirs(target, exist_ok=True)
     written = []

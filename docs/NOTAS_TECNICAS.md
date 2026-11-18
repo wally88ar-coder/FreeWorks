@@ -1202,6 +1202,22 @@ que usan está en `tools/test_load.py` (`check_ia`): si una cambia de firma, el 
   `graphicsView().viewport() == widget` sirve para saber de qué vista es el evento. Cambiar el
   tipo de cámara (`setCameraType`) deja el archivo "modificado"; girar, no.
 
+## Editar la pieza dentro del ensamblaje (15/11, etapa D): hallazgos en FreeCAD 1.1.4
+
+- `vista.setActiveObject("pdbody", ensamblaje, "Comp.")` activa el Cuerpo de la pieza a través del
+  componente: Croquis/Extruir van a la pieza (otro documento). `getActiveObject("pdbody", False)` da
+  `(cuerpo, ensamblaje, "Comp.")`; desactivado da una tupla con None (no None).
+- FreeCAD anota el paso en la pieza y lo refleja en el ensamblaje como "-> <paso>": Std_Undo en la
+  ventana del ensamblaje lo deshace en la pieza. Pieza y ensamblaje quedan "modificados".
+- `Gui.Document.setEdit(ensamblaje, 0, "Comp.Body.Op.")` abre la operación (o el croquis) de la pieza
+  sin salir del ensamblaje.
+- Con configuraciones, el componente apunta a una COPIA de la pieza dentro del ensamblaje
+  (`LinkedObject.Document is link.Document`): editarla no cambia el archivo de la pieza.
+- Un croquis vacío se borra al salir (FreeWorks, empty_sketch.py): en una prueba, Ctrl+Z después de
+  salir de un croquis vacío vuelve a traerlo (no deshace el croquis).
+- Borrar operaciones con dependientes muestra el aviso de FreeCAD "Los siguientes objetos de referencia
+  pueden romperse. ¿Continuar?" (botones Sí/No): en una prueba hay que contestarlo o se traba.
+
 ## Clic derecho y arrastre en el árbol (15/11): hallazgos en FreeCAD 1.1.4
 - `FreeCADGui.Selection.getPreselection()` da lo que está debajo del mouse en la vista (después de un
   MouseMove): `DocumentName`, `ObjectName`, `SubElementNames` (en un Cuerpo "Extruir.Face6" con el

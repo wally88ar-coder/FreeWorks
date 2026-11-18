@@ -247,8 +247,9 @@ def prueba():
     bombear(150)
     m = _menu(derecho_arbol(b.Label))
     _comun(m, "componente en el árbol")
-    esperado = ["{Abrir pieza|Abrir pieza en posición|Ocultar|Cambiar transparencia|Suprimir|Relación de posición"
-                "|Ver relaciones de posición|Propiedades del componente...|Apariencia}", "Invertir la selección",
+    esperado = ["{Abrir pieza|Abrir pieza en posición|Editar pieza|Ocultar|Cambiar transparencia|Suprimir"
+                "|Relación de posición|Ver relaciones de posición|Propiedades del componente...|Apariencia}",
+                "Invertir la selección",
                 "[Componente (TacoB)]", "Cambiar de nombre", "Aislar", "Fijar", "Eliminar", "Padre/Hijo...",
                 "Material...", "Contraer operaciones", "»"]
     assert m["vis"] == esperado, str(cm.last_decision) + "componente en el árbol:\n%s\nesperado:\n%s" % (m["vis"], esperado)
@@ -260,8 +261,9 @@ def prueba():
     sel = _sel()
     assert len(sel) == 1 and b.Name in sel[0] and "Face" in sel[0], "no eligió la cara del componente: %s" % sel
     _comun(m, "componente en la vista")
-    esperado = ["{Seleccionar otra|Abrir pieza|Abrir pieza en posición|Ocultar|Cambiar transparencia|Suprimir"
-                "|Relación de posición|Ver relaciones de posición|Propiedades del componente...|Apariencia}",
+    esperado = ["{Seleccionar otra|Editar operación|Abrir pieza|Abrir pieza en posición|Editar pieza|Ocultar"
+                "|Cambiar transparencia|Suprimir|Relación de posición|Ver relaciones de posición"
+                "|Propiedades del componente...|Apariencia}",
                 "Invertir la selección", "Herramientas de selección", "[Componente (TacoB)]", "Cambiar de nombre",
                 "Aislar", "Fijar", "Eliminar", "Padre/Hijo...", "Material...", "»"]
     assert m["vis"] == esperado, "componente en la vista:\n%s\nesperado:\n%s" % (m["vis"], esperado)

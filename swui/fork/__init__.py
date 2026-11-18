@@ -104,6 +104,9 @@ def install(workbench=None):
             from swui.fork import context_tools  # herramientas del clic derecho como SW (15/11)
 
             context_tools.install()
+            from swui.fork import edit_part  # editar la pieza dentro del ensamblaje (etapa D, 15/11)
+
+            edit_part.install()
         except Exception:
             FreeCAD.Console.PrintError("[SWUI fork] Clic derecho:\n%s\n" % traceback.format_exc())
         rebuild_keys.install()

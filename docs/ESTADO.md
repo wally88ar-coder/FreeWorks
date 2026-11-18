@@ -113,6 +113,52 @@ LOCALES sin push hasta que el usuario pruebe; batería completa solo al final).*
   (copia de la pieza dentro del ensamblaje): AVISAR Y NO DEJAR editarlo ("Este componente usa otra
   configuración; abrí la pieza para cambiarla"). (3) Ctrl+Z: lo mide Claude antes de programar.
   Plan de la etapa D APROBADO para hacer cuando el usuario dé el OK.
+  **Etapa D HECHA (15/11 a la noche, commit local, sin subir).** `swui/fork/edit_part.py`: Editar pieza
+  (ícono propio nuevo t_edit_part en la bandeja de UN componente; otra vez o "Salir" vuelve), Editar
+  operación / Editar croquis desde la cara de un componente (abren la operación o el croquis que hizo esa
+  cara, en la pieza, sin salir del ensamblaje), aviso y no entra con una copia de la pieza, transparencia
+  de los otros componentes sin "modificado" y sin quedar en el archivo, y al guardar el ensamblaje
+  después de editar piezas pregunta si guardarlas. Prueba nueva `prueba_ventana_editar_pieza` (BIEN):
+  entrar, croquis nuevo en la pieza, Ctrl+Z en el ensamblaje lo deshace y se sigue editando, guardar
+  editando, plano nuevo + Salir + guardar con Sí (la pieza queda guardada con el plano), Editar operación
+  y Editar croquis desde la cara, copias (misma y otra configuración), cerrar editando.
+  **Decidido solo:** una pieza con configuraciones SIEMPRE está como copia dentro del ensamblaje (así
+  funcionan las configuraciones de FreeWorks), así que tampoco se edita en contexto aunque esté en la
+  configuración activa: aviso propio "Este componente usa una copia de la pieza (la pieza tiene
+  configuraciones): abrí la pieza para cambiarla." (en otra configuración, el texto aprobado). La pregunta
+  "¿Guardar las piezas también?" aparece solo en ensamblajes en los que se editó una pieza en esta sesión.
+  Transparencia de los otros componentes: 75 % (los componentes no tienen "Transparency": se usa su
+  material propio, OverrideMaterial + ShapeMaterial, medido). Revisor D: 2 altos arreglados (la pregunta de
+  guardar piezas salía en cualquier guardado posterior, también en "Guardar una copia" y guiones: ahora solo
+  al guardar el archivo propio y solo por las piezas editadas desde ese ensamblaje que quedaron
+  modificadas; un Cuerpo propio del ensamblaje se tomaba como copia: ahora se mira la copia de FreeCAD)
+  y medios arreglados (camino armado desde la selección y validado, también con carpetas; si falla
+  entrar no queda a medias; salir por lo nativo, por ejemplo otro Cuerpo activo, también sale; la barra
+  solo en el documento al frente; pruebas: transparencia de verdad, sin pasos de deshacer al entrar y
+  salir, botón Salir, ícono otra vez, Cuerpo del mismo archivo). Quedan (bajos, anotados): si mientras se
+  edita se cambia la transparencia de otro componente, Salir la vuelve a la de antes; un componente
+  agregado mientras se edita no queda transparente; guardar al cerrar el ensamblaje no pregunta por las
+  piezas (FreeCAD ya pregunta por cada documento modificado al cerrar). **Sin hacer:** marcar "->" en el árbol las piezas con
+  referencias a otras (en SW sale así); las referencias las deja hacer FreeCAD (copia de forma, medido),
+  pero sin marca. Editar pieza en subensamblajes anidados: sin probar (el camino es solo el de arriba).
+  Sin comparar con SW con el mouse (pendiente).
+  **Medido el 15/11 a la noche, antes de programar:** (a) SW: dentro de "Editar componente", agregar un
+  plano a la pieza y Ctrl+Z lo saca de la pieza y SIGUE en Editar componente; se sale con el mismo botón
+  (no guardé nada). (b) FreeCAD 1.1.4 (sondeo de un solo uso, borrado): con el Cuerpo de la pieza activo
+  a través del componente, Croquis sobre una cara crea el croquis EN LA PIEZA; FreeCAD anota el paso en la
+  pieza ("Sketch on Face") y lo refleja en el ensamblaje ("-> Sketch on Face"): Ctrl+Z en la ventana del
+  ensamblaje lo deshace (como SW). Pieza y ensamblaje quedan "modificados".
+  **D, qué tiene que pasar (escrito antes de programar):** ícono "Editar pieza" en la bandeja de UN
+  componente: activa el Cuerpo de la pieza a través del componente, los otros componentes se ven
+  transparentes (sin dejar el ensamblaje modificado por eso), arriba la barra "Editando pieza: X" con
+  "Salir"; Croquis, Extruir, Cortar... van a la pieza; Ctrl+Z deshace lo último de la pieza; el mismo
+  ícono (o Salir) vuelve al ensamblaje con todo como antes y lo recalcula. Componente en otra
+  configuración (copia de la pieza dentro del ensamblaje): aviso "Este componente usa otra configuración;
+  abrí la pieza para cambiarla" y no entra. En la cara de un componente, íconos "Editar operación" y
+  "Editar croquis": abren la operación (o su croquis) que hizo esa cara, en la pieza, sin salir del
+  ensamblaje (con la copia de otra configuración: el mismo aviso). Al guardar el ensamblaje después de
+  editar piezas en él, pregunta si guardar también las piezas cambiadas. Referencias a otras piezas: las
+  deja hacer FreeCAD (copia de forma a través del ensamblaje, medido el 15/11).
 - **Etapa E (clic derecho con VARIOS elegidos): PLAN, sin código (lo aprueba el usuario).** Encontrado
   por el usuario el 15/11: con dos componentes elegidos no sale Aislar. Causa: el clic derecho solo
   reconoce UN elemento elegido (`context_of` en `swui/fork/context_menus.py`); con dos o más cae en el

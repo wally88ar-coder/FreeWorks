@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Editar pieza</title>
+  <path d="M20.4 39.5 L8.7 46.2 L8.7 35.0 L20.4 28.3 Z" fill="#cfd3d8" stroke="#1b1b1b" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.7 46.2 L-2.9 39.5 L-2.9 28.3 L8.7 35.0 Z" fill="#dfe2e6" stroke="#1b1b1b" stroke-width="1.6" stroke-linejoin="round"/><path d="M8.7 21.6 L20.4 28.3 L8.7 35.0 L-2.9 28.3 Z" fill="#eef0f3" stroke="#1b1b1b" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M51.4 44.0 L33.9 54.1 L33.9 40.6 L51.4 30.6 Z" fill="#2a6bc9" stroke="#1b1b1b" stroke-width="1.6" stroke-linejoin="round"/><path d="M33.9 54.1 L16.5 44.0 L16.5 30.6 L33.9 40.6 Z" fill="#3d8bff" stroke="#1b1b1b" stroke-width="1.6" stroke-linejoin="round"/><path d="M33.9 20.5 L51.4 30.6 L33.9 40.6 L16.5 30.6 Z" fill="#8cbcff" stroke="#1b1b1b" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M36.0 32.0 L51.3 15.2" stroke="#1b1b1b" stroke-width="10" stroke-linecap="round"/>
+  <path d="M36.0 32.0 L51.3 15.2" stroke="#3d8bff" stroke-width="6.4" stroke-linecap="round"/>
+  <path d="M54.0 17.6 L56.0 10.0 L48.6 12.8 Z" fill="#f4f4f4" stroke="#1b1b1b" stroke-width="1.8" stroke-linejoin="round"/>
+  <circle cx="56.0" cy="10.0" r="2.4" fill="#e0261b" stroke="#1b1b1b" stroke-width="1.6"/>
+</svg>

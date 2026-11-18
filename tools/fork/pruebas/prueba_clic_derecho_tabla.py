@@ -95,7 +95,8 @@ def prueba():
     comp = cm.Context("component", component=None, element="Face6", visible=True)
     comp.component = type("L", (), {"Label": "TacoB", "LinkedObject": None})()
     groups, behind, removed = cm.place(VISTA_COMPONENTE, comp, "View")
-    assert groups[0][1][:3] == ["clarify", "Std_LinkSelectLinked", "SWUI_OpenPartInPosition"], groups[0]
+    assert groups[0][1][:6] == ["clarify", "SWUI_EditPartFeature", "SWUI_EditPartSketch", "Std_LinkSelectLinked",
+                                "SWUI_OpenPartInPosition", "SWUI_EditPart"], groups[0]
     assert groups[1] == (None, ["SWUI_InvertSelection", "submenu:selection"]), groups[1]
     assert groups[2] == ("Componente (TacoB)", ["SWUI_RenameComponent", "SWUI_Isolate", "SWUI_FixComponent",
                                                 "Std_Delete", "SWUI_ComponentParentChild",
