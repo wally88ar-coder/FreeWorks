@@ -68,6 +68,20 @@ las preferencias. El disco C es SSD, así que no se pudo recuperar de ahí.
   - Paso 5 (#101): además del banco y el idioma, las barras de FreeCAD: con configuración nueva FreeCAD las
     mostraba después de que FreeWorks las ocultara. Ahora `first_run` las anota ocultas (solo las que no tienen
     nada anotado). Prueba `primer_arranque`, BIEN.
+  - Segunda revisión independiente (18/11): Cuerpo nuevo al contenedor solo en el paso del botón Cuerpo ("Add a
+    Body") o el de Editar pieza ("Cuerpo", que ya lo mete él); nada al abrir un archivo ni al pegar. Destildar
+    "Usar siempre FreeWorks" devuelve las barras de FreeCAD. Un hallazgo (miembro de soldadas "en dos grupos")
+    resultó ser lo nativo de FreeCAD: la pieza lista la carpeta y lo que tiene adentro (medido).
+  - **Paso 6 (comparar con SW con el mouse): PENDIENTE.** No se hizo: la batería completa final ocupa la pantalla
+    (2 h y media) y no entraba antes de las 7:00. Queda: top-down en SW, clic derecho editando, Piezas soldadas y
+    lista de cortes editando una soldada.
+  - **Batería completa final (18/11, 05:00 a 07:34): 135 pruebas, BIEN 134, FALLA 1** —
+    `editar_pieza`: después de "Sí, guardar también la pieza" el archivo de la pieza SÍ quedó guardado (tiene el
+    plano nuevo), pero la pieza seguía marcada "modificada" a los 5 s. Ficha #103. No se volvió a correr (a las
+    7:00 la PC ya era del usuario). Por la regla "lo que no pasa todo no se sube", el commit 49f4273 y este NO están
+    en `rescate` (quedan en la PC y en el respaldo `D:/FreeWorks-respaldo/freeworks_rescate.bundle`).
+  - Ojo para Claude: `FreeCADCmd` sin `-u <cfg aparte>` regraba la configuración del usuario al salir (pasó el
+    18/11; comparada, sin cambios de contenido). Siempre con `-u`.
   - **Decidido solo:** el idioma se pone una sola vez por configuración; las referencias a aristas de la PROPIA
     pieza que se traen y no se usan siguen sin borrarse al cancelar (era así antes; solo se limpian las de otro
     componente); proyectar todos los componentes al elegir puede ser lento en ensamblajes grandes (sin medir).
