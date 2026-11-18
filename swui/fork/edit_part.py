@@ -136,16 +136,37 @@ def _ghostable(obj):
 def _set_ghosts(doc, st, on):
     """Los otros componentes transparentes (on) o como estaban; sin dejar el ensamblaje modificado."""
     def run():
-        for name, (override, transparency) in st["saved"].items():
+        for name, (override, transparency, diffuse) in st["saved"].items():
             obj = doc.getObject(name)
             if obj is None or not _ghostable(obj):
                 continue
             vo = obj.ViewObject
             m = vo.ShapeMaterial
             m.Transparency = GHOST if on else transparency
+            if on and not override:
+                # con el color de la pieza (si no, el material propio la pinta celeste; visto con el
+                # mouse el 15/11): SW la deja de su color, transparente
+                color = _part_color(obj)
+                if color is not None:
+                    m.DiffuseColor = color
+            elif not on:
+                m.DiffuseColor = diffuse  # todo como estaba (nada distinto queda en el archivo)
             vo.ShapeMaterial = m
             vo.OverrideMaterial = True if on else override
     _quiet(doc, run)
+
+
+def _part_color(link):
+    """El color con que se ve la pieza del componente (el de su Cuerpo), o None."""
+    try:
+        vo = link.LinkedObject.ViewObject
+        if "ShapeAppearance" in vo.PropertiesList and vo.ShapeAppearance:
+            return vo.ShapeAppearance[0].DiffuseColor
+        if "ShapeMaterial" in vo.PropertiesList:
+            return vo.ShapeMaterial.DiffuseColor
+    except Exception:
+        pass
+    return None
 
 
 def ghost_level(obj):
@@ -196,7 +217,8 @@ def start(link, warn=True):
     saved = {}
     for c in mates_sw.components_of(asm):
         if c is not link and _ghostable(c):
-            saved[c.Name] = (bool(c.ViewObject.OverrideMaterial), c.ViewObject.ShapeMaterial.Transparency)
+            m = c.ViewObject.ShapeMaterial
+            saved[c.Name] = (bool(c.ViewObject.OverrideMaterial), m.Transparency, m.DiffuseColor)
     st = {"link": link.Name, "saved": saved, "body": link.LinkedObject.Name}
     _editing[doc.Name] = st
     try:

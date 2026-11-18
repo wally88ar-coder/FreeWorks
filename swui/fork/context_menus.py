@@ -485,7 +485,7 @@ def place(keys, ctx, where, has_selection=True):
 
 # --- Interfaz -----------------------------------------------------------------------------------------
 
-_last = {"where": None, "t": 0.0}
+_last = {"where": None, "t": 0.0, "pos": None}
 last_decision = {}  # lo que decidió el último menú (para las pruebas y el diagnóstico)
 WINDOW = 1.5  # segundos entre el clic derecho y el menú
 
@@ -626,7 +626,7 @@ def on_event(obj, event):
         where = widget_kind(obj)
         if where is None:
             return
-        _last.update(where=where, t=time.time())
+        _last.update(where=where, t=time.time(), pos=_global_pos(event))
         if where == "View":
             try:
                 pick_under_cursor()
@@ -635,7 +635,17 @@ def on_event(obj, event):
     elif t == QtCore.QEvent.Type.ContextMenu:
         where = widget_kind(obj)
         if where is not None:
-            _last.update(where=where, t=time.time())
+            _last.update(where=where, t=time.time(), pos=_global_pos(event))
+
+
+def _global_pos(event):
+    """Dónde se hizo el clic, en la pantalla (Qt6: globalPosition; Qt5: globalPos)."""
+    try:
+        if hasattr(event, "globalPosition"):
+            return event.globalPosition().toPoint()
+        return event.globalPos()
+    except Exception:
+        return None
 
 
 def _QAction():
@@ -841,6 +851,27 @@ def _fit_on_screen(menu):
         pass
 
 
+def place_at_cursor(menu, point=None):
+    """
+    Después de armar el menú, ponerlo donde se hizo el clic (como SW). FreeCAD lo ubica para el menú
+    largo original: si no entraba hacia abajo lo abre hacia arriba, y al quedar corto quedaba lejos del
+    mouse, arriba de la pantalla (visto con el mouse el 15/11). Si no entra hacia abajo, sube lo justo.
+    """
+    from swui.compat import QtCore, QtGui
+
+    try:
+        pos = point if point is not None else QtGui.QCursor.pos()
+        menu.adjustSize()
+        size = menu.sizeHint()
+        screen = QtGui.QGuiApplication.screenAt(pos) or QtGui.QGuiApplication.primaryScreen()
+        area = screen.availableGeometry()
+        x = min(pos.x(), area.right() - size.width())
+        y = pos.y() if pos.y() + size.height() <= area.bottom() else max(area.top(), pos.y() - size.height())
+        menu.move(QtCore.QPoint(max(area.left(), x), y))
+    except Exception:
+        pass
+
+
 def expand(menu):
     """Despliega la "»" (para las pruebas y el teclado). True si había algo detrás."""
     for a in menu.actions():
@@ -929,6 +960,7 @@ def arrange(menu):
     if where is None or time.time() - _last["t"] > WINDOW or not _menu_parent_ok(menu):
         return False
     _last["where"] = None
+    click = _last.get("pos")
     menu.setProperty("swui_cm", True)
     if _busy():
         return False  # croquis en edición o panel abierto: el menú es el de FreeCAD, sin tocar
@@ -948,6 +980,7 @@ def arrange(menu):
     last_decision.update(where=where, kind=ctx.kind, keys=keys, groups=groups, behind=behind, removed=removed)
     if not groups:
         _arrange_general(menu, acts, by_key, behind, removed)
+        place_at_cursor(menu, click)
         return True
     # con una cara elegida en la vista, lo de la operación elige antes la operación del título
     before = None
@@ -1006,6 +1039,7 @@ def arrange(menu):
             menu.addAction(a)
             a.setVisible(False)
         menu.addAction(_more_action(menu, [sep] + hidden))
+    place_at_cursor(menu, click)
     return True
 
 

@@ -27,6 +27,7 @@ def abrir_menu(abrir, cerrar=True, foto=None):
                     try:
                         if foto is not None:  # como se abre, antes de desplegar la »
                             visto["foto"] = obj.grab().toImage()
+                        visto["geo"] = obj.geometry()
                         visto["vis"] = cm.visible_texts(obj)
                         visto["todo"] = cm.visible_texts(obj, with_hidden=True)
                         visto["acciones"] = {a.text().replace("&", ""): a for a in obj.actions()}
@@ -85,6 +86,7 @@ def derecho_arbol(label):
     def abrir():
         ev = QtGui.QContextMenuEvent(QtGui.QContextMenuEvent.Reason.Mouse, p, vp.mapToGlobal(p))
         QtWidgets.QApplication.sendEvent(vp, ev)
+    abrir.punto = vp.mapToGlobal(p)  # dónde se hizo el clic (para ver que el menú salga ahí)
     return abrir
 
 

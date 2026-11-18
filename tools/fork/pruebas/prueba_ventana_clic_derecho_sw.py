@@ -57,8 +57,12 @@ def prueba():
     FreeCADGui.Selection.clearSelection()
     FreeCADGui.Selection.addSelection(doc.Name, body.Name, pad.Name + ".")
     bombear(150)
-    m = _menu(derecho_arbol(pad.Label))
+    abrir = derecho_arbol(pad.Label)
+    m = _menu(abrir)
     _comun(m, "operación en el árbol")
+    # el menú sale donde se hizo el clic (antes quedaba arriba de la pantalla, visto con el mouse 15/11)
+    g, pt = m["geo"], abrir.punto
+    assert abs(g.left() - pt.x()) <= 8 and min(abs(g.top() - pt.y()), abs(g.bottom() - pt.y())) <= 8,         "el menú no salió donde se hizo el clic: menú %s, clic %s" % ((g.left(), g.top(), g.bottom()), (pt.x(), pt.y()))
     esperado = ["{Editar operación|Editar croquis|Suprimir|Retroceder|Ocultar|Apariencia}",
                 "[Operación (%s)]" % pad.Label, "Padre/Hijo...", "Eliminar", "Cambiar transparencia",
                 "Contraer operaciones", "»"]

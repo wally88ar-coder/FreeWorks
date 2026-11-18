@@ -20,6 +20,9 @@ Neueste Version oben. / Newest version first.
   Retroceder...) actúa sobre la operación que creó la cara, la del título. Más textos de FreeCAD
   pasados al castellano. `swui/fork/context_menus.py`; pruebas `prueba_ventana_clic_derecho_sw`,
   `prueba_clic_derecho_tabla`.
+- **Clic derecho: el menú sale donde se hace el clic (15/11).** Antes quedaba arriba de la pantalla, lejos
+  del mouse (FreeCAD lo ubicaba para el menú largo original). En Editar pieza, los otros componentes se ven
+  transparentes con su color (antes, celestes). Visto comparando con el mouse contra SW.
 - **Clic derecho como SW, etapa D (15/11): editar la pieza dentro del ensamblaje.** Ícono "Editar pieza"
   en el clic derecho de un componente (la pieza queda activa, los otros componentes transparentes, barra
   "Editando pieza" con Salir; Ctrl+Z deshace lo de la pieza), "Editar operación" y "Editar croquis" desde

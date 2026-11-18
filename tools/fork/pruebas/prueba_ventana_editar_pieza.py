@@ -115,6 +115,8 @@ def prueba():
     assert act and act[0] is body, "el Cuerpo activo no es el de la pieza: %s" % (act,)
     if tiene:
         assert abs(ep.ghost_level(placa) - ep.GHOST) < 1e-6, "la placa no quedó transparente: %s" % ep.ghost_level(placa)
+        color = ep._part_color(placa)
+        assert color is not None and tuple(vo.ShapeMaterial.DiffuseColor)[:3] == tuple(color)[:3],             "transparente, pero no con el color de la pieza: %s / %s" % (vo.ShapeMaterial.DiffuseColor, color)
     assert not gdoc.Modified, "entrar a Editar pieza dejó el ensamblaje modificado"
     barra = [w for w in FreeCADGui.getMainWindow().findChildren(QtWidgets.QLabel, "SWUI_edit_part_label")
              if w.isVisible()]

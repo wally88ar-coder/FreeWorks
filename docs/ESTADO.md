@@ -220,6 +220,19 @@ LOCALES sin push hasta que el usuario pruebe; batería completa solo al final).*
     misma pieza dos veces la abre una vez, mirada como el primer componente elegido; con varios, la tabla
     de configuraciones es de la configuración activa del ensamblaje (SW muestra una fila por cada
     configuración del ensamblaje: más adelante si hace falta). Sin comparar con SW con el mouse (pendiente).
+  - **Comparado con el mouse contra SW (15/11, 23:45, FreeCAD con copia de la configuración):** en el árbol
+    de una pieza, dos operaciones elegidas: menú "Operaciones" como SW (bandeja Suprimir y Apariencia,
+    Invertir, Eliminar, Cambiar transparencia, Contraer); Suprimir desde la bandeja suprimió las dos y un
+    Ctrl+Z las volvió. En la vista, cara de arriba + pared del agujero: grupos Caras / Operaciones / Sólido.
+    En el ensamblaje, dos componentes: menú "Componente" (Aislar, Fijar, Flotar, Eliminar, Material,
+    Contraer); Aislar dejó solo los dos con la barra "Aislar | Salir de aislar". Editar pieza: barra
+    "Editando pieza: Bloque | Salir", la pieza se abre en el árbol y las otras quedan transparentes.
+    Editar operación desde la cara de la placa abrió el panel de la caja dentro del ensamblaje.
+    **Arreglado por lo visto con el mouse:** (1) el menú se abría arriba de la pantalla, lejos del mouse
+    (venía de las etapas A-C: FreeCAD lo ubica para el menú largo original; ahora va donde se hizo el
+    clic y, si no entra abajo, sube lo justo, `context_menus.place_at_cursor`); (2) en Editar pieza los
+    otros componentes quedaban celestes (el material propio de FreeCAD): ahora transparentes con su color,
+    como SW.
   - **E2, qué tiene que pasar (escrito antes de programar):** con dos o más operaciones del mismo
     Cuerpo elegidas en el árbol, el clic derecho muestra el menú "Operaciones" (como SW) con la bandeja
     Suprimir (o Desactivar supresión) y Apariencia, y la lista Configurar operación, Eliminar, Cambiar
