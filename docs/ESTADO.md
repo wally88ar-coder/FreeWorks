@@ -81,6 +81,14 @@ las preferencias. El disco C es SSD, así que no se pudo recuperar de ahí.
     7:00 la PC ya era del usuario). Después (con permiso del usuario) se corrió sola 4 veces: BIEN las 4, la pieza
     queda guardada a los 0,2 s. **Decidido solo:** es intermitente (como #91): #103 queda abierta, la prueba ahora
     espera hasta 15 s y anota cuánto tardó, y se subió a `rescate`.
+  - **Paso 6, piezas listas (18/11 noche):** `D:\FreeWorks-pruebas\paso6\` (FreeCAD) y
+    `C:\SW-AI-Bridge\trabajos\paso6\` (SW): Placa + Taco arriba + Marco soldado con un travesaño suelto; la lista de
+    qué probar está en `D:\FreeWorks-pruebas\paso6\QUE_PROBAR.md`. La comparación la hace el usuario.
+  - Armándolas apareció **#104** (grave): insertar una pieza de varios cuerpos dejaba su contenedor solo en
+    memoria y el ensamblaje se rompía al reabrirlo. Arreglado (prueba `contenedor_insertar`). Revisión
+    independiente: si la pieza ya estaba abierta con cambios sin guardar, insertarla no la guarda sola (se guarda
+    al guardar el ensamblaje, como SW). Pruebas del área de ensamblaje y Editar pieza: BIEN (`mono_soldadas` se cortó
+    una vez por tiempo a los 600 s; repetida: BIEN en 503 s).
   - Ojo para Claude: `FreeCADCmd` sin `-u <cfg aparte>` regraba la configuración del usuario al salir (pasó el
     18/11; comparada, sin cambios de contenido). Siempre con `-u`.
   - **Decidido solo:** el idioma se pone una sola vez por configuración; las referencias a aristas de la PROPIA

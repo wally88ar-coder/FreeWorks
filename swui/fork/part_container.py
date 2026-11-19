@@ -85,6 +85,56 @@ def wrap(doc, save=True, transaction=True):
 
 
 _inserting = [0]  # >0 mientras se insertan archivos en un ensamblaje (assembly_drop.insert_files)
+_open_before = set()  # documentos abiertos cuando empezó la inserción (los del usuario)
+_to_save = []  # (documento, su archivo, ¿tenía cambios sin guardar?) de las piezas a las que la inserción les puso el contenedor
+
+
+def _gui_doc(name):
+    try:
+        import FreeCADGui
+
+        return FreeCADGui.getDocument(name)
+    except Exception:
+        return None
+
+
+def _save_wrapped():
+    """
+    Guarda las piezas que recibieron el contenedor al insertarlas. Una pieza que ya tenía cambios sin guardar
+    (abierta por el usuario) NO se guarda: no se escriben sus cambios a medias sin preguntar; queda modificada y
+    avisa. Si el guardado falla, queda modificada y avisa.
+    """
+    queued, _to_save[:] = list(_to_save), []
+    for doc, path, dirty in queued:
+        try:
+            name = doc.Name  # documento cerrado: error, se saltea
+            same = FreeCAD.listDocuments().get(name)
+            if same is None or same.FileName != path:
+                continue  # se cerró (o es otro documento con el mismo nombre)
+            doc = same
+            part = container(doc)
+            if part is None or not hasattr(part, MARK) or not getattr(doc, "FileName", ""):
+                continue
+            gdoc = _gui_doc(name)
+            if dirty:
+                FreeCAD.Console.PrintWarning(
+                    "[SWUI fork] %s tenía cambios sin guardar: no se guardó sola. Guardala para que el ensamblaje "
+                    "la encuentre entera al reabrirlo.\n" % doc.Label)
+                if gdoc is not None:
+                    gdoc.Modified = True
+                continue
+            doc.recompute()  # si quedó algo por recalcular, el próximo recálculo la marcaría modificada
+            doc.save()
+            # doc.save() desde Python escribe el archivo pero no limpia la marca de la ventana (medido 18/11)
+            if gdoc is not None:
+                gdoc.Modified = False
+        except Exception as exc:
+            FreeCAD.Console.PrintWarning("[SWUI fork] No se pudo guardar una pieza con su contenedor (%s): guardala "
+                                         "antes de cerrar el ensamblaje.\n" % exc)
+            try:
+                _gui_doc(doc.Name).Modified = True
+            except Exception:
+                pass
 
 
 def _hook_insert():
@@ -102,7 +152,16 @@ def _hook_insert():
     def pick_objects(doc):
         try:
             if _inserting[0] and needs_container(doc):
-                return [wrap(doc)]
+                # sin guardar: durante la inserción FreeCAD 1.1.4 tiene la pieza "de solo lectura" (OSError al
+                # guardar) y el contenedor quedaba solo en memoria: el ensamblaje se rompía al reabrirlo (#104).
+                # Se guarda apenas termina de insertar (insert_files, abajo).
+                # ¿el usuario la tenía abierta con cambios? Solo si ya estaba abierta antes de insertar: la que abre
+                # la inserción (oculta) FreeCAD la marca modificada aunque no tenga nada (medido 18/11)
+                gdoc = _gui_doc(doc.Name)
+                dirty = bool(doc.Name in _open_before and gdoc is not None and gdoc.Modified)
+                part = wrap(doc, save=False)
+                _to_save.append((doc, doc.FileName, dirty))
+                return [part]
             part = container(doc)
             if part is not None and hasattr(part, MARK):
                 return [part]
@@ -118,11 +177,16 @@ def _hook_insert():
     insert = assembly_drop.insert_files
 
     def insert_files(*args, **kwargs):
+        if not _inserting[0]:
+            _open_before.clear()
+            _open_before.update(FreeCAD.listDocuments())
         _inserting[0] += 1
         try:
             return insert(*args, **kwargs)
         finally:
             _inserting[0] -= 1
+            if not _inserting[0]:
+                _save_wrapped()
 
     insert_files._swui_container = True
     assembly_drop.insert_files = insert_files

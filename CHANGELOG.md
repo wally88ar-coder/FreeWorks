@@ -5,6 +5,10 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Insertar una pieza de varios cuerpos ya no rompe el ensamblaje al reabrirlo (#104, 18/11).** El contenedor que
+  FreeWorks le pone a la pieza quedaba solo en memoria: FreeCAD 1.1.4 tiene la pieza de solo lectura durante la
+  inserción y el guardado fallaba en silencio. Ahora la pieza se guarda apenas termina de insertar (y queda sin la
+  marca de modificada); si no se puede, queda modificada y avisa. Prueba `prueba_ventana_contenedor_insertar`.
 - **Rescate y cierre de "Editar pieza = pieza" (17-18/11, sin probar por el usuario).** Lo perdido al desinstalar
   FreeCAD 1.0 se rearmó desde el registro de la sesión (17 commits, rama `rescate`). Editando una pieza cuyo
   componente no está en el origen (#100), el Croquis 3D, las vistas previas (caras y líneas de Redondeo,
