@@ -192,10 +192,13 @@ def prueba():
     assert FreeCADGui.getDocument(pdoc.Name).Modified, "la pieza tenía que quedar modificada"
     visto = _contestar(True)
     doc.save()
-    for _i in range(25):  # la pregunta sale apenas termina de guardar; Sí guarda la pieza
+    # la pregunta sale apenas termina de guardar; Sí guarda la pieza. Hasta 15 s: en la batería larga del 18/11 a
+    # los 5 s el archivo ya estaba guardado pero la pieza seguía marcada (#103; sola tarda menos de 1 s)
+    for _i in range(75):
         bombear(200)
         if not FreeCADGui.getDocument(pdoc.Name).Modified:
             break
+    traza("  la pieza quedó guardada a los %.1f s" % ((_i + 1) * 0.2))
     assert "Taco" in visto.get("texto", ""), "no preguntó por la pieza cambiada: %s" % visto
     with zipfile.ZipFile(pdoc.FileName) as z:
         guardado = b"PlanoNuevo" in z.read("Document.xml")

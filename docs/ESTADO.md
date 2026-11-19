@@ -78,8 +78,9 @@ las preferencias. El disco C es SSD, así que no se pudo recuperar de ahí.
   - **Batería completa final (18/11, 05:00 a 07:34): 135 pruebas, BIEN 134, FALLA 1** —
     `editar_pieza`: después de "Sí, guardar también la pieza" el archivo de la pieza SÍ quedó guardado (tiene el
     plano nuevo), pero la pieza seguía marcada "modificada" a los 5 s. Ficha #103. No se volvió a correr (a las
-    7:00 la PC ya era del usuario). Por la regla "lo que no pasa todo no se sube", el commit 49f4273 y este NO están
-    en `rescate` (quedan en la PC y en el respaldo `D:/FreeWorks-respaldo/freeworks_rescate.bundle`).
+    7:00 la PC ya era del usuario). Después (con permiso del usuario) se corrió sola 4 veces: BIEN las 4, la pieza
+    queda guardada a los 0,2 s. **Decidido solo:** es intermitente (como #91): #103 queda abierta, la prueba ahora
+    espera hasta 15 s y anota cuánto tardó, y se subió a `rescate`.
   - Ojo para Claude: `FreeCADCmd` sin `-u <cfg aparte>` regraba la configuración del usuario al salir (pasó el
     18/11; comparada, sin cambios de contenido). Siempre con `-u`.
   - **Decidido solo:** el idioma se pone una sola vez por configuración; las referencias a aristas de la PROPIA
