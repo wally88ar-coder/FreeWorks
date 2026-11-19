@@ -84,6 +84,18 @@ las preferencias. El disco C es SSD, así que no se pudo recuperar de ahí.
   - **Paso 6, piezas listas (18/11 noche):** `D:\FreeWorks-pruebas\paso6\` (FreeCAD) y
     `C:\SW-AI-Bridge\trabajos\paso6\` (SW): Placa + Taco arriba + Marco soldado con un travesaño suelto; la lista de
     qué probar está en `D:\FreeWorks-pruebas\paso6\QUE_PROBAR.md`. La comparación la hace el usuario.
+  - **Paso 6 con el mouse, lado FreeCAD (18/11, 23 h, Claude):** el acceso a SW con el mouse fue rechazado
+    (comparación con SW: PENDIENTE). Lado FreeCAD:
+    - BIEN: pasos 1-4, 6, 7, 8, 9, 13, 14, 15 y 17-20. Detalle: menús de pieza y de componente; Medir; Esc en
+      Redondeo; croquis en la cara de otro componente; arista traída sola; croquis vacío que se borra; Extruir
+      en la pieza editada; vista previa sobre la pieza movida; Miembro estructural, lista de cortes
+      (2×640 + 2×440 a 45°, travesaño 400) y un Ctrl+Z.
+    - MAL, fichas nuevas:
+      - #105: la barra Salir desaparece.
+      - #106: ventana aparte de la pieza, y la vista lejos del croquis.
+      - #107: Esc borra la línea recién dibujada desde otro componente y cierra el croquis con algo elegido.
+      - #108: Ctrl+Z termina ocultando el componente.
+    - Paso 21: queda cubierto por la prueba `contenedor_pieza` (no se hizo con el mouse).
   - Armándolas apareció **#104** (grave): insertar una pieza de varios cuerpos dejaba su contenedor solo en
     memoria y el ensamblaje se rompía al reabrirlo. Arreglado (prueba `contenedor_insertar`). Revisión
     independiente: si la pieza ya estaba abierta con cambios sin guardar, insertarla no la guarda sola (se guarda
