@@ -63,7 +63,7 @@ def paso1():
         res["error"] = traceback.format_exc()
     QtCore.QTimer.singleShot(2500, fin)
 
-QtCore.QTimer.singleShot(6000, paso1)  # después del segundo repaso de las barras (#101)
+QtCore.QTimer.singleShot(6000, paso1)  # después del segundo repaso de las barras (ficha del primer arranque, cerrada)
 '''
 
 

@@ -137,6 +137,14 @@ las preferencias. El disco C es SSD, así que no se pudo recuperar de ahí.
     - **Batería completa (21/11, 02:44 a 05:33, commit 3cf5cae): 141 pruebas, BIEN 141.** Por eso, como pedía el
       /goal del usuario, **rescate pasó a master** (push sin forzar, 3cf5cae) y se cerraron #96 a #101 y #103 a
       #109 con comentario. Respaldo `D:\FreeWorks-respaldo\freeworks_rescate.bundle` actualizado (05:35).
+    - **Segunda batería completa, con #110 (21/11, 05:55 a 08:32, 1bc5c0d): 141 pruebas, BIEN 140, FALLA 1** —
+      `azar_conocidos`: falsa alarma causada por cerrar #101; la prueba vio "#101" en un comentario DENTRO del
+      guion de `primer_arranque` (es texto para el otro FreeCAD). Se sacó la mención y las dos, vueltas a correr
+      solas: BIEN. **Decidido solo:** pasarlo a master igual (no es una falla de FreeWorks, y se arregló y se
+      repitió en verde antes de las 9).
+    - Quedan en #110 (abierta, baja): desde el árbol o eligiendo un croquis de OTRA instancia de la pieza
+      editada, las cotas se dibujan sobre la editada; con las cotas a la vista, si el componente se mueve sin
+      un clic, quedan en el lugar viejo.
     - **Decidido solo:**
       - abrir la ventana de la pieza a propósito MIENTRAS se la edita la vuelve a apartar. Es raro y hace falta para
         #105; anotado como límite.
