@@ -5,6 +5,19 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Editar pieza, vistos con el mouse en el paso 6 (#105, #106, #107; 20-21/11).**
+  - La barra "Editando pieza / Salir" sigue la ventana que se ve (antes se iba tras Editar operación, Miembro
+    estructural o un croquis).
+  - Editar operación > Cancelar ya no deja la pieza ni el ensamblaje marcados como modificados. Se compara la pila
+    de deshacer entera, así que un cambio de verdad nunca se marca como guardado.
+  - Abrir un croquis de la pieza editada:
+    - no deja a la vista la ventana aparte que abre FreeCAD (vuelve con "Abrir pieza");
+    - la vista queda mirando al croquis, centrada en su cara, y al cerrarlo vuelve a donde estaba.
+  - En el croquis:
+    - Esc ya no borra la línea recién dibujada desde un vértice de otro componente;
+    - Esc con algo elegido y el foco en el panel solo deselecciona (como SW).
+  - Pruebas `prueba_ventana_editar_pieza_barra`, `prueba_ventana_croquis_esc_linea` y
+    `prueba_ventana_editar_pieza_deshacer_oculta` (#108, guardia).
 - **Insertar una pieza de varios cuerpos ya no rompe el ensamblaje al reabrirlo (#104, 18/11).** El contenedor que
   FreeWorks le pone a la pieza quedaba solo en memoria: FreeCAD 1.1.4 tiene la pieza de solo lectura durante la
   inserción y el guardado fallaba en silencio. Ahora la pieza se guarda apenas termina de insertar (y queda sin la

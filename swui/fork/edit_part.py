@@ -315,6 +315,12 @@ def stop(doc):
         FreeCAD.Console.PrintLog("[SWUI fork] Editar pieza (salir):\n%s\n" % traceback.format_exc())
     _set_ghosts(doc, st, False)
     try:
+        from swui.fork import edit_context as ec
+
+        ec.release_aside(doc.Name)  # #106: las ventanas de la pieza apartadas vuelven con su pestaña
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Editar pieza (ventanas):\n%s\n" % traceback.format_exc())
+    try:
         doc.recompute()
     except Exception:
         pass
@@ -395,8 +401,85 @@ def open_in_assembly(top, sub, sketch=False, warn=True):
     except Exception:
         return None
     _touch(top.Document, comp)
+    docs = [top.Document] + ([target.Document] if target.Document is not top.Document else [])
+    before = _doc_states(docs)
+    from swui.fork import edit_context as ec
+
+    windows = [w for w in ec._part_windows(target.Document) if w.isVisible()]
+    camera = ec.asm_camera(top.Document.Name)
     FreeCADGui.getDocument(top.Document.Name).setEdit(top, 0, path)
+    _clean_after_cancel(top.Document.Name, before)
+    ctx = ec.for_document(target.Document)
+    if target.TypeId == "Sketcher::SketchObject" and ctx is not None:
+        ec._after_sketch_open(ctx, target, windows, camera)  # #106 también por Editar croquis desde la cara
     return target
+
+
+def _undo_mark(doc):
+    """
+    La pila de deshacer y rehacer entera. Revisión (18/11): con la pila llena (20 pasos), UndoCount deja de crecer
+    aunque haya pasos nuevos: hay que comparar también los nombres y lo que queda por rehacer.
+    """
+    return (doc.UndoCount, tuple(doc.UndoNames), doc.RedoCount, tuple(doc.RedoNames))
+
+
+def _doc_states(docs):
+    """(nombre, ¿modificado?, pila de deshacer) de cada documento, para devolverlos al cancelar."""
+    out = []
+    for d in docs:
+        g = FreeCADGui.getDocument(d.Name)
+        out.append((d.Name, bool(g is not None and g.Modified), _undo_mark(d)))
+    return out
+
+
+def _clean_after_cancel(asm_name, before):
+    """
+    #105 (18/11): abrir una operación desde el ensamblaje la deja "modificada" y, al cancelar, FreeCAD recalcula y
+    marca también el ensamblaje, aunque no cambió nada (sin pasos nuevos de deshacer). Como SW: al cerrar el panel
+    sin pasos nuevos, cada documento vuelve a como estaba.
+    """
+    from swui.compat import QtCore
+
+    timer = QtCore.QTimer()
+    timer.setInterval(250)
+    state = {"seen": False, "after": 0}
+
+    def tick():
+        try:
+            if asm_name not in FreeCAD.listDocuments():
+                _end()
+                return
+            gdoc = FreeCADGui.getDocument(asm_name)
+            if gdoc.getInEdit() is not None:
+                state["seen"] = True
+                return
+            state["after"] += 1
+            if state["after"] < 2:  # el recálculo del cancelar llega un momento después
+                return
+            _end()
+            for name, modified, undo in before:
+                if name not in FreeCAD.listDocuments():
+                    continue
+                if _undo_mark(FreeCAD.getDocument(name)) != undo:
+                    return  # hubo un cambio de verdad (Aceptar): se deja todo como lo dejó FreeCAD
+            for name, modified, _undo in before:
+                if name in FreeCAD.listDocuments() and not modified:
+                    FreeCADGui.getDocument(name).Modified = False
+        except Exception:
+            _end()
+            FreeCAD.Console.PrintLog("[SWUI fork] Editar operación (cancelar):\n%s\n" % traceback.format_exc())
+
+    def _end():
+        timer.stop()
+        if timer in _cancel_timers:
+            _cancel_timers.remove(timer)
+
+    timer.timeout.connect(tick)
+    _cancel_timers.append(timer)  # que no lo junte la basura (uno por cada panel abierto, hasta que termine)
+    timer.start()
+
+
+_cancel_timers = []
 
 
 def _picked_face():
@@ -745,8 +828,20 @@ def _show_bar(doc, link):
 
 
 def sync_bars():
-    """A la vista solo la barra del documento al frente (con dos ensamblajes, una cada uno)."""
-    active = FreeCAD.ActiveDocument.Name if FreeCAD.ActiveDocument is not None else None
+    """
+    A la vista solo la barra del documento al frente (con dos ensamblajes, una cada uno). #105 (18/11): "al frente" es
+    la ventana que se ve, no FreeCAD.ActiveDocument: Editar operación, Miembro estructural o un croquis de la pieza
+    editada dejan activo el documento de la pieza aunque se sigue viendo (y editando) el ensamblaje.
+    """
+    from swui.compat import QtWidgets
+    from swui.fork import edit_context as ec
+
+    try:  # #106: la ventana apartada de la pieza no vuelve al frente
+        area = FreeCADGui.getMainWindow().findChild(QtWidgets.QMdiArea)
+        ec.keep_aside(area.currentSubWindow() if area is not None else None)
+    except Exception:
+        pass
+    active = _front_document()
     for n, w in list(_bars.items()):
         try:
             w.setVisible(n == active)
@@ -754,6 +849,25 @@ def sync_bars():
                 w.raise_()
         except RuntimeError:
             _bars.pop(n, None)
+
+
+def _front_document():
+    """Nombre del documento de la ventana 3D al frente (o el activo, si no hay ventana al frente)."""
+    from swui.compat import QtWidgets
+    from swui.fork import edit_context as ec
+
+    try:
+        area = FreeCADGui.getMainWindow().findChild(QtWidgets.QMdiArea)
+        # currentSubWindow: la de adelante aunque FreeCAD no tenga el foco (activeSubWindow da None)
+        sub = area.currentSubWindow() if area is not None else None
+        if sub is not None:
+            for name in list(_bars) + list(FreeCAD.listDocuments()):
+                gdoc = FreeCADGui.getDocument(name)
+                if gdoc is not None and sub in ec._part_windows(gdoc.Document):
+                    return name
+    except Exception:
+        pass
+    return FreeCAD.ActiveDocument.Name if FreeCAD.ActiveDocument is not None else None
 
 
 _watching = {}

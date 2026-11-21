@@ -99,6 +99,52 @@ def _later():
         FreeCAD.Console.PrintLog("[SWUI fork] Esc: %s\n" % traceback.format_exc())
 
 
+def _sketch_in_edit():
+    """¿Hay un croquis abierto (en su documento o, editando una pieza, en la ventana del ensamblaje)?"""
+    try:
+        for name in FreeCAD.listDocuments():
+            gd = FreeCADGui.getDocument(name)
+            vp = gd.getInEdit() if gd is not None else None
+            if vp is not None and getattr(getattr(vp, "Object", None), "TypeId", "") == "Sketcher::SketchObject":
+                return True
+    except Exception:
+        pass
+    return False
+
+
+def _in_task_panel(widget):
+    w = widget
+    while w is not None:
+        try:
+            if "TaskView" in w.metaObject().className():
+                return True
+        except Exception:
+            return False
+        w = w.parentWidget()
+    return False
+
+
+def _sketch_panel_esc(obj):
+    """
+    #107 (18/11): con un croquis abierto y algo elegido, Esc con el foco en el panel del costado (Agregar relaciones,
+    la lista de elementos o de restricciones) cerraba el panel y con él el croquis. Como SW: solo deselecciona. En la
+    vista 3D lo hace el croquis de FreeCAD; sin nada elegido, Esc sigue cerrando el croquis como siempre.
+    True si este Esc se usó acá (no sigue de largo).
+    """
+    focus = QtWidgets.QApplication.focusWidget()
+    if obj is not focus or not _in_task_panel(focus):
+        return False
+    if isinstance(focus, (QtWidgets.QLineEdit, QtWidgets.QAbstractSpinBox, QtWidgets.QTextEdit,
+                          QtWidgets.QPlainTextEdit, QtWidgets.QComboBox)):
+        return False
+    if QtWidgets.QApplication.activePopupWidget() is not None or QtWidgets.QApplication.activeModalWidget():
+        return False
+    if not _sketch_in_edit() or not FreeCADGui.Selection.getSelectionEx("*", 0):
+        return False
+    deselect()
+    return True
+
+
 class _EscFilter(QtCore.QObject):
     def eventFilter(self, obj, event):
         try:
@@ -106,6 +152,8 @@ class _EscFilter(QtCore.QObject):
                 return False
             if event.modifiers() & (QtCore.Qt.ControlModifier | QtCore.Qt.AltModifier | QtCore.Qt.ShiftModifier):
                 return False
+            if _sketch_panel_esc(obj):
+                return True
             if not isinstance(obj, QtWidgets.QWidget) or not _in_zone(QtWidgets.QApplication.focusWidget()):
                 return False
             # el mismo Esc llega a varios objetos (widget y sus padres): mirar solo el primero

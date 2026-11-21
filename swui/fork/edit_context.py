@@ -692,7 +692,260 @@ def set_edit(obj, mode=0):
     path = path_of(obj, ctx) if ctx is not None else None
     if path is None:
         return FreeCADGui.getDocument(obj.Document.Name).setEdit(obj, mode)
-    return FreeCADGui.getDocument(ctx.asm.Document.Name).setEdit(ctx.asm, mode, path)
+    from swui.fork import edit_part as ep
+
+    # #105: cancelar no deja el ensamblaje ni la pieza modificados (si no cambió nada)
+    before = ep._doc_states([ctx.asm.Document] + ([obj.Document] if obj.Document is not ctx.asm.Document else []))
+    windows = [w for w in _part_windows(obj.Document) if w.isVisible()]
+    camera = asm_camera(ctx.asm.Document.Name)
+    result = FreeCADGui.getDocument(ctx.asm.Document.Name).setEdit(ctx.asm, mode, path)
+    ep._clean_after_cancel(ctx.asm.Document.Name, before)
+    if obj.TypeId == "Sketcher::SketchObject":
+        _after_sketch_open(ctx, obj, windows, camera)
+    return result
+
+
+def asm_camera(asm_name):
+    """La cámara de la vista del ensamblaje (texto de Inventor), para volver a ella al cerrar el croquis."""
+    try:
+        gasm = FreeCADGui.getDocument(asm_name)
+        view = gasm.activeView() if gasm is not None else None
+        return view.getCamera() if view is not None else None
+    except Exception:
+        return None
+
+
+def _part_windows(doc):
+    """Ventanas (QMdiSubWindow) que muestran la vista 3D de doc."""
+    from swui.compat import QtWidgets
+
+    gdoc = FreeCADGui.getDocument(doc.Name)
+    area = FreeCADGui.getMainWindow().findChild(QtWidgets.QMdiArea)
+    if gdoc is None or area is None:
+        return []
+    out = []
+    try:
+        views = gdoc.mdiViewsOfType("Gui::View3DInventor")
+    except Exception:
+        return []
+    for sub in area.subWindowList():
+        if any(sub.isAncestorOf(v.graphicsView()) for v in views):
+            out.append(sub)
+    return out
+
+
+def _after_sketch_open(ctx, sketch, windows_before, camera=None):
+    """
+    #106 (18/11): al abrir desde el ensamblaje un croquis de la pieza editada, FreeCAD 1.1.4 (código propio, al pasar
+    el documento activo a la pieza) abre una ventana aparte de la pieza, vacía; y gira la vista normal al croquis pero
+    la deja centrada donde estaba (el centro del ensamblaje): el croquis queda fuera de la pantalla. Como SW: ninguna
+    ventana nueva a la vista (no se cierra: cerrar la última vista de la pieza cerraría la pieza) y la vista mirando
+    al croquis, centrada en su cara.
+    """
+    from swui.compat import QtCore
+
+    asm_name, part_name = ctx.asm.Document.Name, sketch.Document.Name
+
+    def aside():
+        # las de la pieza que no estaban a la vista (nuevas, o ya apartadas que FreeCAD vuelve a mostrar)
+        new = [w for w in _part_windows(sketch.Document) if w.isVisible() and w not in windows_before]
+        _set_aside(new, asm_name)
+
+    # la cámara: FreeCAD la gira con una animación que termina después; se centra cuando deja de moverse. Al cerrar
+    # el croquis FreeCAD la anima de vuelta, pero no llega a la de antes (por el centrado): cuando se queda quieta,
+    # se pone la de antes de abrir el croquis (lo que hace FreeCAD fuera del ensamblaje)
+    timer = QtCore.QTimer()
+    timer.setInterval(150)
+    state = {"last": None, "ticks": 0, "phase": "open"}
+
+    def still(view):
+        cam = view.getCameraNode()
+        now = (tuple(round(v, 4) for v in cam.position.getValue().getValue()),
+               tuple(round(v, 5) for v in cam.orientation.getValue().getValue()))
+        same = now == state["last"]
+        state["last"] = now
+        state["ticks"] += 1
+        return same or state["ticks"] > 20  # quieta (o 3 s)
+
+    def tick():
+        try:
+            if asm_name not in FreeCAD.listDocuments() or part_name not in FreeCAD.listDocuments():
+                _stop()
+                return
+            aside()
+            gasm = FreeCADGui.getDocument(asm_name)
+            views = gasm.mdiViewsOfType("Gui::View3DInventor") if gasm is not None else []
+            if not views:
+                _stop()
+                return
+            view = gasm.activeView() if gasm.activeView() in views else views[0]
+            editing = getattr(gasm.getInEdit(), "Object", None) is sketch
+            if state["phase"] == "open":
+                if not editing:
+                    _stop()  # se cerró antes de centrar: la cámara la vuelve FreeCAD
+                    return
+                if still(view):
+                    _look_at_sketch(asm_name, sketch)
+                    state["phase"], state["ticks"], state["last"] = "editing", 0, None
+                return
+            if state["phase"] == "editing":
+                if not editing:
+                    state["phase"], state["ticks"], state["last"] = "closing", 0, None
+                return
+            if still(view):  # "closing": la animación de vuelta terminó
+                _stop()
+                if camera:
+                    view.setCamera(camera)
+            return
+        except Exception:
+            _stop()
+            FreeCAD.Console.PrintLog("[SWUI fork] Croquis en el ensamblaje:\n%s\n" % traceback.format_exc())
+
+    def _stop():
+        timer.stop()
+        if timer in _sketch_timers:
+            _sketch_timers.remove(timer)
+
+    aside()
+    timer.timeout.connect(tick)
+    _sketch_timers.append(timer)  # que no lo junte la basura (hasta que termine)
+    timer.start()
+
+
+_sketch_timers = []
+
+
+def _set_aside(windows, asm_name):
+    """Saca de la vista (sin cerrarlas) las ventanas de la pieza y vuelve a poner al frente la del ensamblaje."""
+    from swui.compat import QtWidgets
+
+    area = FreeCADGui.getMainWindow().findChild(QtWidgets.QMdiArea)
+    if area is None or not windows:
+        return
+    bar = area.findChild(QtWidgets.QTabBar)
+    titles = set()
+    for w in windows:
+        _aside[id(w)] = (w, asm_name)
+        try:
+            titles.add(w.windowTitle().replace("[*]", "*"))
+            titles.add(w.windowTitle().replace("[*]", ""))
+            w.hide()
+        except RuntimeError:
+            pass
+    if bar is not None:
+        for i in range(bar.count()):
+            if bar.tabText(i) in titles:
+                bar.setTabVisible(i, False)
+    gasm = FreeCADGui.getDocument(asm_name)
+    if gasm is not None:
+        for sub in _part_windows(gasm.Document):
+            if sub.isVisible():
+                area.setActiveSubWindow(sub)
+                break
+
+
+_aside = {}  # id(ventana) -> (ventana, ensamblaje): ventanas de piezas apartadas por _set_aside
+
+
+def keep_aside(sub):
+    """
+    Si la ventana que pasó al frente es una de las apartadas (FreeCAD la vuelve a mostrar cuando la pieza pasa a ser
+    el documento activo), se aparta otra vez y vuelve al frente el ensamblaje. Devuelve True si lo hizo.
+    """
+    entry = _aside.get(id(sub)) if sub is not None else None
+    if entry is None or entry[0] is not sub:
+        return False
+    asm_name = entry[1]
+    from swui.fork import edit_part as ep
+
+    if asm_name is None or asm_name not in FreeCAD.listDocuments() or ep.editing(FreeCAD.getDocument(asm_name)) is None:
+        # ya no se edita: la abre el usuario (Abrir pieza...), vuelve con su pestaña
+        _aside.pop(id(sub), None)
+        try:
+            sub.show()
+        except RuntimeError:
+            return False
+        _show_tab(sub)
+        return False
+    _set_aside([sub], asm_name)
+    return True
+
+
+def release_aside(asm_name):
+    """
+    Al salir de Editar pieza: las ventanas apartadas de la pieza quedan liberadas. Siguen sin verse (en SW no hay
+    ventana de la pieza: no aparece una pestaña de más), pero si el usuario abre la pieza (Abrir pieza, menú Ventana)
+    vuelven con su pestaña (keep_aside). Revisión del 18/11.
+    """
+    for key, (sub, owner) in list(_aside.items()):
+        if owner == asm_name:
+            _aside[key] = (sub, None)
+
+
+def _show_tab(sub):
+    from swui.compat import QtWidgets
+
+    area = FreeCADGui.getMainWindow().findChild(QtWidgets.QMdiArea)
+    bar = area.findChild(QtWidgets.QTabBar) if area is not None else None
+    if bar is None:
+        return
+    try:
+        title = sub.windowTitle()
+    except RuntimeError:
+        return
+    for i in range(bar.count()):
+        if bar.tabText(i) in (title.replace("[*]", "*"), title.replace("[*]", "")):
+            bar.setTabVisible(i, True)
+
+
+def _look_at_sketch(asm_name, sketch):
+    """La vista del ensamblaje normal al croquis y centrada en la cara donde está apoyado (o en el croquis)."""
+    import Part
+
+    ctx = for_document(sketch.Document)
+    gasm = FreeCADGui.getDocument(asm_name)
+    if ctx is None or gasm is None:
+        return
+    views = gasm.mdiViewsOfType("Gui::View3DInventor")
+    if not views:
+        return
+    view = gasm.activeView() if gasm.activeView() in views else views[0]
+    plc = part_placement(ctx)
+    rot = plc.Rotation.multiply(sketch.getGlobalPlacement().Rotation)
+
+    def global_shape(obj, sub=""):
+        # sin la colocación propia y con la global (Cuerpo incluido): revisión del 18/11, con un Cuerpo corrido
+        # dentro de la pieza transform=True dejaba la cara corrida
+        s = Part.getShape(obj, sub, needSubElement=bool(sub), transform=False).copy()
+        s.transformShape(obj.getGlobalPlacement().toMatrix())
+        return s
+
+    shape = None
+    try:
+        support = sketch.AttachmentSupport
+        if support:
+            sobj, subs = support[0][0], [s for s in support[0][1] if s]
+            shape = global_shape(sobj, subs[0] if subs else "")
+    except Exception:
+        shape = None
+    if shape is None or shape.isNull():
+        shape = global_shape(sketch)
+    if shape.isNull():
+        center, size = plc.multVec(sketch.getGlobalPlacement().Base), 100.0
+    else:
+        moved = shape.copy()
+        moved.transformShape(plc.toMatrix())
+        bb = moved.BoundBox
+        center, size = bb.Center, max(bb.DiagonalLength, 1.0)
+    view.setCameraOrientation(rot.Q)
+    cam = view.getCameraNode()
+    dist = max(float(cam.focalDistance.getValue()), size * 2.0)
+    back = rot.multVec(FreeCAD.Vector(0, 0, 1))  # la cámara mira por -Z del croquis: se para del lado +Z
+    pos = center + back * dist
+    cam.position.setValue(pos.x, pos.y, pos.z)
+    cam.focalDistance.setValue(dist)
+    if hasattr(cam, "height"):  # ortográfica: la cara entera a la vista, con margen
+        cam.height.setValue(size * 1.4)
 
 
 def reset_edit(doc):

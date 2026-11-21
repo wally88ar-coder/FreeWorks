@@ -385,7 +385,7 @@ def bring(sketch, obj_name, sub):
 # tiene que quedar nada: cuando la herramienta termina o se cierra el croquis, lo traído que ninguna relación usa
 # se saca (con Ctrl+Z de su paso si es el último; si no, en un paso propio).
 
-_pending = []  # [(documento, croquis, copia, elemento, UndoCount después de traerla)]
+_pending = []  # [(documento, croquis, copia, elemento, UndoCount después de traerla, geometrías en ese momento)]
 _pending_timer = [None]
 _pending_viewport = [None]  # la vista donde se hizo el clic (editando, la del ensamblaje: la pieza no tiene vista)
 
@@ -393,7 +393,7 @@ _pending_viewport = [None]  # la vista donde se hizo el clic (editando, la del e
 def _remember(sketch, brought, viewport):
     doc = sketch.Document
     _pending_viewport[0] = viewport
-    _pending.append((doc.Name, sketch.Name, brought[0], brought[1], doc.UndoCount))
+    _pending.append((doc.Name, sketch.Name, brought[0], brought[1], doc.UndoCount, sketch.GeometryCount))
     timer = _pending_timer[0]
     if timer is None:
         timer = QtCore.QTimer()
@@ -430,7 +430,7 @@ def _check_pending():
             return
         editing = _editing_sketch()
         for item in list(_pending):
-            doc_name, sketch_name, binder, element, undo_count = item
+            doc_name, sketch_name, binder, element, undo_count, geo_count = item
             try:
                 doc = FreeCAD.getDocument(doc_name)
                 sketch = doc.getObject(sketch_name)
@@ -445,7 +445,11 @@ def _check_pending():
             used = _used(sketch, binder, element)
             if used is None or used:
                 continue
-            if doc.UndoCount == undo_count and doc.UndoNames and doc.UndoNames[0] == OUTSIDE_STEP:
+            # #107 (18/11): si la herramienta dibujó algo después de traerla (la línea que empezó ahí, aunque no quedó
+            # pegada por una relación), deshacer el paso se llevaba también la línea: se saca solo la referencia, en
+            # un paso propio (abajo)
+            if (sketch.GeometryCount == geo_count and doc.UndoCount == undo_count and doc.UndoNames
+                    and doc.UndoNames[0] == OUTSIDE_STEP):
                 doc.undo()  # nada después: como si no se hubiera traído
                 continue
             own = safe_ops.begin_step(doc, "Quitar referencia sin usar")

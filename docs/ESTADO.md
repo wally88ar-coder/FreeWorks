@@ -84,6 +84,31 @@ las preferencias. El disco C es SSD, así que no se pudo recuperar de ahí.
   - **Paso 6, piezas listas (18/11 noche):** `D:\FreeWorks-pruebas\paso6\` (FreeCAD) y
     `C:\SW-AI-Bridge\trabajos\paso6\` (SW): Placa + Taco arriba + Marco soldado con un travesaño suelto; la lista de
     qué probar está en `D:\FreeWorks-pruebas\paso6\QUE_PROBAR.md`. La comparación la hace el usuario.
+  - **Noche del 20 al 21/11 (Claude solo, hasta las 9):** arreglos de #105 a #107 y la guardia de #108.
+    - **#105**:
+      - la barra sigue la ventana al frente (`edit_part._front_document`, con `currentSubWindow`);
+      - Editar operación > Cancelar deja la pieza y el ensamblaje como estaban, comparando la pila de deshacer
+        entera (`_undo_mark`; revisión: con la pila llena, UndoCount no crece).
+    - **#106**:
+      - FreeCAD (código propio, al pasar el documento activo a la pieza) abre una ventana de la pieza al abrir un
+        croquis desde el ensamblaje. No se puede evitar ni cerrar (cerraría la pieza), así que se aparta: oculta y
+        sin pestaña (`edit_context._set_aside`). Si FreeCAD la vuelve a traer mientras se edita, se aparta otra vez;
+        al salir queda liberada y "Abrir pieza" la trae con su pestaña.
+      - La cámara se centra en la cara del croquis cuando termina la animación de FreeCAD, y al cerrar el croquis
+        vuelve a la de antes (sin eso, el clic siguiente caía en otro componente: lo mostró `editar_pieza_cara` 5c).
+    - **#107**:
+      - la limpieza de "referencia sin usar" ya no deshace el paso si se dibujó algo después; saca solo la
+        referencia, en un paso propio;
+      - Esc con algo elegido y el foco en el panel del croquis solo deselecciona (`esc_deselect`).
+      - Ojo: la herramienta de mouse de Claude no manda movimientos, así que la línea no quedaba pegada por
+        relación. Con un mouse de verdad, FreeCAD la pega.
+    - **#108: no se reprodujo** con guion (ni con el código viejo de #107). Queda la prueba como guardia y se
+      repite con el mouse.
+    - **Decidido solo:**
+      - abrir la ventana de la pieza a propósito MIENTRAS se la edita la vuelve a apartar. Es raro y hace falta para
+        #105; anotado como límite.
+      - "Editar croquis" desde la cara de un componente, sin estar en Editar pieza, no se centra (no hay contexto
+        de pieza editada).
   - **Paso 6 con el mouse, lado FreeCAD (18/11, 23 h, Claude):** el acceso a SW con el mouse fue rechazado
     (comparación con SW: PENDIENTE). Lado FreeCAD:
     - BIEN: pasos 1-4, 6, 7, 8, 9, 13, 14, 15 y 17-20. Detalle: menús de pieza y de componente; Medir; Esc en

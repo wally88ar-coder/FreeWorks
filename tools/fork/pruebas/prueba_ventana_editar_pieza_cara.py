@@ -227,7 +227,9 @@ def prueba():
     assert apoyo and body not in apoyo and apoyo[0] is body.Tip, "croquis apoyado en %s (punta %s)" % (
         [o.Name for o in apoyo], body.Tip.Name)
     FreeCADGui.ActiveDocument.resetEdit()
-    bombear(800)
+    # al cerrar el croquis FreeCAD vuelve la cámara a donde estaba con una animación (más larga desde #106, que
+    # centra la vista en el croquis): esperar a que termine antes del clic de 5c (una persona espera lo mismo)
+    bombear(2000)
     yield 100
 
     traza("paso 5c")
