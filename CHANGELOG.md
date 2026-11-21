@@ -23,6 +23,8 @@ Neueste Version oben. / Newest version first.
     - apartar la ventana de la pieza ya no saca a las otras de las pestañas (quedaban flotando);
     - el doble clic en una pieza dentro de un ensamblaje, o editándola, muestra sus cotas (#109; antes nunca).
     - Prueba `prueba_ventana_editar_pieza_cotas_doble_clic`.
+    - #108: deshacer después de un croquis ya no oculta el componente que se edita (prueba
+      `prueba_ventana_editar_pieza_deshacer_oculta2`, con la secuencia exacta del mouse).
 - **Insertar una pieza de varios cuerpos ya no rompe el ensamblaje al reabrirlo (#104, 18/11).** El contenedor que
   FreeWorks le pone a la pieza quedaba solo en memoria: FreeCAD 1.1.4 tiene la pieza de solo lectura durante la
   inserción y el guardado fallaba en silencio. Ahora la pieza se guarda apenas termina de insertar (y queda sin la

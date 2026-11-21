@@ -127,7 +127,8 @@ las preferencias. El disco C es SSD, así que no se pudo recuperar de ahí.
         pestañas (quedaban flotando). Ahora solo se saca su pestaña; la prueba lo vigila.
       - **Raro, sin investigar:** al abrir `Conjunto.FCStd` el título de la ventana dice "Conjunto *" (la pestaña
         no tiene `*`).
-    - **#108: no se reprodujo** con guion (ni con el código viejo de #107). Queda la prueba como guardia y se
+    - **#108: reproducido con el mouse (21/11, 2:40) y después con guion** (`editar_pieza_deshacer_oculta2`: Editar pieza con el comando, Extruir con un círculo hecho con la herramienta, Salir del croquis, Aceptar). El croquis de FreeCAD oculta lo que depende de él al abrirse y lo vuelve a mostrar al cerrarse; ese "mostrar" queda en el paso "Sketch recompute", que el ensamblaje comparte con la pieza, y deshacerlo ocultaba el componente. Arreglado (`edit_part._Observer.slotChangedObject`): si deshacer/rehacer oculta el componente que se edita, vuelve a verse. Solo el editado (Suprimir sí oculta con deshacer). Antes:
+      no se reprodujo** con guion (ni con el código viejo de #107). Queda la prueba como guardia y se
       repite con el mouse.
     - **Decidido solo:**
       - abrir la ventana de la pieza a propósito MIENTRAS se la edita la vuelve a apartar. Es raro y hace falta para

@@ -758,6 +758,34 @@ def ask_save_parts(doc):
 class _Observer:
     """Al guardar mientras se edita: el archivo sin la transparencia; después, preguntar por las piezas."""
 
+    def slotChangedObject(self, obj, prop):
+        """
+        #108 (21/11, reproducido con el mouse y con guion): el croquis de FreeCAD oculta lo que depende de él al abrirse
+        y lo vuelve a mostrar al cerrarse, y ese "mostrar" queda grabado en un paso de deshacer ("Sketch recompute")
+        que el ensamblaje comparte con la pieza. Deshacerlo ocultaba el componente editado. Mostrar u ocultar nunca es
+        un paso de deshacer (ni en FreeCAD ni en SW): si deshacer/rehacer oculta el componente que se edita, vuelve.
+        """
+        if prop != "Visibility":
+            return
+        try:
+            doc = obj.Document
+            if not getattr(doc, "Transacting", False) or obj.Visibility:
+                return
+            if editing(doc) is not obj:
+                return
+            from swui.compat import QtCore
+
+            name, oname = doc.Name, obj.Name
+
+            def show():
+                if name in FreeCAD.listDocuments():
+                    o = FreeCAD.getDocument(name).getObject(oname)
+                    if o is not None and not o.Visibility and editing(o.Document) is o:
+                        o.Visibility = True
+            QtCore.QTimer.singleShot(0, show)
+        except Exception:
+            FreeCAD.Console.PrintLog("[SWUI fork] Editar pieza (deshacer):\n%s\n" % traceback.format_exc())
+
     def slotStartSaveDocument(self, doc, filename):
         from swui.fork import context_tools as ct
 
