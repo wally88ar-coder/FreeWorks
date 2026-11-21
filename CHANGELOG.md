@@ -18,6 +18,11 @@ Neueste Version oben. / Newest version first.
     - Esc con algo elegido y el foco en el panel solo deselecciona (como SW).
   - Pruebas `prueba_ventana_editar_pieza_barra`, `prueba_ventana_croquis_esc_linea` y
     `prueba_ventana_editar_pieza_deshacer_oculta` (#108, guardia).
+  - Repasado con el mouse:
+    - la barra quedaba tapada por la vista al cerrarse un panel: ahora vuelve arriba;
+    - apartar la ventana de la pieza ya no saca a las otras de las pestañas (quedaban flotando);
+    - el doble clic en una pieza dentro de un ensamblaje, o editándola, muestra sus cotas (#109; antes nunca).
+    - Prueba `prueba_ventana_editar_pieza_cotas_doble_clic`.
 - **Insertar una pieza de varios cuerpos ya no rompe el ensamblaje al reabrirlo (#104, 18/11).** El contenedor que
   FreeWorks le pone a la pieza quedaba solo en memoria: FreeCAD 1.1.4 tiene la pieza de solo lectura durante la
   inserción y el guardado fallaba en silencio. Ahora la pieza se guarda apenas termina de insertar (y queda sin la

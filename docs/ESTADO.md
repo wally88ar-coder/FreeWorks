@@ -102,6 +102,31 @@ las preferencias. El disco C es SSD, así que no se pudo recuperar de ahí.
       - Esc con algo elegido y el foco en el panel del croquis solo deselecciona (`esc_deselect`).
       - Ojo: la herramienta de mouse de Claude no manda movimientos, así que la línea no quedaba pegada por
         relación. Con un mouse de verdad, FreeCAD la pega.
+    - **Con el mouse, de 1:40 a 2:20** (SW y FreeCAD, cada paso en los dos):
+      - **Paso 5:**
+        - SW: Editar operación > Cancelar, sigue editando y no cambia nada.
+        - FreeCAD, primero: la barra quedaba TAPADA por la vista; `isVisible()` decía que sí, por eso la prueba
+          no lo veía. Arreglado: se vuelve a poner arriba cada medio segundo mientras se edita. Ahora BIEN, sin `*`.
+      - **Pasos 10/11:**
+        - SW: con clics sueltos no dibuja (la herramienta no manda movimiento); arrastrando sí, y la línea queda
+          SIN relación con el vértice. Un Esc deja la línea y el croquis abierto.
+        - FreeCAD (arreglado): la línea queda, esta vez con Coincidente al vértice. Un Esc más suelta la
+          herramienta. Esc con la línea elegida desde la lista solo deselecciona.
+      - **Diferencia con SW, PARA DECIDIR por el usuario:** en SW, Esc NUNCA sale del croquis. En FreeWorks, Esc
+        sin nada elegido sale (lo de FreeCAD, y así lo prueba `editar_pieza_teclas`). No lo cambié solo: cambia una
+        costumbre.
+      - **Diferencia menor:** el clic derecho en SW, editando, trae "Editar ensamblaje: Conjunto" (para salir) y
+        la sección "Componente (Taco)". FreeWorks trae Cara / Operación / Sólido. Anotado, sin cambiar.
+      - **SW no gira la vista** al abrir el croquis. FreeWorks la pone normal y centrada (lo de FreeCAD).
+      - **Paso 12:** no aplica con estas piezas (ninguna arista de la Placa queda detrás del Taco en esa vista).
+      - **Paso 16:**
+        - SW muestra las cotas 60/40/20 sobre el Taco con doble clic.
+        - FreeCAD no mostraba NADA en un ensamblaje: #109, tres causas, arreglado (prueba
+          `editar_pieza_cotas_doble_clic`).
+      - **Apareció y se arregló:** apartar la ventana de la pieza con `hide()` sacaba a las otras ventanas de las
+        pestañas (quedaban flotando). Ahora solo se saca su pestaña; la prueba lo vigila.
+      - **Raro, sin investigar:** al abrir `Conjunto.FCStd` el título de la ventana dice "Conjunto *" (la pestaña
+        no tiene `*`).
     - **#108: no se reprodujo** con guion (ni con el código viejo de #107). Queda la prueba como guardia y se
       repite con el mouse.
     - **Decidido solo:**

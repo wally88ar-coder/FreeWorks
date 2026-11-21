@@ -287,7 +287,7 @@ def _watch(doc):
     timer = _timers.get(name)
     if timer is None:
         timer = QtCore.QTimer()
-        timer.setInterval(1000)
+        timer.setInterval(500)
 
         def tick():
             if name not in FreeCAD.listDocuments() or name not in _editing:
@@ -296,6 +296,10 @@ def _watch(doc):
             d = FreeCAD.getDocument(name)
             if not _still_active(d):
                 stop(d)
+                return
+            # #105 (21/11, visto con el mouse): al cerrarse un panel, la zona central se redibuja ENCIMA de la barra
+            # (sigue "visible" para Qt pero no se ve): se la vuelve a poner arriba
+            sync_bars()
         timer.timeout.connect(tick)
         _timers[name] = timer
     timer.start()
@@ -405,7 +409,7 @@ def open_in_assembly(top, sub, sketch=False, warn=True):
     before = _doc_states(docs)
     from swui.fork import edit_context as ec
 
-    windows = [w for w in ec._part_windows(target.Document) if w.isVisible()]
+    windows = [w for w in ec._part_windows(target.Document) if ec.tab_visible(w)]
     camera = ec.asm_camera(top.Document.Name)
     FreeCADGui.getDocument(top.Document.Name).setEdit(top, 0, path)
     _clean_after_cancel(top.Document.Name, before)
@@ -724,6 +728,11 @@ def save_parts(docs):
         try:
             if d.FileName:
                 d.save()
+                # #103: doc.save() desde Python escribe el archivo pero no limpia la marca de la ventana (medido en
+                # #104); a veces otra cosa la limpiaba y la prueba pasaba: intermitente
+                g = FreeCADGui.getDocument(d.Name)
+                if g is not None:
+                    g.Modified = False
                 out.append(d)
         except Exception:
             FreeCAD.Console.PrintError("[SWUI fork] Guardar %s:\n%s\n" % (d.Label, traceback.format_exc()))

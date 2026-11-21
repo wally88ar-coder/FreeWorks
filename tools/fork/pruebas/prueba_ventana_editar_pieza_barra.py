@@ -48,9 +48,20 @@ def _en_edicion(gdoc):
 
 
 def _barra_visible():
+    """La barra se VE: visible y por ENCIMA de la zona central (la vista): entre hermanos, el último es el de arriba."""
     import FreeCADGui
     from swui.compat import QtWidgets
-    return any(w.isVisible() for w in FreeCADGui.getMainWindow().findChildren(QtWidgets.QFrame, "SWUI_edit_part_bar"))
+    mw = FreeCADGui.getMainWindow()
+    for w in mw.findChildren(QtWidgets.QFrame, "SWUI_edit_part_bar"):
+        if not w.isVisible():
+            continue
+        hijos = [c for c in mw.children() if isinstance(c, QtWidgets.QWidget)]
+        central = mw.centralWidget()
+        if w.parent() is mw and central in hijos and hijos.index(w) < hijos.index(central):
+            traza("  barra tapada por la zona central")
+            continue
+        return True
+    return False
 
 
 def _ventanas():
@@ -60,7 +71,12 @@ def _ventanas():
     bar = area.findChild(QtWidgets.QTabBar)
     tabs = [bar.tabText(i) for i in range(bar.count()) if bar.isTabVisible(i)] if bar is not None else []
     limpio = lambda t: t.replace("[*]", "").rstrip("*")  # noqa: E731
-    return sorted(limpio(s.windowTitle()) for s in area.subWindowList() if s.isVisible()), sorted(limpio(t) for t in tabs)
+    # 21/11 (visto con el mouse): ocultar una ventana sacaba a las otras de las pestañas (quedaban flotando)
+    cur = area.currentSubWindow()
+    assert area.viewMode() == QtWidgets.QMdiArea.ViewMode.TabbedView and (cur is None or cur.isMaximized()), \
+        "las ventanas dejaron de estar en pestañas: al frente %s, maximizada %s" % (
+            cur.windowTitle() if cur else None, cur.isMaximized() if cur else None)
+    return limpio(cur.windowTitle()) if cur is not None else None, sorted(limpio(t) for t in tabs)
 
 
 def _en_pantalla(view, punto):
@@ -138,7 +154,7 @@ def prueba():
     cam_antes = (nodo.position.getValue().getValue(), nodo.orientation.getValue().getValue())
     FreeCADGui.Selection.clearSelection()
     vis, ok = _con_menu(derecho_vista(uno.Placement.multVec(V(30, 20, 20))), "Croquis")
-    bombear(1500)
+    bombear(3000)  # la cámara se centra cuando termina la animación de FreeCAD
     sk = _en_edicion(gdoc)
     assert ok and sk is not None and sk.TypeId == "Sketcher::SketchObject", "no abrió el croquis: %s" % vis
     traza("  ventanas: %s" % (_ventanas(),))
@@ -165,11 +181,15 @@ def prueba():
     FreeCADGui.Selection.clearSelection()
     FreeCADGui.Selection.addSelection(doc.Name, asm.Name, "%s.Extruir.Face6" % dos.Name)
     ribbon._run("PartDesign_NewSketch")
-    bombear(1500)
+    bombear(3000)  # la cámara se centra cuando termina la animación de FreeCAD
     sk = _en_edicion(gdoc)
     assert sk is not None and sk.TypeId == "Sketcher::SketchObject", "no abrió el croquis top-down"
     assert _ventanas() == ventanas, "#106: se abrió otra ventana: %s" % (_ventanas(),)
     adentro, donde = _en_pantalla(view, dos.Placement.multVec(V(30, 20, 20)))
+    nodo = view.getCameraNode()
+    traza("  top-down: cámara %s orient %s; apoyo %s; quiero ver %s" % (
+        nodo.position.getValue().getValue(), nodo.orientation.getValue().getValue(),
+        [(o.Name, s) for o, s in sk.AttachmentSupport], dos.Placement.multVec(V(30, 20, 20))))
     assert adentro, "#106: la vista quedó lejos de la cara del otro componente: %s" % (donde,)
     sk.addGeometry(Part.Circle(V(10, 10, 0), V(0, 0, 1), 3))
     pdoc.recompute()

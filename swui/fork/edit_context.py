@@ -696,7 +696,7 @@ def set_edit(obj, mode=0):
 
     # #105: cancelar no deja el ensamblaje ni la pieza modificados (si no cambió nada)
     before = ep._doc_states([ctx.asm.Document] + ([obj.Document] if obj.Document is not ctx.asm.Document else []))
-    windows = [w for w in _part_windows(obj.Document) if w.isVisible()]
+    windows = [w for w in _part_windows(obj.Document) if tab_visible(w)]
     camera = asm_camera(ctx.asm.Document.Name)
     result = FreeCADGui.getDocument(ctx.asm.Document.Name).setEdit(ctx.asm, mode, path)
     ep._clean_after_cancel(ctx.asm.Document.Name, before)
@@ -748,7 +748,7 @@ def _after_sketch_open(ctx, sketch, windows_before, camera=None):
 
     def aside():
         # las de la pieza que no estaban a la vista (nuevas, o ya apartadas que FreeCAD vuelve a mostrar)
-        new = [w for w in _part_windows(sketch.Document) if w.isVisible() and w not in windows_before]
+        new = [w for w in _part_windows(sketch.Document) if tab_visible(w) and w not in windows_before]
         _set_aside(new, asm_name)
 
     # la cámara: FreeCAD la gira con una animación que termina después; se centra cuando deja de moverse. Al cerrar
@@ -822,26 +822,52 @@ def _set_aside(windows, asm_name):
     area = FreeCADGui.getMainWindow().findChild(QtWidgets.QMdiArea)
     if area is None or not windows:
         return
-    bar = area.findChild(QtWidgets.QTabBar)
-    titles = set()
+    # sin hide(): con las ventanas en pestañas, ocultar una sacaba a las otras de maximizadas (quedaban flotando, 21/11
+    # visto con el mouse). En pestañas, la que no está al frente no se ve: alcanza con sacar su pestaña y poner al
+    # frente el ensamblaje
     for w in windows:
         _aside[id(w)] = (w, asm_name)
-        try:
-            titles.add(w.windowTitle().replace("[*]", "*"))
-            titles.add(w.windowTitle().replace("[*]", ""))
-            w.hide()
-        except RuntimeError:
-            pass
-    if bar is not None:
-        for i in range(bar.count()):
-            if bar.tabText(i) in titles:
-                bar.setTabVisible(i, False)
+        _set_tab(w, False)
     gasm = FreeCADGui.getDocument(asm_name)
     if gasm is not None:
         for sub in _part_windows(gasm.Document):
-            if sub.isVisible():
-                area.setActiveSubWindow(sub)
-                break
+            area.setActiveSubWindow(sub)
+            break
+
+
+def _tab_index(sub):
+    """(barra de pestañas, índice de la pestaña de sub) o (barra, None)."""
+    from swui.compat import QtWidgets
+
+    area = FreeCADGui.getMainWindow().findChild(QtWidgets.QMdiArea)
+    bar = area.findChild(QtWidgets.QTabBar) if area is not None else None
+    if bar is None:
+        return None, None
+    try:
+        title = sub.windowTitle()
+    except RuntimeError:
+        return bar, None
+    for i in range(bar.count()):
+        if bar.tabText(i) in (title.replace("[*]", "*"), title.replace("[*]", "")):
+            return bar, i
+    return bar, None
+
+
+def _set_tab(sub, visible):
+    bar, i = _tab_index(sub)
+    if bar is not None and i is not None:
+        bar.setTabVisible(i, visible)
+
+
+def tab_visible(sub):
+    """¿Se ve la pestaña de sub? (sin barra de pestañas: si la ventana se ve)."""
+    bar, i = _tab_index(sub)
+    if bar is None:
+        try:
+            return sub.isVisible()
+        except RuntimeError:
+            return False
+    return i is not None and bar.isTabVisible(i)
 
 
 _aside = {}  # id(ventana) -> (ventana, ensamblaje): ventanas de piezas apartadas por _set_aside
@@ -861,11 +887,7 @@ def keep_aside(sub):
     if asm_name is None or asm_name not in FreeCAD.listDocuments() or ep.editing(FreeCAD.getDocument(asm_name)) is None:
         # ya no se edita: la abre el usuario (Abrir pieza...), vuelve con su pestaña
         _aside.pop(id(sub), None)
-        try:
-            sub.show()
-        except RuntimeError:
-            return False
-        _show_tab(sub)
+        _set_tab(sub, True)
         return False
     _set_aside([sub], asm_name)
     return True
@@ -880,22 +902,6 @@ def release_aside(asm_name):
     for key, (sub, owner) in list(_aside.items()):
         if owner == asm_name:
             _aside[key] = (sub, None)
-
-
-def _show_tab(sub):
-    from swui.compat import QtWidgets
-
-    area = FreeCADGui.getMainWindow().findChild(QtWidgets.QMdiArea)
-    bar = area.findChild(QtWidgets.QTabBar) if area is not None else None
-    if bar is None:
-        return
-    try:
-        title = sub.windowTitle()
-    except RuntimeError:
-        return
-    for i in range(bar.count()):
-        if bar.tabText(i) in (title.replace("[*]", "*"), title.replace("[*]", "")):
-            bar.setTabVisible(i, True)
 
 
 def _look_at_sketch(asm_name, sketch):
@@ -916,8 +922,10 @@ def _look_at_sketch(asm_name, sketch):
     def global_shape(obj, sub=""):
         # sin la colocación propia y con la global (Cuerpo incluido): revisión del 18/11, con un Cuerpo corrido
         # dentro de la pieza transform=True dejaba la cara corrida
-        s = Part.getShape(obj, sub, needSubElement=bool(sub), transform=False).copy()
-        s.transformShape(obj.getGlobalPlacement().toMatrix())
+        s = Part.getShape(obj, sub, needSubElement=bool(sub), transform=True).copy()
+        # la de su contenedor (Cuerpo...): la global sin la propia, que transform=True ya aplicó
+        parent = obj.getGlobalPlacement().multiply(obj.Placement.inverse())
+        s.transformShape(parent.toMatrix())
         return s
 
     shape = None

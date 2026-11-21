@@ -442,7 +442,7 @@ def _place():
 def _follow():
     try:
         if (FreeCAD.ActiveDocument is None or _state["obj"] is None
-                or _state["obj"].Document is not FreeCAD.ActiveDocument or _editing()):
+                or not _doc_ok(_state["obj"]) or _editing()):
             hide()  # otro documento, o se abrió el croquis/la operación
             return
         from swui.fork import sketch_model_edges as me
@@ -573,9 +573,51 @@ def _in_workbench():
         return False
 
 
-def _editing():
+def _doc_ok(obj):
+    """
+    ¿Las cotas de obj van en la vista de ahora? Si es del documento activo, o de la pieza que se edita dentro del
+    ensamblaje activo (Editar pieza: la vista es la del ensamblaje y #100 las pone donde se ve la pieza). 21/11.
+    """
+    doc = FreeCAD.ActiveDocument
+    if doc is None:
+        return False
+    if obj.Document is doc:
+        return True
     try:
-        return FreeCADGui.ActiveDocument is not None and FreeCADGui.ActiveDocument.getInEdit() is not None
+        from swui.fork import edit_context as ec
+
+        ctx = ec.for_document(obj.Document)
+        return ctx is not None and ctx.asm.Document in (doc, FreeCAD.getDocument(doc.Name))
+    except Exception:
+        return False
+
+
+def _view_of(viewport):
+    """La vista 3D (de cualquier documento) a la que pertenece ese viewport."""
+    try:
+        for name in FreeCAD.listDocuments():
+            gdoc = FreeCADGui.getDocument(name)
+            for v in (gdoc.mdiViewsOfType("Gui::View3DInventor") if gdoc is not None else []):
+                if v.graphicsView().viewport() == viewport:
+                    return v
+    except Exception:
+        pass
+    return None
+
+
+def _editing():
+    """
+    ¿Hay algo abierto en edición (croquis, panel de una operación)? El ensamblaje activo NO cuenta (21/11, visto con
+    el mouse): FreeCAD lo tiene "en edición" mientras está activo, y el doble clic nunca mostraba cotas en un ensamblaje.
+    """
+    try:
+        gdoc = FreeCADGui.ActiveDocument
+        vp = gdoc.getInEdit() if gdoc is not None else None
+        if vp is None:
+            return False
+        obj = getattr(vp, "Object", None)
+        kind = getattr(obj, "TypeId", "") or getattr(vp, "TypeId", "")
+        return "Assembly" not in kind  # el objeto o su proveedor de vista ("AssemblyGui::ViewProviderAssembly")
     except Exception:
         return False
 
@@ -607,12 +649,18 @@ class _ViewFilter(QtCore.QObject):
             from swui.fork import feature_tree as ft
             from swui.fork import sketch_model_edges as me
 
-            view = FreeCADGui.ActiveDocument.ActiveView
+            # la vista del doble clic, y el objeto en SU documento (21/11, visto con el mouse): editando una pieza,
+            # el documento activo puede ser la pieza (tras un croquis) y su vista no es la que se ve
+            view = _view_of(viewport) or FreeCADGui.ActiveDocument.ActiveView
             ratio = viewport.devicePixelRatioF()
             info = view.getObjectInfo(me.coin_point(pos.x(), pos.y(), viewport.height(), ratio))
             if not info:
                 return False
-            obj = FreeCAD.ActiveDocument.getObject(info.get("Object"))
+            try:
+                src = FreeCAD.getDocument(info.get("Document")) if info.get("Document") else FreeCAD.ActiveDocument
+            except Exception:
+                src = FreeCAD.ActiveDocument
+            obj = src.getObject(info.get("Object"))
             if _target(obj) is None:
                 return False
             comp = info.get("Component", "")
