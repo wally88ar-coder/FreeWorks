@@ -25,6 +25,12 @@ Neueste Version oben. / Newest version first.
     - Prueba `prueba_ventana_editar_pieza_cotas_doble_clic`.
     - #108: deshacer después de un croquis ya no oculta el componente que se edita (prueba
       `prueba_ventana_editar_pieza_deshacer_oculta2`, con la secuencia exacta del mouse).
+    - #110 (revisión de #109), cotas con doble clic dentro de un ensamblaje:
+      - quedan sobre la instancia del clic (antes podían ir a la otra instancia de la misma pieza, o quedar
+        corridas con la pieza como documento activo);
+      - el doble clic en un componente que no se edita muestra las suyas en su lugar (antes aparecían un
+        instante y se iban);
+      - con un panel abierto no se muestran y el doble clic sigue de largo.
 - **Insertar una pieza de varios cuerpos ya no rompe el ensamblaje al reabrirlo (#104, 18/11).** El contenedor que
   FreeWorks le pone a la pieza quedaba solo en memoria: FreeCAD 1.1.4 tiene la pieza de solo lectura durante la
   inserción y el guardado fallaba en silencio. Ahora la pieza se guarda apenas termina de insertar (y queda sin la

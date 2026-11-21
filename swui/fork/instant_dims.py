@@ -40,7 +40,7 @@ LABEL_QSS = ("QPushButton { color: #000000; background: rgba(247,247,247,170); b
 SKETCH_DIMS = ("Distance", "DistanceX", "DistanceY", "Radius", "Diameter", "Angle")
 
 _state = {"obj": None, "dims": [], "labels": [], "node": None, "view": None, "camera": None, "timer": None,
-          "by_click": False}  # by_click: mostradas por un clic en un croquis (se van al elegir otra cosa)
+          "by_click": False, "vp": None, "plc": None, "path": None, "vdoc": None}  # by_click: mostradas por un clic en un croquis (se van al elegir otra cosa)
 _filters = {}
 
 
@@ -303,18 +303,104 @@ def _viewport():
         return None
 
 
-def show(obj):
-    """Mostrar las cotas de obj (operación o croquis)."""
+def _doc_of_view(view):
+    """Nombre del documento de esa vista 3D, o None."""
+    try:
+        target = view.graphicsView().viewport()
+        for name in FreeCAD.listDocuments():
+            gdoc = FreeCADGui.getDocument(name)
+            for v in (gdoc.mdiViewsOfType("Gui::View3DInventor") if gdoc is not None else []):
+                if v.graphicsView().viewport() == target:
+                    return name
+    except Exception:
+        pass
+    return None
+
+
+def _placement(obj, vdoc, path):
+    """
+    Placement de la pieza de obj a la vista del documento vdoc (#110): None si obj es de ese documento (la pieza
+    sola). Si no, el del camino del clic path = (objeto raíz, camino hasta el componente): la instancia justa,
+    también una copia de una matriz de componentes. Sin camino, el de la pieza que se edita.
+    """
+    if vdoc is None or obj.Document.Name == vdoc:
+        return None
+    from swui.fork import edit_context as ec
+
+    if path is None:
+        return ec.view_placement(part_doc=obj.Document)
+    import Part
+
+    root, sub = path
+    target = root.getSubObject(sub, retType=1)
+    linked = target.getLinkedObject(True) if target is not None else None
+    if linked is None or linked.Document is not obj.Document:
+        return None
+    glob, local = Part.getShape(root, sub), Part.getShape(linked)
+    if glob.isNull() or local.isNull():
+        return None
+    return glob.Placement.multiply(local.Placement.inverse())  # como edit_context.part_placement
+
+
+def _path_clicked(info, vdoc, obj):
+    """
+    (objeto raíz, camino) del clic hasta el componente por el que se llegó a obj, o None. El ÚLTIMO del camino que
+    no es de la pieza y enlaza a ella: el componente, o la copia de una matriz (revisión de #110).
+    """
+    try:
+        doc = FreeCAD.getDocument(vdoc)
+        root = info.get("ParentObject")
+        if isinstance(root, str):
+            root = doc.getObject(root)
+        names = (info.get("SubName") or "").split(".")[:-1]
+        if root is None and names:
+            root, names = doc.getObject(names[0]), names[1:]
+        if root is None:
+            return None
+        found = None
+        for k in range(1, len(names) + 1):
+            sub = ".".join(names[:k]) + "."
+            o = root.getSubObject(sub, retType=1)
+            if o is None or o.Document is obj.Document:
+                continue
+            linked = o.getLinkedObject(True)
+            if linked is not None and linked is not o and linked.Document is obj.Document:
+                found = (root, sub)
+        return found
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Cotas (camino):\n%s\n" % traceback.format_exc())
+    return None
+
+
+def show(obj, view=None, path=None):
+    """
+    Mostrar las cotas de obj (operación o croquis). view: la vista donde se muestran (por omisión la activa);
+    path: (objeto raíz, camino) del componente por el que se ve obj (#110: dibujar donde está ESA instancia).
+    """
     hide()
-    vp = _viewport()
-    if vp is None:
+    if view is None:
+        vp = _viewport()
+        view = FreeCADGui.ActiveDocument.ActiveView if vp is not None else None
+    else:
+        try:
+            vp = view.graphicsView().viewport()
+        except Exception:
+            vp = None
+    if vp is None or view is None:
         return 0
     dims = dims_of(obj)
     if not dims:
         FreeCADGui.getMainWindow().statusBar().showMessage("%s no tiene cotas para mostrar." % obj.Label, 4000)
         return 0
-    view = FreeCADGui.ActiveDocument.ActiveView
-    _state.update(obj=obj, dims=dims, view=view, camera=None)
+    vdoc = _doc_of_view(view) or getattr(FreeCAD.ActiveDocument, "Name", None)
+    try:
+        plc = _placement(obj, vdoc, path)
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Cotas (ubicación):\n%s\n" % traceback.format_exc())
+        plc = None
+    if plc is None and vdoc != obj.Document.Name:
+        return 0  # no se sabe dónde se ve la pieza en esa vista: mejor nada que cotas corridas
+    _state.update(obj=obj, dims=dims, view=view, camera=None, vp=vp, plc=plc, path=path, vdoc=vdoc)
     _draw_lines(view, dims)
     for dim in dims:
         button = QtWidgets.QPushButton(("Σ " if dim.locked else "") + dim.text, vp)
@@ -354,11 +440,23 @@ def hide():
             view.getSceneGraph().removeChild(node)
         except Exception:
             pass
-    _state.update(obj=None, dims=[], labels=[], node=None, view=None, camera=None, timer=None)
+    _state.update(obj=None, dims=[], labels=[], node=None, view=None, camera=None, timer=None, vp=None, plc=None,
+                  path=None, vdoc=None)
 
 
 def shown():
     return _state["obj"] is not None
+
+
+def _show_again(obj):
+    """Volver a mostrar obj en la misma vista y por el mismo componente (revisión de #110: Modificar, refresh)."""
+    view, path = _state.get("view"), _state.get("path")
+    try:
+        if path is not None:
+            path[0].Name  # se borró
+    except Exception:
+        view, path = None, None
+    return show(obj, view, path)
 
 
 def refresh():
@@ -372,7 +470,7 @@ def refresh():
         hide()
         return
     by_click = _state.get("by_click")
-    show(obj)
+    _show_again(obj)
     _state["by_click"] = by_click
 
 
@@ -380,10 +478,12 @@ def _draw_lines(view, dims):
     from pivy import coin
 
     sep = coin.SoAnnotation()
-    from swui.fork import edit_context as ec
-
-    place = ec.view_transform_node()  # editando dentro de un ensamblaje: donde se ve la pieza (#100)
-    if place is not None:
+    plc = _state.get("plc")  # dentro de un ensamblaje: donde se ve la pieza (#100, #110)
+    if plc is not None:
+        place = coin.SoTransform()
+        place.translation.setValue(plc.Base.x, plc.Base.y, plc.Base.z)
+        q = plc.Rotation.Q
+        place.rotation.setValue(coin.SbRotation(q[0], q[1], q[2], q[3]))
         sep.addChild(place)
     color = coin.SoBaseColor()
     color.rgb = LINE_COLOR
@@ -428,26 +528,27 @@ def _side(u):
 
 
 def _place():
-    view, vp = _state["view"], _viewport()
+    view, vp, plc = _state["view"], _state["vp"], _state["plc"]
     if view is None or vp is None:
         return
     ratio = vp.devicePixelRatioF()
     for button, dim in _state["labels"]:
-        from swui.fork import edit_context as ec
-
-        x, y = view.getPointOnViewport(ec.to_view(dim.label_at))
+        x, y = view.getPointOnViewport(plc.multVec(dim.label_at) if plc is not None else dim.label_at)
         button.move(int(x / ratio - button.width() / 2), int(vp.height() - y / ratio - button.height() / 2))
 
 
 def _follow():
     try:
-        if (FreeCAD.ActiveDocument is None or _state["obj"] is None
-                or not _doc_ok(_state["obj"]) or _editing()):
+        active = FreeCAD.ActiveDocument
+        obj = _state["obj"]
+        if (active is None or obj is None or active.Name not in (_state["vdoc"], obj.Document.Name)
+                or _editing()):
             hide()  # otro documento, o se abrió el croquis/la operación
             return
         from swui.fork import sketch_model_edges as me
 
-        key = (me._camera_key(_state["view"]), _viewport().size().width(), _viewport().size().height())
+        vp = _state["vp"]
+        key = (me._camera_key(_state["view"]), vp.size().width(), vp.size().height())
         if key != _state["camera"]:
             _state["camera"] = key
             _place()
@@ -551,7 +652,7 @@ def _modify(dim, button):
         if apply_value(dim, value) and obj is not None:
             if close:
                 box.close()
-            show(obj)  # posiciones y valores nuevos
+            _show_again(obj)  # posiciones y valores nuevos, en el mismo lugar (revisión de #110)
 
     ok.clicked.connect(lambda *_a: commit(True))
     rebuild.clicked.connect(lambda *_a: commit(False))
@@ -569,25 +670,6 @@ def _modify(dim, button):
 def _in_workbench():
     try:
         return FreeCADGui.activeWorkbench().name() == WB_NAME
-    except Exception:
-        return False
-
-
-def _doc_ok(obj):
-    """
-    ¿Las cotas de obj van en la vista de ahora? Si es del documento activo, o de la pieza que se edita dentro del
-    ensamblaje activo (Editar pieza: la vista es la del ensamblaje y #100 las pone donde se ve la pieza). 21/11.
-    """
-    doc = FreeCAD.ActiveDocument
-    if doc is None:
-        return False
-    if obj.Document is doc:
-        return True
-    try:
-        from swui.fork import edit_context as ec
-
-        ctx = ec.for_document(obj.Document)
-        return ctx is not None and ctx.asm.Document in (doc, FreeCAD.getDocument(doc.Name))
     except Exception:
         return False
 
@@ -611,15 +693,23 @@ def _editing():
     el mouse): FreeCAD lo tiene "en edición" mientras está activo, y el doble clic nunca mostraba cotas en un ensamblaje.
     """
     try:
-        gdoc = FreeCADGui.ActiveDocument
-        vp = gdoc.getInEdit() if gdoc is not None else None
-        if vp is None:
-            return False
-        obj = getattr(vp, "Object", None)
-        kind = getattr(obj, "TypeId", "") or getattr(vp, "TypeId", "")
-        return "Assembly" not in kind  # el objeto o su proveedor de vista ("AssemblyGui::ViewProviderAssembly")
+        if FreeCADGui.Control.activeDialog():
+            return True  # un panel abierto (#110)
     except Exception:
-        return False
+        pass
+    # el documento activo y el que tiene algo en edición (editando una pieza no siempre es el mismo, #110)
+    for gdoc in (FreeCADGui.ActiveDocument, FreeCADGui.editDocument()):
+        try:
+            vp = gdoc.getInEdit() if gdoc is not None else None
+            if vp is None:
+                continue
+            obj = getattr(vp, "Object", None)
+            kind = getattr(obj, "TypeId", "") or getattr(vp, "TypeId", "")
+            if "Assembly" not in kind:  # el objeto o su proveedor de vista ("AssemblyGui::ViewProviderAssembly")
+                return True
+        except Exception:
+            pass
+    return False
 
 
 def _target(obj):
@@ -663,14 +753,20 @@ class _ViewFilter(QtCore.QObject):
             obj = src.getObject(info.get("Object"))
             if _target(obj) is None:
                 return False
+            vdoc = _doc_of_view(view) or getattr(FreeCAD.ActiveDocument, "Name", None)
+            path = None
+            if obj.Document.Name != vdoc:
+                # una pieza vista por un componente (#110): ESA instancia; sin componente, el doble clic sigue de largo
+                path = _path_clicked(info, vdoc, obj)
+                if path is None:
+                    return False
             comp = info.get("Component", "")
             if comp.startswith("Face"):
                 try:
                     obj = ft.creator(obj, obj.Shape.getElement(comp)) or obj
                 except Exception:
                     pass
-            show(obj)
-            return True
+            return bool(show(obj, view, path))
         except Exception:
             FreeCAD.Console.PrintLog("[SWUI fork] Cotas (vista):\n%s\n" % traceback.format_exc())
             return False
@@ -709,8 +805,7 @@ class _TreeFilter(QtCore.QObject):
 
             if obj is None or ft.is_sketch(obj):
                 return False  # croquis: el doble clic lo abre (las cotas salen con un clic)
-            show(obj)
-            return True
+            return bool(show(obj))  # nada que mostrar: el doble clic sigue de largo (revisión de #110)
         except Exception:
             FreeCAD.Console.PrintLog("[SWUI fork] Cotas (árbol):\n%s\n" % traceback.format_exc())
             return False

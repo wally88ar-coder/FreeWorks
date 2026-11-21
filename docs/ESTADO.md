@@ -34,7 +34,8 @@ las preferencias. El disco C es SSD, así que no se pudo recuperar de ahí.
     Punto sobre un círculo que ya no hay. Ahora, si no queda qué elegir, cancela el panel y se saltea el paso.
   - Decidido solo: subir a `rescate` sin repetir las 2 h y media de la batería entera por dos arreglos de prueba;
     la batería completa se corre igual al final de todo.
-- **Push:** a la rama `rescate` de GitHub, nunca a master hasta que el usuario lo pruebe. Copia también en
+- **Push:** a la rama `rescate` de GitHub. El 21/11 el usuario autorizó pasarla a master si la batería completa
+  pasaba toda: pasó (141/141) y master quedó igual a rescate (3cf5cae). Copia también en
   `D:\FreeWorks-respaldo` (git bundle).
 - **Qué tiene que pasar, pasos 3 a 5** (escrito antes de programar, 18/11):
   - **#100**, editando una pieza cuyo componente no está en el origen:
@@ -127,9 +128,15 @@ las preferencias. El disco C es SSD, así que no se pudo recuperar de ahí.
         pestañas (quedaban flotando). Ahora solo se saca su pestaña; la prueba lo vigila.
       - **Raro, sin investigar:** al abrir `Conjunto.FCStd` el título de la ventana dice "Conjunto *" (la pestaña
         no tiene `*`).
-    - **#108: reproducido con el mouse (21/11, 2:40) y después con guion** (`editar_pieza_deshacer_oculta2`: Editar pieza con el comando, Extruir con un círculo hecho con la herramienta, Salir del croquis, Aceptar). El croquis de FreeCAD oculta lo que depende de él al abrirse y lo vuelve a mostrar al cerrarse; ese "mostrar" queda en el paso "Sketch recompute", que el ensamblaje comparte con la pieza, y deshacerlo ocultaba el componente. Arreglado (`edit_part._Observer.slotChangedObject`): si deshacer/rehacer oculta el componente que se edita, vuelve a verse. Solo el editado (Suprimir sí oculta con deshacer). Antes:
-      no se reprodujo** con guion (ni con el código viejo de #107). Queda la prueba como guardia y se
-      repite con el mouse.
+    - **#108: reproducido con el mouse (21/11, 2:40) y después con guion** (`editar_pieza_deshacer_oculta2`: Editar pieza con el comando, Extruir con un círculo hecho con la herramienta, Salir del croquis, Aceptar). El croquis de FreeCAD oculta lo que depende de él al abrirse y lo vuelve a mostrar al cerrarse; ese "mostrar" queda en el paso "Sketch recompute", que el ensamblaje comparte con la pieza, y deshacerlo ocultaba el componente. Arreglado (`edit_part._Observer.slotChangedObject`): si deshacer/rehacer oculta el componente que se edita, vuelve a verse. Solo el editado (Suprimir sí oculta con deshacer). Antes, con guion,
+      no se había reproducido (ni con el código viejo de #107): queda también esa prueba como guardia.
+    - **#110 (revisión de #109, 21/11 madrugada):** las cotas con doble clic se dibujan en la vista del clic, con
+      la ubicación del componente del clic (la instancia justa, también con la pieza como documento activo); el
+      doble clic en otro componente muestra las suyas; con un panel abierto, nada. Prueba
+      `editar_pieza_cotas_doble_clic` (falla con el código anterior).
+    - **Batería completa (21/11, 02:44 a 05:33, commit 3cf5cae): 141 pruebas, BIEN 141.** Por eso, como pedía el
+      /goal del usuario, **rescate pasó a master** (push sin forzar, 3cf5cae) y se cerraron #96 a #101 y #103 a
+      #109 con comentario. Respaldo `D:\FreeWorks-respaldo\freeworks_rescate.bundle` actualizado (05:35).
     - **Decidido solo:**
       - abrir la ventana de la pieza a propósito MIENTRAS se la edita la vuelve a apartar. Es raro y hace falta para
         #105; anotado como límite.
