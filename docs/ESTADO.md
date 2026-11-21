@@ -142,6 +142,13 @@ las preferencias. El disco C es SSD, así que no se pudo recuperar de ahí.
       guion de `primer_arranque` (es texto para el otro FreeCAD). Se sacó la mención y las dos, vueltas a correr
       solas: BIEN. **Decidido solo:** pasarlo a master igual (no es una falla de FreeWorks, y se arregló y se
       repitió en verde antes de las 9).
+    - **Giro con la ruedita roto (21/11, visto por el usuario):** no era FreeWorks. Al borrarse `user.cfg` el
+      17/11, FreeCAD volvió al estilo de navegación de fábrica, "CAD" (ruedita = desplazar); antes era
+      "SolidWorks". Medido en las copias de configuración de las pruebas: SolidWorks hasta el 17/11 07:30, CAD
+      desde el 17/11 21:00. Arreglado en el `user.cfg` del usuario, con FreeCAD cerrado y copia
+      `user.cfg.antes_navegacion_21-11`. **Decisión del usuario:** por ahora NO poner el estilo SolidWorks en
+      el primer arranque de FreeWorks ("dejémoslo ahí"). Idea anotada: hacerlo solo con configuración nueva o
+      sin la marca de primer arranque, sin imponerlo en cada arranque.
     - Quedan en #110 (abierta, baja): desde el árbol o eligiendo un croquis de OTRA instancia de la pieza
       editada, las cotas se dibujan sobre la editada; con las cotas a la vista, si el componente se mueve sin
       un clic, quedan en el lugar viejo.
