@@ -142,6 +142,22 @@ las preferencias. El disco C es SSD, así que no se pudo recuperar de ahí.
       guion de `primer_arranque` (es texto para el otro FreeCAD). Se sacó la mención y las dos, vueltas a correr
       solas: BIEN. **Decidido solo:** pasarlo a master igual (no es una falla de FreeWorks, y se arregló y se
       repitió en verde antes de las 9).
+    - **Probado por el usuario con el mouse (21/11, mañana, en `paso6`, 8 pasos guiados por Claude):**
+      - BIEN: entrar a Editar pieza; Editar operación > Cancelar (barra y sin `*`, #105); croquis en la cara de
+        la Placa de frente y sin ventana aparte (#106); línea desde un vértice de la Placa queda tras un Esc
+        (#107); Ctrl+Z no oculta componentes (#108); cotas con doble clic sobre el Taco, también tras Modificar
+        (#109/#110).
+      - Solo salió la cota 20: el croquis del Taco de `paso6` (armado por Claude) no tiene cotas. No es error.
+      - **Fichas nuevas, sin arreglar:**
+        - **#111:** Esc con una línea elegida y clic en el panel CIERRA el croquis (la prueba de #107 pone el
+          foco por código; con un clic real no alcanza).
+        - **#112:** el croquis de la línea sola quedó en el Taco con error; avisos "Extruir: Wire is not closed
+          (12 veces)" durante la extrusión siguiente.
+        - **#113:** Ctrl+Z editando muestra el cartel nativo "Hay transacciones de grupo... Sí/No/Abort" (SW no
+          pregunta). Las pruebas deshacen por otro camino y no lo ven. También: marca en el ícono del Extruir de
+          Placa<1>, a revisar.
+      - Estimado para arreglarlas: 4 a 6 h de trabajo + 3 h de batería completa (conviene de noche). #113 es la
+        más delicada (deshacer pieza y ensamblaje juntos sin romper #108).
     - **Giro con la ruedita roto (21/11, visto por el usuario):** no era FreeWorks. Al borrarse `user.cfg` el
       17/11, FreeCAD volvió al estilo de navegación de fábrica, "CAD" (ruedita = desplazar); antes era
       "SolidWorks". Medido en las copias de configuración de las pruebas: SolidWorks hasta el 17/11 07:30, CAD
