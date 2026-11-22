@@ -11,6 +11,8 @@ Neueste Version oben. / Newest version first.
   configuración; `mono_soldadas` tiene 900 s de tope.
 - **Croquis, Equidistanciar y Matriz lineal (22/11, #117):** ya no dejan escribir 0 en la distancia o la separación
   (el mínimo 0,001 se redondeaba a 0 por mostrar 2 decimales; al Aceptar salía un error en el informe).
+- **Editar pieza, Eliminar sólido (22/11, #118):** en una pieza con contenedor ya no saca de Editar pieza y se deshace
+  con un solo Ctrl+Z (el grupo de la operación entraba al contenedor después, en un paso aparte).
 - **Esquina de confirmación, como SW 2018 (21/11; plan aprobado en `docs/pedidos/esquina_confirmacion.md`).** Arriba
   a la derecha de la vista (a la izquierda del cubo de navegación) quedan los botones de lo que está abierto:
   - panel de operación: ✓ Aceptar y ✗ Cancelar (los mismos botones del panel, también con la pestaña Modelo al frente);

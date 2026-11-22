@@ -624,8 +624,18 @@ class DeleteBodiesPanel:
                 self.group.setEditorMode(MARK, 2)
                 multibody._keep_label(self.group, next_label(set(o.Label for o in self.doc.Objects)))
             setattr(self.group, MARK, json.dumps(self.spec, sort_keys=True))
+            before = set(o.Name for o in self.doc.Objects)
             try:
                 problem = build(self.doc, self.group, self.spec)
+                if not problem:
+                    # pieza con el contenedor de FreeWorks: el grupo y los Cuerpos nuevos (Conservar) van adentro en
+                    # ESTE paso (batería del 22/11: lo hacía después part_container, en un paso propio "Cuerpo a la
+                    # pieza"; el primer Ctrl+Z dejaba el grupo, con el Cuerpo, fuera de la pieza y se salía de
+                    # Editar pieza)
+                    from swui.fork import part_container as pc
+
+                    for o in [self.group] + [x for x in self.doc.Objects if x.TypeId == BODY and x.Name not in before]:
+                        pc.adopt(self.doc.Name, o.Name, recompute=False)
             except Exception:
                 FreeCAD.Console.PrintError("[SWUI fork] %s:\n%s\n" % (LABEL, traceback.format_exc()))
                 problem = "FreeCAD no pudo armar la operación."
