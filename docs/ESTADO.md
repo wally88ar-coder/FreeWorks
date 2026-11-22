@@ -54,6 +54,32 @@ aprobados por el usuario: `docs/pedidos/esquina_confirmacion.md`. Empezó el 21/
     - Deshacer de varios pasos del desplegable con la pregunta de grupo hace uno solo.
     - Si se desinstala FreeWorks con "Usar siempre" tildado, la casilla de Esc del croquis queda apagada.
   - Sin probar por el usuario. Falta la comparación con el mouse contra SW (la decide el usuario).
+- **Capturas de la esquina (22/11), PARA APROBAR por el usuario:** `tools/fork/pruebas/capturas/nuevas/`:
+  `esquina_panel`, `esquina_croquis`, `esquina_aplanado` y `esquina_editar_pieza` (el cuadro de botones; aprobar =
+  copiarlas a `aprobadas/`). Las `*_contexto.png` muestran la esquina sobre la vista, con el cubo; son para mirar y
+  no se aprueban. Prueba nueva: `prueba_ventana_capturas_esquina` (sin aprobar, no frena).
+- **Batería completa del 22/11 (madrugada):** 146 de 148 BIEN. Las dos que fallaron eran de las pruebas, no de
+  FreeWorks (ficha **#116**, arreglada en 2a61f48):
+  - `mono_configuraciones`: esperaba el largo nuevo después de Ctrl+Z de "Modificar cota". Con el código de antes
+    de la esquina (7686066) fallaba igual. También salía el aviso de FreeCAD de #44 al pasar de configuración.
+  - `mono_soldadas`: se cortó a los 600 s. Tardó de 394 a 569 s en 20 baterías; ahora tiene 900 s.
+  - Había quedado abierto un FreeCAD de prueba del 21/11 22:54 (760 MB); lo corté por su PID.
+- **Batería completa del 22/11 (04:24 a 08:56):** 147 de 149 BIEN. Las dos fallas eran errores de verdad de
+  FreeWorks, no de la esquina; quedan arreglados, cada uno con su prueba (sin probar por el usuario):
+  - **#117:** Equidistanciar del croquis dejaba escribir 0 en la distancia, y la Matriz lineal 0 en la separación:
+    el mínimo 0,001 con 2 decimales se redondeaba a 0. Ahora 0 escrito queda en 0,01. Por la revisión, cualquier
+    valor fuera de rango en esos campos del croquis queda en el borde: antes volvía callado al valor anterior.
+    Prueba: `prueba_ventana_croquis_distancia_cero`.
+  - **#118:** editando una pieza con contenedor, Eliminar sólido con una cara sacaba de Editar pieza y se deshacía
+    con dos Ctrl+Z. El grupo entraba al contenedor después, en un paso aparte. Prueba:
+    `prueba_ventana_editar_pieza_eliminar_solido`. Falta probar el modo Conservar y reabrir la operación (lo
+    marcó la revisión; sin prueba propia todavía).
+  - **#119 (abierta, sin probar):** otras herramientas que crean Cuerpos (Mover/Copiar sólido, Simetría de
+    sólidos, Mover cara, soldadas...) podrían tener el mismo doble paso de deshacer editando una pieza con
+    contenedor. Queda para revisar.
+- **Batería completa del 22/11 (09:52 a 13:59), después del último commit de código (2cf9cce):** 151 de 151
+  BIEN, sin intermitentes. Con esto se dio por cumplido el /goal del 21/11 (#111, #112, #113 y la esquina A a F).
+  La esquina sigue sin probar por el usuario y sin compararla con el mouse contra SW.
 
 **17-18/11 noche, RESCATE (con /goal del usuario).** El 17/11 a la tarde el usuario desinstaló FreeCAD 1.0 y
 el desinstalador borró `C:\Users\Windows\AppData\Roaming\FreeCAD` entero: FreeWorks con su `.git`, SheetMetal y
