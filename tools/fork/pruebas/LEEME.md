@@ -190,6 +190,10 @@ Material abiertos con un panel abierto (error conocido #3; en croquis no aplica)
   de estado. Probado el 09/11: dos corridas seguidas dan 0,00 % de diferencia; con un texto del
   panel de Redondeo cambiado, 0,11 %: la tolerancia es 0,02 %. Los paneles se fotografían con
   la pestaña Operaciones al frente.
+- `prueba_ventana_capturas_esquina.py` (con ventana, 22/11): el cuadro de la esquina de confirmación en sus 4
+  casos (panel, croquis, chapa aplanada, Editar pieza). Sin aprobada, la foto queda en `capturas/nuevas/` y la
+  prueba solo lo anota (no frena); aprobada, se compara igual que las otras. Deja también una foto `_contexto`
+  (la esquina sobre la vista, con el cubo) para mirar; esa no se compara.
 - Mapa de cobertura de TODO FreeWorks (`swui/`, no solo `swui/fork/`): `correr.py completa
   --cobertura` (lo corre la noche) o `correr.py sin_ventana --cobertura` (rápida + al azar).
 
