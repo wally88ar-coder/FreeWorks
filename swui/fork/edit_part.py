@@ -553,6 +553,47 @@ def _outside_face():
     return _Outside(subs[0])
 
 
+# Extruir y Extruir corte: con un croquis elegido, SW 2018 lo usa y no tiene en cuenta lo elegido en otros
+# componentes (visto el 22/11). Revolución y Ranura pueden tomar un eje de otro componente: sin ver en SW, quedan
+# como estaban (revisión del 22/11).
+SKETCH_FIRST = ("PartDesign_Pad", "PartDesign_Pocket")
+
+
+def _sketches_only(inside):
+    """¿Todo lo elegido de la pieza editada son croquis (o elementos de croquis) del Cuerpo activo?"""
+    from swui.fork import edit_context as ec
+    from swui.fork import multibody
+
+    try:
+        body = ec.active_body()
+    except Exception:
+        body = None
+    return body is not None and all(getattr(obj, "TypeId", "") == "Sketcher::SketchObject"
+                                    and multibody.body_of(obj) is body for obj, _subs in inside)
+
+
+def _keep_only(inside):
+    """
+    Deja elegido solo lo de la pieza editada (por el camino del componente), sin lo de otros componentes. Si no
+    se puede volver a elegir algo, devuelve lo elegido como estaba y False (sigue el camino de antes).
+    """
+    from swui.fork import edit_context as ec
+
+    before = [(s.DocumentName, s.ObjectName, list(s.SubElementNames or []))
+              for s in FreeCADGui.Selection.getSelectionEx("", 0)]
+    FreeCADGui.Selection.clearSelection()
+    ok = True
+    for obj, subs in inside:
+        for sub in subs or [""]:
+            ok = bool(ec.select(obj, sub, clear=False)) and ok
+    if not ok:
+        FreeCADGui.Selection.clearSelection()
+        for doc_name, obj_name, subs in before:
+            for sub in subs or [""]:
+                FreeCADGui.Selection.addSelection(doc_name, obj_name, sub)
+    return ok
+
+
 def _hook_pick_plane():
     """
     Croquis / Extruir / Corte (pick_plane: croquis en la cara o plano y, al salir, la operación) también
@@ -607,6 +648,10 @@ def _hook_pick_plane():
         if command not in commands() or _edit_target() is None or pp._dialog_open():
             return handle(command)
         inside, outside = selection_in_part()
+        if outside and inside and command in SKETCH_FIRST and _sketches_only(inside) and _keep_only(inside):
+            # #114, visto en SW 2018 el 22/11: con un croquis de la pieza elegido, Extruir usa ese croquis y lo
+            # elegido en otros componentes no cuenta (FreeCAD mostraba "debe pertenecer al cuerpo activo")
+            outside = False
         if outside:
             external = None if inside else _outside_face()
             if external is None:
