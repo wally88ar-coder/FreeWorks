@@ -5,6 +5,13 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Esc nunca sale del croquis, como SW (#111, decisión del usuario del 21/11).** Esc suelta la herramienta o
+  deselecciona; para salir, Salir del croquis (cinta, panel, Insertar > Croquis). Es la casilla nativa de FreeCAD
+  "Esc puede salir del modo de edición del croquis" (Preferencias > Croquis), que FreeWorks apaga una vez por
+  configuración (`first_run`); destildar "Usar siempre FreeWorks" la vuelve a prender si la había apagado
+  FreeWorks. Con eso, Esc con una línea elegida y un clic en el panel ya no cierra el croquis por ningún camino.
+  Pruebas `prueba_ventana_croquis_esc_linea` (clics y Esc de verdad en la lista, un rótulo y el fondo del panel;
+  Esc sin nada elegido) y `prueba_ventana_primer_arranque`.
 - **Ctrl+Z / Ctrl+Y editando una pieza sin la pregunta de FreeCAD (#113, 21/11).** Si la pieza o el ensamblaje
   tienen un paso propio más nuevo que los que comparten (por ejemplo, mover un componente), FreeCAD preguntaba
   "Hay transacciones de grupo... Sí / No / Abort". Ahora, mientras se edita una pieza, FreeWorks deshace (o

@@ -16,6 +16,9 @@ asistente) y, solo si "Usar siempre FreeWorks" está activo:
   - anota ocultas las barras generales de FreeCAD que todavía no tienen nada anotado;
   - si el idioma de FreeCAD no está elegido, lo pone en castellano (el asistente lo muestra elegido), una sola vez
     por configuración. Un idioma ya elegido no se toca nunca.
+  - Esc nunca sale del croquis, como SW (decisión del usuario del 21/11; #111): apaga la casilla nativa del croquis
+    "Esc puede salir del modo de edición" (LeaveSketchWithEscape), una sola vez por configuración: si después el
+    usuario la vuelve a prender en Preferencias > Croquis, queda prendida.
 """
 
 import FreeCAD
@@ -27,6 +30,10 @@ OWN = "User parameter:BaseApp/Preferences/Mod/SWUI"
 LANGUAGE_DONE = "FirstRunLanguage"  # el idioma se revisa UNA vez por configuración (revisión del 18/11, hallazgo 10)
 TOOLBARS = "User parameter:BaseApp/MainWindow/Toolbars"
 # barras generales de FreeCAD (nombres internos de 1.1.4) que FreeWorks no muestra; "Workbench" es el selector
+SKETCHER = "User parameter:BaseApp/Preferences/Mod/Sketcher"
+ESC_LEAVES = "LeaveSketchWithEscape"  # casilla nativa "Esc puede salir del modo de edición del croquis"
+ESC_DONE = "FirstRunSketchEsc"  # se apaga UNA vez por configuración (21/11)
+ESC_CHANGED = "FirstRunSketchEscChanged"  # la apagó FreeWorks (no el usuario): solo entonces se vuelve a prender
 HIDDEN_TOOLBARS = ("File", "Edit", "Clipboard", "Workbench", "Macro", "View", "Individual Views", "Structure", "Help")
 
 
@@ -57,12 +64,25 @@ def apply():
         if not general.GetString(LANGUAGE_KEY, ""):
             general.SetString(LANGUAGE_KEY, LANGUAGE)
             changed.append("idioma")
+    if not own.GetBool(ESC_DONE, False):
+        own.SetBool(ESC_DONE, True)
+        sk = FreeCAD.ParamGet(SKETCHER)
+        if sk.GetBool(ESC_LEAVES, True):
+            sk.SetBool(ESC_LEAVES, False)
+            own.SetBool(ESC_CHANGED, True)
+            changed.append("Esc en el croquis")
     return changed
 
 
 def release_toolbars():
     """Al dejar de usar siempre FreeWorks: las barras generales de FreeCAD vuelven a estar a la vista en los otros
-    bancos (en FreeWorks las sigue ocultando layout.enter)."""
+    bancos (en FreeWorks las sigue ocultando layout.enter), y Esc vuelve a salir del croquis como en FreeCAD (si lo
+    había apagado FreeWorks; la próxima vez que se use siempre FreeWorks se apaga de nuevo)."""
     bars = FreeCAD.ParamGet(TOOLBARS)
     for name in HIDDEN_TOOLBARS:
         bars.SetBool(name, True)
+    own = FreeCAD.ParamGet(OWN)
+    if own.GetBool(ESC_CHANGED, False):
+        FreeCAD.ParamGet(SKETCHER).SetBool(ESC_LEAVES, True)
+    own.SetBool(ESC_CHANGED, False)
+    own.SetBool(ESC_DONE, False)

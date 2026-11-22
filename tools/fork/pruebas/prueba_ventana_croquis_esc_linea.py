@@ -8,8 +8,12 @@ QUE = """#107 (visto con el mouse el 18/11): editando una pieza, en un croquis a
    LÍNEA QUEDA (antes la limpieza de "referencia sin usar" deshacía su paso entero y se llevaba la línea).
 2) Lo mismo pasando el mouse (queda pegada con Coincidente).
 3) Esc con algo elegido y el foco en el panel del costado (Agregar relaciones, la lista de elementos) solo
-   deselecciona: el croquis sigue abierto, como SW. Sin nada elegido, Esc sale del croquis (como siempre).
-4) Línea sin usar (Esc antes del segundo clic): no queda nada (lo de antes sigue)."""
+   deselecciona: el croquis sigue abierto, como SW.
+4) #111 (visto con el mouse el 21/11): lo mismo con un clic DE VERDAD en el panel y Esc con el teclado (QTest, sin
+   poner el foco por código).
+5) Línea sin usar (Esc antes del segundo clic): no queda nada (lo de antes sigue).
+6) Esc sin nada elegido NO sale del croquis, como SW (decisión del usuario del 21/11: la casilla nativa
+   "Esc puede salir del croquis" queda apagada desde el primer arranque de FreeWorks)."""
 TIPO = "completa"
 import FreeCAD  # noqa: E402
 from _base import carpeta_temporal, traza  # noqa: E402
@@ -52,6 +56,33 @@ def _esc(widget):
     bombear(400)
 
 
+def _punto_panel(donde):
+    """(widget, punto) para un clic de verdad en el panel del croquis: en la lista de elementos ("lista"), en un rótulo
+    ("rotulo") o en el fondo vacío del panel ("fondo", debajo de las cajas)."""
+    import FreeCADGui
+    from swui.compat import QtCore, QtWidgets
+    if donde == "lista":
+        w = _panel_widget()
+        return (w.viewport(), QtCore.QPoint(5, 5)) if w is not None else (None, None)
+    mw = FreeCADGui.getMainWindow()
+    tv = next((w for w in mw.findChildren(QtWidgets.QWidget)
+               if w.metaObject().className() == "Gui::TaskView::TaskView" and w.isVisible()), None)
+    if tv is None:
+        return None, None
+    if donde == "rotulo":
+        for lab in tv.findChildren(QtWidgets.QLabel):
+            if lab.isVisible() and lab.width() > 10 and lab.text():
+                return lab, QtCore.QPoint(3, lab.height() // 2)
+        return None, None
+    area = tv.viewport() if hasattr(tv, "viewport") else tv
+    for y in range(area.height() - 3, 0, -6):  # de abajo para arriba: el primer punto sin nada encima
+        pt = QtCore.QPoint(area.width() // 2, y)
+        hijo = area.childAt(pt)
+        if hijo is None or hijo.metaObject().className() in ("QWidget", "QFrame", "Gui::TaskView::TaskPanel"):
+            return area, pt
+    return None, None
+
+
 def _panel_widget():
     """Un widget del panel de tareas (la lista de elementos del croquis, o cualquiera enfocable del panel)."""
     import FreeCADGui
@@ -73,7 +104,7 @@ def prueba():
     import FreeCADGui
     import piezas_editar as pe
     from swui import ribbon
-    from swui.compat import QtCore
+    from swui.compat import QtCore, QtWidgets
     from swui.fork import edit_part as ep
     c = carpeta_temporal()
     doc, asm, (uno, dos) = pe.ensamblaje([pe.bloque(c), pe.bloque(c, "Otro")])
@@ -147,6 +178,35 @@ def prueba():
     assert not FreeCADGui.Selection.getSelectionEx("*", 0), "Esc no deseleccionó"
     yield 100
 
+    traza("#111: clic de verdad en el panel con la línea elegida y Esc con el teclado")
+    import os
+    from PySide6.QtTest import QTest
+    if os.environ.get("FW_ESC_SALE") == "1":  # para ver la falla de antes: Esc vuelve a poder salir del croquis
+        FreeCAD.ParamGet("User parameter:BaseApp/Preferences/Mod/Sketcher").SetBool("LeaveSketchWithEscape", True)
+    traza("  Esc puede salir del croquis: %s" % FreeCAD.ParamGet(
+        "User parameter:BaseApp/Preferences/Mod/Sketcher").GetBool("LeaveSketchWithEscape", True))
+    for donde in ("lista", "rotulo", "fondo"):
+        FreeCADGui.Selection.clearSelection()
+        FreeCADGui.Selection.addSelection(doc.Name, asm.Name, "%s.%s.Edge1" % (uno.Name, sk.Name))
+        bombear(300)
+        assert FreeCADGui.Selection.getSelectionEx("*", 0), "no pude elegir la línea"
+        destino, punto = _punto_panel(donde)
+        assert destino is not None, "no encontré dónde hacer clic en el panel (%s)" % donde
+        traza("  clic en %s: %s" % (donde, destino.metaObject().className()))
+        QTest.mouseClick(destino, QtCore.Qt.MouseButton.LeftButton, QtCore.Qt.KeyboardModifier.NoModifier, punto)
+        bombear(400)
+        foco = QtWidgets.QApplication.focusWidget()
+        traza("  clic en %s: foco en %s; elegido %s" % (donde, foco.metaObject().className() if foco else None,
+                                                       bool(FreeCADGui.Selection.getSelectionEx("*", 0))))
+        if not FreeCADGui.Selection.getSelectionEx("*", 0):  # el clic en la lista puede deseleccionar: volver a elegir
+            FreeCADGui.Selection.addSelection(doc.Name, asm.Name, "%s.%s.Edge1" % (uno.Name, sk.Name))
+            bombear(300)
+        QTest.keyClick(foco or w, QtCore.Qt.Key.Key_Escape)
+        bombear(800)
+        assert getattr(gdoc.getInEdit(), "Object", None) is sk, "#111: clic en el panel (%s) y Esc cerró el croquis" % donde
+        assert not FreeCADGui.Selection.getSelectionEx("*", 0), "#111: Esc no deseleccionó (%s)" % donde
+    yield 100
+
     traza("Línea sin usar (Esc antes del segundo clic): no queda nada")
     n_geo, n_ext = len(sk.Geometry), len(sk.ExternalGeometry)
     FreeCADGui.runCommand("Sketcher_CreateLine")
@@ -159,12 +219,22 @@ def prueba():
     assert getattr(gdoc.getInEdit(), "Object", None) is sk, "Esc cerró el croquis"
     yield 100
 
-    traza("sin nada elegido, Esc sale del croquis (como siempre en FreeWorks)")
+    traza("sin nada elegido, Esc NO sale del croquis (como SW, 21/11)")
     FreeCADGui.Selection.clearSelection()
     _esc(vpw)
     bombear(800)
-    assert gdoc.getInEdit() is None, "sin nada elegido Esc no salió del croquis"
-    assert ep.editing(doc) is uno, "Esc sacó de Editar pieza"
+    assert getattr(gdoc.getInEdit(), "Object", None) is sk, "sin nada elegido Esc salió del croquis (en SW nunca)"
+    from PySide6.QtTest import QTest as _QT
+    _QT.keyClick(vpw, QtCore.Qt.Key.Key_Escape)
+    bombear(800)
+    assert getattr(gdoc.getInEdit(), "Object", None) is sk, "Esc con el teclado salió del croquis (en SW nunca)"
+    traza("  Salir del croquis activo: %s; documento activo %s" % (
+        FreeCADGui.Command.get("Sketcher_LeaveSketch").isActive(), FreeCAD.ActiveDocument.Name))
+    FreeCADGui.runCommand("Sketcher_LeaveSketch")
+    bombear(1500)
+    # (el ensamblaje activo queda "en edición" él mismo: lo de FreeCAD; el croquis no)
+    assert getattr(gdoc.getInEdit(), "Object", None) is not sk, "Salir del croquis no salió"
+    assert ep.editing(doc) is uno, "salir del croquis sacó de Editar pieza"
     ep.stop(doc)
     bombear(300)
     del QtCore

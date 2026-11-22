@@ -4,7 +4,8 @@
 QUE = """Instalación de cero (18/11; lo vio el usuario el 17/11 al reinstalar FreeCAD): con una configuración de FreeCAD
 NUEVA, el PRIMER arranque ya queda en FreeWorks (cinta a la vista, sin las barras de FreeCAD ni el selector de
 bancos) y con el idioma en castellano; después de tocar "Done" en el asistente de bienvenida de FreeCAD, sigue en
-castellano. Un idioma ya elegido no se toca. Se arranca otro FreeCAD (con ventana) con una configuración vacía,
+castellano, y Esc no sale del croquis (como SW, decisión del 21/11: casilla nativa LeaveSketchWithEscape apagada una
+vez; destildar "Usar siempre FreeWorks" la devuelve). Un idioma ya elegido no se toca. Se arranca otro FreeCAD (con ventana) con una configuración vacía,
 mientras este espera: nunca la configuración del usuario."""
 TIPO = "completa"
 import json  # noqa: E402
@@ -122,6 +123,7 @@ def prueba():
     assert despues["idioma"].startswith("Spanish"), "el asistente dejó el idioma en %r" % despues["idioma"]
     assert despues["banco"] == "LikeSolidWorksUIWorkbench" and despues["cinta"], "después de Done: %s" % despues
     assert not despues["barras"], "después de Done, barras de FreeCAD: %s" % despues["barras"]
+    assert '<FCBool Name="LeaveSketchWithEscape" Value="0"/>' in res["cfg"], "Esc sigue saliendo del croquis"
     yield 100
 
     traza("paso 2")
@@ -147,14 +149,24 @@ def prueba():
     from swui.fork import always_swui, first_run
     bars = FreeCAD.ParamGet(first_run.TOOLBARS)
     antes = always_swui.enabled()
+    sk = FreeCAD.ParamGet(first_run.SKETCHER)
+    own = FreeCAD.ParamGet(first_run.OWN)
+    traza("  antes de destildar: Esc sale del croquis %s; la apagó FreeWorks %s" % (
+        sk.GetBool(first_run.ESC_LEAVES, True), own.GetBool(first_run.ESC_CHANGED, False)))
+    assert not sk.GetBool(first_run.ESC_LEAVES, True), "con FreeWorks, Esc sigue saliendo del croquis"
     try:
         always_swui._AlwaysCommand().Activated(False)
         ocultas = [n for n in first_run.HIDDEN_TOOLBARS if not bars.GetBool(n, True)]
         assert not ocultas, "al destildar quedaron ocultas: %s" % ocultas
+        traza("  al destildar: Esc sale del croquis %s" % sk.GetBool(first_run.ESC_LEAVES, False))
+        if own.GetBool(first_run.ESC_DONE, False) is False:  # se soltó: tiene que volver lo de FreeCAD
+            assert sk.GetBool(first_run.ESC_LEAVES, False), "al destildar, Esc no volvió a salir del croquis"
     finally:
         always_swui._AlwaysCommand().Activated(antes)
         for n in first_run.HIDDEN_TOOLBARS:
             bars.SetBool(n, False)
+        if antes:
+            first_run.apply()  # como el próximo arranque: Esc vuelve a no salir del croquis
     yield 100
 
 
