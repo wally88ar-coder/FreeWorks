@@ -12,6 +12,9 @@ sobre un esqueleto rectangular. Seguidillas al azar de:
 Errores ya registrados que el mono anota sin frenarse: #2, #6 (#40 arreglado el 14/11).
 Seguidillas por regla: FW_CASOS_AZAR (6); largo: 3 a FW_LARGO_MONO (8)."""
 TIPO = "completa"
+# 20 baterías (14/11 al 22/11): de 394 a 569 s según lo que salga al azar; cortada a los 600 s el 18/11 y dos veces
+# el 22/11 (las dos con las 12 seguidillas casi hechas). Es volumen (marcos de 4 caños), no un cuelgue.
+TIEMPO_MAXIMO = 900
 
 from mono_comun import correr_reglas  # noqa: E402
 from mono_entornos import Soldada  # noqa: E402

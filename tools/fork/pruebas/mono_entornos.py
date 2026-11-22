@@ -384,7 +384,11 @@ class Configuraciones(Entorno):
     # suprimir el Agujero con un Redondeo sobre su arista: el redondeo se suprime con él (como SW)
     # pero FreeCAD igual lo recalcula y avisa (Issue 44, descartada por el usuario el 12/11: no es falla)
     deuda = ((ACEPTADO_44, ("Failed to recompute suppressed feature", "Invalid edge link"), None, "suprimir"),
-             (ACEPTADO_44, "Failed to recompute suppressed feature", None, "suprimir"))
+             (ACEPTADO_44, "Failed to recompute suppressed feature", None, "suprimir"),
+             # lo mismo al pasar a una configuración donde un Chaflán y el Redondeo hecho sobre su arista están
+             # suprimidos (operaciones nuevas: suprimidas en las otras, como SW): FreeCAD recalcula igual el
+             # Redondeo suprimido y avisa; nada queda con error (malos lo sigue contando). Batería del 22/11.
+             (ACEPTADO_44, ("Failed to recompute suppressed feature", "Invalid edge link"), None, "config_ir"))
 
     def armar(self):
         from casos_otros import anotar
@@ -395,6 +399,10 @@ class Configuraciones(Entorno):
         self.body, self.hueco = armar_pieza(self.doc)
         cf.ensure(self.doc)
         self.largos = {cf.active(self.doc) or cf.names(self.doc)[0]: 40.0}
+        # pasos "Modificar cota" de config_nueva: (configuración, largo antes, largo después). Ctrl+Z de ese
+        # paso le devuelve a la configuración el largo de antes (como SW); la prueba lo esperaba igual con el
+        # nuevo (falla de la prueba, batería del 22/11)
+        self._cotas, self._cotas_rehacer = [], []
 
     def crear_casos(self):
         from casos_otros import AgregarConfiguracion
@@ -422,12 +430,27 @@ class Configuraciones(Entorno):
         # sin configuraciones y en SW). Era la variante de #74 que quedaba (12/11, 300 casos sin
         # ventana: 0 rotos de 38 a 70; con el agujero lejos de la pared, 0 rotos de 25 a 70)
         largo = round(rng.uniform(40.0, 70.0), 1)
+        antes = self._caja().Length.Value
         with safe_ops.undo_step(self.doc, "Modificar cota"):
             cf.configure(self.doc, ("prop", self._caja(), "Length"), largo, scope="this")
             self.doc.recompute()
         bombear(400)
         self.largos[nombre] = largo
+        self._cotas.append((nombre, antes, largo))
+        self._cotas_rehacer = []
         assert abs(self._caja().Length.Value - largo) < 1e-6, "%s: la configuración nueva no tomó su largo" % que
+
+    def antes_de_deshacer(self):
+        if self.doc.UndoNames[:1] == ["Modificar cota"] and self._cotas:
+            nombre, antes, despues = self._cotas.pop()
+            self.largos[nombre] = antes
+            self._cotas_rehacer.append((nombre, antes, despues))
+
+    def antes_de_rehacer(self):
+        if self.doc.RedoNames[:1] == ["Modificar cota"] and self._cotas_rehacer:
+            nombre, antes, despues = self._cotas_rehacer.pop()
+            self.largos[nombre] = despues
+            self._cotas.append((nombre, antes, despues))
 
     def accion_config_ir(self, rng, que, f0):
         from swui.fork import configurations as cf
@@ -449,3 +472,4 @@ class Configuraciones(Entorno):
     def reabierto(self):
         from swui.fork import configurations as cf
         self.largos = {n: v for n, v in self.largos.items() if n in cf.names(self.doc)}
+        self._cotas, self._cotas_rehacer = [], []  # al abrir, sin pila de deshacer

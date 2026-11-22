@@ -509,10 +509,14 @@ def paso(m, accion, semilla, historia):
             d = diferencias(f0, m.foto(), visibilidad=False)
             assert not d, "%s: Ctrl+Z después de suprimir no volvió: %s" % (que, d[:3])
     elif accion == "deshacer":
+        if hasattr(m, "antes_de_deshacer"):  # el entorno lleva la cuenta de lo que el paso devuelve
+            m.antes_de_deshacer()
         ctrl_z(m.doc)
         m.doc.recompute()
         bombear(400)
     elif accion == "rehacer":
+        if hasattr(m, "antes_de_rehacer"):
+            m.antes_de_rehacer()
         ctrl_y(m.doc)
         m.doc.recompute()
         bombear(400)
