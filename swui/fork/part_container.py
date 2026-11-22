@@ -222,9 +222,53 @@ class _NewBodies:
             # adoptarlo antes lo dejaba en dos grupos (revisión del 18/11, 2.ª pasada). En FreeCAD 1.1.4 el Cuerpo
             # ya tiene su Origen al avisar que se creó (medido con FreeCADCmd el 18/11).
             adopt(doc, name, recompute=False)
+        elif active or getattr(obj.Document, "HasPendingTransaction", False):
+            # creado dentro del paso de una herramienta: entra al contenedor al cerrar ese paso
+            # (safe_ops.end_step -> adopt_pending), en el mismo paso de deshacer (#119); con el número del paso, para
+            # no adoptar después, dentro de otra herramienta, algo de un paso que no pasó por end_step (revisión)
+            _pending.setdefault(doc, []).append((name, active[1] if active else None))
         from swui.compat import QtCore
 
         QtCore.QTimer.singleShot(0, lambda: adopt(doc, name))
+
+    def slotDeletedDocument(self, doc):
+        _pending.pop(getattr(doc, "Name", None), None)  # otro documento con el mismo nombre no hereda la lista
+
+
+_pending = {}  # documento -> Cuerpos o grupos creados dentro del paso abierto de una herramienta
+
+
+def adopt_pending(doc, abort=False):
+    """
+    Al cerrar el paso de una herramienta (safe_ops.end_step): los Cuerpos o grupos que se crearon en ESE paso y
+    quedaron sueltos en la raíz entran al contenedor DENTRO del paso. Antes entraban después, con un temporizador
+    y en un paso propio "Cuerpo a la pieza": un solo Aceptar necesitaba dos Ctrl+Z y, editando, el primero sacaba
+    de Editar pieza (#118, #119). Lo que la herramienta ya puso en una carpeta (miembros de soldadas) queda donde
+    está. El paso de la aplicación es uno solo para todos los documentos: se miran todos (la pieza editada aunque
+    el paso se haya abierto en el ensamblaje). Lo anotado en otros pasos se descarta.
+    """
+    active = FreeCAD.getActiveTransaction()
+    current = active[1] if active else None
+    for name_doc in list(_pending):
+        entries = _pending.pop(name_doc, [])
+        names = [n for n, tx in entries if tx == current]
+        other = FreeCAD.listDocuments().get(name_doc)
+        if abort or not names or other is None:
+            continue
+        moved = False
+        for name in names:
+            obj = other.getObject(name)
+            if obj is None or obj.getParentGeoFeatureGroup() is not None or obj.getParentGroup() is not None:
+                continue
+            adopt(name_doc, name, recompute=False)
+            moved = moved or obj.getParentGeoFeatureGroup() is not None
+        if moved:
+            other.recompute()
+
+
+def forget_pending(doc):
+    """Un paso nuevo de una herramienta: lo anotado antes en ese documento ya no es de un paso abierto."""
+    _pending.pop(getattr(doc, "Name", None), None)
 
 
 def adopt(doc_name, obj_name, recompute=True):

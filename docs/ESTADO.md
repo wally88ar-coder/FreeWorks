@@ -80,6 +80,26 @@ aprobados por el usuario: `docs/pedidos/esquina_confirmacion.md`. Empezó el 21/
 - **Batería completa del 22/11 (09:52 a 13:59), después del último commit de código (2cf9cce):** 151 de 151
   BIEN, sin intermitentes. Con esto se dio por cumplido el /goal del 21/11 (#111, #112, #113 y la esquina A a F).
   La esquina sigue sin probar por el usuario y sin compararla con el mouse contra SW.
+- **22/11 tarde, #114 y #119 (pedido del usuario; batería completa a la noche, push después):**
+  - **#114, visto en SW 2018 con el mouse** (Conjunto114 armado con guion en `C:\SW-AI-Bridge\trabajos\prueba114`, cerrado sin guardar):
+    editando el Taco, línea de un croquis del Taco + cara de arriba de la Placa, Extruir saliente: SW usa el croquis
+    (Contornos seleccionados: solo "Croquis2-Contorno<1>@Taco"), no usa la cara para nada y, como el croquis es
+    abierto, tilda sola la Operación lámina. **Hecho:** Extruir y Extruir corte, con un croquis del Cuerpo activo
+    elegido, dejan de lado lo de otros componentes (antes: cartel "debe pertenecer al cuerpo activo"). Prueba
+    `prueba_ventana_editar_pieza_croquis_y_cara` (falla sin el arreglo). Sin probar por el usuario.
+    - **Decidido solo (revisión):** Revolución y Ranura quedan como estaban (pueden tomar un eje de otro
+      componente; no lo vi en SW). Un croquis de OTRO Cuerpo de la pieza sigue con el cartel de FreeCAD.
+    - **Límite:** FreeCAD 1.1 no tiene Operación lámina: con un croquis abierto pasa lo mismo que en la pieza sola.
+  - **#119:** las herramientas que crean Cuerpos o grupos ahora los meten al contenedor de la pieza DENTRO de su
+    paso (en `safe_ops.end_step`, para todas las herramientas de FreeWorks), no después en un paso aparte "Cuerpo a
+    la pieza". Con error antes del arreglo (visto con prueba): Simetría con sólidos aparte y Tapa de extremo
+    (soldadas, también en la pieza sola). Mover/Copiar sólido ya andaba. Pruebas: `prueba_ventana_cuerpos_nuevos_un_paso`
+    (Mover/Copiar, Simetría, Fusionar resultado) y la de todos los botones (ahora falla si aparece el paso aparte).
+    - Por la revisión independiente: lo anotado queda atado a su paso (un grupo de un paso de FreeCAD no entra
+      callado en el paso de otra herramienta; caso 4 de la prueba, falla sin el arreglo), se miran todos los
+      documentos y los errores quedan en el informe.
+    - **Sin prueba propia (cubierto por el arreglo central):** Conservar sólido y reabrir Eliminar/Conservar (#118),
+      Mover cara sobre un sólido suelto. Sin probar por el usuario.
 
 **17-18/11 noche, RESCATE (con /goal del usuario).** El 17/11 a la tarde el usuario desinstaló FreeCAD 1.0 y
 el desinstalador borró `C:\Users\Windows\AppData\Roaming\FreeCAD` entero: FreeWorks con su `.git`, SheetMetal y

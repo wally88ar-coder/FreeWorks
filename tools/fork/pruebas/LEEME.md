@@ -200,6 +200,15 @@ Material abiertos con un panel abierto (error conocido #3; en croquis no aplica)
 - `prueba_ventana_editar_pieza_eliminar_solido.py` (con ventana, 22/11, #118): editando una pieza con contenedor,
   Eliminar sólido con una cara no saca de Editar pieza y es un solo paso de deshacer (Ctrl+Z / Ctrl+Y, Cancelar);
   soltar el Cuerpo a propósito sigue saliendo.
+- `prueba_ventana_editar_pieza_croquis_y_cara.py` (con ventana, 22/11, #114): editando el Taco de paso6, un croquis
+  del Taco más la cara de arriba de la Placa y Extruir: sin el cartel "debe pertenecer al cuerpo activo", la
+  extrusión usa el croquis (como SW 2018, visto con el mouse); Cancelar, Aceptar, Ctrl+Z / Ctrl+Y; con un croquis
+  abierto pasa lo mismo que con el croquis solo.
+- `prueba_ventana_cuerpos_nuevos_un_paso.py` (con ventana, 22/11, #119): editando una pieza con contenedor, Mover/
+  Copiar sólido copiando, Simetría con sólidos aparte y "Fusionar resultado" apagado dejan UN paso de deshacer con
+  el Cuerpo nuevo ya dentro del contenedor; se sigue editando con Ctrl+Z / Ctrl+Y. La de todos los botones
+  (`editar_pieza_botones`) ahora también falla si un botón deja un paso aparte "Cuerpo a la pieza" (así apareció
+  Tapa de extremo de soldadas).
 - Mapa de cobertura de TODO FreeWorks (`swui/`, no solo `swui/fork/`): `correr.py completa
   --cobertura` (lo corre la noche) o `correr.py sin_ventana --cobertura` (rápida + al azar).
 

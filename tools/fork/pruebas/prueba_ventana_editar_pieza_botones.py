@@ -219,6 +219,8 @@ def _correr(ctx, tab, cmd, sel):
     from swui import ribbon
     pdoc, adoc, gdoc = ctx["pdoc"], ctx.get("adoc"), ctx["gdoc"]
     antes_p = set(o.Name for o in pdoc.Objects)
+    # sin historial: FreeCAD guarda hasta 20 pasos y, lleno, UndoCount ya no cambia (no se podrían contar)
+    pdoc.clearUndos()
     ctx["deshacer"] = pdoc.UndoCount
     antes_a = set(o.Name for o in adoc.Objects) if adoc else set()
     traza("    %s %s %s %s" % (ctx["modo"], tab, cmd, sel))
@@ -250,6 +252,8 @@ def _correr(ctx, tab, cmd, sel):
         "invalidos": _invalidos(pdoc, antes_p),
         "avisos": modales, "excepcion": excepcion, "cuerpos_antes": cuerpos,
         "errores": [m[:200] for m in mensajes_nuevos(desde)][:14],
+        # #119: pasos de deshacer que dejó el botón en la pieza (uno solo, como en la pieza sola)
+        "pasos": list(pdoc.UndoNames[:max(0, pdoc.UndoCount - ctx["deshacer"])]),
     })
     if os.environ.get("FW_SONDEO_INFORME") and r["errores"]:
         from reglas_paneles import _report_view
@@ -506,6 +510,10 @@ def diferencias(resultados):
             malas.append("sale de Editar pieza")
         if malas and k not in EXCEPCIONES:
             out.append((k, "; ".join(malas)))
+        for modo, r in (("pieza", p), ("editando", e)):  # sin excepciones (revisión del 22/11)
+            if len(r.get("pasos", [])) > 1 and "Cuerpo a la pieza" in r["pasos"]:
+                out.append((k, "#119: %s: el Cuerpo nuevo entra a la pieza en otro paso de deshacer: %s"
+                            % (modo, r["pasos"])))
     return out
 
 

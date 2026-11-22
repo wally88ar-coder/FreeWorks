@@ -13,6 +13,14 @@ Neueste Version oben. / Newest version first.
   (el mínimo 0,001 se redondeaba a 0 por mostrar 2 decimales; al Aceptar salía un error en el informe).
 - **Editar pieza, Eliminar sólido (22/11, #118):** en una pieza con contenedor ya no saca de Editar pieza y se deshace
   con un solo Ctrl+Z (el grupo de la operación entraba al contenedor después, en un paso aparte).
+- **Editar pieza, Extruir con un croquis y una cara de otro componente (22/11, #114):** como en SW 2018 (visto con
+  el mouse), Extruir y Extruir corte usan el croquis elegido (del Cuerpo activo) y no tienen en cuenta lo elegido en
+  otros componentes; antes salía el cartel de FreeCAD "El objeto seleccionado debe pertenecer al cuerpo activo" y
+  no pasaba nada.
+- **Un Aceptar, un Ctrl+Z (22/11, #119):** en una pieza con contenedor, los Cuerpos nuevos de una herramienta entran
+  a la pieza dentro del paso de deshacer de esa herramienta (antes iban en un paso aparte "Cuerpo a la pieza": hacían
+  falta dos Ctrl+Z y, editando en un ensamblaje, el primero sacaba el Cuerpo de la pieza). Visto en Simetría con
+  sólidos aparte y en Tapa de extremo de soldadas; el arreglo vale para todas las herramientas de FreeWorks.
 - **Esquina de confirmación, como SW 2018 (21/11; plan aprobado en `docs/pedidos/esquina_confirmacion.md`).** Arriba
   a la derecha de la vista (a la izquierda del cubo de navegación) quedan los botones de lo que está abierto:
   - panel de operación: ✓ Aceptar y ✗ Cancelar (los mismos botones del panel, también con la pestaña Modelo al frente);

@@ -147,6 +147,12 @@ def begin_step(doc, name):
     join = doc.Name in _open_steps or pending or task_open(doc)
     if join:
         return False
+    try:
+        from swui.fork import part_container
+
+        part_container.forget_pending(doc)
+    except Exception:
+        pass
     doc.openTransaction(name)
     _open_steps.add(doc.Name)
     return True
@@ -170,6 +176,15 @@ def end_step(doc, abort=False):
     cierra también esa.
     """
     _open_steps.discard(doc.Name)
+    try:
+        # los Cuerpos o grupos nuevos entran al contenedor de la pieza en ESTE paso (#119)
+        from swui.fork import part_container
+
+        part_container.adopt_pending(doc, abort=abort)
+    except Exception:
+        import traceback
+
+        FreeCAD.Console.PrintLog("[SWUI fork] Cuerpos nuevos al contenedor:\n%s\n" % traceback.format_exc())
     if abort:
         doc.abortTransaction()
     else:
