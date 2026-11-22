@@ -308,6 +308,10 @@ def moved_lines(sketch, geo_ids, change, number=48):
 def _spin(value, suffix, low, high, decimals=2, step=1.0):
     box = QtWidgets.QDoubleSpinBox()
     box.setDecimals(decimals)
+    if 0 < low < 10 ** -decimals:
+        # Qt redondea el mínimo a los decimales que muestra: 0,001 con 2 decimales quedaba en 0 y se podía
+        # escribir 0 (Equidistanciar a distancia 0, Matriz con separación 0): el mínimo es lo más chico visible.
+        low = 10 ** -decimals
     box.setRange(low, high)
     box.setSuffix(suffix)
     box.setSingleStep(step)

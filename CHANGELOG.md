@@ -5,6 +5,12 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Pruebas (22/11):** capturas de referencia de la esquina (`prueba_ventana_capturas_esquina`; quedan en
+  `capturas/nuevas` hasta que el usuario las apruebe). #116, arreglado en las pruebas: `mono_configuraciones` ahora
+  sabe que Ctrl+Z de "Modificar cota" devuelve el largo anterior y tolera el aviso de FreeCAD de #44 al pasar de
+  configuración; `mono_soldadas` tiene 900 s de tope.
+- **Croquis, Equidistanciar y Matriz lineal (22/11, #117):** ya no dejan escribir 0 en la distancia o la separación
+  (el mínimo 0,001 se redondeaba a 0 por mostrar 2 decimales; al Aceptar salía un error en el informe).
 - **Esquina de confirmación, como SW 2018 (21/11; plan aprobado en `docs/pedidos/esquina_confirmacion.md`).** Arriba
   a la derecha de la vista (a la izquierda del cubo de navegación) quedan los botones de lo que está abierto:
   - panel de operación: ✓ Aceptar y ✗ Cancelar (los mismos botones del panel, también con la pestaña Modelo al frente);
