@@ -72,7 +72,7 @@ def prueba():
     vista = _al_frente(doc)
     todos = []
     for n in range(1, 15):
-        if not pdoc.UndoCount and not doc.UndoCount:
+        if not pdoc.UndoCount:  # lo que queda en el ensamblaje es de la preparación de la prueba
             break
         FreeCADGui.Selection.clearSelection()
         cart = _atajo(vista, QtCore.Qt.Key.Key_Z)

@@ -3,7 +3,8 @@
 # SPDX-FileCopyrightText: 2026 wally88ar-coder
 QUE = """Editar la pieza dentro del ensamblaje, como SW (etapa D, 15/11). Editar pieza (ícono de la bandeja de un
 componente) deja activo el Cuerpo de la pieza a través del componente, los otros componentes transparentes
-sin dejar el ensamblaje modificado, y la barra "Editando pieza: X"; un croquis sobre una cara va a la
+sin dejar el ensamblaje modificado, y Volver al ensamblaje en la esquina de confirmación (desde el 21/11 reemplaza a la
+barra "Editando pieza: X"); un croquis sobre una cara va a la
 pieza; Ctrl+Z en el ensamblaje lo deshace y se sigue editando; Salir vuelve todo como estaba. Guardar
 editando no deja la transparencia en el archivo; al guardar el ensamblaje pregunta si guardar las piezas
 cambiadas (Sí las guarda). Editar operación / Editar croquis desde la cara de un componente abren la
@@ -67,7 +68,6 @@ def _contestar(que):
 def prueba():
     import FreeCADGui
     import casos_relacion as cr
-    from swui.compat import QtWidgets
     from swui.fork import config_asm, edit_part as ep
 
     carpeta = carpeta_temporal()
@@ -118,9 +118,8 @@ def prueba():
         color = ep._part_color(placa)
         assert color is not None and tuple(vo.ShapeMaterial.DiffuseColor)[:3] == tuple(color)[:3],             "transparente, pero no con el color de la pieza: %s / %s" % (vo.ShapeMaterial.DiffuseColor, color)
     assert not gdoc.Modified, "entrar a Editar pieza dejó el ensamblaje modificado"
-    barra = [w for w in FreeCADGui.getMainWindow().findChildren(QtWidgets.QLabel, "SWUI_edit_part_label")
-             if w.isVisible()]
-    assert barra and "Taco" in barra[0].text(), "falta la barra Editando pieza"
+    from esquina_comun import claves
+    assert claves() == ["back_assembly"], "falta Volver al ensamblaje en la esquina: %s" % claves()
     assert ep.editing(doc) is taco
     yield 100
 
@@ -175,20 +174,16 @@ def prueba():
     plano.MapMode = "FlatFace"
     pdoc.recompute()
     pasos = list(doc.UndoNames)
-    # Salir con el botón de la barra
-    from swui.compat import QtWidgets as _QW
-    boton = [b for b in FreeCADGui.getMainWindow().findChildren(_QW.QPushButton, "SWUI_edit_part_exit")
-             if b.isVisible()]
-    assert boton, "no está el botón Salir de la barra"
-    boton[0].click()
-    bombear(300)
+    # Salir con Volver al ensamblaje de la esquina (antes, el botón Salir de la barra)
+    from esquina_comun import clic_boton
+    clic_boton("back_assembly")
     assert ep.editing(doc) is None, "el botón Salir no salió"
     assert list(doc.UndoNames) == pasos, "salir dejó un paso de deshacer"
     quedo = view.getActiveObject("pdbody", False)
     assert not quedo or quedo[0] is None, "el Cuerpo siguió activo: %s" % (quedo,)
     assert ep.ghost_level(placa) == antes and not vo.OverrideMaterial, "la placa no volvió a como estaba"
-    assert not [w for w in FreeCADGui.getMainWindow().findChildren(QtWidgets.QLabel, "SWUI_edit_part_label")
-                if w.isVisible()], "quedó la barra"
+    from esquina_comun import claves as _claves
+    assert _claves() == [], "quedó la esquina: %s" % _claves()
     assert FreeCADGui.getDocument(pdoc.Name).Modified, "la pieza tenía que quedar modificada"
     visto = _contestar(True)
     doc.save()
@@ -288,8 +283,8 @@ def prueba():
     FreeCAD.closeDocument(doc.Name)
     bombear(500)
     visto["fin"] = True
-    assert not ep._editing and not [w for w in FreeCADGui.getMainWindow().findChildren(
-        QtWidgets.QLabel, "SWUI_edit_part_label") if w.isVisible()], "quedó Editar pieza después de cerrar"
+    from esquina_comun import claves as _cl
+    assert not ep._editing and _cl() == [], "quedó Editar pieza después de cerrar (esquina %s)" % _cl()
 
 
 from _base import ejecutar  # noqa: E402

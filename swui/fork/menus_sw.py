@@ -448,6 +448,7 @@ def menus():
         ]),
         ("FreeWorks", [
             E("Usar siempre FreeWorks", "SWUI_AlwaysSWUI"),
+            E("Habilitar esquina de confirmación", "SWUI_ConfirmationCorner"),
             E("Velocidad de giro...", "SWUI_OrbitSpeed"),
             E("Guardar también STEP", "SWUI_AlsoSaveStep"),
             E("Chequear carpeta...", "SWUI_CheckFolder"),

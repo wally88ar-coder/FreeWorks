@@ -1273,6 +1273,35 @@ def _flat(body, label):
     return flat
 
 
+def flattened(doc):
+    """La chapa aplanada a la vista en doc (el desarrollo visible con su chapa oculta), o None: lo que en SW deja
+    "Salir de aplanar" en la esquina de confirmación."""
+    if doc is None:
+        return None
+    for obj in doc.Objects:
+        try:
+            # el desarrollo es un objeto de Python: los demás ni se miran (corre 4 veces por segundo)
+            if not obj.TypeId.endswith("FeaturePython") or not obj.Visibility:
+                continue
+            if sm.kind(obj) == "flat":
+                body = sm.flat_body(obj)
+                if body is not None and not body.Visibility:
+                    return obj
+        except Exception:
+            continue
+    return None
+
+
+def exit_flat(flat):
+    """Salir de aplanar: vuelve a la chapa plegada (lo mismo que el botón Aplanar con la chapa aplanada)."""
+    body = sm.flat_body(flat)
+    flat.Visibility = False
+    if body is not None:
+        body.Visibility = True
+    _sketches_follow(flat)
+    return flat
+
+
 def toggle_flat():
     if not _ready_to_start():
         return None
@@ -1281,10 +1310,7 @@ def toggle_flat():
         return None
     flat = sm.flat_of(body)
     if flat is not None and flat.Visibility:
-        flat.Visibility = False
-        body.Visibility = True
-        _sketches_follow(flat)
-        return flat
+        return exit_flat(flat)
     try:
         flat = _flat(body, "Aplanar")
     except Exception as exc:

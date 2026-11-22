@@ -767,6 +767,20 @@ def _after_sketch_open(ctx, sketch, windows_before, camera=None):
         state["ticks"] += 1
         return same or state["ticks"] > 20  # quieta (o 3 s)
 
+    def facing(view):
+        """#115 (21/11): ¿la cámara ya mira normal al croquis? Es donde termina la animación de FreeCAD; "quieta" sola
+        no alcanza: antes de que la animación empiece también está quieta, y centrar ahí no sirve (la animación la
+        vuelve a mover). Si nunca llega (vista normal al croquis apagada en las preferencias), a los 3 s (still)."""
+        try:
+            want = sketch_view_rotation(asm_name, sketch)
+            if want is None:
+                return True
+            q = view.getCameraNode().orientation.getValue().getValue()  # (x, y, z, w), como Rotation.Q
+            dot = abs(sum(a * b for a, b in zip(q, want.Q)))
+            return dot > 0.9999
+        except Exception:
+            return True
+
     def tick():
         try:
             if asm_name not in FreeCAD.listDocuments() or part_name not in FreeCAD.listDocuments():
@@ -784,7 +798,7 @@ def _after_sketch_open(ctx, sketch, windows_before, camera=None):
                 if not editing:
                     _stop()  # se cerró antes de centrar: la cámara la vuelve FreeCAD
                     return
-                if still(view):
+                if still(view) and (facing(view) or state["ticks"] > 20):
                     _look_at_sketch(asm_name, sketch)
                     state["phase"], state["ticks"], state["last"] = "editing", 0, None
                 return
@@ -902,6 +916,14 @@ def release_aside(asm_name):
     for key, (sub, owner) in list(_aside.items()):
         if owner == asm_name:
             _aside[key] = (sub, None)
+
+
+def sketch_view_rotation(asm_name, sketch):
+    """La rotación de cámara normal al croquis en la vista del ensamblaje (la de _look_at_sketch), o None."""
+    ctx = for_document(sketch.Document)
+    if ctx is None or asm_name not in FreeCAD.listDocuments():
+        return None
+    return part_placement(ctx).Rotation.multiply(sketch.getGlobalPlacement().Rotation)
 
 
 def _look_at_sketch(asm_name, sketch):

@@ -16,7 +16,8 @@ tiene el paso más nuevo: un solo paso, el que haría SW. El Ctrl+Z siguiente si
 FreeCAD volviera a preguntar (los dos documentos con pasos propios encima del grupo), se contesta "Sí":
 FreeCAD deshace el grupo entero en los dos y quedan parejos.
 
-Lógica en funciones (`is_grouped_question`, `listed_documents`, `route`); el filtro de Qt solo las llama.
+Lógica en funciones (`is_grouped_question`, `listed_documents`, `route`, `step`); el filtro de Qt solo las llama.
+`step` también la usa la esquina de confirmación (Cancelar croquis).
 """
 
 import traceback
@@ -72,20 +73,47 @@ def listed_documents(text):
     return out
 
 
-def _gui_step(doc_name, undo):
-    """Deshace (o rehace) un paso desde el documento doc_name, como si su vista estuviera al frente (con su
-    vista: FreeCAD agrupa los otros documentos); sin vista, en ese documento solo."""
+def step(doc_name, undo=True):
+    """Deshace (o rehace) UN paso desde el documento doc_name, como Ctrl+Z con su vista 3D al frente (FreeCAD agrupa
+    los otros documentos del mismo paso). El mensaje va solo a una vista: a todas, una planilla o un plano del mismo
+    documento deshacían otro paso cada uno (revisión del 21/11). Sin vista 3D, en ese documento solo."""
+    msg = "Undo" if undo else "Redo"
     gdoc = FreeCADGui.getDocument(doc_name)
     views = gdoc.mdiViewsOfType("Gui::View3DInventor") if gdoc is not None else []
-    if len(views) == 1:
-        gdoc.sendMsgToViews("Undo" if undo else "Redo")
-        return "vista"
+    if views:
+        view = views[0]
+        if hasattr(view, "sendMessage"):
+            view.sendMessage(msg)
+            return "vista"
+        if len(gdoc.mdiViewsOfType("Gui::MDIView")) == 1:
+            gdoc.sendMsgToViews(msg)
+            return "vista"
+        return _step_active(view, msg)
     doc = FreeCAD.getDocument(doc_name)
     if undo:
         doc.undo()
     else:
         doc.redo()
     return "documento"
+
+
+def _step_active(view, msg):
+    """Varias vistas en el documento: se pone al frente un momento la 3D y se le manda el mensaje a ella sola."""
+    from swui.compat import QtWidgets
+
+    area = FreeCADGui.getMainWindow().findChild(QtWidgets.QMdiArea)
+    before = area.activeSubWindow() if area is not None else None
+    target = None
+    for sub in area.subWindowList() if area is not None else []:
+        if sub.isAncestorOf(view.graphicsView()):
+            target = sub
+    if target is None:
+        return None
+    area.setActiveSubWindow(target)
+    FreeCADGui.SendMsgToActiveView(msg)
+    if before is not None and before is not target:
+        area.setActiveSubWindow(before)
+    return "vista activada"
 
 
 def route(names, undo):
@@ -96,7 +124,7 @@ def route(names, undo):
             continue
         _state["routing"] = True
         try:
-            return _gui_step(name, undo)
+            return step(name, undo)
         finally:
             _state["routing"] = False
     return None
@@ -135,7 +163,14 @@ def _make_filter():
                 if (ev.type() == QtCore.QEvent.Type.Show and isinstance(obj, QtWidgets.QMessageBox)
                         and _editing_any() and is_grouped_question(obj)):
                     box = obj
-                    QtCore.QTimer.singleShot(0, lambda: answer(box))
+
+                    def later_answer():
+                        try:
+                            answer(box)
+                        except RuntimeError:
+                            pass  # el cartel ya no está
+
+                    QtCore.QTimer.singleShot(0, later_answer)
             except Exception:
                 pass
             return False

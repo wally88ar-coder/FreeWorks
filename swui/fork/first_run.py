@@ -64,14 +64,24 @@ def apply():
         if not general.GetString(LANGUAGE_KEY, ""):
             general.SetString(LANGUAGE_KEY, LANGUAGE)
             changed.append("idioma")
-    if not own.GetBool(ESC_DONE, False):
-        own.SetBool(ESC_DONE, True)
-        sk = FreeCAD.ParamGet(SKETCHER)
-        if sk.GetBool(ESC_LEAVES, True):
-            sk.SetBool(ESC_LEAVES, False)
-            own.SetBool(ESC_CHANGED, True)
-            changed.append("Esc en el croquis")
+    if apply_esc():
+        changed.append("Esc en el croquis")
     return changed
+
+
+def apply_esc():
+    """Esc nunca sale del croquis (decisión del usuario del 21/11): apaga la casilla nativa una sola vez por
+    configuración. True si la cambió."""
+    own = FreeCAD.ParamGet(OWN)
+    if own.GetBool(ESC_DONE, False):
+        return False
+    own.SetBool(ESC_DONE, True)
+    sk = FreeCAD.ParamGet(SKETCHER)
+    if not sk.GetBool(ESC_LEAVES, True):
+        return False
+    sk.SetBool(ESC_LEAVES, False)
+    own.SetBool(ESC_CHANGED, True)
+    return True
 
 
 def release_toolbars():

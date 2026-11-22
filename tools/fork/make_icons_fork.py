@@ -394,6 +394,64 @@ def _():
         pencil(36, 32, 56, 10)
 
 
+# --- Esquina de confirmación (21/11): arriba a la derecha de la vista, como SW --------------------------------
+# Diseños propios: ✓ azul (el "OK" del original) y ✗ roja; el croquis es el plano gris del original.
+
+CHECK = "M14 34 L27 47 L52 18"
+
+
+def check(d=CHECK, w=7.0):
+    return ['<path d="%s" stroke="%s" stroke-width="%.1f" fill="none" stroke-linecap="round" '
+            'stroke-linejoin="round"/>' % (d, mk.OUTLINE, w + 4.5),
+            '<path d="%s" stroke="%s" stroke-width="%.1f" fill="none" stroke-linecap="round" '
+            'stroke-linejoin="round"/>' % (d, mk.OK, w)]
+
+
+def ex(cx, cy, s, w=7.0):
+    d = "M%d %d L%d %d M%d %d L%d %d" % (cx - s, cy - s, cx + s, cy + s, cx + s, cy - s, cx - s, cy + s)
+    return ['<path d="%s" stroke="%s" stroke-width="%.1f" stroke-linecap="round"/>' % (d, mk.OUTLINE, w + 4.5),
+            '<path d="%s" stroke="%s" stroke-width="%.1f" stroke-linecap="round"/>' % (d, mk.RED, w)]
+
+
+def sketch_sign():
+    """El croquis: plano gris con un contorno blanco (más chico, arriba a la izquierda)."""
+    return [mk.plane("M4 36 L16 18 H44 L32 36 Z"), mk.geo("M14 31 L20 23 H33 L27 31 Z")]
+
+
+@icon("c_ok", "Aceptar")
+def _():
+    return check()
+
+
+@icon("c_cancel", "Cancelar")
+def _():
+    return ex(32, 32, 16)
+
+
+@icon("c_exit_sketch", "Salir del croquis")
+def _():
+    return sketch_sign() + check("M30 46 L39 55 L58 32", 5.6)
+
+
+@icon("c_cancel_sketch", "Cancelar croquis")
+def _():
+    return sketch_sign() + ex(46, 46, 10, 5.6)
+
+
+@icon("c_back_assembly", "Volver al ensamblaje")
+def _():
+    # el ensamblaje (dos piezas grises, una transparente) y la flecha azul que vuelve a él
+    return [mk.box(-22, -6, 0, 16, 16, 12), mk.box(-4, -6, 0, 16, 16, 12, GHOST_FACES),
+            mk.arrow(58, 58, 38, 38, color=mk.NEW, w=4.2)]
+
+
+@icon("c_exit_flat", "Salir de aplanar")
+def _():
+    # la chapa plana (gris) y la flecha azul que la vuelve a plegar
+    return [mk.plane("M4 52 L14 40 H58 L48 52 Z"), mk.geo("M14 46 H44"),
+            mk.arrow(20, 34, 40, 10, color=mk.NEW, w=3.6)]
+
+
 def build(target=TARGET):
     os.makedirs(target, exist_ok=True)
     written = []

@@ -3,6 +3,8 @@
 # SPDX-FileCopyrightText: 2026 wally88ar-coder
 """Ayudas para las pruebas de deshacer editando una pieza (#113): atajos con el teclado de verdad, carteles,
 ventana al frente, clic derecho."""
+import os
+
 import FreeCAD
 from azar_comun import bombear
 
@@ -144,3 +146,50 @@ def vista_activa_doc():
         return g.Document.Name if g is not None else None
     except Exception as exc:  # noqa: BLE001
         return "? %s" % exc
+
+
+def prefijo(comp):
+    """Camino desde el ensamblaje hasta el Cuerpo del componente ("Comp." o "Comp.Body.")."""
+    lo = comp.LinkedObject
+    if lo.TypeId == "PartDesign::Body":
+        return comp.Name + ".", lo
+    for o in lo.Group:
+        if o.TypeId == "PartDesign::Body":
+            return "%s.%s." % (comp.Name, o.Name), o
+    raise AssertionError("sin Cuerpo en %s" % comp.Label)
+
+
+def cara_arriba(asm, comp):
+    """(camino de la cara de arriba de la punta del Cuerpo, la cara en coordenadas del ensamblaje)."""
+    import Part
+    pre, body = prefijo(comp)
+    tip = body.Tip
+    mejor = None
+    for i in range(len(tip.Shape.Faces)):
+        sub = "%s%s.Face%d" % (pre, tip.Name, i + 1)
+        f = Part.getShape(asm, sub, needSubElement=True)
+        if f.Surface.__class__.__name__ != "Plane":
+            continue
+        n = f.normalAt(0, 0)
+        if n.z > 0.99 and (mejor is None or f.BoundBox.ZMax > mejor[1].BoundBox.ZMax):
+            mejor = (sub, f)
+    assert mejor is not None, "sin cara de arriba en %s" % comp.Label
+    return mejor
+
+
+PASO6 = os.path.join(os.path.dirname(os.path.abspath(__file__)), "piezas", "paso6")
+
+
+def abrir_paso6(carpeta):
+    """Copia las piezas de paso6 (Conjunto con Placa, Taco fuera del origen y Marco) a carpeta y abre el Conjunto
+    desde el disco, como el usuario. Devuelve (doc, asm, taco, placa)."""
+    import shutil
+    for n in os.listdir(PASO6):
+        shutil.copy(os.path.join(PASO6, n), carpeta)
+    doc = FreeCAD.openDocument(os.path.join(carpeta, "Conjunto.FCStd"))
+    bombear(1500)
+    asm = [o for o in doc.Objects if o.TypeId == "Assembly::AssemblyObject"][0]
+    comps = {o.LinkedObject.Document.Name: o for o in asm.Group if o.TypeId == "App::Link"}
+    taco = [o for k, o in comps.items() if k.startswith("Taco")][0]
+    placa = [o for k, o in comps.items() if k.startswith("Placa")][0]
+    return doc, asm, taco, placa

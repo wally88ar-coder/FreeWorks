@@ -174,11 +174,13 @@ class _AlwaysCommand:
         on = bool(checked) if checked is not None else not enabled()
         FreeCAD.ParamGet(PARAMS).SetBool(KEY, on)
         set_autoload(on)
+        from swui.fork import first_run
+
         if not on:
             # los demás bancos de FreeCAD vuelven a tener sus barras (first_run las anota ocultas; revisión 18/11)
-            from swui.fork import first_run
-
             first_run.release_toolbars()
+        else:
+            first_run.apply_esc()  # Esc que no sale del croquis, ya (revisión del 21/11)
         try:
             from swui import layout
 

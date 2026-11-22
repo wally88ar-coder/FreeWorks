@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 # SPDX-License-Identifier: LGPL-2.1-or-later
 # SPDX-FileCopyrightText: 2026 wally88ar-coder
-QUE = """#105 y #106 (vistos con el mouse el 18/11): editando una pieza dentro del ensamblaje, la barra "Editando pieza /
-Salir" sigue a la vista después de Editar operación > Cancelar, de abrir y cerrar un croquis en la pieza y de un
+QUE = """#105 y #106 (vistos con el mouse el 18/11): editando una pieza dentro del ensamblaje, la esquina de confirmación
+(desde el 21/11 reemplaza la barra "Editando pieza / Salir": Volver al ensamblaje, o los botones del croquis o del panel
+abierto) sigue a la vista después de Editar operación > Cancelar, de abrir y cerrar un croquis en la pieza y de un
 croquis sobre la cara de OTRO componente (top-down). Cancelar no deja el ensamblaje ni la pieza modificados. Abrir
 un croquis de la pieza editada no abre ninguna ventana aparte (la de la pieza) y la vista queda mirando al croquis
 (su origen y la cara donde está apoyado, dentro de la pantalla)."""
@@ -48,20 +49,24 @@ def _en_edicion(gdoc):
 
 
 def _barra_visible():
-    """La barra se VE: visible y por ENCIMA de la zona central (la vista): entre hermanos, el último es el de arriba."""
+    """La esquina de confirmación se VE: visible, con botones y por ENCIMA de la zona central (la vista): entre
+    hermanos, el último es el de arriba (#105). Desde el 21/11 reemplaza a la barra "Editando pieza / Salir"."""
     import FreeCADGui
     from swui.compat import QtWidgets
+    from swui.fork import confirm_corner as cc
+    bombear(400)  # el reloj de la esquina
     mw = FreeCADGui.getMainWindow()
-    for w in mw.findChildren(QtWidgets.QFrame, "SWUI_edit_part_bar"):
-        if not w.isVisible():
-            continue
-        hijos = [c for c in mw.children() if isinstance(c, QtWidgets.QWidget)]
-        central = mw.centralWidget()
-        if w.parent() is mw and central in hijos and hijos.index(w) < hijos.index(central):
-            traza("  barra tapada por la zona central")
-            continue
-        return True
-    return False
+    assert not [w for w in mw.findChildren(QtWidgets.QFrame, "SWUI_edit_part_bar") if w.isVisible()],         "con la esquina prendida se ve la barra vieja"
+    w = cc.widget()
+    if w is None or not cc.visible_keys():
+        return False
+    hijos = [c for c in mw.children() if isinstance(c, QtWidgets.QWidget)]
+    central = mw.centralWidget()
+    if w.parent() is mw and central in hijos and hijos.index(w) < hijos.index(central):
+        traza("  esquina tapada por la zona central")
+        return False
+    traza("  esquina: %s" % cc.visible_keys())
+    return True
 
 
 def _ventanas():

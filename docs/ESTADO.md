@@ -1,5 +1,60 @@
 # Estado del fork
 
+**21/11 noche (/goal del usuario): ESQUINA DE CONFIRMACIÓN + fichas #111, #112, #113.** Plan y "qué tiene que pasar"
+aprobados por el usuario: `docs/pedidos/esquina_confirmacion.md`. Empezó el 21/11 a las 20:59 (tope 23/11 20:59).
+- **#113 (Ctrl+Z editando con el cartel "Hay transacciones de grupo...")** — arreglado (27a42a1, `swui/fork/undo_route.py`).
+  - Causa medida: pieza y ensamblaje comparten los pasos ("-> paso"). Si uno tiene un paso propio más nuevo (p. ej.
+    mover un componente) y Ctrl+Z llega desde la vista del otro, FreeCAD pregunta.
+  - Reproducido con el texto exacto ("... anteriores, Conjunto") desde la vista de la pieza.
+  - La seguidilla exacta del usuario (paso6 del disco, Esc, Modificar cota) NO lo da con guion.
+  - Arreglo: editando una pieza, FreeWorks contesta Abort y deshace/rehace UN paso en el documento que nombra FreeCAD
+    (el del paso más nuevo).
+  - **Decidido solo:** desde la ventana de la pieza (no debería verse mientras se edita: está apartada, #106) Ctrl+Y
+    rehace solo lo de la pieza; lo propio del ensamblaje, desde su vista. Como una ventana de pieza aparte en SW.
+  - Sin reproducir: la marca en el ícono del Extruir de Placa<1>.
+- **#111 + decisión del usuario "Esc nunca sale del croquis, como SW"** — arreglado (d320679). Es la casilla nativa
+  `LeaveSketchWithEscape`, apagada una vez por configuración (`first_run`). Destildar "Usar siempre FreeWorks" la
+  devuelve si la apagó FreeWorks. El clic exacto del usuario en el panel no se reprodujo con QTest; la casilla tapa
+  cualquier camino.
+- **#112** — no se reproduce por el camino normal; queda `prueba_ventana_editar_pieza_croquis_linea_sola` de guardia.
+  Probablemente venía del Esc viejo (#111). De paso: **#114** (línea + cara elegidas, Extruir muestra el cartel nativo
+  "debe pertenecer al cuerpo activo"; sin decidir qué tiene que pasar: PREGUNTA PARA EL USUARIO).
+- **#115 (encontrado y arreglado):** al abrir un croquis editando, la vista a veces no se centraba (carrera con la
+  animación de FreeCAD). `prueba_ventana_editar_pieza_barra` fallaba también con el código de antes de hoy.
+- **Esquina de confirmación** (`swui/fork/confirm_corner.py`, partes A a F):
+  - lugar: arriba a la derecha de la vista, a la izquierda del cubo de navegación (**decidido solo**: no se mueve el
+    cubo de FreeCAD; SW no tiene cubo ahí);
+  - botones:
+    - panel abierto: ✓/✗;
+    - croquis: Salir / Cancelar croquis;
+    - chapa aplanada: Salir de aplanar;
+    - Editar pieza: Volver al ensamblaje, que reemplaza la barra (la barra vuelve solo con la esquina apagada);
+  - opción en el menú FreeWorks;
+  - íconos propios `c_*`.
+  - **Casos anidados, decididos por Claude (para revisar):** se ve solo lo de más adentro: panel > croquis > chapa
+    aplanada > Editar pieza.
+    - Croquis dentro de Editar pieza: Salir/Cancelar croquis; al salir aparece Volver al ensamblaje.
+    - Panel dentro de un croquis (p. ej. las herramientas del croquis con panel): ✓/✗.
+    - Un panel que solo tiene Cerrar: solo ✗.
+  - **Decidido solo:**
+    - Cancelar croquis en un croquis NUEVO deshace también su creación y la referencia a la cara de otro componente
+      hecha para él (como SW: no queda nada y Ctrl+Z deshace lo anterior).
+    - Límite: si dentro del croquis hubo más pasos que el tope de deshacer de FreeCAD, los más viejos no se descartan.
+  - Íconos: ✓ azul, no verde: los colores del original son blanco, gris, rojo y azul.
+  - Revisión independiente (21/11): 17 hallazgos. Arreglados todos los graves y medios, con prueba:
+    - Cancelar croquis con pasos calculados (`steps_back`, prueba rápida `prueba_esquina_pasos`);
+    - "Undo" solo a la vista 3D (planilla abierta en la prueba);
+    - pila del croquis nuevo anotada al crearlo;
+    - taladro de ensamblaje;
+    - documento al frente;
+    - reentrada.
+  - **Quedan como límites (decidido solo):**
+    - Ctrl+Y justo después de Cancelar croquis trae lo cancelado (queda en Rehacer; FreeCAD no deja borrar solo
+      eso).
+    - Deshacer de varios pasos del desplegable con la pregunta de grupo hace uno solo.
+    - Si se desinstala FreeWorks con "Usar siempre" tildado, la casilla de Esc del croquis queda apagada.
+  - Sin probar por el usuario. Falta la comparación con el mouse contra SW (la decide el usuario).
+
 **17-18/11 noche, RESCATE (con /goal del usuario).** El 17/11 a la tarde el usuario desinstaló FreeCAD 1.0 y
 el desinstalador borró `C:\Users\Windows\AppData\Roaming\FreeCAD` entero: FreeWorks con su `.git`, SheetMetal y
 las preferencias. El disco C es SSD, así que no se pudo recuperar de ahí.

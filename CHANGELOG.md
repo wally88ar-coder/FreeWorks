@@ -5,6 +5,39 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Esquina de confirmación, como SW 2018 (21/11; plan aprobado en `docs/pedidos/esquina_confirmacion.md`).** Arriba
+  a la derecha de la vista (a la izquierda del cubo de navegación) quedan los botones de lo que está abierto:
+  - panel de operación: ✓ Aceptar y ✗ Cancelar (los mismos botones del panel, también con la pestaña Modelo al frente);
+  - croquis: Salir del croquis y **Cancelar croquis** (descarta todo lo hecho desde que se abrió; un croquis nuevo
+    desaparece sin dejar nada, tampoco la referencia a la cara de otro componente, y Ctrl+Z después no lo trae; la
+    operación que esperaba el croquis, p. ej. Extruir sin croquis, no arranca);
+  - chapa aplanada: Salir de aplanar (`sheet_panels.flattened` / `exit_flat`);
+  - editando una pieza: **Volver al ensamblaje**, que reemplaza a la barra "Editando pieza: X — Salir" (la barra vuelve
+    solo si se apaga la esquina).
+  - Casos anidados: se ve solo lo de más adentro (panel > croquis > chapa aplanada > Editar pieza).
+  - Revisión independiente (21/11), arreglado:
+    - Cancelar croquis calcula antes cuántos pasos deshacer y, si la pila no coincide (dentro del croquis se
+      deshizo algo de antes), no deshace nada y avisa; antes podía seguir hasta el fondo.
+    - Deshacer manda el mensaje solo a la vista 3D (con una planilla abierta se deshacían dos pasos).
+    - La pila de un croquis nuevo se anota al crearlo, y el croquis del taladro/corte de ensamblaje también se
+      cancela sin dejar nada.
+    - Los botones son solo del documento al frente.
+    - El reloj no rehace la esquina mientras corre un botón.
+    - Nada con la vista desacoplada o a pantalla completa, ni en los otros bancos.
+    - Tildar "Usar siempre FreeWorks" apaga el Esc del croquis enseguida.
+  - Opción "Habilitar esquina de confirmación" en el menú FreeWorks (prendida de fábrica, como SW).
+  - Íconos propios nuevos (`c_*`, `tools/fork/make_icons_fork.py`). Lógica en `swui/fork/confirm_corner.py` (funciones
+    públicas; el widget solo las llama).
+  - Pruebas `prueba_ventana_esquina_confirmacion` (pieza: panel, croquis, croquis nuevo, Extruir sin croquis, aplanar,
+    dos documentos, opción), `prueba_ventana_esquina_editar_pieza` (Editar pieza, anidados, opción) y las de Editar
+    pieza que miraban la barra (`..._barra`, `prueba_ventana_editar_pieza`), ahora sobre la esquina.
+- **#115: al abrir un croquis editando una pieza, la vista a veces no se centraba en él** (carrera con la animación de
+  FreeCAD: se centraba antes de que la animación empezara y la animación la volvía a mover). Ahora se centra cuando la
+  cámara ya mira normal al croquis (o a los 3 s, como antes). Lo encontró `prueba_ventana_editar_pieza_barra`, que
+  fallaba también con el código anterior.
+- **#112 (croquis con una línea sola en la pieza editada con error):** no se reproduce por el camino normal (Salir
+  del croquis con la línea elegida, después Extruir con un círculo): queda `prueba_ventana_editar_pieza_croquis_linea_sola`
+  de guardia. Probablemente venía del Esc viejo que cerraba el croquis (#111). Encontrado de paso: #114.
 - **Esc nunca sale del croquis, como SW (#111, decisión del usuario del 21/11).** Esc suelta la herramienta o
   deselecciona; para salir, Salir del croquis (cinta, panel, Insertar > Croquis). Es la casilla nativa de FreeCAD
   "Esc puede salir del modo de edición del croquis" (Preferencias > Croquis), que FreeWorks apaga una vez por

@@ -836,9 +836,21 @@ _bars = {}
 
 
 def _show_bar(doc, link):
+    """La barra "Editando pieza: X — Salir". Desde el 21/11 la reemplaza el ícono Volver al ensamblaje de la esquina
+    de confirmación (como SW); queda solo si el usuario apaga la esquina (menú FreeWorks)."""
     from swui.compat import QtWidgets
 
     _hide_bar(doc.Name)
+    # la vigilancia de la ventana al frente va siempre (aparta la ventana de la pieza, #106), haya barra o no
+    _watch_active()
+    try:
+        from swui.fork import confirm_corner
+
+        if confirm_corner.enabled():
+            sync_bars()
+            return
+    except Exception:
+        pass
     mw = FreeCADGui.getMainWindow()
     box = QtWidgets.QFrame(mw)
     box.setObjectName("SWUI_edit_part_bar")
@@ -861,6 +873,18 @@ def _show_bar(doc, link):
     box.move(geo.left() + (geo.width() - box.width()) // 2, geo.top() + 8)
     _bars[doc.Name] = box
     _watch_active()
+    sync_bars()
+
+
+def corner_option_changed():
+    """La esquina de confirmación se prendió o se apagó: la barra vuelve (apagada) o se va (prendida)."""
+    for name in list(_editing):
+        if name not in FreeCAD.listDocuments():
+            continue
+        doc = FreeCAD.getDocument(name)
+        link = editing(doc)
+        if link is not None:
+            _show_bar(doc, link)
     sync_bars()
 
 

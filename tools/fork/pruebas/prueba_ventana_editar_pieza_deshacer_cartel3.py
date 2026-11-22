@@ -7,45 +7,16 @@ una línea desde su vértice (se cierra), Extruir con croquis en esa cara (círc
 TECLADO hasta el principio: nunca aparece el cartel "Hay transacciones de grupo..." y ningún componente se oculta."""
 TIPO = "completa"
 import os  # noqa: E402
-import shutil  # noqa: E402
 
 import FreeCAD  # noqa: E402
 from _base import carpeta_temporal, traza  # noqa: E402
 from azar_comun import bombear  # noqa: E402
 from deshacer_comun import atajo, cancelar_panel, con_menu, doble_clic, modificar, ventana_activa, visibles  # noqa: E402
-from deshacer_comun import vista_activa_doc  # noqa: E402
+from deshacer_comun import cara_arriba, vista_activa_doc  # noqa: E402
 
 V = FreeCAD.Vector
-ORIGEN = os.path.join(os.path.dirname(os.path.abspath(__file__)), "piezas", "paso6")
 
 
-def _prefijo(comp):
-    """Camino desde el ensamblaje hasta el Cuerpo del componente ("Comp." o "Comp.Body.")."""
-    lo = comp.LinkedObject
-    if lo.TypeId == "PartDesign::Body":
-        return comp.Name + ".", lo
-    for o in lo.Group:
-        if o.TypeId == "PartDesign::Body":
-            return "%s.%s." % (comp.Name, o.Name), o
-    raise AssertionError("sin Cuerpo en %s" % comp.Label)
-
-
-def _cara_arriba(asm, comp):
-    """(camino de la cara de arriba de la punta del Cuerpo, la cara en coordenadas del ensamblaje)."""
-    import Part
-    pre, body = _prefijo(comp)
-    tip = body.Tip
-    mejor = None
-    for i in range(len(tip.Shape.Faces)):
-        sub = "%s%s.Face%d" % (pre, tip.Name, i + 1)
-        f = Part.getShape(asm, sub, needSubElement=True)
-        if f.Surface.__class__.__name__ != "Plane":
-            continue
-        n = f.normalAt(0, 0)
-        if n.z > 0.99 and (mejor is None or f.BoundBox.ZMax > mejor[1].BoundBox.ZMax):
-            mejor = (sub, f)
-    assert mejor is not None, "sin cara de arriba en %s" % comp.Label
-    return mejor
 
 
 def prueba():
@@ -56,23 +27,17 @@ def prueba():
     from swui.compat import QtCore, QtWidgets
     from swui.fork import edit_part as ep
     c = carpeta_temporal()
-    for n in os.listdir(ORIGEN):
-        shutil.copy(os.path.join(ORIGEN, n), c)
-    doc = FreeCAD.openDocument(os.path.join(c, "Conjunto.FCStd"))
-    bombear(1500)
-    asm = [o for o in doc.Objects if o.TypeId == "Assembly::AssemblyObject"][0]
-    comps = {o.LinkedObject.Document.Name: o for o in asm.Group if o.TypeId == "App::Link"}
-    traza("componentes: %s; documentos %s" % (sorted(comps), sorted(FreeCAD.listDocuments())))
-    taco = [o for k, o in comps.items() if k.startswith("Taco")][0]
-    placa = [o for k, o in comps.items() if k.startswith("Placa")][0]
+    from deshacer_comun import abrir_paso6
+    doc, asm, taco, placa = abrir_paso6(c)
+    traza("documentos %s" % sorted(FreeCAD.listDocuments()))
     FreeCAD.setActiveDocument(doc.Name)
     gdoc = FreeCADGui.getDocument(doc.Name)
     vista = gdoc.activeView()
     vista.viewIsometric()
     FreeCADGui.SendMsgToActiveView("ViewFit")
     bombear(800)
-    sub_taco, cara_taco = _cara_arriba(asm, taco)
-    sub_placa, cara_placa = _cara_arriba(asm, placa)
+    sub_taco, cara_taco = cara_arriba(asm, taco)
+    sub_placa, cara_placa = cara_arriba(asm, placa)
     FreeCADGui.Selection.clearSelection()
     FreeCADGui.Selection.addSelection(doc.Name, asm.Name, sub_taco)
     FreeCADGui.runCommand("SWUI_EditPart")

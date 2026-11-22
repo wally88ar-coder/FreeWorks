@@ -107,14 +107,25 @@ def install(workbench=None):
             from swui.fork import edit_part  # editar la pieza dentro del ensamblaje (etapa D, 15/11)
 
             edit_part.install()
-            from swui.fork import undo_route  # Ctrl+Z editando una pieza sin la pregunta de FreeCAD (#113)
-
-            undo_route.install()
             from swui.fork import part_container  # pieza de varios Cuerpos = un componente (16/11)
 
             part_container.install()
         except Exception:
             FreeCAD.Console.PrintError("[SWUI fork] Clic derecho:\n%s\n" % traceback.format_exc())
+        try:
+            from swui.fork import undo_route  # Ctrl+Z editando una pieza sin la pregunta de FreeCAD (#113)
+
+            undo_route.install()
+        except Exception:
+            FreeCAD.Console.PrintError("[SWUI fork] Deshacer editando una pieza:\n%s\n" % traceback.format_exc())
+        try:
+            from swui.fork import confirm_corner  # esquina de confirmación como SW (21/11)
+
+            confirm_corner.install()
+            if workbench is not None:
+                workbench.appendMenu(MENU, [confirm_corner.COMMAND])
+        except Exception:
+            FreeCAD.Console.PrintError("[SWUI fork] Esquina de confirmación:\n%s\n" % traceback.format_exc())
         rebuild_keys.install()
         tree_overlay.install()
         step_copy.install()
