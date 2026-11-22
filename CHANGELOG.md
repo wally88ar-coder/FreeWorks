@@ -5,6 +5,13 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Ctrl+Z / Ctrl+Y editando una pieza sin la pregunta de FreeCAD (#113, 21/11).** Si la pieza o el ensamblaje
+  tienen un paso propio más nuevo que los que comparten (por ejemplo, mover un componente), FreeCAD preguntaba
+  "Hay transacciones de grupo... Sí / No / Abort". Ahora, mientras se edita una pieza, FreeWorks deshace (o
+  rehace) un solo paso, el más nuevo, en el documento que lo tiene, como SW (`swui/fork/undo_route.py`). Pruebas
+  `prueba_ventana_editar_pieza_deshacer_desparejo` (fuerza el desparejo; falla sin el arreglo),
+  `..._deshacer_cartel` (Ctrl+Z / Ctrl+Y con el teclado) y `..._deshacer_cartel3` (la seguidilla del usuario sobre
+  una copia de las piezas de paso6, abiertas desde el disco).
 - **Editar pieza, vistos con el mouse en el paso 6 (#105, #106, #107; 20-21/11).**
   - La barra "Editando pieza / Salir" sigue la ventana que se ve (antes se iba tras Editar operación, Miembro
     estructural o un croquis).

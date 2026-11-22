@@ -107,6 +107,9 @@ def install(workbench=None):
             from swui.fork import edit_part  # editar la pieza dentro del ensamblaje (etapa D, 15/11)
 
             edit_part.install()
+            from swui.fork import undo_route  # Ctrl+Z editando una pieza sin la pregunta de FreeCAD (#113)
+
+            undo_route.install()
             from swui.fork import part_container  # pieza de varios Cuerpos = un componente (16/11)
 
             part_container.install()
