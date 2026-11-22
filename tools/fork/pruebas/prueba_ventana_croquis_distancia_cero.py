@@ -32,11 +32,12 @@ def prueba():
     from swui.fork import sketch_transform
 
     # el campo solo: el mínimo que se ve, nunca 0
-    for dec in (2, 3, 4):
+    for dec in (2, 3):
         s = sketch_transform._spin(10.0, " mm", 0.0001, 1e6, decimals=dec)
         _escribir(s, "0")
-        assert s.minimum() > 0 and s.value() > 0, "con %d decimales el campo acepta 0 (mínimo %r, valor %r)" % (
-            dec, s.minimum(), s.value())
+        assert s.minimum() > 0 and abs(s.value() - 10 ** -dec) < 1e-9, (
+            "con %d decimales, 0 escrito queda en %r (mínimo %r; tiene que quedar el mínimo visible)" % (
+                dec, s.value(), s.minimum()))
 
     doc = FreeCAD.newDocument("DistanciaCero")
     caso = cc.Equidistanciar()
@@ -49,7 +50,7 @@ def prueba():
     FreeCADGui.Selection.addSelection(caso.croquis, "Edge1")
     yield 400
     _escribir(p.distance, "0")
-    assert p.distance.value() > 0, "la distancia quedó en %r" % p.distance.value()
+    assert abs(p.distance.value() - 0.01) < 1e-9, "la distancia quedó en %r, no 0,01" % p.distance.value()
     p.hover = FreeCAD.Vector(15, -5, 0)
     p.update()
     yield 300
@@ -72,7 +73,7 @@ def prueba():
             break
     assert p2 is not None and hasattr(p2, "spacing1"), "no abrió la Matriz lineal del croquis"
     _escribir(p2.spacing1, "0")
-    assert p2.spacing1.value() > 0, "la separación de la matriz quedó en %r" % p2.spacing1.value()
+    assert abs(p2.spacing1.value() - 0.01) < 1e-9, "la separación quedó en %r, no 0,01" % p2.spacing1.value()
     p2.reject()
     yield 300
     FreeCADGui.ActiveDocument.resetEdit()

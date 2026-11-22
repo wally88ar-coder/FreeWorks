@@ -313,6 +313,8 @@ def _spin(value, suffix, low, high, decimals=2, step=1.0):
         # escribir 0 (Equidistanciar a distancia 0, Matriz con separación 0): el mínimo es lo más chico visible.
         low = 10 ** -decimals
     box.setRange(low, high)
+    # fuera de rango queda en el borde (0 escrito -> el mínimo), no vuelve callado al valor anterior (revisión 22/11)
+    box.setCorrectionMode(QtWidgets.QAbstractSpinBox.CorrectionMode.CorrectToNearestValue)
     box.setSuffix(suffix)
     box.setSingleStep(step)
     box.setValue(value)

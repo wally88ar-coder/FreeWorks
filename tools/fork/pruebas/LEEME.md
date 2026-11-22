@@ -195,7 +195,8 @@ Material abiertos con un panel abierto (error conocido #3; en croquis no aplica)
   prueba solo lo anota (no frena); aprobada, se compara igual que las otras. Deja también una foto `_contexto`
   (la esquina sobre la vista, con el cubo) para mirar; esa no se compara.
 - `prueba_ventana_croquis_distancia_cero.py` (con ventana, 22/11, #117): en el croquis, escribir 0 en la distancia
-  de Equidistanciar o en la separación de la Matriz lineal deja 0,01 (no 0) y Equidistanciar acepta sin error.
+  de Equidistanciar o en la separación de la Matriz lineal deja exactamente 0,01 (ni 0 ni el valor anterior) y
+  Equidistanciar acepta sin error.
 - `prueba_ventana_editar_pieza_eliminar_solido.py` (con ventana, 22/11, #118): editando una pieza con contenedor,
   Eliminar sólido con una cara no saca de Editar pieza y es un solo paso de deshacer (Ctrl+Z / Ctrl+Y, Cancelar);
   soltar el Cuerpo a propósito sigue saliendo.
