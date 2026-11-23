@@ -512,7 +512,7 @@ def diferencias(resultados):
             out.append((k, "; ".join(malas)))
         for modo, r in (("pieza", p), ("editando", e)):  # sin excepciones (revisión del 22/11)
             if len(r.get("pasos", [])) > 1 and "Cuerpo a la pieza" in r["pasos"]:
-                out.append((k, "#119: %s: el Cuerpo nuevo entra a la pieza en otro paso de deshacer: %s"
+                out.append((k, "%s: el Cuerpo nuevo entra a la pieza en otro paso de deshacer (ficha 119): %s"
                             % (modo, r["pasos"])))
     return out
 

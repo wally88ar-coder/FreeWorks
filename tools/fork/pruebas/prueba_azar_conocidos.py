@@ -4,7 +4,7 @@
 QUE = """Los errores que las pruebas toleran ("conocidos" y "deudas") siguen abiertos en GitHub. Las pruebas
 dejan pasar un error ya registrado para seguir buscando otros (CONOCIDO = "#N", conocido="#N" en
 Fallas.correr, DEUDA de las reglas de paneles, deuda / deuda_pasos del mono...; no los mensajes de
-un assert, que cuentan qué se rompió). Si esa Issue se
+un assert, que cuentan qué se rompió, ni las trazas, que cuentan qué se prueba). Si esa Issue se
 cerró (se arregló, o se descartó) y la prueba la sigue tolerando, la prueba quedó tapando algo que
 ya no debería pasar: esta prueba lo avisa, con el archivo y el número.
 También avisa si un número no existe en el repositorio.
@@ -54,6 +54,11 @@ def referencias(raiz=AQUI):
                 primera = f
             # el mensaje de un assert o de un raise cuenta qué se rompió ("borró el taladro (#17)"): no tolera
             if f.type == tokenize.STRING and primera is not None and primera.string in ("assert", "raise"):
+                previas.append(f)
+                continue
+            # una traza cuenta qué se está probando ("#111: clic de verdad..."): tampoco tolera
+            if (f.type == tokenize.STRING and primera is not None and primera.string == "traza"
+                    and len(previas) >= 2 and previas[-1].string == "(" and previas[-2].string == "traza"):
                 previas.append(f)
                 continue
             if f.type == tokenize.STRING:
