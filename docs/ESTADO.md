@@ -100,6 +100,10 @@ aprobados por el usuario: `docs/pedidos/esquina_confirmacion.md`. Empezó el 21/
       documentos y los errores quedan en el informe.
     - **Sin prueba propia (cubierto por el arreglo central):** Conservar sólido y reabrir Eliminar/Conservar (#118),
       Mover cara sobre un sólido suelto. Sin probar por el usuario.
+  - **Batería completa de la noche (22/11 23:00 a 23/11 03:02, en e348f5a): 152 de 153 BIEN.** La única falla,
+    `prueba_azar_conocidos`, era falsa alarma: tomaba la traza "#111: ..." como error tolerado (#111 se cerró el
+    22/11 después de la batería anterior). Arreglado en 0213fc3 (las trazas no cuentan, como los mensajes de un
+    assert); vuelta a correr sola: BIEN. Subido (push) y #114 y #119 cerradas en GitHub.
 
 **17-18/11 noche, RESCATE (con /goal del usuario).** El 17/11 a la tarde el usuario desinstaló FreeCAD 1.0 y
 el desinstalador borró `C:\Users\Windows\AppData\Roaming\FreeCAD` entero: FreeWorks con su `.git`, SheetMetal y
