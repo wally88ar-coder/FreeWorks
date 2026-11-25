@@ -1,5 +1,53 @@
 # Estado del fork
 
+**24/11 noche (/goal del usuario, tope 25/11 06:00): pendientes de #114 y #119, #102, intermitentes.**
+- **Pruebas que faltaban de #119** (`un_paso_comun.py` + tres pruebas con ventana, editando una pieza con contenedor;
+  42c36e1): Conservar un pedazo, reabrir Eliminar sólidos para sacar un Cuerpo de la lista, Mover cara sobre un
+  sólido suelto. Cada una: Cancelar sin nada ni pasos; Aceptar = UN paso con el nombre de la herramienta, todo
+  dentro del contenedor, se sigue editando, Ctrl+Z / Ctrl+Y.
+  - **Error real encontrado y arreglado (#122):** Conservar/Eliminar un PEDAZO en una pieza con contenedor daba
+    "FreeCAD no pudo armar la operación": `makeCompoundFilter` sin `into_group` crea el filtro en el documento
+    ACTIVO (editando, el ensamblaje); además el filtro en la raíz apuntaba a un Cuerpo dentro de la Parte (aviso
+    "allowed scope"). Ahora se crea dentro del grupo, y grupo y Cuerpos nuevos van a la Parte antes de vincularlos.
+  - **Demostraciones (24/11):** apagar SOLO `adopt_pending` no hace fallar ninguna de las tres: Mover cara crea su
+    Cuerpo al ABRIR el panel y el temporizador del contenedor ya lo mete dentro del paso abierto; Eliminar/Conservar
+    los mete por su cuenta (#118). Apagando temporizador + `adopt_pending`, Mover cara FALLA (Cuerpo fuera); con el
+    Eliminar/Conservar de antes, Conservar y reabrir FALLAN (#122). Sospecha descartada midiendo: sacar un Cuerpo de
+    la carpeta de la operación NO lo saca de la Parte (FreeCAD lo deja en Part.Group).
+- **#102 (aristas tapadas en el croquis), visto en SW 2018 con el mouse** (bloque 60x40x20 con guion, croquis en la
+  cara de arriba, isométrica, Línea; cerrado sin guardar): sobre una arista o el vértice de abajo tapados, SW no
+  resalta nada (solo la inferencia punteada); donde en pantalla pasa una arista visible de arriba, resalta ESA.
+  **Hecho (c6dd05b):** `sketch_model_edges._find` saltea las candidatas tapadas (toques del rayo del píxel con
+  `getObjectsInfo`; tapa solo una cara de un sólido que no se ve a través; los componentes transparentes de Editar
+  pieza, planos y croquis no tapan). Dos revisiones independientes cambiaron bastante la primera versión: tolerancia
+  en chapa fina y con píxeles enteros, lo transparente que tapaba (rompió `croquis_esc_linea`), el punto sobre la
+  cuerda en aristas curvas, rendimiento (tope de 6). Prueba `prueba_ventana_croquis_arista_tapada` (bloque, croquis
+  abajo, chapa de 2 mm, cilindro; falla sin el arreglo). Sin probar por el usuario.
+  - **Diferencia vista de paso, PARA DECIDIR (usuario):** SW 2018 con la Línea NO resalta aristas visibles que no
+    están en el plano del croquis (la vertical de adelante, la de abajo a la derecha); FreeWorks sí las engancha
+    (decisión del 18/11 para el top-down). No se cambió.
+  - Sin cubrir (revisión, de antes del cambio): `_global_shape` sin ensamblaje no suma la ubicación de una Parte
+    que no esté en el origen (el contenedor de FreeWorks lo está); con dos vistas del mismo documento usa la activa.
+- **Intermitentes:** #94: 10 de 10 BIEN; el menú llega a los 0 ms (se abre sincrónico): descartado que llegara
+  tarde; la prueba ahora deja en el registro qué había en el menú (comentado en la ficha; sin CONOCIDO porque pasa
+  casi siempre y la batería lo marcaría ARREGLADO?). #83: 10 de 10 BIEN, sin el registro "(ficha 83)". #91 (azar de ensamblaje, ~4 min cada una): 5 de 5 BIEN
+  sin colgarse, más la de la batería completa (6); quedaron debiendo 4 para llegar a 10 por tiempo. Ninguna causa
+  encontrada: las tres siguen abiertas, comentadas con lo probado y lo descartado.
+- Memoria nueva: el permiso de computer use para SW se pide como `sldworks.exe` (pedido del usuario).
+- **Batería completa (25/11, 00:29 a 03:47, con 42c36e1 y c6dd05b): 157 pruebas, 155 BIEN, 2 FALLA**, las dos
+  errores VIEJOS que encontraron las pruebas al azar (no los trajeron #102 ni #122):
+  - `prueba_ventana_campos_otros`: Equidistanciar del croquis con 1e9 deja "makeOffset2D: offset result has no
+    wires" en el informe → **#124** (abierta; `sketch_offset.py` sin cambios desde 49f4273).
+  - `prueba_ventana_mono_chapa` (se cortó por tiempo achicando el caso; sola falla en 4 min, siempre igual):
+    desplegar → Brida de arista → Dobladillo → desplegar deja ocultos `Sketch_Bends` y `Sketch_Bend_Labels` del
+    desarrollo → **#125** (abierta). Con `delete_bodies.py` y `sketch_model_edges.py` como en GitHub falla igual.
+  - Por eso (plan B del pedido) se subieron 42c36e1 y c6dd05b, cuyas pruebas pasaron, y se cerraron #102 y #122;
+    #124 y #125 quedan para arreglar (después de la hora de dejar de programar no se tocó código).
+- **Para que pruebe el usuario con el mouse:** croquis sobre una cara, pasar por donde hay una arista o un vértice
+  tapado por el sólido (no tiene que resaltar), y por una arista visible (sí); Conservar sólido de un pedazo
+  editando una pieza dentro de un ensamblaje; decidir si las aristas visibles fuera del plano del croquis se
+  enganchan (FreeWorks) o no (SW 2018).
+
 **21/11 noche (/goal del usuario): ESQUINA DE CONFIRMACIÓN + fichas #111, #112, #113.** Plan y "qué tiene que pasar"
 aprobados por el usuario: `docs/pedidos/esquina_confirmacion.md`. Empezó el 21/11 a las 20:59 (tope 23/11 20:59).
 - **#113 (Ctrl+Z editando con el cartel "Hay transacciones de grupo...")** — arreglado (27a42a1, `swui/fork/undo_route.py`).
