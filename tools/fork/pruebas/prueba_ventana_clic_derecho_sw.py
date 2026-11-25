@@ -10,7 +10,7 @@ edición el menú es el de FreeCAD. Abrir el menú y cerrarlo con Esc no cambia 
 elige del menú hace lo que dice."""
 TIPO = "completa"
 import FreeCAD  # noqa: E402
-from _base import carpeta_temporal  # noqa: E402
+from _base import carpeta_temporal, traza  # noqa: E402
 from azar_comun import bombear  # noqa: E402
 from menu_comun import abrir_menu as _menu, arbol as _arbol, derecho_arbol, derecho_vista, pieza as _pieza  # noqa: E402,F401
 
@@ -215,15 +215,25 @@ def prueba():
                 visto["m"] = obj
 
                 def hacer():
+                    # #94: lo que había en el menú, para el registro si falla
+                    visto["vis"] = cm.visible_texts(obj)
+                    visto["bandeja"] = [(b.property("swui_text"), b.isEnabled()) for a in obj.actions()
+                                        if a.objectName() == "SWUI_cm_tray" for b in cm.tray_buttons(a)]
                     visto["ok"] = ocultar(obj)
                     obj.close()
                 QtCore.QTimer.singleShot(350, hacer)
             return False
     f = F()
     QtWidgets.QApplication.instance().installEventFilter(f)
+    elegido_antes = [(s.ObjectName, s.SubElementNames) for s in FreeCADGui.Selection.getSelectionEx("", 0)]
     derecho_arbol(pad.Label)()
-    bombear(900)
+    espera = 0
+    while "ok" not in visto and espera < 5000:  # #94: esperar al menú (antes, 900 ms fijos)
+        bombear(100)
+        espera += 100
     QtWidgets.QApplication.instance().removeEventFilter(f)
+    traza("  paso 7: menú a los %d ms; elegido antes %s; menú %s; bandeja %s" % (
+        espera, elegido_antes, visto.get("vis"), visto.get("bandeja")))
     assert visto.get("ok"), "no estaba Ocultar en el menú"
     assert not body.Visibility or not pad.Visibility, "Ocultar no ocultó"
     # oculta: la bandeja ofrece Mostrar, con su ícono

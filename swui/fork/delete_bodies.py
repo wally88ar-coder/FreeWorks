@@ -171,7 +171,7 @@ def _teardown(doc, group):
         return "El sólido %s ya tiene operaciones propias: no se puede desarmar." % busy[0].Label
     members = _member_bodies(group)
     for name in members:
-        group.removeObject(doc.getObject(name))
+        group.removeObject(doc.getObject(name))  # sigue en la Parte: FreeCAD no lo saca de ella (medido el 24/11)
     _restore(doc, members, [o.Name for o in built])
     return ""
 
@@ -302,6 +302,15 @@ def _restore_later(doc_name, bodies, built, keep):
             % ", ".join(doc.getObject(n).Label for n in keep if doc.getObject(n) is not None))
 
 
+def _home(doc, bodies):
+    """La Parte (contenedor) donde están los Cuerpos de la operación, o None si están en la raíz (#122)."""
+    for body in bodies:
+        parent = body.getParentGeoFeatureGroup() if body is not None else None
+        if parent is not None and parent.TypeId == "App::Part":
+            return parent
+    return None
+
+
 def build(doc, group, spec):
     """Armar la operación según spec (dentro de una transacción). Devuelve un problema o ""."""
     from swui.fork import multibody
@@ -337,26 +346,35 @@ def build(doc, group, spec):
             todo.append((body, i, p))
     import CompoundTools.CompoundFilter as CF
 
+    # #122: en una pieza con contenedor (Parte) los Cuerpos están dentro de la Parte; la operación, sus filtros y
+    # los Cuerpos nuevos van a la misma Parte ANTES de apuntarlos al Cuerpo (si no, FreeCAD rechaza el vínculo:
+    # "go out of the allowed scope")
+    home = _home(doc, [doc.getObject(n) for n in list(keep) + list(gone)])
+    if home is not None and not home.hasObject(group, True):
+        home.addObject(group)
     used = set(o.Label for o in doc.Objects)
     created = []
     try:
         for body, i, p in todo:
             pt = doc.addObject("Part::Vertex", "Punto")
             created.append(pt)
+            group.addObject(pt)
             pt.X, pt.Y, pt.Z = p.x, p.y, p.z
             pt.Visibility = False
             multibody._keep_label(pt, "Punto (%s, pedazo<%d>)" % (body.Label, i + 1))
-            filt = CF.makeCompoundFilter("Filtro")
+            # en el grupo (y así en su documento): sin into_group lo crea en el documento ACTIVO, que editando la
+            # pieza dentro de un ensamblaje es el ensamblaje (#122: "Cannot add an object from another document")
+            filt = CF.makeCompoundFilter("Filtro", into_group=group)
             created.append(filt)
             filt.Base = body
             filt.FilterType = "collision-pass"
             filt.Stencil = pt
             filt.Visibility = False
             multibody._keep_label(filt, "Pedazo<%d> de %s" % (i + 1, body.Label))
-            group.addObject(pt)
-            group.addObject(filt)
             new = doc.addObject(BODY, "Body")
             created.append(new)
+            if home is not None:
+                home.addObject(new)
             new.BaseFeature = filt
             label = multibody.next_body_label(used)
             used.add(label)
@@ -366,6 +384,8 @@ def build(doc, group, spec):
             try:
                 if o.getParentGroup() is not None:
                     o.getParentGroup().removeObject(o)
+                if o.TypeId == BODY:
+                    o.removeObjectsFromDocument()  # su BaseFeature de adentro (revisión 24/11: quedaba huérfano)
                 doc.removeObject(o.Name)
             except Exception:
                 pass
