@@ -209,6 +209,21 @@ Material abiertos con un panel abierto (error conocido #3; en croquis no aplica)
   el Cuerpo nuevo ya dentro del contenedor; se sigue editando con Ctrl+Z / Ctrl+Y. La de todos los botones
   (`editar_pieza_botones`) ahora también falla si un botón deja un paso aparte "Cuerpo a la pieza" (así apareció
   Tapa de extremo de soldadas).
+- `prueba_ventana_conservar_solido_un_paso.py`, `prueba_ventana_reabrir_eliminar_solido_un_paso.py` y
+  `prueba_ventana_mover_cara_suelto_un_paso.py` (con ventana, 24/11, #119 y #122; ayudantes en `un_paso_comun.py`):
+  editando una pieza con contenedor, Conservar un pedazo de un sólido, reabrir Eliminar sólidos para sacar un Cuerpo
+  de la lista, y Mover cara sobre un sólido suelto (como un STEP): Cancelar no deja nada ni pasos; Aceptar deja UN
+  paso con el nombre de la herramienta, todo dentro del contenedor (también los Cuerpos de antes), se sigue
+  editando, Ctrl+Z / Ctrl+Y. Conservar además mira el Informe: sin el aviso de FreeCAD "allowed scope" (#122).
+  Demostrado el 24/11 que fallan sin lo que las protege: Conservar y reabrir con el Eliminar/Conservar de antes
+  ("FreeCAD no pudo armar la operación", #122); Mover cara solo si se apagan a la vez el temporizador del contenedor
+  y `adopt_pending` (con cualquiera de los dos pasa: el Cuerpo se crea al ABRIR el panel, con su paso abierto).
+- `prueba_ventana_croquis_arista_tapada.py` (con ventana, 24/11, #102): croquis en la cara de arriba de un bloque,
+  isométrica, Línea y el mouse de verdad: una arista o un vértice de abajo tapados por la cara no se enganchan (como
+  SW 2018, visto con el mouse); las visibles sí (de la cara, de abajo por fuera, vertical); con el croquis abajo,
+  igual; también en una chapa de 2 mm vista entera y en el borde curvo de un cilindro. Falla sin el arreglo. Lo de
+  atrás de un componente transparente de Editar pieza se sigue enganchando: lo cubre `croquis_esc_linea` (falló
+  con la primera versión del arreglo).
 - Mapa de cobertura de TODO FreeWorks (`swui/`, no solo `swui/fork/`): `correr.py completa
   --cobertura` (lo corre la noche) o `correr.py sin_ventana --cobertura` (rápida + al azar).
 

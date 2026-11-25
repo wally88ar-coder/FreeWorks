@@ -5,6 +5,17 @@ Neueste Version oben. / Newest version first.
 ## Unveröffentlicht / Unreleased
 
 **Fork (wally88ar-coder, español)**
+- **Croquis, aristas tapadas (24/11, #102):** con un croquis abierto, una arista o un vértice del modelo tapados por
+  el sólido (por ejemplo, los de abajo vistos a través de la cara de arriba en isométrica) ya no se resaltan ni se
+  enganchan; como en SW 2018 (visto con el mouse). Si en ese lugar pasa una arista visible, se engancha esa. Lo
+  transparente (los otros componentes en Editar pieza) y los planos de referencia no tapan; anda también en chapa
+  fina y en aristas curvas.
+- **Eliminar/Conservar un pedazo de un sólido (24/11, #122):** en una pieza con contenedor (y editando la pieza
+  dentro de un ensamblaje) ya no dice "FreeCAD no pudo armar la operación": el filtro del pedazo se armaba en el
+  documento del ensamblaje y fuera de la pieza.
+- **Pruebas (24/11, #119):** Conservar sólido, reabrir Eliminar sólidos y Mover cara sobre un sólido suelto tienen
+  su prueba de "un Aceptar, un paso de deshacer". #94: la prueba del clic derecho espera al menú y deja en el
+  registro qué había si falla.
 - **Pruebas (22/11):** capturas de referencia de la esquina (`prueba_ventana_capturas_esquina`; quedan en
   `capturas/nuevas` hasta que el usuario las apruebe). #116, arreglado en las pruebas: `mono_configuraciones` ahora
   sabe que Ctrl+Z de "Modificar cota" devuelve el largo anterior y tolera el aviso de FreeCAD de #44 al pasar de

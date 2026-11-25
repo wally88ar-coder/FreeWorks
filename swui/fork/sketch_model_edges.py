@@ -48,6 +48,7 @@ WB_NAME = "LikeSolidWorksUIWorkbench"
 SKETCH = "Sketcher::SketchObject"
 NATIVE_FROM = 26
 SNAP_PX = 10  # distancia de enganche en píxeles
+MAX_HIDDEN_TRIES = 6  # #102: candidatas tapadas que se saltean por movimiento del mouse (después, como antes)
 POINTS_PER_EDGE = 16
 HIGHLIGHT = (1.0, 0.55, 0.0)  # naranja (resaltado de look_sw)
 LINE_WIDTH = 4
@@ -287,17 +288,129 @@ def _find(view, sketch, coin, ratio=1.0):
     """(objeto, sub, punto Coin) enganchable cerca de coin, o None."""
     st = _state
     if st["sketch"] is not sketch:
-        st.update(sketch=sketch, cands=_candidates(sketch), camera=None)
+        st.update(sketch=sketch, cands=_candidates(sketch), camera=None, elements={})
     key = _camera_key(view)
     if key is None or key != st["camera"]:
         st["screen"] = _screen(view, sketch, st["cands"])
         st["camera"] = key
     vertices, edges = st["screen"]
-    found = choose(coin, vertices, [(k, s, d) for k, s, d, _p in edges], SNAP_PX * ratio)
-    if found is None:
-        return None
-    (obj, sub), q = found
-    return obj, sub, q
+    snap = SNAP_PX * ratio
+    # #102: las candidatas cerca del mouse se juntan una vez (pocas) y se prueban en el orden de choose; la
+    # primera que no está tapada por el sólido es la que se engancha (como SW)
+    verts = [v for v in vertices if math.hypot(coin[0] - v[1][0], coin[1] - v[1][1]) <= snap]
+    lines = []
+    for k, s, d, _pts in edges:
+        hit = closest_on_polyline(coin, s) if len(s) > 1 else None
+        if hit is not None and hit[0] <= snap:
+            lines.append((k, s, d))
+    for tries in range(MAX_HIDDEN_TRIES + 1):
+        found = choose(coin, verts, lines, snap)
+        if found is None:
+            return None
+        key, q = found
+        if tries == MAX_HIDDEN_TRIES or not _hidden(view, q, _element(key)):
+            obj, sub = key  # (al llegar al tope, como antes: la que elige choose)
+            return obj, sub, q
+        verts = [v for v in verts if v[0] != key]
+        lines = [e for e in lines if e[0] != key]
+    return None
+
+
+def _element(key):
+    """La arista o el vértice (forma global) de la candidata key = (nombre, "EdgeN"/"VertexN"), o None."""
+    cache = _state.setdefault("elements", {})
+    if key in cache:
+        return cache[key]
+    elem = None
+    for obj, shape in _state.get("cands") or []:
+        if obj.Name == key[0]:
+            try:
+                n = int(key[1][4:] if key[1].startswith("Edge") else key[1][6:])
+                elem = (shape.Edges if key[1].startswith("Edge") else shape.Vertexes)[n - 1]
+            except Exception:
+                elem = None
+            break
+    cache[key] = elem
+    return elem
+
+
+def _see_through(info, obj=None):
+    """¿Lo que tocó el rayo se ve a través? Componentes transparentes (los de Editar pieza: SW elige a través de
+    ellos) y objetos o Cuerpos transparentes (30 % o más). obj: el objeto tocado (también si no vino ParentObject)."""
+    objs = [obj] if obj is not None else []
+    parent = info.get("ParentObject")
+    if parent is not None:
+        objs.append(parent)
+        doc = parent.Document
+        for name in (info.get("SubName") or "").split(".")[:-1]:
+            obj = doc.getObject(name) if name and doc is not None else None
+            if obj is None:
+                break
+            objs.append(obj)
+            linked = getattr(obj, "LinkedObject", None)
+            doc = linked.Document if linked is not None and linked is not obj else obj.Document
+    for obj in objs:
+        vo = getattr(obj, "ViewObject", None)
+        if vo is None:
+            continue
+        try:
+            if getattr(vo, "OverrideMaterial", False) and vo.ShapeMaterial.Transparency >= 0.3:
+                return True
+        except Exception:
+            pass
+        if getattr(vo, "Transparency", 0) >= 30:
+            return True
+    return False
+
+
+def _hidden(view, q, elem):
+    """
+    #102: ¿la arista o vértice elem (forma global), que en pantalla cae en q (Coin), está tapado por el sólido? Se
+    miran los toques del rayo de ese píxel (getObjectsInfo de FreeCAD, de adelante hacia atrás). Tapa solo una CARA de
+    un objeto con sólido que no se ve a través (no los planos, ejes ni croquis, ni los componentes transparentes de
+    Editar pieza) y que está más cerca de la cámara que el punto de elem más cercano al rayo (el de la curva, no el
+    de su cuerda), en más de 1,5 píxeles. Las caras pegadas a la propia arista (a menos de 3 píxeles: sus vecinas,
+    aunque se vean de canto) no tapan. En SW las aristas tapadas no se enganchan. Ante cualquier duda (la vista no
+    responde), no se considera tapado: queda como antes.
+    """
+    if elem is None:
+        return False
+    try:
+        import Part
+
+        x, y = int(round(q[0])), int(round(q[1]))
+        hits = view.getObjectsInfo((x, y), 2.0) or []
+        direction = view.getViewDirection()  # de la cámara hacia la escena
+        direction = FreeCAD.Vector(direction[0], direction[1], direction[2])
+        if not hits or direction.Length == 0:
+            return False
+        direction.normalize()
+        # el punto de elem más cercano al rayo del píxel
+        base = view.getPoint((x, y))
+        size = max(elem.BoundBox.DiagonalLength, 1.0) * 10 + (base - elem.BoundBox.Center).Length * 2
+        ray = Part.LineSegment(base - direction * size, base + direction * size).toShape()
+        point = elem.distToShape(ray)[1][0][0]
+        # milímetros por píxel a esa profundidad (proyectando 100 mm: getPointOnViewport da píxeles enteros)
+        up = view.getCameraOrientation().multVec(FreeCAD.Vector(0, 1, 0))
+        a, b = view.getPointOnViewport(point), view.getPointOnViewport(point + up * 100)
+        per_px = 100.0 / max(math.hypot(b[0] - a[0], b[1] - a[1]), 1e-6)
+        tol, near = max(1.5 * per_px, 1e-3), max(3 * per_px, 1e-3)
+        for info in hits:
+            if "x" not in info or not str(info.get("Component", "")).startswith("Face"):
+                continue  # aristas y vértices no tapan
+            doc = FreeCAD.listDocuments().get(info.get("Document", ""))
+            obj = doc.getObject(info.get("Object", "")) if doc is not None else None
+            shape = Part.getShape(obj) if obj is not None else None
+            if shape is None or shape.isNull() or not shape.Solids or _see_through(info, obj):
+                continue
+            hit = FreeCAD.Vector(info["x"], info["y"], info["z"])
+            if elem.distToShape(Part.Vertex(hit))[0] <= near:
+                return False  # una cara pegada a la propia arista: se ve
+            return (point - hit).dot(direction) > tol
+        return False
+    except Exception:
+        FreeCAD.Console.PrintLog("[SWUI fork] Arista tapada:\n%s\n" % traceback.format_exc())
+        return False
 
 
 # --- Resaltado (Coin) ---------------------------------------------------
