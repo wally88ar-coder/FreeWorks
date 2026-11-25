@@ -1,5 +1,23 @@
 # Estado del fork
 
+**25/11, 06:00 (cierre del /goal de la noche del 24/11, plan B: la batería no dio toda en BIEN).**
+- **Hecho y probado (subido, 9b2b813):** #122 y #102 arregladas y cerradas; las tres pruebas de #119 en el LEEME.
+  Demostraciones repetidas el 25/11 (03:59 a 04:10, código desactivado a propósito y vuelto a dejar como estaba):
+  solo sin `adopt_pending` las tres nuevas pasan (las tapa el temporizador del contenedor) y falla
+  `cuerpos_nuevos_un_paso` (2 pasos de deshacer); sin `adopt_pending` ni temporizador falla `mover_cara_suelto`
+  (Cuerpo fuera de la pieza); con el `delete_bodies.py` de antes de #122 fallan `conservar_solido` y
+  `reabrir_eliminar_solido`; con todo el arreglo, 4 de 4 en BIEN.
+- **#102, las 7 preguntas:** cancelar (Esc en cada caso) y algo raro (arista curva, chapa de 2 mm, vértices):
+  cubiertas; deshacer/rehacer y guardar/abrir: no corresponden (enganchar no cambia el documento); otra herramienta:
+  Editar pieza con transparentes (`croquis_esc_linea`); dos archivos: el cilindro se abre con el bloque abierto.
+  **Sin prueba:** cambiar una medida con el MISMO croquis abierto, y dos vistas del mismo documento.
+- **Intermitentes, sin causa, abiertas y comentadas:** #94 10/10, #83 10/10, #91 10/10 (6 + 4 más a las 04:10).
+- **Sin arreglar (errores viejos que encontró la batería):** #124 (Equidistanciar con 1e9) y #125 (chapa: líneas de
+  plegado ocultas después de desplegar con Brida de arista + Dobladillo). Nada quedó a medias: no hay commits sin
+  subir ni ramas locales.
+- **Falta que pruebe el usuario con el mouse:** #102 (arista/vértice tapado no se resalta, visible sí), #122
+  (Conservar un pedazo editando una pieza en un ensamblaje), y decidir lo de las aristas fuera del plano del croquis.
+
 **24/11 noche (/goal del usuario, tope 25/11 06:00): pendientes de #114 y #119, #102, intermitentes.**
 - **Pruebas que faltaban de #119** (`un_paso_comun.py` + tres pruebas con ventana, editando una pieza con contenedor;
   42c36e1): Conservar un pedazo, reabrir Eliminar sólidos para sacar un Cuerpo de la lista, Mover cara sobre un
