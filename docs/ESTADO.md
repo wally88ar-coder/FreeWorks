@@ -3,7 +3,14 @@
 **25/11: DXF de chapa probado en el mundo real** (el usuario lo mandó a cortar con láser a una empresa y anduvo).
 Próximo, para el buzón de libros: planos de plegado como los suyos de SW (vistas de la pieza terminada con la medida
 exterior de cada ala, isométrica y rótulo; sin tabla de pliegues: la secuencia la resuelve el plegador). Planos =
-área sin estándares de calidad (avisado).
+área sin estándares de calidad (avisado). **Prueba hecha y cerrada por el usuario ("fue una prueba, dejémoslo
+ahí"):** plano 2 (lateral izquierdo) con guiones en TechDraw, sin tocar FreeWorks
+(`C:\SW-AI-Bridge\trabajos\buzon_libros\freecad\planos\` y `fabricacion\`). Aprendido: plantilla propia A4 con
+rótulo en castellano (los campos editables necesitan `<tspan>`; los valores se grabaron en una copia del SVG porque
+cambiar EditableTexts no refrescaba el PDF); el usuario pide **vistas partidas** en piezas largas con alas chicas:
+`TechDraw::DrawBrokenView` con un croquis de dos líneas paralelas en el plano de CADA vista (una `Part` línea suelta
+deja la vista "Invalid: TopoDS::Edge"); las cotas sobre la vista partida dan la medida real; fondo blanco del PDF
+cambiando un momento la preferencia PageColor y FaceColor de cada vista.
 
 **24/11 noche: árbol como SW (pedido del usuario: piezas repetidas en el ensamblaje y "Sin nombre" sumándose al
 árbol). MEDIDO, sin código** (FreeCAD de prueba con copia de la configuración y copias de `paso6`; guion de un solo
