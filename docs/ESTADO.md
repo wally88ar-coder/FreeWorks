@@ -1,5 +1,62 @@
 # Estado del fork
 
+**25/11: DXF de chapa probado en el mundo real** (el usuario lo mandó a cortar con láser a una empresa y anduvo).
+Próximo, para el buzón de libros: planos de plegado como los suyos de SW (vistas de la pieza terminada con la medida
+exterior de cada ala, isométrica y rótulo; sin tabla de pliegues: la secuencia la resuelve el plegador). Planos =
+área sin estándares de calidad (avisado).
+
+**24/11 noche: árbol como SW (pedido del usuario: piezas repetidas en el ensamblaje y "Sin nombre" sumándose al
+árbol). MEDIDO, sin código** (FreeCAD de prueba con copia de la configuración y copias de `paso6`; guion de un solo
+uso en el scratchpad de la sesión):
+- **`Std_TreeSingleDocument` (nativo de 1.1.4) resuelve las repetidas:** el árbol muestra solo el documento de la
+  ventana al frente. Conjunto: solo Conjunto (sin Placa/Taco/Marco abajo); Placa al frente: solo Placa; volver:
+  Conjunto. Pieza nueva: solo "Sin nombre". Poner a mano `TreeView/DocumentMode = 1` en vivo NO cambió nada; el
+  comando sí (y el parámetro siguió en 0: falta ver si el modo queda guardado o hay que pedirlo en cada arranque).
+- **Editar pieza con el modo nuevo: bien.** Durante Editar pieza y con un croquis abierto en el Taco, el árbol se
+  queda en el Conjunto (Taco<1> abierto con Origen / Extruir / Croquis1, sin nivel "Body", como SW).
+- **Un solo nivel arriba (`setRootIndex` sobre "Ensamblaje1"):** anda y aguanta recalcular y elegir. Se ven
+  Origen / Relaciones / componentes sin "Conjunto > Ensamblaje1". Falta: dónde va el nombre del archivo (SW lo
+  muestra arriba) y probar abrir/cerrar documentos, deshacer, arrastrar y lo que dibuja FreeWorks encima del árbol.
+- **"Nuevo"** sigue creando "Sin nombre" (SW: Pieza1); además deja la cinta en la pestaña Ensamblaje y la vista de
+  Datos con lo elegido antes.
+- Visto de paso: con Editar pieza, el título de la ventana decía "Placa" o "Taco *" estando al frente el Conjunto.
+- Ojo: a las 22:27 apareció un FreeCAD de batería (`fw_bateria_…`, `mover_cara_suelto_un_paso`) que no lancé yo; no
+  se tocó. Puede haberse superpuesto un minuto con la última medición.
+- **Plan aprobado por el usuario (24/11), etapas A y B (la C, sacar "Ensamblaje1"/"Body", no por ahora):**
+  - A. Qué tiene que pasar: con un documento al frente, el árbol muestra solo ese documento; cambiar de ventana
+    cambia el árbol; Editar pieza (también con croquis abierto) deja el árbol en el ensamblaje; al apagar "Usar
+    siempre FreeWorks" vuelve el árbol de FreeCAD. Con `Std_TreeSingleDocument`; junto con la ficha #123 (título).
+  - B. Qué tiene que pasar: Archivo > Nuevo abre una ventanita como SW para elegir Pieza / Ensamblaje / Dibujo; la
+    pieza nueva se llama "Pieza1", "Pieza2"..., la cinta pasa a Operaciones y Datos queda vacío.
+  - Pestañas de documentos de abajo: **se dejan como están por ahora**, y Ctrl+Tab cambia de documento (como SW;
+    revisar si FreeCAD ya lo trae).
+  - Sin código todavía.
+- **Lectura del código (24/11 noche, sin FreeCAD), para programar A y B:**
+  - Lo que dibuja FreeWorks sobre el árbol (`tree_overlay` barra de retroceso / gris / ocultar auxiliares,
+    `mates_tree`, `config_asm` nombre de configuración, `tree_drag`, `config_tab`) mide cada renglón en el momento con
+    `visualItemRect` y saltea los que no se ven: con los otros documentos ocultos no debería fallar. A MEDIR: si
+    cambiar de documento en ese modo hace que FreeCAD rearme los renglones (`mates_tree` vuelve a poner sus carpetas
+    en `rowsAboutToBeRemoved`: comprobar que reaparecen).
+  - Ya pasaba antes y sigue igual: el documento de un renglón se busca por su nombre visible (`_doc_of`,
+    `_doc_by_label`); dos documentos abiertos con el mismo nombre se confunden.
+  - Dónde va A: módulo nuevo (p. ej. `swui/fork/tree_single.py`) que envuelve `layout.enter` / `layout.leave` como
+    `panel_sw`: al entrar dispara `Std_TreeSingleDocument` y anota el modo que había; al salir lo devuelve. El modo
+    se lee del tilde de la acción (`QAction` del grupo de comandos), no de `TreeView/DocumentMode` (medido: no
+    cambia).
+  - #123: `frameless.current_title` usa `FreeCADGui.ActiveDocument`, que durante Editar pieza o un croquis es la
+    pieza. Usar la ventana al frente, como `edit_part._front_document` (sacar esa búsqueda a una función común).
+  - B: "Nuevo" hoy es `Std_New` en tres lugares: Archivo > Nuevo (`menus_sw`), el ícono de acceso rápido
+    (`quick_access`) y el atajo Ctrl+N. Los tres pasan a un comando propio con la ventanita Pieza / Ensamblaje /
+    Dibujo. Ensamblaje = `new_assembly.create` (ya da "Ensamblaje1"). Dibujo: revisar si `SWUI_NewDrawing` sirve sin
+    pieza elegida. Pieza: documento "Pieza1" y la cinta en Operaciones (`asm_tab` hoy no cambia de pestaña con un
+    documento vacío).
+  - Ctrl+Tab: FreeCAD 1.1.4 no lo tiene asignado (solo Ctrl+F6). A medir: si el área de ventanas de Qt ya lo toma
+    sola; si no, atajo Ctrl+Tab / Ctrl+Shift+Tab a `Std_ActivateNextWindow` / `Std_ActivatePrevWindow`.
+  - Pruebas a escribir: con ventana, ensamblaje con 3 piezas (árbol solo del documento al frente, pasar a cada pieza
+    y volver, Editar pieza + croquis, dos ensamblajes, guardar y reabrir, salir de FreeWorks y volver); los dibujos
+    de FreeWorks sobre el árbol después de cambiar de documento; título (#123); Nuevo (Pieza1, Pieza2, Cancelar no
+    crea nada, Ctrl+N); Ctrl+Tab. Capturas nuevas del árbol para aprobar.
+
 **25/11, 06:00 (cierre del /goal de la noche del 24/11, plan B: la batería no dio toda en BIEN).**
 - **Hecho y probado (subido, 9b2b813):** #122 y #102 arregladas y cerradas; las tres pruebas de #119 en el LEEME.
   Demostraciones repetidas el 25/11 (03:59 a 04:10, código desactivado a propósito y vuelto a dejar como estaba):
@@ -3831,7 +3888,9 @@ Etapas:
     internas pasan a guardarse como vínculos (los archivos viejos se siguen abriendo).
   - Densidad "7.850": **se deja como 7,85** (un punto = coma decimal), como hasta ahora.
   - **CypCut: el usuario no lo usa** (11/11): la prueba "abrir el DXF en CypCut" sale de los
-    pendientes; el DXF se valida con lo que él use.
+    pendientes; el DXF se valida con lo que él use. **Hecho (dicho por el usuario el 25/11):** mandó a
+    cortar con láser a una empresa un DXF de FreeWorks y anduvo; la prueba del DXF en el mundo real queda
+    cerrada.
   - Ecuación que deja una operación imposible: **como SW**: se acepta el valor y la operación
     queda marcada con error en el árbol (no se rechaza).
 - **Estructuras / piezas soldadas (usuario, 01/11):** con Cuerpos nativos de FreeCAD (como el
